@@ -27,21 +27,25 @@ export const app = initializeApp(firebaseConfig);
 // for any iOS-based environment to prevent this.
 // =============================================================
 
+// iOS detection (iPhone, iPad, iPod)
 const isIOS = typeof navigator !== 'undefined' && (
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 );
 
+// PWA standalone detection (Home Screen app on iOS)
 const isPwaStandalone = typeof window !== 'undefined' && (
   (window.navigator as any).standalone === true ||
   (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches)
 );
 
+// Safari detection (Web Locks API is unreliable on all Safari builds)
 const isSafari = typeof navigator !== 'undefined' && (
   /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
 );
 
-// Any of these → use single-tab-manager to avoid Web Locks deadlock
+// Combined: use single-tab manager for any iOS, Safari, or PWA environment.
+// This prevents Firestore's Web Locks API from deadlocking IndexedDB.
 const useSingleTabManager = isIOS || isSafari || isPwaStandalone;
 
 // Debug log (visible in console for troubleshooting)
@@ -55,7 +59,9 @@ if (typeof window !== 'undefined') {
   });
 }
 
-const useDefaultDbDirectly = !firebaseConfig.firestoreDatabaseId || firebaseConfig.firestoreDatabaseId === '(default)';
+const useDefaultDbDirectly =
+  !firebaseConfig.firestoreDatabaseId ||
+  firebaseConfig.firestoreDatabaseId === '(default)';
 
 // Firestore Database with smart fallback for iOS/Safari/PWA
 let firestoreInstance: any;
@@ -103,14 +109,18 @@ try {
     if (useDefaultDbDirectly) {
       firestoreInstance = getFirestore(app);
     } else {
-      firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
+      firestoreInstance = getFirestore(
+        app,
+        firebaseConfig.firestoreDatabaseId as string
+      );
     }
   }
 }
 
 export const db = firestoreInstance;
 
-// Secondary Firestore instance pointing to the active database (avoid querying non-existent (default) database)
+// Secondary Firestore instance pointing to the active database
+// (avoid querying non-existent (default) database)
 export const defaultDb = db;
 
 export const auth = getAuth(app);
@@ -199,7 +209,6 @@ export function withTimeout<T>(
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
-      // FIX: Set err.code = 'timeout' on timeout error
       const err = new Error(fallbackMessage) as any;
       err.code = 'timeout';
       reject(err);
@@ -217,7 +226,7 @@ export function withTimeout<T>(
   });
 }
 
-// FIX: Exported helper to identify timeout errors
+// Exported helper to identify timeout errors
 export function isTimeoutError(e: unknown): boolean {
   if (!e) return false;
   const code = (e as any)?.code;
@@ -225,7 +234,7 @@ export function isTimeoutError(e: unknown): boolean {
   return code === 'timeout' || msg.includes('timed out') || msg.includes('timeout');
 }
 
-// FIX: Exported helper to identify permission-denied errors
+// Exported helper to identify permission-denied errors
 export function isPermissionError(e: unknown): boolean {
   if (!e) return false;
   const code = (e as any)?.code;
@@ -244,17 +253,31 @@ export function isQuotaExhausted(): boolean {
     if (!raw) return false;
     const ts = Number(raw);
 
-    // Calculate start of current Pacific day (00:00:00 Pacific Time = PST UTC-8 / PDT UTC-7)
+    // Calculate start of current Pacific day
     const now = new Date();
-    let currentPacificMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0);
+    let currentPacificMidnight = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      0,
+      0,
+      0
+    );
     try {
       const ptNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-      const ptTodayMidnight = new Date(ptNow.getFullYear(), ptNow.getMonth(), ptNow.getDate(), 0, 0, 0);
+      const ptTodayMidnight = new Date(
+        ptNow.getFullYear(),
+        ptNow.getMonth(),
+        ptNow.getDate(),
+        0,
+        0,
+        0
+      );
       const diffFromPt = ptNow.getTime() - ptTodayMidnight.getTime();
       currentPacificMidnight = now.getTime() - diffFromPt;
     } catch {}
 
-    // If timestamp was set before today's Pacific Midnight reset, server quota has already reset!
+    // If timestamp was set before today's Pacific Midnight reset, quota has reset!
     if (ts < currentPacificMidnight) {
       localStorage.removeItem('ngwe_quota_write_exhausted');
       localStorage.removeItem('ngwe_quota_exhausted');
@@ -313,7 +336,11 @@ export function isQuotaExhaustedError(error: unknown): boolean {
 
 import { recordSyncError } from './syncErrorHistory';
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null
+) {
   const isQuota = isQuotaExhaustedError(error);
   const errMsg = error instanceof Error ? error.message : String(error);
   const isTargetIdExists = errMsg.includes('Target ID already exists');
@@ -330,10 +357,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
       email: auth.currentUser?.email,
       emailVerified: auth.currentUser?.emailVerified,
       isAnonymous: auth.currentUser?.isAnonymous,
-      providerInfo: auth.currentUser?.providerData?.map((p) => ({
-        providerId: p.providerId,
-        email: p.email,
-      })) || [],
+      providerInfo:
+        auth.currentUser?.providerData?.map((p) => ({
+          providerId: p.providerId,
+          email: p.email,
+        })) || [],
     },
     operationType,
     path,
@@ -342,9 +370,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   if (isQuota) {
     try {
       localStorage.setItem('ngwe_quota_write_exhausted', String(Date.now()));
-      import('./quotaTracker').then(({ forceWritesExhausted }) => {
-        forceWritesExhausted();
-      }).catch(() => {});
+      import('./quotaTracker')
+        .then(({ forceWritesExhausted }) => {
+          forceWritesExhausted();
+        })
+        .catch(() => {});
     } catch {}
     pauseNetworkDueToQuota().catch(() => {});
   } else if (isTargetIdExists) {
@@ -369,19 +399,25 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 import { recordFirestoreOp } from './quotaTracker';
 
-export async function safeSetDoc(docRef: any, data: any, options?: any): Promise<boolean> {
+export async function safeSetDoc(
+  docRef: any,
+  data: any,
+  options?: any
+): Promise<boolean> {
   const path = docRef?.path || null;
   const parts = path ? path.split('/') : [];
   const targetUid = parts.length === 4 && parts[0] === 'users' ? parts[1] : undefined;
   const entityType = parts.length === 4 && parts[0] === 'users' ? parts[2] : undefined;
   const entityId = parts.length === 4 && parts[0] === 'users' ? parts[3] : undefined;
 
-  // FIX: Early guard when quota is exhausted; enqueue user entity tasks to syncQueue without calling setDoc
+  // Guard when quota is exhausted; enqueue user entity tasks to syncQueue
   if (isQuotaExhausted()) {
     if (entityType && entityId && targetUid) {
-      import('./syncQueue').then(({ syncQueue }) => {
-        syncQueue.enqueue(entityType as any, entityId, 'upsert', targetUid, data);
-      }).catch(() => {});
+      import('./syncQueue')
+        .then(({ syncQueue }) => {
+          syncQueue.enqueue(entityType as any, entityId, 'upsert', targetUid, data);
+        })
+        .catch(() => {});
     }
     return false;
   }
@@ -392,27 +428,35 @@ export async function safeSetDoc(docRef: any, data: any, options?: any): Promise
     isNetworkPausedForQuota = false;
     recordFirestoreOp('write', docRef?.parent?.id || path || 'system', 1);
     if (entityType && entityId) {
-      import('./syncQueue').then(({ syncQueue }) => {
-        syncQueue.remove(entityType as any, entityId);
-      }).catch(() => {});
+      import('./syncQueue')
+        .then(({ syncQueue }) => {
+          syncQueue.remove(entityType as any, entityId);
+        })
+        .catch(() => {});
     }
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
 
-    // FIX: Skip REST fallback on quota or permission errors
+    // Skip REST fallback on quota or permission errors
     if (!isQuotaExhaustedError(error) && !isPermissionError(error)) {
       if (entityType === 'transactions' && targetUid && data) {
         try {
           const { pushTransactionsDirectHttp } = await import('./directFirestoreHttp');
           const httpRes = await pushTransactionsDirectHttp([data], targetUid);
           if (httpRes.success) {
-            console.log(`[safeSetDoc] Recovered tx ${entityId} via direct HTTPS REST push!`);
-            import('./syncQueue').then(({ syncQueue }) => {
-              syncQueue.remove('transactions', entityId);
-            }).catch(() => {});
+            console.log(
+              `[safeSetDoc] Recovered tx ${entityId} via direct HTTPS REST push!`
+            );
+            import('./syncQueue')
+              .then(({ syncQueue }) => {
+                syncQueue.remove('transactions', entityId);
+              })
+              .catch(() => {});
             if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('ngwe_cloud_tx_confirmed', { detail: [entityId] }));
+              window.dispatchEvent(
+                new CustomEvent('ngwe_cloud_tx_confirmed', { detail: [entityId] })
+              );
             }
             return true;
           }
@@ -424,9 +468,11 @@ export async function safeSetDoc(docRef: any, data: any, options?: any): Promise
 
     // Automatically enqueue to transactional syncQueue for retry-on-failure
     if (entityType && entityId && targetUid) {
-      import('./syncQueue').then(({ syncQueue }) => {
-        syncQueue.enqueue(entityType as any, entityId, 'upsert', targetUid, data);
-      }).catch(() => {});
+      import('./syncQueue')
+        .then(({ syncQueue }) => {
+          syncQueue.enqueue(entityType as any, entityId, 'upsert', targetUid, data);
+        })
+        .catch(() => {});
     }
     return false;
   }
@@ -439,47 +485,53 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
   const entityType = parts.length === 4 && parts[0] === 'users' ? parts[2] : undefined;
   const entityId = parts.length === 4 && parts[0] === 'users' ? parts[3] : undefined;
 
-  // FIX: Guard against quota exhaustion and enqueue delete task
+  // Guard against quota exhaustion and enqueue delete task
   if (isQuotaExhausted()) {
     if (entityType && entityId && targetUid) {
-      import('./syncQueue').then(({ syncQueue }) => {
-        syncQueue.enqueue(entityType as any, entityId, 'delete', targetUid);
-      }).catch(() => {});
+      import('./syncQueue')
+        .then(({ syncQueue }) => {
+          syncQueue.enqueue(entityType as any, entityId, 'delete', targetUid);
+        })
+        .catch(() => {});
     }
     return false;
   }
 
   try {
-    // FIX: Wrap deleteDoc in withTimeout(..., 8000) to prevent hanging
+    // Wrap deleteDoc in withTimeout(..., 8000) to prevent hanging
     await withTimeout(deleteDoc(docRef), 8000);
     isNetworkPausedForQuota = false;
     recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
     if (entityType && entityId) {
-      import('./syncQueue').then(({ syncQueue }) => {
-        syncQueue.remove(entityType as any, entityId);
-      }).catch(() => {});
+      import('./syncQueue')
+        .then(({ syncQueue }) => {
+          syncQueue.remove(entityType as any, entityId);
+        })
+        .catch(() => {});
     }
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
     // Automatically enqueue to transactional syncQueue for retry-on-failure
     if (entityType && entityId && targetUid) {
-      import('./syncQueue').then(({ syncQueue }) => {
-        syncQueue.enqueue(entityType as any, entityId, 'delete', targetUid);
-      }).catch(() => {});
+      import('./syncQueue')
+        .then(({ syncQueue }) => {
+          syncQueue.enqueue(entityType as any, entityId, 'delete', targetUid);
+        })
+        .catch(() => {});
     }
     return false;
   }
 }
 
 export async function safeUpdateDoc(docRef: any, data: any): Promise<boolean> {
-  // FIX: Guard against quota exhaustion in safeUpdateDoc
+  // Guard against quota exhaustion in safeUpdateDoc
   if (isQuotaExhausted()) {
     return false;
   }
 
   try {
-    // FIX: Wrap updateDoc in withTimeout(..., 8000) to prevent hanging
+    // Wrap updateDoc in withTimeout(..., 8000) to prevent hanging
     await withTimeout(updateDoc(docRef, cleanForFirestore(data)), 8000);
     isNetworkPausedForQuota = false;
     recordFirestoreOp('write', docRef?.parent?.id || docRef?.path || 'system', 1);
@@ -493,7 +545,10 @@ export async function safeUpdateDoc(docRef: any, data: any): Promise<boolean> {
 /**
  * Tracks document reads performed across the application
  */
-export function trackFirestoreReads(collectionName: string = 'system', count: number = 1) {
+export function trackFirestoreReads(
+  collectionName: string = 'system',
+  count: number = 1
+) {
   recordFirestoreOp('read', collectionName, count);
 }
 
@@ -530,5 +585,3 @@ export async function testFirestoreQuotaPing(): Promise<{
     };
   }
 }
-
-

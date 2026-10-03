@@ -1047,6 +1047,47 @@ export default function App() {
         }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${targetUid}/transactions`)));
       }, 0));
 
+        // =============================================================
+  // iOS PWA: Force-flush pending Firestore writes before suspend
+  // =============================================================
+  // iOS PWA suspends JS almost immediately when backgrounded.
+  // This listener ensures pending writes are flushed to the
+  // network layer before the app is suspended.
+  // =============================================================
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const flushPendingWrites = async () => {
+      try {
+        const { waitForPendingWrites } = await import('firebase/firestore');
+        await Promise.race([
+          waitForPendingWrites(db),
+          new Promise((resolve) => setTimeout(resolve, 2000)),
+        ]);
+      } catch (err) {
+        console.warn('[iOS PWA] Flush pending writes notice:', err);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingWrites();
+      }
+    };
+
+    const handlePageHide = () => {
+      flushPendingWrites();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, []);
+  
       // 2. Wallets
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'wallets'), (snap) => {

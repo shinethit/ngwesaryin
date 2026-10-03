@@ -237,7 +237,18 @@ export interface ExchangeRates {
 
 export interface PinLockSettings {
   isEnabled: boolean;
-  pin: string; // 4 digits
+  /**
+   * PIN storage field.
+   * - Legacy format: 4-digit plaintext (auto-migrated to hash on app load)
+   * - New format: PBKDF2-SHA256 hash, 64 hex characters
+   *   (see src/utils/pinHash.ts)
+   */
+  pin: string;
+  /**
+   * PBKDF2 salt (16 bytes hex, 32 chars).
+   * Empty string for legacy plaintext format.
+   */
+  pinSalt: string;
   requireOnStart: boolean;
 }
 

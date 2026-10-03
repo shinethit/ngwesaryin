@@ -1,37 +1,90 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Delete, KeyRound, LogOut } from 'lucide-react';
 import { FortuneLogo } from './FortuneLogo';
+import { verifyPin, isHashedPinFormat } from '../utils/pinHash';
 
 interface PinLockScreenProps {
-  correctPin: string;
+  /**
+   * Hashed PIN (64 hex chars) OR legacy plaintext PIN (4 digits).
+   * We support both for backward compatibility during migration.
+   */
+  pinHash: string;
+  /**
+   * PBKDF2 salt (hex). Empty for legacy plaintext format.
+   */
+  pinSalt: string;
   lang: 'my' | 'en';
   onUnlock: () => void;
   onForgotPin?: () => void;
 }
 
 export const PinLockScreen: React.FC<PinLockScreenProps> = ({
-  correctPin,
+  pinHash,
+  pinSalt,
   lang,
   onUnlock,
   onForgotPin,
 }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
+  // Verify PIN asynchronously whenever 4 digits entered
   useEffect(() => {
-    if (pin.length === 4) {
-      if (pin === correctPin) {
-        onUnlock();
-      } else {
-        setError(true);
-        if (navigator.vibrate) navigator.vibrate(200);
-        setTimeout(() => {
-          setPin('');
-          setError(false);
-        }, 500);
+    if (pin.length !== 4 || isVerifying) return;
+
+    let cancelled = false;
+
+    const runVerification = async () => {
+      setIsVerifying(true);
+
+      try {
+        let isCorrect = false;
+
+        if (isHashedPinFormat({ pin: pinHash, pinSalt })) {
+          // New hashed format — async PBKDF2 verification
+          isCorrect = await verifyPin(pin, pinSalt, pinHash);
+        } else {
+          // Legacy plaintext format — direct comparison
+          isCorrect = pin === pinHash;
+        }
+
+        if (cancelled) return;
+
+        if (isCorrect) {
+          onUnlock();
+        } else {
+          setError(true);
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate(200); } catch {}
+          }
+          setTimeout(() => {
+            if (cancelled) return;
+            setPin('');
+            setError(false);
+          }, 500);
+        }
+      } catch (err) {
+        console.warn('[PinLockScreen] verification error:', err);
+        if (!cancelled) {
+          setError(true);
+          setTimeout(() => {
+            if (cancelled) return;
+            setPin('');
+            setError(false);
+          }, 500);
+        }
+      } finally {
+        if (!cancelled) setIsVerifying(false);
       }
-    }
-  }, [pin, correctPin, onUnlock]);
+    };
+
+    runVerification();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pin, pinHash, pinSalt, onUnlock, isVerifying]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -96,6 +149,12 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
         {error && (
           <div className="text-xs text-rose-400 font-semibold mb-4 animate-shake">
             {lang === 'my' ? '❌ PIN နံပါတ် မှားယွင်းနေပါသည်' : '❌ Incorrect PIN code'}
+          </div>
+        )}
+
+        {isVerifying && !error && (
+          <div className="text-xs text-slate-500 font-medium mb-4">
+            {lang === 'my' ? 'စစ်ဆေးနေသည်...' : 'Verifying...'}
           </div>
         )}
 

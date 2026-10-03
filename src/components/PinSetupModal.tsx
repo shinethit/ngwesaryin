@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { Lock, ShieldCheck, X, Check } from 'lucide-react';
+import { hashPin, generateSalt } from '../utils/pinHash';
 
 interface PinSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   lang: 'my' | 'en';
-  onSavePin: (pin: string) => void;
+  /**
+   * Called with the PBKDF2 hashed PIN and its salt.
+   * Never pass plaintext.
+   */
+  onSavePin: (pinHash: string, pinSalt: string) => void;
 }
 
 export const PinSetupModal: React.FC<PinSetupModalProps> = ({
@@ -18,10 +23,36 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   const [confirmPin, setConfirmPin] = useState('');
   const [step, setStep] = useState<'create' | 'confirm'>('create');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
 
+  const handleFinalize = async (finalPin: string) => {
+    setIsSaving(true);
+    try {
+      const salt = generateSalt();
+      const pinHash = await hashPin(finalPin, salt);
+      onSavePin(pinHash, salt);
+      onClose();
+    } catch (err) {
+      console.error('[PinSetupModal] Failed to hash PIN:', err);
+      setErrorMsg(
+        lang === 'my'
+          ? 'လျှို့ဝှက်နံပါတ်ကို လုံခြုံစွာ သိမ်းဆည်းရာတွင် အမှားရှိပါသည်။ ပြန်လည်ကြိုးစားပါ။'
+          : 'Failed to securely save PIN. Please try again.'
+      );
+      setTimeout(() => {
+        setConfirmPin('');
+        setStep('create');
+        setPin('');
+      }, 1500);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleKeyPress = (num: string) => {
+    if (isSaving) return;
     setErrorMsg('');
     if (step === 'create') {
       if (pin.length < 4) {
@@ -39,8 +70,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
         setConfirmPin(nextConfirm);
         if (nextConfirm.length === 4) {
           if (nextConfirm === pin) {
-            onSavePin(pin);
-            onClose();
+            handleFinalize(pin);
           } else {
             setErrorMsg(
               lang === 'my'
@@ -59,6 +89,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   };
 
   const handleDelete = () => {
+    if (isSaving) return;
     setErrorMsg('');
     if (step === 'create') {
       setPin((prev) => prev.slice(0, -1));
@@ -75,7 +106,8 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center transition-colors cursor-pointer"
+          disabled={isSaving}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
         >
           <X className="w-4 h-4" />
         </button>
@@ -102,8 +134,8 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
         <p className="text-[10px] text-slate-500 text-center mt-1 bg-slate-800/60 px-3 py-1 rounded-lg border border-slate-700/50">
           {lang === 'my'
-            ? '💡 သတိပေးချက် - ဤ PIN Lock သည် ဖုန်းမျက်နှာပြင်တွင် အခြားသူများ ရုတ်တရက် မကြည့်နိုင်စေရန် Device Screen Lock စနစ် ဖြစ်ပါသည်'
-            : '💡 Note: Screen lock protection for device privacy, not cryptographic data encryption'}
+            ? '💡 လုံခြုံရေး - PIN ကို PBKDF2 ဖြင့် hash လုပ်ပြီး သိမ်းဆည်းပါသည် (plaintext မသိမ်းပါ)'
+            : '🔒 Security: PIN is hashed with PBKDF2 before storage (never stored as plaintext)'}
         </p>
 
         {/* PIN Indicators */}
@@ -126,14 +158,21 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
           </div>
         )}
 
+        {isSaving && (
+          <div className="text-xs text-emerald-400 font-medium mb-3 text-center">
+            {lang === 'my' ? 'လုံခြုံစွာ သိမ်းဆည်းနေသည်...' : 'Securing PIN...'}
+          </div>
+        )}
+
         {/* Keypad */}
         <div className="grid grid-cols-3 gap-3 w-full max-w-[260px]">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
             <button
               key={num}
               type="button"
+              disabled={isSaving}
               onClick={() => handleKeyPress(num.toString())}
-              className="w-16 h-14 rounded-2xl flex items-center justify-center text-xl font-bold bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 transition-colors cursor-pointer"
+              className="w-16 h-14 rounded-2xl flex items-center justify-center text-xl font-bold bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 transition-colors cursor-pointer disabled:opacity-50"
             >
               {num}
             </button>
@@ -141,15 +180,17 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
           <div />
           <button
             type="button"
+            disabled={isSaving}
             onClick={() => handleKeyPress('0')}
-            className="w-16 h-14 rounded-2xl flex items-center justify-center text-xl font-bold bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 transition-colors cursor-pointer"
+            className="w-16 h-14 rounded-2xl flex items-center justify-center text-xl font-bold bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 transition-colors cursor-pointer disabled:opacity-50"
           >
             0
           </button>
           <button
             type="button"
+            disabled={isSaving}
             onClick={handleDelete}
-            className="w-16 h-14 rounded-2xl flex items-center justify-center text-sm font-semibold text-slate-400 bg-slate-800/40 hover:bg-slate-700 active:bg-slate-600 transition-colors cursor-pointer"
+            className="w-16 h-14 rounded-2xl flex items-center justify-center text-sm font-semibold text-slate-400 bg-slate-800/40 hover:bg-slate-700 active:bg-slate-600 transition-colors cursor-pointer disabled:opacity-50"
           >
             ⌫
           </button>

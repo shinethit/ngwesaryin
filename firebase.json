@@ -13,7 +13,10 @@
       }
     ]
   },
-  "firestore": {
-    "rules": "firestore.rules"
-  }
+  "firestore": [
+    {
+      "database": "ai-studio-incomeexpensedeb-8b430923-ad0a-45a6-9f38-4c9cb02bcf7e",
+      "rules": "firestore.rules"
+    }
+  ]
 }

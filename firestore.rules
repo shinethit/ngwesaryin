@@ -23,7 +23,6 @@ service cloud.firestore {
     }
 
     // Master admin — MUST match AuthContext.tsx isMasterAdminEmail()
-    // ⚠️ Change this email if you change admin
     function isMasterAdmin() {
       return isSignedIn() && userEmailLower() == 'khunthanshwe@gmail.com';
     }
@@ -39,7 +38,6 @@ service cloud.firestore {
     }
 
     // Collaborator check on another user's workspace
-    // Uses .get('collaborators', []) to safely fallback if field is missing
     function isCollaborator(userId) {
       return isSignedIn()
         && userEmail() != ''
@@ -77,7 +75,6 @@ service cloud.firestore {
 
     // =========================================================
     // 2. COLLECTION GROUP MATCHES (Admin Analytics Only)
-    //    These allow admins to run collectionGroup() queries.
     // =========================================================
     match /{path=**}/transactions/{transactionId} {
       allow read: if isAdmin();
@@ -93,7 +90,6 @@ service cloud.firestore {
 
     // =========================================================
     // 3. /admins/{adminId} — FIXED (was: privilege escalation)
-    //    Anyone could self-register as admin. Now only master admin.
     // =========================================================
     match /admins/{adminId} {
       allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
@@ -103,17 +99,12 @@ service cloud.firestore {
 
     // =========================================================
     // 4. /activationCodes/{codeId} — FIXED (was: any user can update)
-    //    Users can only mark a code as used (redeem).
-    //    Admins can do anything.
     // =========================================================
     match /activationCodes/{codeId} {
       allow get: if isSignedIn();
       allow list, create, delete: if isAdmin();
 
       // Strict redeem-only update:
-      //   - Must transition isUsed from false → true
-      //   - Must set usedBy to own uid
-      //   - Cannot change months, code, createdAt, createdBy
       allow update: if isSignedIn()
         && resource.data.isUsed == false
         && request.resource.data.isUsed == true
@@ -144,8 +135,6 @@ service cloud.firestore {
 
     // =========================================================
     // 6. /feedbacks/{feedbackId}
-    //    Public read + create (allows guest feedback).
-    //    Only admin or feedback owner can update/delete.
     // =========================================================
     match /feedbacks/{feedbackId} {
       allow get, list: if true;
@@ -156,9 +145,6 @@ service cloud.firestore {
 
     // =========================================================
     // 7. /visitors/{visitorId} — FIXED (was: anyone can read/write)
-    //    Create/update open (for anonymous visitor tracking).
-    //    Read limited to admins + signed-in users.
-    //    Delete only admins.
     // =========================================================
     match /visitors/{visitorId} {
       allow create, update: if true;
@@ -168,7 +154,6 @@ service cloud.firestore {
 
     // =========================================================
     // 8. /public_shops/{shopId} — FIXED (was: any user can delete)
-    //    Public read. Only creator or admin can update/delete.
     // =========================================================
     match /public_shops/{shopId} {
       allow get, list: if true;
@@ -180,15 +165,12 @@ service cloud.firestore {
 
     // =========================================================
     // 9. /sharedWallets/{walletId} — FIXED (was: any signed-in user)
-    //    Only wallet members (owner or sharedWith list) can access.
     // =========================================================
     match /sharedWallets/{walletId} {
       allow read: if isSharedWalletMember(walletId);
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid;
-      // Owner can update freely
       allow update: if isSharedWalletOwner(walletId);
-      // Collaborator can only touch balance, updatedAt, sharedWith, permissions
       allow update: if isSharedWalletMember(walletId)
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['balance', 'updatedAt', 'sharedWith', 'collaboratorPermissions']);
@@ -201,7 +183,6 @@ service cloud.firestore {
 
     // =========================================================
     // 10. /users/{userId} and all subcollections
-    //     Only owner, admin, or registered collaborator.
     // =========================================================
     match /users/{userId} {
       allow read, write: if canAccess(userId);

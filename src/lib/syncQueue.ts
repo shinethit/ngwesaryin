@@ -143,6 +143,19 @@ class SyncQueueManager {
   }
 
   /**
+   * Check if a specific entity has a pending DELETE operation in the queue.
+   * Used to prevent accidental resurrection during reconciliation.
+   */
+  public isEntityPendingDelete(entityType: SyncEntityType, entityId: string): boolean {
+    return this.queue.some(
+      (item) =>
+        item.entityType === entityType &&
+        item.entityId === entityId &&
+        item.operation === 'delete'
+    );
+  }
+
+  /**
    * Remove a specific item from the queue when confirmed or resolved elsewhere
    */
   public remove(entityType: SyncEntityType, entityId: string) {
@@ -420,6 +433,9 @@ class SyncQueueManager {
    * Forced Reconciliation Check: Matches cloudTxIds Set against local transactions
    * and triggers a specific writeBatch ONLY for items truly missing in Firestore,
    * replacing generic sync loops.
+   *
+   * ⚠️ CRITICAL: Skips any tx that has a pending DELETE in the queue — pushing
+   * them would resurrect a delete that was just issued on this device.
    */
   public async reconcileMissingTxsWithWriteBatch(params: {
     missingTxs: { id: string; [key: string]: any }[];
@@ -435,8 +451,15 @@ class SyncQueueManager {
       return { succeededCount: 0, failedCount: 0, newlyConfirmedTxIds: [] };
     }
 
-    // Filter strictly for items truly missing in cloudTxIds
-    const trulyMissing = missingTxs.filter((tx) => tx && tx.id && !cloudTxIds.has(tx.id));
+    // Filter strictly for items truly missing in cloudTxIds.
+    // ALSO skip items currently queued for deletion — pushing them would
+    // resurrect a delete that was just issued on this device.
+    const trulyMissing = missingTxs.filter((tx) => {
+      if (!tx || !tx.id) return false;
+      if (cloudTxIds.has(tx.id)) return false;
+      if (this.isEntityPendingDelete('transactions', tx.id)) return false;
+      return true;
+    });
     if (trulyMissing.length === 0) {
       return { succeededCount: 0, failedCount: 0, newlyConfirmedTxIds: [] };
     }

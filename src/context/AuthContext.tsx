@@ -35,12 +35,12 @@ interface AuthContextType {
   user: User | null;
   userProfile: {
     plan?: PlanType;
-    premiumExpiresAt?: string;
-    premiumActivatedAt?: string;
-    premiumMonths?: number;
-    premiumCodeUsed?: string;
+    premiumExpiresAt?: string | null;
+    premiumActivatedAt?: string | null;
+    premiumMonths?: number | null;
+    premiumCodeUsed?: string | null;
     trialClaimed?: boolean;
-    trialClaimedAt?: string;
+    trialClaimedAt?: string | null;
     accountCreatedAt?: string;
   } | null;
   loading: boolean;
@@ -121,12 +121,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<{
     plan?: PlanType;
-    premiumExpiresAt?: string;
-    premiumActivatedAt?: string;
-    premiumMonths?: number;
-    premiumCodeUsed?: string;
+    premiumExpiresAt?: string | null;
+    premiumActivatedAt?: string | null;
+    premiumMonths?: number | null;
+    premiumCodeUsed?: string | null;
     trialClaimed?: boolean;
-    trialClaimedAt?: string;
+    trialClaimedAt?: string | null;
     accountCreatedAt?: string;
   } | null>(() => {
     try {
@@ -835,12 +835,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       }
 
-      // 2. Transactions (Differential Smart Upsert: Only push transactions truly missing in Cloud or pending in queue!)
+      // 2. Transactions — STRICT queue-only push.
+      //
+      // ⚠️ CRITICAL: NEVER auto-push a local tx just because it's missing from
+      // cloudTxIds. That path resurrects transactions that were deleted on
+      // another device, causing an infinite delete/push loop (counts never match).
+      //
+      // The syncQueue is the single source of truth for pending changes.
+      // New/edited txs are enqueued by the caller; deleted txs are handled by
+      // their own 'delete' queue operation. Anything else is either already
+      // synced or was deleted by another device — leave it alone.
       const txsToPush = (cloudTxIds && !forceSync)
-        ? transactions.filter((tx) => !cloudTxIds.has(tx.id) || syncQueue.isEntityPending('transactions', tx.id))
+        ? transactions.filter((tx) => syncQueue.isEntityPending('transactions', tx.id))
         : transactions;
 
-      console.log(`[syncDataToCloud] Total local: ${transactions.length}, Differential missing/pending to push: ${txsToPush.length}`);
+      console.log(`[syncDataToCloud] Total local: ${transactions.length}, Queue-pending to push: ${txsToPush.length}`);
 
       for (const tx of txsToPush) {
         operations.push({

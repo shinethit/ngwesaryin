@@ -1273,66 +1273,9 @@ export default function App() {
     };
   }, [user?.uid, activeWorkspaceId]);
 
-  // FIX: [4]a Cross-device sync on app resume / tab focus / online / periodic auto-sync with refs, throttle, visibility & quota guards
-  useEffect(() => {
-    if (!user?.uid || !isCloudLoaded) return;
-    const targetUid = activeWorkspaceId || user.uid;
-
-    const handleResumeSync = async () => {
-      // Guards: offline check
-      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-      // Guard: hidden tab
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-      // Guard: quota exhausted
-      if (isQuotaExhausted()) return;
-      // Guard: 60-second throttle
-      const now = Date.now();
-      if (now - lastResumeSyncAtRef.current < 60000) return;
-      lastResumeSyncAtRef.current = now;
-
-      try {
-        const currentTxs = transactionsRef.current;
-        const currentCloudIds = cloudTxIdsRef.current;
-
-        // Unmark deleted flags for active transactions
-        currentTxs.forEach((t) => {
-          if (t && t.id) unmarkTxDeleted(t.id);
-        });
-
-        // pending = transactions that are NOT in cloudTxIds AND NOT syncQueue.isEntityPending('transactions', id)
-        const pending = currentTxs.filter(
-          (t) => t && t.id && !currentCloudIds.has(t.id) && !syncQueue.isEntityPending('transactions', t.id)
-        );
-
-        if (pending.length > 0) {
-          syncQueue.enqueueBatch(
-            pending.map((tx) => ({
-              entityType: 'transactions',
-              entityId: tx.id,
-              operation: 'upsert',
-              targetUid,
-              data: cleanForFirestore({ ...tx, userId: targetUid }),
-            }))
-          );
-        }
-      } catch (err) {
-        console.warn('Auto background sync tick notice:', err);
-      }
-    };
-
-    handleResumeSync();
-
-    const interval = setInterval(handleResumeSync, 120000);
-    document.addEventListener('visibilitychange', handleResumeSync);
-    window.addEventListener('focus', handleResumeSync);
-    window.addEventListener('online', handleResumeSync);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleResumeSync);
-      window.removeEventListener('focus', handleResumeSync);
-      window.removeEventListener('online', handleResumeSync);
-    };
-  }, [user?.uid, activeWorkspaceId, isCloudLoaded]);
+  // ⚠️ REMOVED (v5.3.32): Auto-tick that re-enqueued any local tx missing
+  // from cloudTxIds caused a deletion resurrection loop across devices.
+  // syncQueue is now the sole source of pending writes.
 
   // Centralized Debounced Cloud Synchronization Layer
   // Note: Direct user mutations (add/update/delete) write to Firestore instantly per-document.

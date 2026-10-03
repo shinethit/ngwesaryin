@@ -17,37 +17,94 @@ import firebaseConfig from '@/firebase-applet-config.json';
 // Initialize Firebase App
 export const app = initializeApp(firebaseConfig);
 
-// Detect iOS WebKit / Safari to avoid Web Locks API deadlock bugs on iPhone
-const isSafariOrIOS = typeof navigator !== 'undefined' && (
+// =============================================================
+// iOS / PWA Detection (Web Locks API deadlock prevention)
+// =============================================================
+// iOS Safari AND iOS PWA (standalone mode) both have issues with
+// the Web Locks API which Firestore's persistentMultipleTabManager
+// depends on. This causes IndexedDB deadlocks that silently block
+// all Firestore writes on iOS. We force persistentSingleTabManager
+// for any iOS-based environment to prevent this.
+// =============================================================
+
+const isIOS = typeof navigator !== 'undefined' && (
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-  (/^((?!chrome|android).)*safari/i.test(navigator.userAgent))
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 );
+
+const isPwaStandalone = typeof window !== 'undefined' && (
+  (window.navigator as any).standalone === true ||
+  (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches)
+);
+
+const isSafari = typeof navigator !== 'undefined' && (
+  /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+);
+
+// Any of these → use single-tab-manager to avoid Web Locks deadlock
+const useSingleTabManager = isIOS || isSafari || isPwaStandalone;
+
+// Debug log (visible in console for troubleshooting)
+if (typeof window !== 'undefined') {
+  console.log('[firebase.ts] Cache manager mode:', {
+    isIOS,
+    isPwaStandalone,
+    isSafari,
+    useSingleTabManager,
+    userAgent: navigator.userAgent,
+  });
+}
 
 const useDefaultDbDirectly = !firebaseConfig.firestoreDatabaseId || firebaseConfig.firestoreDatabaseId === '(default)';
 
-// Firestore Database with smart fallback & multi-device compatibility (Safari/iOS safe)
+// Firestore Database with smart fallback for iOS/Safari/PWA
 let firestoreInstance: any;
+
+const localCacheConfig = {
+  localCache: persistentLocalCache({
+    tabManager: useSingleTabManager
+      ? persistentSingleTabManager(undefined)
+      : persistentMultipleTabManager(),
+  }),
+};
+
+// FIX: Explicitly split initializeFirestore calls to satisfy
+// TypeScript's strict databaseId typing (string, not string|undefined).
 try {
-  // FIX: Use persistentSingleTabManager when isSafariOrIOS is true to prevent WebKit IndexedDB locks deadlock
-  firestoreInstance = initializeFirestore(
-    app,
-    {
-      localCache: persistentLocalCache({
-        tabManager: isSafariOrIOS ? persistentSingleTabManager(undefined) : persistentMultipleTabManager(),
-      }),
-    },
-    useDefaultDbDirectly ? undefined : firebaseConfig.firestoreDatabaseId
-  );
-} catch (err) {
-  try {
+  if (useDefaultDbDirectly) {
+    firestoreInstance = initializeFirestore(app, localCacheConfig);
+  } else {
     firestoreInstance = initializeFirestore(
       app,
-      {},
-      useDefaultDbDirectly ? undefined : firebaseConfig.firestoreDatabaseId
+      localCacheConfig,
+      firebaseConfig.firestoreDatabaseId as string
     );
-  } catch {
-    firestoreInstance = getFirestore(app, useDefaultDbDirectly ? undefined : firebaseConfig.firestoreDatabaseId);
+  }
+  if (typeof window !== 'undefined') {
+    console.log('[firebase.ts] Firestore initialized with persistentLocalCache');
+  }
+} catch (err) {
+  console.warn('[firebase.ts] persistentLocalCache failed, falling back:', err);
+  try {
+    if (useDefaultDbDirectly) {
+      firestoreInstance = initializeFirestore(app, {});
+    } else {
+      firestoreInstance = initializeFirestore(
+        app,
+        {},
+        firebaseConfig.firestoreDatabaseId as string
+      );
+    }
+    if (typeof window !== 'undefined') {
+      console.log('[firebase.ts] Firestore initialized with default cache');
+    }
+  } catch (err2) {
+    console.error('[firebase.ts] initializeFirestore failed, using getFirestore:', err2);
+    if (useDefaultDbDirectly) {
+      firestoreInstance = getFirestore(app);
+    } else {
+      firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
+    }
   }
 }
 

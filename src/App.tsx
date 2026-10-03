@@ -83,6 +83,7 @@ import {
 import { areArraysEqual, deduplicateById } from './utils/syncGuards';
 import { mergeById, mergeByKey } from './utils/mergeById';
 import { usePersistedState } from './hooks/usePersistedState';
+import { hashPin, generateSalt, isHashedPinFormat } from './utils/pinHash';
 
 // Helper to retry dynamic script imports if a network glitch occurs or after new build chunk deployment
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -454,20 +455,34 @@ export default function App() {
     return count;
   }, [debts, budgets, transactions, tirePressureLogs, readNotificationIds]);
 
-  const [pinSettings, setPinSettings] = useState<PinLockSettings>(() => {
+    const [pinSettings, setPinSettings] = useState<PinLockSettings>(() => {
     try {
       const saved = safeGetItem('ngwe_pin');
-      return saved ? JSON.parse(saved) : { isEnabled: false, pin: '', requireOnStart: false };
+      if (!saved) {
+        return { isEnabled: false, pin: '', pinSalt: '', requireOnStart: false };
+      }
+      const parsed = JSON.parse(saved);
+      // Normalize: ensure pinSalt field exists (legacy data may not have it)
+      return {
+        isEnabled: Boolean(parsed.isEnabled),
+        pin: typeof parsed.pin === 'string' ? parsed.pin : '',
+        pinSalt: typeof parsed.pinSalt === 'string' ? parsed.pinSalt : '',
+        requireOnStart: Boolean(parsed.requireOnStart),
+      };
     } catch {
-      return { isEnabled: false, pin: '', requireOnStart: false };
+      return { isEnabled: false, pin: '', pinSalt: '', requireOnStart: false };
     }
   });
-  const [isLocked, setIsLocked] = useState(() => {
+    const [isLocked, setIsLocked] = useState(() => {
     try {
       const saved = safeGetItem('ngwe_pin');
       if (saved) {
         const parsed: PinLockSettings = JSON.parse(saved);
-        return Boolean(parsed.isEnabled && parsed.requireOnStart && parsed.pin && parsed.pin.length === 4);
+        if (!parsed.isEnabled || !parsed.requireOnStart || !parsed.pin) return false;
+        // Support both legacy plaintext (4 chars) and new hashed (64 chars) formats
+        const isLegacyPin = parsed.pin.length === 4 && /^\d{4}$/.test(parsed.pin);
+        const isHashedPin = parsed.pin.length === 64 && /^[0-9a-fA-F]+$/.test(parsed.pin);
+        return isLegacyPin || isHashedPin;
       }
     } catch {
       return false;
@@ -598,7 +613,7 @@ export default function App() {
       );
 
       // Process transactional queue with force option
-      // FIX: processQueue signature in syncQueue may not accept options; cast to any
+      // FIX: cast to any because processQueue signature may not accept options
       const queueResult = await (syncQueue.processQueue as any)({ force: true });
 
       let httpPushedCount = 0;
@@ -718,15 +733,15 @@ export default function App() {
     const targetUid = overrideWorkspaceId || activeWorkspaceId || user.uid;
     const opId = recordSyncOperationStart('pull', 'Pull and merge records from Cloud Firestore', 0, targetUid);
     try {
-      const cloudData = await pullDataFromCloud(overrideWorkspaceId);
+      const cloudData: any = await pullDataFromCloud(overrideWorkspaceId);
       if (cloudData) {
         let totalReceived = 0;
         if (cloudData.transactions !== undefined) {
           totalReceived += (cloudData.transactions || []).length;
           if (cloudData.transactions && Array.isArray(cloudData.transactions)) {
             const confirmedIds = cloudData.transactions
-              .filter((t) => t && t.id && !syncQueue.isEntityPending('transactions', t.id))
-              .map((t) => t.id);
+              .filter((t: any) => t && t.id && !syncQueue.isEntityPending('transactions', t.id))
+              .map((t: any) => t.id);
             setCloudTxIds(new Set(confirmedIds));
           }
           setTransactions((prevLocal) => {
@@ -734,11 +749,11 @@ export default function App() {
             prevLocal.forEach((t) => {
               if (t && t.id && !isTxDeleted(t.id)) map.set(t.id, t);
             });
-            cloudData.transactions?.forEach((t) => {
+            cloudData.transactions?.forEach((t: any) => {
               if (t && t.id) {
-                unmarkTxDeleted(t.id); // Live cloud document -> unmark stale deletion flag
+                unmarkTxDeleted(t.id);
                 const existing = map.get(t.id);
-                map.set(t.id, { ...existing, ...t });
+                map.set(t.id, { ...(existing as any), ...(t as any) } as Transaction);
               }
             });
             const merged = Array.from(map.values()).sort(
@@ -748,187 +763,185 @@ export default function App() {
             return merged;
           });
         }
-      if (cloudData.debts !== undefined) {
-        setDebts((prevLocal) => {
-          const map = new Map<string, Debt>();
-          prevLocal.forEach((d) => {
-            if (d && d.id) map.set(d.id, d);
-          });
-          cloudData.debts?.forEach((d) => {
-            if (d && d.id) {
-              const existing = map.get(d.id);
-              map.set(d.id, { ...existing, ...d });
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_debts', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (cloudData.wallets) {
-        setWallets((prevLocal) => {
-          const map = new Map<string, Wallet>();
-          // Only populate non-deleted wallets from prevLocal and cloudData
-          prevLocal.forEach((w) => {
-            if (w && w.id && !isWalletDeleted(w.id)) map.set(w.id, w);
-          });
-          cloudData.wallets?.forEach((w) => {
-            if (w && w.id && !isWalletDeleted(w.id)) {
-              const existing = map.get(w.id);
-              map.set(w.id, { ...existing, ...w });
-            }
-          });
-          // If completely empty and no wallets ever existed, fallback safely
-          if (map.size === 0) {
-            INITIAL_WALLETS.forEach((w) => {
-              if (!isWalletDeleted(w.id)) map.set(w.id, w);
+        if (cloudData.debts !== undefined) {
+          setDebts((prevLocal) => {
+            const map = new Map<string, Debt>();
+            prevLocal.forEach((d) => {
+              if (d && d.id) map.set(d.id, d);
             });
-          }
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_wallets', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (cloudData.categories) {
-        setCategories((prevLocal) => {
-          const map = new Map<string, Category>();
-          INITIAL_CATEGORIES.forEach((c) => map.set(c.id, c));
-          prevLocal.forEach((c) => {
-            if (c && c.id) {
-              const existing = map.get(c.id);
-              map.set(c.id, {
-                ...existing,
-                ...c,
-                subCategories: (c.subCategories && c.subCategories.length > 0) ? c.subCategories : existing?.subCategories,
+            cloudData.debts?.forEach((d: any) => {
+              if (d && d.id) {
+                const existing = map.get(d.id);
+                map.set(d.id, { ...(existing as any), ...(d as any) } as Debt);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_debts', JSON.stringify(merged));
+            return merged;
+          });
+        }
+        if (cloudData.wallets) {
+          setWallets((prevLocal) => {
+            const map = new Map<string, Wallet>();
+            prevLocal.forEach((w) => {
+              if (w && w.id && !isWalletDeleted(w.id)) map.set(w.id, w);
+            });
+            cloudData.wallets?.forEach((w: any) => {
+              if (w && w.id && !isWalletDeleted(w.id)) {
+                const existing = map.get(w.id);
+                map.set(w.id, { ...(existing as any), ...(w as any) } as Wallet);
+              }
+            });
+            if (map.size === 0) {
+              INITIAL_WALLETS.forEach((w) => {
+                if (!isWalletDeleted(w.id)) map.set(w.id, w);
               });
             }
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_wallets', JSON.stringify(merged));
+            return merged;
           });
-          cloudData.categories?.forEach((c) => {
-            if (c && c.id) {
-              const existing = map.get(c.id);
-              map.set(c.id, {
-                ...existing,
-                ...c,
-                subCategories: (c.subCategories && c.subCategories.length > 0) ? c.subCategories : existing?.subCategories,
-              });
-            }
+        }
+        if (cloudData.categories) {
+          setCategories((prevLocal) => {
+            const map = new Map<string, Category>();
+            INITIAL_CATEGORIES.forEach((c) => map.set(c.id, c));
+            prevLocal.forEach((c) => {
+              if (c && c.id) {
+                const existing = map.get(c.id);
+                map.set(c.id, {
+                  ...(existing as any),
+                  ...(c as any),
+                  subCategories: (c.subCategories && c.subCategories.length > 0) ? c.subCategories : existing?.subCategories,
+                } as Category);
+              }
+            });
+            cloudData.categories?.forEach((c: any) => {
+              if (c && c.id) {
+                const existing = map.get(c.id);
+                map.set(c.id, {
+                  ...(existing as any),
+                  ...(c as any),
+                  subCategories: (c.subCategories && c.subCategories.length > 0) ? c.subCategories : existing?.subCategories,
+                } as Category);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_categories', JSON.stringify(merged));
+            return merged;
           });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_categories', JSON.stringify(merged));
-          return merged;
+        }
+        if (cloudData.budgets) {
+          setBudgets((prevLocal) => {
+            const map = new Map<string, BudgetConfig>();
+            INITIAL_BUDGETS.forEach((b) => map.set(b.categoryId, b));
+            prevLocal.forEach((b) => map.set(b.categoryId, b));
+            (cloudData.budgets as any[])?.forEach((b: any) => {
+              if (b && b.categoryId) {
+                const existing = map.get(b.categoryId);
+                map.set(b.categoryId, { ...(existing as any), ...(b as any) } as BudgetConfig);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_budgets', JSON.stringify(merged));
+            return merged;
+          });
+        }
+        if (cloudData.shops) {
+          setShops((prevLocal) => {
+            const map = new Map<string, ShopContact>();
+            prevLocal.forEach((s) => {
+              if (s && s.id) map.set(s.id, s);
+            });
+            cloudData.shops?.forEach((s: any) => {
+              if (s && s.id) {
+                const existing = map.get(s.id);
+                map.set(s.id, { ...(existing as any), ...(s as any) } as ShopContact);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_shops', JSON.stringify(merged));
+            return merged;
+          });
+        }
+        if (cloudData.vehicles) {
+          setVehicles((prevLocal) => {
+            const map = new Map<string, Vehicle>();
+            prevLocal.forEach((v) => { if (v && v.id) map.set(v.id, v); });
+            cloudData.vehicles?.forEach((v: any) => {
+              if (v && v.id) {
+                const existing = map.get(v.id);
+                map.set(v.id, { ...(existing as any), ...(v as any) } as Vehicle);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_vehicles', JSON.stringify(merged));
+            return merged;
+          });
+        }
+        if (cloudData.fuelLogs) {
+          setFuelLogs((prevLocal) => {
+            const map = new Map<string, FuelLog>();
+            prevLocal.forEach((f) => { if (f && f.id) map.set(f.id, f); });
+            cloudData.fuelLogs?.forEach((f: any) => {
+              if (f && f.id) {
+                const existing = map.get(f.id);
+                map.set(f.id, { ...(existing as any), ...(f as any) } as FuelLog);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_fuel_logs', JSON.stringify(merged));
+            return merged;
+          });
+        }
+        if (cloudData.maintenanceLogs) {
+          setVehicleMaintenance((prevLocal) => {
+            const map = new Map<string, VehicleMaintenance>();
+            prevLocal.forEach((m) => { if (m && m.id) map.set(m.id, m); });
+            cloudData.maintenanceLogs?.forEach((m: any) => {
+              if (m && m.id) {
+                const existing = map.get(m.id);
+                map.set(m.id, { ...(existing as any), ...(m as any) } as VehicleMaintenance);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(merged));
+            return merged;
+          });
+        }
+        if (cloudData.tireLogs) {
+          setTirePressureLogs((prevLocal) => {
+            const map = new Map<string, TirePressureLog>();
+            prevLocal.forEach((t) => { if (t && t.id) map.set(t.id, t); });
+            cloudData.tireLogs?.forEach((t: any) => {
+              if (t && t.id) {
+                const existing = map.get(t.id);
+                map.set(t.id, { ...(existing as any), ...(t as any) } as TirePressureLog);
+              }
+            });
+            const merged = Array.from(map.values());
+            safeSetItem('ngwe_tire_logs', JSON.stringify(merged));
+            return merged;
+          });
+        }
+        finishSyncOperation(opId, cloudData ? 'success' : 'failed', {
+          itemCount: totalReceived,
+          details: cloudData ? `Pulled ${totalReceived} records from Cloud Firestore` : 'Failed to pull data',
+        });
+        showToast(lang === 'my' ? 'Cloud မှ ဒေတာများကို ပေါင်းစပ်ရယူပြီးပါပြီ ✓' : 'Merged records from Cloud ✓');
+      } else {
+        finishSyncOperation(opId, 'failed', {
+          details: 'No response from Cloud Firestore',
+          errorMessage: 'Network or database error during pull',
         });
       }
-      if (cloudData.budgets) {
-        setBudgets((prevLocal) => {
-          const map = new Map<string, BudgetConfig>();
-          INITIAL_BUDGETS.forEach((b) => map.set(b.categoryId, b));
-          prevLocal.forEach((b) => map.set(b.categoryId, b));
-          (cloudData.budgets as any[])?.forEach((b) => {
-            if (b && b.categoryId) {
-              const existing = map.get(b.categoryId);
-              map.set(b.categoryId, { ...existing, ...b });
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_budgets', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (cloudData.shops) {
-        setShops((prevLocal) => {
-          const map = new Map<string, ShopContact>();
-          prevLocal.forEach((s) => {
-            if (s && s.id) map.set(s.id, s);
-          });
-          cloudData.shops?.forEach((s) => {
-            if (s && s.id) {
-              const existing = map.get(s.id);
-              map.set(s.id, { ...existing, ...s });
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_shops', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (cloudData.vehicles) {
-        setVehicles((prevLocal) => {
-          const map = new Map<string, Vehicle>();
-          prevLocal.forEach((v) => { if (v && v.id) map.set(v.id, v); });
-          cloudData.vehicles?.forEach((v) => {
-            if (v && v.id) {
-              const existing = map.get(v.id);
-              map.set(v.id, { ...existing, ...v });
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_vehicles', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (cloudData.fuelLogs) {
-        setFuelLogs((prevLocal) => {
-          const map = new Map<string, FuelLog>();
-          prevLocal.forEach((f) => { if (f && f.id) map.set(f.id, f); });
-          cloudData.fuelLogs?.forEach((f) => {
-            if (f && f.id) {
-              const existing = map.get(f.id);
-              map.set(f.id, { ...existing, ...f });
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_fuel_logs', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (cloudData.maintenanceLogs) {
-        setVehicleMaintenance((prevLocal) => {
-          const map = new Map<string, VehicleMaintenance>();
-          prevLocal.forEach((m) => { if (m && m.id) map.set(m.id, m); });
-          cloudData.maintenanceLogs?.forEach((m) => {
-            if (m && m.id) {
-              const existing = map.get(m.id);
-              map.set(m.id, { ...existing, ...m });
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      if (cloudData.tireLogs) {
-        setTirePressureLogs((prevLocal) => {
-          const map = new Map<string, TirePressureLog>();
-          prevLocal.forEach((t) => { if (t && t.id) map.set(t.id, t); });
-          cloudData.tireLogs?.forEach((t) => {
-            if (t && t.id) {
-              const existing = map.get(t.id);
-              map.set(t.id, { ...existing, ...t });
-            }
-          });
-          const merged = Array.from(map.values());
-          safeSetItem('ngwe_tire_logs', JSON.stringify(merged));
-          return merged;
-        });
-      }
-      finishSyncOperation(opId, cloudData ? 'success' : 'failed', {
-        itemCount: totalReceived,
-        details: cloudData ? `Pulled ${totalReceived} records from Cloud Firestore` : 'Failed to pull data',
-      });
-      showToast(lang === 'my' ? 'Cloud မှ ဒေတာများကို ပေါင်းစပ်ရယူပြီးပါပြီ ✓' : 'Merged records from Cloud ✓');
-    } else {
+    } catch (pullErr: any) {
       finishSyncOperation(opId, 'failed', {
-        details: 'No response from Cloud Firestore',
-        errorMessage: 'Network or database error during pull',
+        details: 'Pull failed with error',
+        errorMessage: pullErr?.message || String(pullErr),
       });
     }
-  } catch (pullErr: any) {
-    finishSyncOperation(opId, 'failed', {
-      details: 'Pull failed with error',
-      errorMessage: pullErr?.message || String(pullErr),
-    });
-  }
-};
+  };
 
   // Live Real-Time Firestore Synchronization for personal / active workspace
   const [isCloudLoaded, setIsCloudLoaded] = useState(false);
@@ -992,8 +1005,7 @@ export default function App() {
             const map = new Map<string, Transaction>();
             confirmedServerTxs.forEach((cloudTx) => {
               if (cloudTx && cloudTx.id && !deletedIds.includes(cloudTx.id)) {
-                // FIX: Removed syncEngine.reconcileAndSync call (syncEngine is undefined).
-                // The cloud data is authoritative; map.set below preserves local edits when pending.
+                // Note: cloud data is authoritative for confirmed items
                 if (!syncQueue.isEntityPending('transactions', cloudTx.id)) {
                   map.set(cloudTx.id, cloudTx);
                 } else {
@@ -1285,6 +1297,49 @@ export default function App() {
   // Note: Direct user mutations (add/update/delete) write to Firestore instantly per-document.
   // Full-collection batch sync is reserved for initial load or manual user sync button.
 
+    // =============================================================
+  // iOS PWA: Flush pending writes before app goes to background
+  // =============================================================
+  // iOS PWA suspends the app almost immediately when it goes to
+  // background. If Firestore has pending writes, they may be lost.
+  // We listen to visibilitychange and pagehide to force flush.
+  // =============================================================
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const flushPendingWrites = async () => {
+      try {
+        const { waitForPendingWrites } = await import('firebase/firestore');
+        await Promise.race([
+          waitForPendingWrites(db),
+          new Promise((resolve) => setTimeout(resolve, 3000)), // 3s max
+        ]);
+        console.log('[iOS PWA] Pending writes flushed');
+      } catch (err) {
+        console.warn('[iOS PWA] Flush pending writes notice:', err);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Fire and forget — don't await, iOS may kill us
+        flushPendingWrites();
+      }
+    };
+
+    const handlePageHide = () => {
+      flushPendingWrites();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, []);
+  
   // Track Visitor & Guest Session
   useEffect(() => {
     // Only track once initial auth resolution has completed
@@ -1444,19 +1499,13 @@ export default function App() {
             });
           }
 
-          const liveSharedTxIds = new Set(sharedTxs.map((t) => t.id));
-
           setTransactions((prev) => {
             const map = new Map<string, Transaction>();
 
             prev.forEach((t) => {
               if (!t || !t.id) return;
-
-              // If marked deleted, skip
               if (isTxDeleted(t.id)) return;
               if (deletedTxIds && deletedTxIds.includes(t.id)) return;
-
-              // Keep all personal and non-deleted transactions
               map.set(t.id, t);
             });
 
@@ -1465,7 +1514,7 @@ export default function App() {
               if (t && t.id) {
                 unmarkTxDeleted(t.id);
                 const existing = map.get(t.id);
-                map.set(t.id, { ...existing, ...t });
+                map.set(t.id, { ...(existing as any), ...(t as any) } as Transaction);
               }
             });
 
@@ -1954,7 +2003,6 @@ export default function App() {
         const pricePerLiter =
           vehicleLinkData.pricePerLiter || (liters > 0 ? Math.round(cleanAmount / liters) : 0);
 
-        // Calculate fuel efficiency if prior logs exist
         const vehicleLogs = fuelLogs
           .filter((l) => l.vehicleId === vehicleLinkData.vehicleId)
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -2114,8 +2162,6 @@ export default function App() {
       return;
     }
 
-    const cleanAmount = Math.abs(Number(txToDelete.amount) || 0);
-
     // 1. Calculate next state synchronously (including paired transfer if any)
     const pairId = txToDelete.transferPairId;
     const nextTransactions = transactions.filter((t) => t.id !== id && (!pairId || t.id !== pairId));
@@ -2217,7 +2263,6 @@ export default function App() {
       return next;
     });
 
-    // Immediate Firestore deletion for debt record and linked transaction
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
       safeDeleteDoc(doc(db, 'users', targetUid, 'debts', id));
@@ -2249,7 +2294,6 @@ export default function App() {
               updatedRepayments = [settlementRepayment, ...updatedRepayments];
             }
           } else {
-            // Reversing settled status back to active: remove auto-generated settlement repayment
             updatedRepayments = updatedRepayments.filter((r) => !r.id.startsWith('rep_settle_'));
           }
 
@@ -2302,9 +2346,6 @@ export default function App() {
         }
       }
 
-      // Auto-create repayment transaction in the selected Wallet
-      // Receivable repayment -> Income into wallet
-      // Payable repayment -> Expense from wallet
       const isReceivable = targetDebt.type === 'receivable';
       const repTxId = `tx_rep_${Date.now()}`;
       const repTx: Transaction = {
@@ -2505,7 +2546,6 @@ export default function App() {
     if (!target) return;
 
     // 1. COLLABORATOR LEAVING SHARED WALLET
-    // Collaborator cannot delete the shared wallet, they can only leave it
     if (target.isSharedFromOther) {
       if (
         window.confirm(
@@ -2523,7 +2563,7 @@ export default function App() {
       return;
     }
 
-    // 2. OWNER DELETING WALLET (PERSONAL OR SHARED)
+    // 2. OWNER DELETING WALLET
     const ownWallets = wallets.filter((w) => !w.isSharedFromOther);
     if (ownWallets.length <= 1) {
       alert(
@@ -2569,7 +2609,6 @@ export default function App() {
       return;
     }
 
-    // Reassign transactions to fallback wallet if any
     let updatedTransactions = transactions;
     if (relatedTxCount > 0) {
       updatedTransactions = transactions.map((t) =>
@@ -2589,7 +2628,6 @@ export default function App() {
       }
     }
 
-    // Update wallets state and promote fallback to default if deleted wallet was default
     markWalletDeleted(walletId);
     if (target.originalId) markWalletDeleted(target.originalId);
     if (target.sharedDocId) markWalletDeleted(target.sharedDocId);
@@ -2600,12 +2638,8 @@ export default function App() {
     setWallets(updatedWallets);
     safeSetItem('ngwe_wallets', JSON.stringify(updatedWallets));
 
-    // Delete from Firestore
     if (user) {
-      // 1. Delete from sharedWallets collection so all collaborators see it deleted instantly
       await deleteSharedWalletDoc(walletId, user.uid, target.sharedDocId, target.originalId);
-
-      // 2. Delete from user's personal wallets subcollection
       await deleteUserWalletFromCloud(user.uid, walletId, target.originalId);
     }
 
@@ -2715,7 +2749,6 @@ export default function App() {
     const txId = logData.transactionId || `tx_fuel_${logId}`;
     const log: FuelLog = { ...logData, id: logId, transactionId: txId, createdAt: logData.createdAt || Date.now() };
 
-    // 1. Sync with Transactions if syncToExpense enabled and wallet selected
     if (log.syncToExpense !== false && log.totalCost > 0 && log.walletId) {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
@@ -2753,7 +2786,6 @@ export default function App() {
       }
     }
 
-    // 2. Save Fuel Log
     setFuelLogs((prev) => {
       const exists = prev.some((f) => f.id === log.id);
       const next = exists ? prev.map((f) => (f.id === log.id ? log : f)) : [log, ...prev];
@@ -2769,7 +2801,6 @@ export default function App() {
       }, { merge: true });
     }
 
-    // 3. Update vehicle's current odometer if new log odometer is higher
     if (targetVehicle && log.odometer > (targetVehicle.currentOdometer || 0)) {
       handleSaveVehicle({ ...targetVehicle, currentOdometer: log.odometer });
     }
@@ -2781,7 +2812,6 @@ export default function App() {
     const logToDelete = fuelLogs.find((f) => f.id === logId);
     const txId = logToDelete?.transactionId || `tx_fuel_${logId}`;
 
-    // 1. Delete associated transaction if found
     const linkedTx = transactions.find((t) => t.id === txId);
     if (linkedTx) {
       setTransactions((prev) => {
@@ -2795,7 +2825,6 @@ export default function App() {
       }
     }
 
-    // 2. Delete fuel log
     setFuelLogs((prev) => {
       const next = prev.filter((f) => f.id !== logId);
       safeSetItem('ngwe_fuel_logs', JSON.stringify(next));
@@ -2854,7 +2883,6 @@ export default function App() {
       }
     }
 
-    // 2. Save Maintenance Log
     setVehicleMaintenance((prev) => {
       const exists = prev.some((m) => m.id === maint.id);
       const next = exists ? prev.map((m) => (m.id === maint.id ? maint : m)) : [maint, ...prev];
@@ -2870,7 +2898,6 @@ export default function App() {
       }, { merge: true });
     }
 
-    // 3. Update vehicle current odometer if higher
     if (targetVehicle && maint.odometer > (targetVehicle.currentOdometer || 0)) {
       handleSaveVehicle({ ...targetVehicle, currentOdometer: maint.odometer });
     }
@@ -3082,7 +3109,6 @@ export default function App() {
       createdAt: Date.now() + 1,
     };
 
-    // Record transactions
     setTransactions((prev) => {
       const next = [outTx, inTx, ...prev];
       safeSetItem('ngwe_transactions', JSON.stringify(next));
@@ -3100,11 +3126,9 @@ export default function App() {
         userId: targetUid,
       }, { merge: true });
 
-      // If source wallet is shared
       if (fromWallet && (fromWallet.isSharedFromOther || (fromWallet.sharedWith && fromWallet.sharedWith.length > 0))) {
         saveSharedWalletTransaction(fromWallet.id, outTx, fromWallet.balance, getSharedWalletDocId(fromWallet, user.uid), user.uid);
       }
-      // If destination wallet is shared
       if (toWallet && (toWallet.isSharedFromOther || (toWallet.sharedWith && toWallet.sharedWith.length > 0))) {
         saveSharedWalletTransaction(toWallet.id, inTx, toWallet.balance, getSharedWalletDocId(toWallet, user.uid), user.uid);
       }
@@ -3156,12 +3180,10 @@ export default function App() {
     safeSetItem('ngwe_wallets', JSON.stringify(nextWallets));
 
     if (user) {
-      // Ensure the collaborator is added to the user's root document's collaborators list for security rules validation
       await addCollaborator(cleanEmail).catch((err) => console.warn('Failed to add collaborator for security rules:', err));
 
       const txs = transactions.filter((t) => isWalletMatch(target, t.walletId));
       await syncSharedWalletToCloud(updatedWallet, user, txs);
-      // Also update personal wallets collection in cloud immediately
       safeSetDoc(doc(db, 'users', user.uid, 'wallets', updatedWallet.id), {
         ...updatedWallet,
         userId: user.uid,
@@ -3195,7 +3217,6 @@ export default function App() {
         userId: user.uid,
       }, { merge: true });
 
-      // Clean up root collaborator list only if they have no other wallets shared with them
       const otherWalletsWithCollab = wallets.filter(
         (w) => w.id !== walletId && !w.isSharedFromOther && w.sharedWith?.map((e) => e.toLowerCase()).includes(cleanEmail)
       );
@@ -3271,7 +3292,6 @@ export default function App() {
       });
     }
 
-    // 2. Optionally create adjustment transaction if there is a discrepancy
     if (recordTransaction && difference !== 0) {
       const isIncome = difference > 0;
       const absDiff = Math.abs(difference);
@@ -3333,10 +3353,11 @@ export default function App() {
     }
   };
 
-  const handleSavePinAndLock = (newPin: string) => {
+    const handleSavePinAndLock = (pinHash: string, pinSalt: string) => {
     const updatedSettings: PinLockSettings = {
       isEnabled: true,
-      pin: newPin,
+      pin: pinHash,
+      pinSalt: pinSalt,
       requireOnStart: pinSettings.requireOnStart ?? true,
     };
     setPinSettings(updatedSettings);
@@ -3347,7 +3368,6 @@ export default function App() {
 
   const handleAddBudget = (config: BudgetConfig) => {
     setBudgets((prev) => {
-      // Remove any existing budget for this category and append
       const filtered = prev.filter((b) => b.categoryId !== config.categoryId);
       return [...filtered, config];
     });
@@ -3381,7 +3401,6 @@ export default function App() {
     }
   };
 
-  // Category & Sub-Category Handlers (Premium Allowed, Free Protected)
   const handleAddCategory = (newCat: Omit<Category, 'id'>) => {
     if (plan !== 'premium') {
       setIsPremiumModalOpen(true);
@@ -3436,11 +3455,9 @@ export default function App() {
       return;
     }
     
-    // Find category type
     const catToDelete = categories.find((c) => c.id === categoryId);
     if (!catToDelete) return;
     
-    // Warn user and reassign transactions
     const relatedTxCount = transactions.filter(t => t.category === categoryId).length;
     
     if (relatedTxCount > 0) {
@@ -3502,7 +3519,7 @@ export default function App() {
     if (user?.uid && updatedParent) {
       const targetUid = activeWorkspaceId || user.uid;
       safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
-        ...updatedParent,
+        ...(updatedParent as Category),
         userId: targetUid,
       }, { merge: true });
     }
@@ -3536,7 +3553,7 @@ export default function App() {
     if (user?.uid && updatedParent) {
       const targetUid = activeWorkspaceId || user.uid;
       safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
-        ...updatedParent,
+        ...(updatedParent as Category),
         userId: targetUid,
       }, { merge: true });
     }
@@ -3571,7 +3588,7 @@ export default function App() {
     if (user?.uid && updatedParent) {
       const targetUid = activeWorkspaceId || user.uid;
       safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
-        ...updatedParent,
+        ...(updatedParent as Category),
         userId: targetUid,
       }, { merge: true });
     }
@@ -3583,7 +3600,6 @@ export default function App() {
   };
 
   const handleMergeAndCleanCategories = () => {
-    // FIX: [4]d Build maps of previous JSON stringified values to avoid writing unchanged items to Firestore
     const prevCategoryMap = new Map<string, string>(categories.map((c) => [c.id, JSON.stringify(c)]));
     const prevTxMap = new Map<string, string>(transactions.map((t) => [t.id, JSON.stringify(t)]));
 
@@ -3612,7 +3628,6 @@ export default function App() {
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      // Write only categories that changed
       result.cleanedCategories.forEach((cat) => {
         const prevJson = prevCategoryMap.get(cat.id);
         const currJson = JSON.stringify(cat);
@@ -3623,7 +3638,6 @@ export default function App() {
           }, { merge: true });
         }
       });
-      // Write only transactions that changed
       result.updatedTransactions.forEach((tx) => {
         if (tx.id) {
           const prevJson = prevTxMap.get(tx.id);
@@ -3673,8 +3687,9 @@ export default function App() {
   // App Main Content
   if (isLocked && pinSettings?.isEnabled && pinSettings?.pin && pinSettings.pin.length === 4) {
     return (
-      <PinLockScreen
-        correctPin={pinSettings.pin}
+            <PinLockScreen
+        pinHash={pinSettings.pin}
+        pinSalt={pinSettings.pinSalt || ''}
         lang={lang}
         onUnlock={() => setIsLocked(false)}
         onForgotPin={() => {
@@ -3687,13 +3702,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-emerald-500 selection:text-white pb-24 relative">
-      {/* Quota Exceeded Notification & Retry Sync Banner */}
       <QuotaExceededNotificationBanner lang={lang} onOpenSyncStatus={() => setIsSyncStatusDrawerOpen(true)} />
-
-      {/* PWA Install Auto Modal & Floating Prompts */}
       <PWAInstallPrompt lang={lang} />
 
-      {/* Top Navigation Header (Sticky at top-0) */}
       <Navbar
         currentPlan={plan}
         onOpenSidebar={() => setIsSidebarOpen(true)}
@@ -3719,10 +3730,8 @@ export default function App() {
         pendingCloudCount={transactions.filter((t) => t && t.id && !cloudTxIds.has(t.id)).length}
       />
 
-      {/* Admin Broadcast / Marquee Announcement */}
       <AdminBroadcastBanner lang={lang} />
 
-      {/* Sidebar Navigation Drawer */}
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -3749,7 +3758,6 @@ export default function App() {
         onManualSync={handleFullManualSync}
       />
 
-      {/* Plan Status Banner */}
       <PlanBanner
         plan={plan}
         transactionsCount={transactions.length}
@@ -3760,7 +3768,6 @@ export default function App() {
         lang={lang}
       />
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <React.Suspense fallback={
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
@@ -3793,7 +3800,6 @@ export default function App() {
               onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
               cloudTxIds={cloudTxIds}
             />
-            {/* Subtle Ad for Free Plan (Hidden for Premium) */}
             <AdBanner
               plan={plan}
               lang={lang}
@@ -3821,7 +3827,6 @@ export default function App() {
               cloudTxIds={cloudTxIds}
               onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
             />
-            {/* Subtle Ad for Free Plan (Hidden for Premium) */}
             <AdBanner
               plan={plan}
               lang={lang}
@@ -3846,7 +3851,6 @@ export default function App() {
               onUpdateSubCategory={handleUpdateSubCategory}
               onMergeCategories={handleMergeAndCleanCategories}
             />
-            {/* Subtle Ad for Free Plan (Hidden for Premium) */}
             <AdBanner
               plan={plan}
               lang={lang}
@@ -3905,7 +3909,6 @@ export default function App() {
                 onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
               />
             )}
-            {/* Subtle Ad for Free Plan (Hidden for Premium) */}
             <AdBanner
               plan={plan}
               lang={lang}
@@ -3939,7 +3942,6 @@ export default function App() {
               onUpdatePermissions={handleUpdateWalletPermissions}
               onSyncRefresh={handleManualSyncDown}
             />
-            {/* Subtle Ad for Free Plan (Hidden for Premium) */}
             <AdBanner
               plan={plan}
               lang={lang}
@@ -3989,7 +3991,6 @@ export default function App() {
                 onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
               />
             )}
-            {/* Subtle Ad for Free Plan (Hidden for Premium) */}
             <AdBanner
               plan={plan}
               lang={lang}
@@ -4030,9 +4031,7 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Grid cards for Guest vs Free vs Premium */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {/* Guest Mode Card */}
                 <div
                   className={`p-5 rounded-2xl border-2 flex flex-col justify-between ${
                     plan === 'guest' ? 'border-slate-700 bg-slate-50/80 shadow-xs' : 'border-slate-200 bg-white'
@@ -4077,7 +4076,6 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* Free Plan Card */}
                 <div
                   className={`p-5 rounded-2xl border-2 flex flex-col justify-between ${
                     plan === 'free' ? 'border-emerald-600 bg-emerald-50/20 shadow-xs ring-2 ring-emerald-500/20' : 'border-slate-200 bg-white'
@@ -4128,7 +4126,6 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* Premium Card */}
                 <div
                   className={`p-5 rounded-2xl border-2 flex flex-col justify-between relative overflow-hidden ${
                     plan === 'premium'
@@ -4184,7 +4181,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Activation Code & Payment Section */}
               <div className="mt-8 p-6 rounded-2xl bg-amber-50/60 border border-amber-200">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
@@ -4208,7 +4204,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Data Management & Clear Data Section */}
               <div className="mt-6 p-6 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center gap-2 mb-2">
                   <Trash2 className="w-4 h-4 text-rose-600" />
@@ -4259,7 +4254,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 9. Feedback & Reviews View */}
         {activeTab === 'feedback' && (
           <FeedbackView
             lang={lang}
@@ -4268,7 +4262,6 @@ export default function App() {
           />
         )}
 
-        {/* 10. Shop Directory View */}
         {activeTab === 'shops' && (
           <ShopsView
             shops={shops}
@@ -4281,7 +4274,6 @@ export default function App() {
           />
         )}
 
-        {/* 11. Vehicle Management View */}
         {activeTab === 'vehicles' && (
           <VehiclesView
             vehicles={vehicles}
@@ -4305,7 +4297,6 @@ export default function App() {
         </React.Suspense>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
@@ -4330,7 +4321,6 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Floating Bottom Navigation Dock */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-md">
         <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl px-3 sm:px-4 py-2 shadow-lg shadow-slate-900/5 flex items-center justify-between">
           <button
@@ -4359,7 +4349,6 @@ export default function App() {
             <span className="text-[10px]">{lang === 'my' ? 'စာရင်း' : 'Records'}</span>
           </button>
 
-          {/* Centered Add Button */}
           <div className="-mt-6">
             <ClayFloatingCoinButton
               onClick={() => handleOpenAddTx('expense')}
@@ -4391,7 +4380,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Modal Dialogs */}
       <TransactionModal
         isOpen={isTxModalOpen}
         initialType={txModalInitialType}
@@ -4475,7 +4463,6 @@ export default function App() {
           />
         )}
 
-        {/* Privacy Policy & Disclaimer Modal */}
         {isPrivacyModalOpen && (
           <PrivacyModal
             isOpen={isPrivacyModalOpen}
@@ -4485,7 +4472,6 @@ export default function App() {
           />
         )}
 
-        {/* User Guide & App Features Walkthrough Modal */}
         {isUserGuideModalOpen && (
           <UserGuideModal
             isOpen={isUserGuideModalOpen}
@@ -4495,7 +4481,6 @@ export default function App() {
           />
         )}
 
-        {/* Share App & Connection Help Modal */}
         {isShareAppModalOpen && (
           <ShareAppModal
             isOpen={isShareAppModalOpen}
@@ -4504,7 +4489,6 @@ export default function App() {
           />
         )}
 
-        {/* Version History & Changelog Modal */}
         {isVersionHistoryModalOpen && (
           <VersionHistoryModal
             isOpen={isVersionHistoryModalOpen}
@@ -4513,7 +4497,6 @@ export default function App() {
           />
         )}
 
-        {/* Notification Modal (အသိပေးချက်များ) */}
         {isNotificationModalOpen && (
           <NotificationModal
             isOpen={isNotificationModalOpen}
@@ -4533,7 +4516,6 @@ export default function App() {
           />
         )}
 
-        {/* Admin Panel (Strictly restricted to Admin user) */}
         {isAdmin && isAdminPanelOpen && (
           <AdminPanel
             isOpen={isAdminPanelOpen}
@@ -4546,7 +4528,6 @@ export default function App() {
         )}
       </React.Suspense>
 
-      {/* Global Search Modal (သိလိုတာပြန်ရှာတာ) */}
       <GlobalSearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
@@ -4561,7 +4542,6 @@ export default function App() {
         }}
       />
 
-      {/* Account & Cloud Sync Modal */}
       <AccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
@@ -4582,7 +4562,6 @@ export default function App() {
         onOpenVersionHistory={() => setIsVersionHistoryModalOpen(true)}
       />
 
-      {/* Reconcile Balance Modal (စာရင်းညှိခြင်း) */}
       <ReconcileBalanceModal
         isOpen={isReconcileModalOpen}
         onClose={() => {
@@ -4596,15 +4575,13 @@ export default function App() {
         onReconcile={handleReconcileBalance}
       />
 
-      {/* Quick Pin Setup Modal (when user clicks lock without having a pin set) */}
-      <PinSetupModal
+           <PinSetupModal
         isOpen={isPinSetupModalOpen}
         onClose={() => setIsPinSetupModalOpen(false)}
         lang={lang}
         onSavePin={handleSavePinAndLock}
       />
 
-      {/* Live Database Sync & Delivery Tracker Modal */}
       <DatabaseSyncTrackerModal
         isOpen={isDatabaseTrackerOpen}
         onClose={() => setIsDatabaseTrackerOpen(false)}
@@ -4620,7 +4597,6 @@ export default function App() {
         onUpdateCloudTxIds={handleUpdateConfirmedCloudTxIds}
       />
 
-      {/* Sync Health Score & Queue Inspector Modal */}
       <SyncHealthModal
         isOpen={isSyncHealthModalOpen}
         onClose={() => setIsSyncHealthModalOpen(false)}
@@ -4629,14 +4605,13 @@ export default function App() {
         cloudTxIds={cloudTxIds}
         debts={debts}
         wallets={computedWallets}
-        activeWorkspaceId={activeWorkspaceId}
+        activeWorkspaceId={activeWorkspaceId || undefined}
         onForcePushAll={handleForcePushAll}
         onForcePullAll={handleForcePullAll}
         onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
         onUpdateCloudTxIds={handleUpdateConfirmedCloudTxIds}
       />
 
-      {/* Sync Status Drawer & Exact Error Tracker */}
       <SyncStatusDrawer
         isOpen={isSyncStatusDrawerOpen}
         onClose={() => setIsSyncStatusDrawerOpen(false)}
@@ -4647,7 +4622,6 @@ export default function App() {
         onDeleteTransaction={handleDeleteTransaction}
       />
 
-      {/* Login Screen Overlay when requested from within guest mode */}
       {(isAuthModalOpen || showLoginModal) && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
           <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg">

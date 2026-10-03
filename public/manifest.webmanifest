@@ -1,0 +1,27 @@
+{
+  "name": "ငွေစာရင်း - Income, Expense & Debt Manager",
+  "short_name": "ငွေစာရင်း",
+  "description": "ဝင်ငွေ၊ ထွက်ငွေနှင့် အကြွေး (ပေးရန်/ရရန်) စာရင်းများကို စနစ်တကျ မှတ်တမ်းတင်နိုင်သော ဘဏ္ဍာရေး စီမံခန့်ခွဲမှု ဆော့ဖ်ဝဲ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

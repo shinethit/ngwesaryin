@@ -1,0 +1,299 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with plan details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "plan": { "type": "string", "enum": ["free", "premium"] },
+        "premiumExpiresAt": { "type": "string" },
+        "premiumActivatedAt": { "type": "string" },
+        "premiumMonths": { "type": "number" },
+        "premiumCodeUsed": { "type": "string", "maxLength": 128 },
+        "trialClaimed": { "type": "boolean" },
+        "trialClaimedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "email", "plan"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial income or expense record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "amount": { "type": "number" },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "subCategoryId": { "type": "string", "maxLength": 128 },
+        "walletId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 64 },
+        "note": { "type": "string", "maxLength": 1000 },
+        "receiptUrl": { "type": "string", "maxLength": 1024 },
+        "isRecurring": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "type", "amount", "categoryId", "walletId", "date"]
+    },
+    "Debt": {
+      "title": "Debt",
+      "description": "Lent (receivable) or borrowed (payable) debt record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["lent", "borrowed"] },
+        "personName": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "totalAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "dueDate": { "type": "string", "maxLength": 64 },
+        "startDate": { "type": "string", "maxLength": 64 },
+        "interestRate": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "settled"] },
+        "note": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "type", "personName", "totalAmount", "paidAmount", "status"]
+    },
+    "Wallet": {
+      "title": "Wallet",
+      "description": "Cash, bank, or mobile wallet account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["cash", "bank", "mobile", "crypto", "savings"] },
+        "balance": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 16 },
+        "icon": { "type": "string", "maxLength": 64 },
+        "color": { "type": "string", "maxLength": 64 },
+        "accountNumber": { "type": "string", "maxLength": 64 },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "type", "balance"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Transaction category and sub-categories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "nameMy": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "icon": { "type": "string", "maxLength": 64 },
+        "color": { "type": "string", "maxLength": 64 },
+        "isCustom": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "nameMy", "type"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Monthly category budget limit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "monthlyLimit": { "type": "number" },
+        "alertThreshold": { "type": "number" },
+        "walletId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "categoryId", "monthlyLimit"]
+    },
+    "SavingsTarget": {
+      "title": "SavingsTarget",
+      "description": "Monthly savings goal target amount",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "month": { "type": "string", "maxLength": 32 },
+        "targetAmount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "month", "targetAmount"]
+    },
+    "ActivationCode": {
+      "title": "ActivationCode",
+      "description": "Pre-generated codes to upgrade users to premium",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 32 },
+        "months": { "type": "number" },
+        "isUsed": { "type": "boolean" },
+        "usedBy": { "type": "string", "maxLength": 128 },
+        "usedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["code", "months", "isUsed"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Admin users",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User reviews, feature requests, and feedback comments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 256 },
+        "userPlan": { "type": "string", "enum": ["guest", "free", "premium"] },
+        "rating": { "type": "number" },
+        "category": { "type": "string", "enum": ["general", "feature_request", "bug_report", "app_review"] },
+        "comment": { "type": "string", "maxLength": 2000 },
+        "adminReply": { "type": "string", "maxLength": 2000 },
+        "adminRepliedAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "resolved"] },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "userName", "rating", "category", "comment", "status", "createdAt"]
+    },
+    "Visitor": {
+      "title": "Visitor",
+      "description": "Visitor and Guest analytics record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "isGuest": { "type": "boolean" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 256 },
+        "country": { "type": "string", "maxLength": 128 },
+        "countryCode": { "type": "string", "maxLength": 10 },
+        "city": { "type": "string", "maxLength": 128 },
+        "device": { "type": "string", "enum": ["mobile", "desktop", "tablet"] },
+        "browser": { "type": "string", "maxLength": 64 },
+        "ip": { "type": "string", "maxLength": 64 },
+        "visitCount": { "type": "number" },
+        "firstSeenAt": { "type": "number" },
+        "lastActiveAt": { "type": "number" }
+      },
+      "required": ["id", "isGuest", "visitCount", "firstSeenAt", "lastActiveAt"]
+    },
+    "SharedWallet": {
+      "title": "SharedWallet",
+      "description": "Collaborative wallet shared with specific collaborator emails",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "ownerEmail": { "type": "string", "maxLength": 256 },
+        "ownerName": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "nameEn": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 32 },
+        "balance": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 16 },
+        "color": { "type": "string", "maxLength": 64 },
+        "icon": { "type": "string", "maxLength": 64 },
+        "sharedWith": { "type": "array" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "ownerUid", "name", "balance", "sharedWith"]
+    }
+  },
+  "firestore": {
+    "/sharedWallets/{walletId}": {
+      "schema": "SharedWallet",
+      "description": "Individually shared wallet records accessible by collaborator emails"
+    },
+    "/sharedWallets/{walletId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Transactions belonging to a shared collaborative wallet"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with plan details"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User income and expense transaction records"
+    },
+    "/users/{userId}/debts/{debtId}": {
+      "schema": "Debt",
+      "description": "User debt and loan tracking records"
+    },
+    "/users/{userId}/wallets/{walletId}": {
+      "schema": "Wallet",
+      "description": "User cash and bank wallet accounts"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "User custom transaction categories"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": "Budget",
+      "description": "User category budget limits"
+    },
+    "/users/{userId}/savingsTargets/{targetId}": {
+      "schema": "SavingsTarget",
+      "description": "User monthly savings target goals"
+    },
+    "/activationCodes/{codeId}": {
+      "schema": "ActivationCode",
+      "description": "Global premium activation codes"
+    },
+    "/admins/{userId}": {
+      "schema": "Admin",
+      "description": "List of global admins"
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User reviews and feedback submissions"
+    },
+    "/visitors/{visitorId}": {
+      "schema": "Visitor",
+      "description": "Visitor and Guest analytics records"
+    },
+    "/users/{userId}/shops/{shopId}": {
+      "schema": "ShopContact",
+      "description": "User private shop address directory"
+    },
+    "/users/{userId}/vehicles/{vehicleId}": {
+      "schema": "Vehicle",
+      "description": "User vehicles, cars, and motorbikes"
+    },
+    "/users/{userId}/fuelLogs/{fuelLogId}": {
+      "schema": "FuelLog",
+      "description": "User vehicle fuel logs and mileage records"
+    },
+    "/users/{userId}/vehicleMaintenance/{maintenanceId}": {
+      "schema": "VehicleMaintenance",
+      "description": "User vehicle maintenance and spare part records"
+    },
+    "/users/{userId}/tirePressureLogs/{logId}": {
+      "schema": "TirePressureLog",
+      "description": "User tire pressure logs"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+import { useState, useEffect, useRef } from 'react';
+
+/**
+ * Custom hook to manage state persisted in localStorage.
+ * Handles JSON parsing errors and provides a consistent interface.
+ */
+export function usePersistedState<T>(
+  key: string,
+  initial: T,
+  validator?: (data: any) => data is T
+): [T, (value: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!validator || validator(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn(`Error parsing persisted state for ${key}:`, e);
+    }
+    return initial;
+  });
+
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+    try {
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch (e) {
+      console.warn(`Error persisting state for ${key}:`, e);
+    }
+  }, [key, state]);
+
+  const setPersistedState = (value: T | ((prev: T) => T)) => {
+    const nextValue = value instanceof Function ? value(stateRef.current) : value;
+    setState(nextValue);
+  };
+
+  return [state, setPersistedState];
+}

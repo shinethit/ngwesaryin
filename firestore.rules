@@ -1,0 +1,254 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // 1. HELPER FUNCTIONS
+    // =========================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function userEmail() {
+      return request.auth.token.email != null ? request.auth.token.email : '';
+    }
+
+    function userEmailLower() {
+      return userEmail().lower();
+    }
+
+    // Master admin — MUST match AuthContext.tsx isMasterAdminEmail()
+    // ⚠️ Change this email if you change admin
+    function isMasterAdmin() {
+      return isSignedIn() && userEmailLower() == 'khunthanshwe@gmail.com';
+    }
+
+    // Registered admin via /admins/{uid} collection
+    function isRegisteredAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isMasterAdmin() || isRegisteredAdmin();
+    }
+
+    // Collaborator check on another user's workspace
+    // Uses .get('collaborators', []) to safely fallback if field is missing
+    function isCollaborator(userId) {
+      return isSignedIn()
+        && userEmail() != ''
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && (
+          userEmail() in get(/databases/$(database)/documents/users/$(userId)).data.get('collaborators', [])
+          || userEmailLower() in get(/databases/$(database)/documents/users/$(userId)).data.get('collaborators', [])
+        );
+    }
+
+    function canAccess(userId) {
+      return isOwner(userId) || isAdmin() || isCollaborator(userId);
+    }
+
+    // Shared wallet membership check
+    function isSharedWalletMember(walletId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/sharedWallets/$(walletId))
+        && (
+          get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid
+          || userEmail() in get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('sharedWith', [])
+          || userEmailLower() in get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('sharedWith', [])
+        );
+    }
+
+    function isSharedWalletOwner(walletId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/sharedWallets/$(walletId))
+        && get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // =========================================================
+    // 2. COLLECTION GROUP MATCHES (Admin Analytics Only)
+    //    These allow admins to run collectionGroup() queries.
+    // =========================================================
+    match /{path=**}/transactions/{transactionId} {
+      allow read: if isAdmin();
+    }
+
+    match /{path=**}/wallets/{walletId} {
+      allow read: if isAdmin();
+    }
+
+    match /{path=**}/categories/{categoryId} {
+      allow read: if isAdmin();
+    }
+
+    // =========================================================
+    // 3. /admins/{adminId} — FIXED (was: privilege escalation)
+    //    Anyone could self-register as admin. Now only master admin.
+    // =========================================================
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if isMasterAdmin();
+    }
+
+    // =========================================================
+    // 4. /activationCodes/{codeId} — FIXED (was: any user can update)
+    //    Users can only mark a code as used (redeem).
+    //    Admins can do anything.
+    // =========================================================
+    match /activationCodes/{codeId} {
+      allow get: if isSignedIn();
+      allow list, create, delete: if isAdmin();
+
+      // Strict redeem-only update:
+      //   - Must transition isUsed from false → true
+      //   - Must set usedBy to own uid
+      //   - Cannot change months, code, createdAt, createdBy
+      allow update: if isSignedIn()
+        && resource.data.isUsed == false
+        && request.resource.data.isUsed == true
+        && request.resource.data.usedBy == request.auth.uid
+        && request.resource.data.months == resource.data.months
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
+    }
+
+    // =========================================================
+    // 5. System-wide messages / settings / config
+    // =========================================================
+    match /systemMessages/{messageId} {
+      allow get, list: if true;
+      allow write: if isAdmin();
+    }
+
+    match /systemSettings/{settingId} {
+      allow get, list: if true;
+      allow write: if isAdmin();
+    }
+
+    match /systemConfig/{configId} {
+      allow get, list: if true;
+      allow write: if isAdmin();
+    }
+
+    // =========================================================
+    // 6. /feedbacks/{feedbackId}
+    //    Public read + create (allows guest feedback).
+    //    Only admin or feedback owner can update/delete.
+    // =========================================================
+    match /feedbacks/{feedbackId} {
+      allow get, list: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // =========================================================
+    // 7. /visitors/{visitorId} — FIXED (was: anyone can read/write)
+    //    Create/update open (for anonymous visitor tracking).
+    //    Read limited to admins + signed-in users.
+    //    Delete only admins.
+    // =========================================================
+    match /visitors/{visitorId} {
+      allow create, update: if true;
+      allow get, list: if isAdmin() || isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 8. /public_shops/{shopId} — FIXED (was: any user can delete)
+    //    Public read. Only creator or admin can update/delete.
+    // =========================================================
+    match /public_shops/{shopId} {
+      allow get, list: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.addedByUid == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && (resource.data.addedByUid == request.auth.uid || isAdmin());
+    }
+
+    // =========================================================
+    // 9. /sharedWallets/{walletId} — FIXED (was: any signed-in user)
+    //    Only wallet members (owner or sharedWith list) can access.
+    // =========================================================
+    match /sharedWallets/{walletId} {
+      allow read: if isSharedWalletMember(walletId);
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+      // Owner can update freely
+      allow update: if isSharedWalletOwner(walletId);
+      // Collaborator can only touch balance, updatedAt, sharedWith, permissions
+      allow update: if isSharedWalletMember(walletId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['balance', 'updatedAt', 'sharedWith', 'collaboratorPermissions']);
+      allow delete: if isSharedWalletOwner(walletId) || isAdmin();
+
+      match /transactions/{transactionId} {
+        allow read, write: if isSharedWalletMember(walletId);
+      }
+    }
+
+    // =========================================================
+    // 10. /users/{userId} and all subcollections
+    //     Only owner, admin, or registered collaborator.
+    // =========================================================
+    match /users/{userId} {
+      allow read, write: if canAccess(userId);
+
+      match /transactions/{transactionId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /debts/{debtId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /wallets/{walletId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /categories/{categoryId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /budgets/{budgetId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /savingsTargets/{targetId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /shops/{shopId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /vehicles/{vehicleId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /fuelLogs/{fuelLogId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /vehicleMaintenance/{maintenanceId} {
+        allow read, write: if canAccess(userId);
+      }
+
+      match /tirePressureLogs/{logId} {
+        allow read, write: if canAccess(userId);
+      }
+    }
+  }
+}

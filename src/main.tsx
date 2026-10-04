@@ -99,7 +99,7 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !import.met
       }
     });
   });
-
+}   // ← ⭐ FIX: SW if ကို ဒီမှာ ပိတ်လိုက်ပြီ (အရင် ဖိုင်အဆုံးမှာ ရောက်နေခဲ့တယ်)
 
 // Auto Zoom-Out & Viewport Reset when typing finishes (input blur)
 if (typeof window !== 'undefined') {
@@ -158,5 +158,4 @@ if (rootElement) {
       </div>`;
     }
   }
-}
 }

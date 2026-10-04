@@ -99,7 +99,7 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !import.met
       }
     });
   });
-}
+
 
 // Auto Zoom-Out & Viewport Reset when typing finishes (input blur)
 if (typeof window !== 'undefined') {
@@ -159,4 +159,4 @@ if (rootElement) {
     }
   }
 }
-
+}

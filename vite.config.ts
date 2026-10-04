@@ -13,8 +13,8 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      sourcemap: true,       // ⭐ debug
-      minify: false,         // ⭐ debug
+      sourcemap: false,       // ⭐ debug
+      minify: true,         // ⭐ debug
       chunkSizeWarningLimit: 3500,
       rollupOptions: {
         output: {

@@ -19,30 +19,35 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
-
-            // ⭐ React family + use-sync-external-store — တစ်ခုထဲသော chunk
             if (
               id.includes('/react/') ||
               id.includes('/react-dom/') ||
               id.includes('/react-is/') ||
               id.includes('/scheduler/') ||
-              id.includes('/use-sync-external-store/')   // ⭐ NEW
+              id.includes('/use-sync-external-store/')
             ) {
               return 'react-vendor';
             }
-
             if (id.includes('/firebase/') || id.includes('/@firebase/')) {
               return 'firebase-vendor';
             }
-
-            // ⚠️ chart-vendor ကို လုံးဝ မဖန်တီးတော့ပါ
-            // recharts ကို main bundle ထဲ ထားလိုက်ပါ
           },
         },
       },
     },
     resolve: {
-      // ⭐ use-sync-external-store ကို dedupe ထည့်ပြီ
+      // ⭐ KEY FIX: React family ကို single file အဖြစ် force
+      alias: [
+        { find: /^react$/, replacement: path.resolve(__dirname, 'node_modules/react/index.js') },
+        { find: /^react\/jsx-runtime$/, replacement: path.resolve(__dirname, 'node_modules/react/jsx-runtime.js') },
+        { find: /^react\/jsx-dev-runtime$/, replacement: path.resolve(__dirname, 'node_modules/react/jsx-dev-runtime.js') },
+        { find: /^react-dom$/, replacement: path.resolve(__dirname, 'node_modules/react-dom/index.js') },
+        { find: /^react-dom\/client$/, replacement: path.resolve(__dirname, 'node_modules/react-dom/client.js') },
+        { find: /^react-dom\/server$/, replacement: path.resolve(__dirname, 'node_modules/react-dom/server.js') },
+        { find: /^scheduler$/, replacement: path.resolve(__dirname, 'node_modules/scheduler/index.js') },
+        { find: /^react-is$/, replacement: path.resolve(__dirname, 'node_modules/react-is/index.js') },
+        { find: '@', replacement: path.resolve(__dirname, '.') },
+      ],
       dedupe: [
         'react',
         'react-dom',
@@ -50,14 +55,13 @@ export default defineConfig(({ mode }) => {
         'scheduler',
         'use-sync-external-store',
       ],
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
     },
     optimizeDeps: {
       include: [
         'react',
         'react-dom',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
         'react-is',
         'scheduler',
         'recharts',

@@ -1,10 +1,10 @@
-const CACHE_VERSION = 'v9';  // ⭐ Fix တိုင်း ဒါကို bump
+﻿const CACHE_VERSION = 'v10';  // â­ Fix á€á€­á€¯á€„á€ºá€¸ á€’á€«á€€á€­á€¯ bump
 const CACHE_NAME = `ngwesaryin-live-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',              // ⭐ .json ဖြစ်ရမယ် (file name နဲ့ တူရမယ်)
+  '/manifest.webmanifest',       // â­ .webmanifest (file name á€”á€²á€· á€á€°á€›á€™á€šá€º)
   '/icon.svg',
   '/apple-touch-icon.png',
   '/pwa-192x192.png',
@@ -16,7 +16,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // ⭐ File တစ်ခုချင်း ခွဲပြီး cache — တစ်ခု fail ရင် ကျန်တာ မပျက်စေရ
+      // â­ File á€á€…á€ºá€á€¯á€á€»á€„á€ºá€¸ á€á€½á€²á€•á€¼á€®á€¸ cache â€” á€á€…á€ºá€á€¯ fail á€›á€„á€º á€€á€»á€”á€ºá€á€¬ á€™á€•á€»á€€á€ºá€…á€±á€›
       for (const asset of PRECACHE_ASSETS) {
         try {
           await cache.add(asset);
@@ -50,7 +50,7 @@ self.addEventListener('message', (event) => {
 });
 
 /**
- * Fetch with timeout — 5s (slow networks/VPNs)
+ * Fetch with timeout â€” 5s (slow networks/VPNs)
  */
 function fetchWithTimeout(request, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
@@ -64,19 +64,19 @@ function fetchWithTimeout(request, timeoutMs = 5000) {
 }
 
 /**
- * ⭐ Safe cache.put — scheme + status check
+ * â­ Safe cache.put â€” scheme + status check
  */
 async function safeCachePut(cache, request, response) {
   try {
     const url = request.url;
-    // HTTP/HTTPS သာ cache လုပ်ပါ
+    // HTTP/HTTPS á€žá€¬ cache á€œá€¯á€•á€ºá€•á€«
     if (!url.startsWith('http://') && !url.startsWith('https://')) return;
-    // Response status 200 (သို့) opaque သာ
+    // Response status 200 (á€žá€­á€¯á€·) opaque á€žá€¬
     if (response && (response.status === 200 || response.type === 'opaque')) {
       await cache.put(request, response);
     }
   } catch (err) {
-    // Silent — chrome-extension, unsupported scheme, etc.
+    // Silent â€” chrome-extension, unsupported scheme, etc.
   }
 }
 
@@ -87,10 +87,10 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // ⭐⭐ CRITICAL: HTTP/HTTPS မဟုတ်ရင် လုံးဝ မကိုင်ရ (chrome-extension://, etc.)
+  // â­â­ CRITICAL: HTTP/HTTPS á€™á€Ÿá€¯á€á€ºá€›á€„á€º á€œá€¯á€¶á€¸á€ á€™á€€á€­á€¯á€„á€ºá€› (chrome-extension://, etc.)
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // ⭐ Firebase / Google APIs ကို SW handle မလုပ်ရ — network ကတည်းက
+  // â­ Firebase / Google APIs á€€á€­á€¯ SW handle á€™á€œá€¯á€•á€ºá€› â€” network á€€á€á€Šá€ºá€¸á€€
   if (
     url.hostname.includes('firestore.googleapis.com') ||
     url.hostname.includes('identitytoolkit.googleapis.com') ||

@@ -1,0 +1,30 @@
+/manifest.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=3600
+
+/sw.js
+  Content-Type: application/javascript
+  Cache-Control: public, max-age=0, must-revalidate
+
+/apple-touch-icon.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
+
+/pwa-192x192.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
+
+/pwa-512x512.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
+
+/pwa-maskable-512x512.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY

@@ -1,5 +1,4 @@
-﻿const CACHE_VERSION = 'v10';
-const CACHE_NAME = `ngwesaryin-live-${CACHE_VERSION}`;
+const CACHE_NAME = 'ngwesaryin-live-v8';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -13,103 +12,138 @@ const PRECACHE_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Force immediate activation of new worker version
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      for (const asset of PRECACHE_ASSETS) {
-        try { await cache.add(asset); }
-        catch (err) { console.warn('[SW] Pre-cache skipped:', asset); }
-      }
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+        console.warn('Pre-cache warning:', err);
+      });
     })
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(
-        names
-          .filter((n) => n !== CACHE_NAME && n.startsWith('ngwesaryin-'))
-          .map((n) => caches.delete(n))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => {
+            console.log('Clearing old service worker cache:', name);
+            return caches.delete(name);
+          })
+      );
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
-async function safeCachePut(cache, request, response) {
-  try {
-    const url = request.url;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) return;
-    if (response && (response.status === 200 || response.type === 'opaque')) {
-      await cache.put(request, response);
-    }
-  } catch (err) {}
+/**
+ * Helper to fetch with a strict timeout to prevent slow networks / VPNs from hanging the UI
+ */
+function fetchWithTimeout(request, timeoutMs = 1500) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Network timeout in Service Worker'));
+    }, timeoutMs);
+
+    fetch(request)
+      .then((response) => {
+        clearTimeout(timer);
+        resolve(response);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 }
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET') return;
 
+  if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-
+  // Skip Firebase Auth, Firestore and GCP Cloud live sync calls
   if (
     url.hostname.includes('firestore.googleapis.com') ||
     url.hostname.includes('identitytoolkit.googleapis.com') ||
-    url.hostname.includes('firebaseio.com') ||
-    url.hostname.includes('googleapis.com') ||
-    url.hostname.includes('gstatic.com') ||
-    url.hostname.includes('google.com') ||
-    url.hostname.includes('google-analytics.com')
+    url.hostname.includes('firebase') ||
+    url.hostname.includes('google')
   ) {
     return;
   }
 
+  // Fast Network-First with 1.5s timeout for HTML & Dynamic Chunks
+  // If network takes > 1.5s, immediately serve cached build so devices open in 0.1s!
   const isCodeOrHtml =
     request.mode === 'navigate' ||
     url.pathname.endsWith('.html') ||
     url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.ts') ||
+    url.pathname.endsWith('.tsx') ||
     url.pathname.endsWith('.css') ||
+    url.pathname.startsWith('/src/') ||
     url.pathname.startsWith('/assets/');
 
   if (isCodeOrHtml) {
     event.respondWith(
-      fetch(request)
+      fetchWithTimeout(request, 1500)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => safeCachePut(cache, request, clone));
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
           }
           return networkResponse;
         })
-        .catch(() =>
-          caches.match(request).then((cached) => {
-            if (cached) return cached;
-            if (request.mode === 'navigate') return caches.match('/index.html');
-            return new Response('Offline', { status: 408 });
-          })
-        )
+        .catch(() => {
+          return caches.match(request).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // Fallback to index.html for SPA routing
+            if (request.mode === 'navigate') {
+              return caches.match('/index.html');
+            }
+            return new Response('Network error and no cache available', {
+              status: 408,
+              headers: { 'Content-Type': 'text/plain' },
+            });
+          });
+        })
     );
     return;
   }
 
+  // Cache-First for static assets (images, fonts, icons)
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => safeCachePut(cache, request, clone));
-          }
-          return networkResponse;
-        })
-        .catch(() => new Response('Offline', { status: 404 }));
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        return new Response('Offline resource not available', {
+          status: 404,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      });
     })
   );
 });

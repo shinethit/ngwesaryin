@@ -2,41 +2,31 @@
 <html lang="my">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
-    
-    <!-- ⭐ iOS PWA — REQUIRED -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="ငွေစာရင်း" />
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="theme-color" content="#059669" />
-    
-    <!-- ⭐ apple-touch-icon — REQUIRED (iOS home screen icon) -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192x192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/pwa-512x512.png" />
-    
-    <!-- ⭐ Manifest -->
-    <link rel="manifest" href="/manifest.webmanifest" />
-    
-    <!-- ⭐ Icons -->
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
-    
-    <title>ငွေစာရင်း - Income, Expense & Debt Manager</title>
-    <meta name="description" content="ဝင်ငွေ၊ ထွက်ငွေနှင့် အကြွေး (ပေးရန်/ရရန်) စာရင်းများကို စနစ်တကျ မှတ်တမ်းတင်နိုင်သော ဘဏ္ဍာရေး စီမံခန့်ခွဲမှု ဆော့ဖ်ဝဲ" />
-    
-    <!-- ⭐ Cache-Control meta tags ဖျက်ပြီ — iOS PWA install block လုပ်နေတာ -->
-    <!-- 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>ငွေစာရင်း - Income, Expense & Debt Manager</title>
+    <meta name="description" content="ဝင်ငွေ၊ ထွက်ငွေနှင့် အကြွေး (ပေးရန်/ရရန်) စာရင်းများကို စနစ်တကျ မှတ်တမ်းတင်ပြီး Free နှင့် Premium ခွဲခြားအသုံးပြုနိုင်သော ဘဏ္ဍာရေး စီမံခန့်ခွဲမှု ဆော့ဖ်ဝဲ" />
+    <meta property="og:title" content="ငွေစာရင်း - Income, Expense & Debt Manager" />
+    <meta property="og:description" content="ဝင်ငွေ၊ ထွက်ငွေနှင့် အကြွေး (ပေးရန်/ရရန်) စာရင်းများကို စနစ်တကျ မှတ်တမ်းတင်ပြီး Free နှင့် Premium ခွဲခြားအသုံးပြုနိုင်သော ဘဏ္ဍာရေး စီမံခန့်ခွဲမှု ဆော့ဖ်ဝဲ" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#059669" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="ငွေစာရင်း" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+    </noscript>
   </head>
-  <body>
-    <!-- ကျန်တာ အတူတူ -->
   <body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-emerald-500 selection:text-white">
     <div id="root">
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; color: #047857; background: #F8FAFC; padding: 24px; text-align: center;">

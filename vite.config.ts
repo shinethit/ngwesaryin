@@ -9,11 +9,7 @@ export default defineConfig(({ mode }) => {
   const shouldDisableHMR = isProduction || isAIS;
 
   return {
-    plugins: [
-      react(),
-      tailwindcss(),
-      // ❌ splitVendorChunkPlugin() ဖြုတ်လိုက်ပြီ — manualChunks နဲ့ ရှုပ်နေတယ်
-    ],
+    plugins: [react(), tailwindcss()],
     build: {
       outDir: 'dist',
       emptyOutDir: true,
@@ -21,38 +17,52 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 3500,
       rollupOptions: {
         output: {
-          // Function form — module path အလိုက် ခွဲ (object form ထက် ပိုတိကျ)
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
 
-            // ⭐ React family — တစ်ခုထဲသော chunk ဖြစ်ရမယ်
+            // ⭐ React family + use-sync-external-store — တစ်ခုထဲသော chunk
             if (
               id.includes('/react/') ||
               id.includes('/react-dom/') ||
               id.includes('/react-is/') ||
-              id.includes('/scheduler/')
+              id.includes('/scheduler/') ||
+              id.includes('/use-sync-external-store/')   // ⭐ NEW
             ) {
               return 'react-vendor';
             }
+
             if (id.includes('/firebase/') || id.includes('/@firebase/')) {
               return 'firebase-vendor';
             }
-            if (id.includes('/recharts/') || id.includes('/d3-')) {
-              return 'chart-vendor';
-            }
+
+            // ⚠️ chart-vendor ကို လုံးဝ မဖန်တီးတော့ပါ
+            // recharts ကို main bundle ထဲ ထားလိုက်ပါ
           },
         },
       },
     },
     resolve: {
-      // ⭐ react-is နဲ့ scheduler ပါ ထည့်ပြီ — Error #321 ရဲ့ အဓိက fix
-      dedupe: ['react', 'react-dom', 'react-is', 'scheduler'],
+      // ⭐ use-sync-external-store ကို dedupe ထည့်ပြီ
+      dedupe: [
+        'react',
+        'react-dom',
+        'react-is',
+        'scheduler',
+        'use-sync-external-store',
+      ],
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
     optimizeDeps: {
-      include: ['react', 'react-dom', 'react-is', 'scheduler', 'recharts'],
+      include: [
+        'react',
+        'react-dom',
+        'react-is',
+        'scheduler',
+        'recharts',
+        'use-sync-external-store',
+      ],
     },
     server: {
       port: 3000,
@@ -61,10 +71,7 @@ export default defineConfig(({ mode }) => {
       watch: shouldDisableHMR
         ? null
         : {
-            awaitWriteFinish: {
-              stabilityThreshold: 1000,
-              pollInterval: 100,
-            },
+            awaitWriteFinish: { stabilityThreshold: 1000, pollInterval: 100 },
             usePolling: false,
           },
     },

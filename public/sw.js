@@ -1,9 +1,10 @@
-const CACHE_NAME = 'ngwesaryin-live-v8';
+const CACHE_VERSION = 'v9';  // ⭐ Fix တိုင်း ဒါကို bump
+const CACHE_NAME = `ngwesaryin-live-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
+  '/manifest.json',              // ⭐ .json ဖြစ်ရမယ် (file name နဲ့ တူရမယ်)
   '/icon.svg',
   '/apple-touch-icon.png',
   '/pwa-192x192.png',
@@ -12,13 +13,17 @@ const PRECACHE_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  // Force immediate activation of new worker version
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('Pre-cache warning:', err);
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // ⭐ File တစ်ခုချင်း ခွဲပြီး cache — တစ်ခု fail ရင် ကျန်တာ မပျက်စေရ
+      for (const asset of PRECACHE_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn(`[SW] Pre-cache skipped: ${asset}`, err);
+        }
+      }
     })
   );
 });
@@ -28,9 +33,9 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
+          .filter((name) => name !== CACHE_NAME && name.startsWith('ngwesaryin-'))
           .map((name) => {
-            console.log('Clearing old service worker cache:', name);
+            console.log('[SW] Clearing old cache:', name);
             return caches.delete(name);
           })
       );
@@ -45,72 +50,81 @@ self.addEventListener('message', (event) => {
 });
 
 /**
- * Helper to fetch with a strict timeout to prevent slow networks / VPNs from hanging the UI
+ * Fetch with timeout — 5s (slow networks/VPNs)
  */
-function fetchWithTimeout(request, timeoutMs = 1500) {
+function fetchWithTimeout(request, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error('Network timeout in Service Worker'));
+      reject(new Error('SW fetch timeout'));
     }, timeoutMs);
-
     fetch(request)
-      .then((response) => {
-        clearTimeout(timer);
-        resolve(response);
-      })
-      .catch((err) => {
-        clearTimeout(timer);
-        reject(err);
-      });
+      .then((response) => { clearTimeout(timer); resolve(response); })
+      .catch((err) => { clearTimeout(timer); reject(err); });
   });
+}
+
+/**
+ * ⭐ Safe cache.put — scheme + status check
+ */
+async function safeCachePut(cache, request, response) {
+  try {
+    const url = request.url;
+    // HTTP/HTTPS သာ cache လုပ်ပါ
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return;
+    // Response status 200 (သို့) opaque သာ
+    if (response && (response.status === 200 || response.type === 'opaque')) {
+      await cache.put(request, response);
+    }
+  } catch (err) {
+    // Silent — chrome-extension, unsupported scheme, etc.
+  }
 }
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   if (request.method !== 'GET') return;
+
   const url = new URL(request.url);
 
-  // Skip Firebase Auth, Firestore and GCP Cloud live sync calls
+  // ⭐⭐ CRITICAL: HTTP/HTTPS မဟုတ်ရင် လုံးဝ မကိုင်ရ (chrome-extension://, etc.)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // ⭐ Firebase / Google APIs ကို SW handle မလုပ်ရ — network ကတည်းက
   if (
     url.hostname.includes('firestore.googleapis.com') ||
     url.hostname.includes('identitytoolkit.googleapis.com') ||
-    url.hostname.includes('firebase') ||
-    url.hostname.includes('google')
+    url.hostname.includes('firebaseio.com') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('gstatic.com') ||
+    url.hostname.includes('google.com') ||
+    url.hostname.includes('google-analytics.com')
   ) {
     return;
   }
 
-  // Fast Network-First with 1.5s timeout for HTML & Dynamic Chunks
-  // If network takes > 1.5s, immediately serve cached build so devices open in 0.1s!
   const isCodeOrHtml =
     request.mode === 'navigate' ||
     url.pathname.endsWith('.html') ||
     url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.ts') ||
-    url.pathname.endsWith('.tsx') ||
     url.pathname.endsWith('.css') ||
-    url.pathname.startsWith('/src/') ||
     url.pathname.startsWith('/assets/');
 
   if (isCodeOrHtml) {
     event.respondWith(
-      fetchWithTimeout(request, 1500)
+      fetchWithTimeout(request, 5000)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
+              safeCachePut(cache, request, responseClone);
             });
           }
           return networkResponse;
         })
         .catch(() => {
           return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Fallback to index.html for SPA routing
+            if (cachedResponse) return cachedResponse;
             if (request.mode === 'navigate') {
               return caches.match('/index.html');
             }
@@ -124,17 +138,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-First for static assets (images, fonts, icons)
+  // Cache-First for static assets
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+      if (cachedResponse) return cachedResponse;
       return fetch(request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
+            safeCachePut(cache, request, responseClone);
           });
         }
         return networkResponse;

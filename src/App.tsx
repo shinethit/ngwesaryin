@@ -3678,7 +3678,7 @@ if (typeof window !== 'undefined') {
   }
 
   // App Main Content
-  if (isLocked && pinSettings?.isEnabled && pinSettings?.pin && pinSettings.pin.length === 4) {
+  if (isLocked && pinSettings?.isEnabled && pinSettings?.pin) {
     return (
             <PinLockScreen
         pinHash={pinSettings.pin}

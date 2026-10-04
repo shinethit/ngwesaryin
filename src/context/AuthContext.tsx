@@ -1167,11 +1167,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           () => getDocs(collection(db, 'users', targetUid, 'tirePressureLogs')),
           12000
         ),
-        safeFetch(
-          () => getDocsFromServer(collection(db, 'sharedWallets')),
-          () => getDocs(collection(db, 'sharedWallets')),
-          15000
-        ),
+        // [QUOTA-GUARD v6.1.1] Scoped sharedWallets query.
+        // BEFORE: read the ENTIRE sharedWallets collection (all users' shared wallets).
+        // AFTER: only fetch (a) wallets I own + (b) wallets shared with me.
+        // Saves potentially hundreds of reads per pull on a multi-user system.
+        (async () => {
+          try {
+            const me = (auth.currentUser?.email || '').trim().toLowerCase();
+            const ownQ = query(
+              collection(db, 'sharedWallets'),
+              where('ownerUid', '==', uid)
+            );
+            const sharedQ = me
+              ? query(
+                  collection(db, 'sharedWallets'),
+                  where('sharedWith', 'array-contains', me)
+                )
+              : null;
+
+            const [ownSnap, sharedSnap] = await Promise.all([
+              withTimeout(getDocsFromServer(ownQ), 15000).catch(() => null),
+              sharedQ
+                ? withTimeout(getDocsFromServer(sharedQ), 15000).catch(() => null)
+                : Promise.resolve(null),
+            ]);
+
+            const mergedDocs: any[] = [];
+            if (ownSnap) ownSnap.docs.forEach((d) => mergedDocs.push(d));
+            if (sharedSnap) {
+              sharedSnap.docs.forEach((d) => {
+                if (!mergedDocs.some((m) => m.id === d.id)) mergedDocs.push(d);
+              });
+            }
+
+            return {
+              docs: mergedDocs,
+              empty: mergedDocs.length === 0,
+              size: mergedDocs.length,
+            };
+          } catch {
+            return { docs: [], empty: true, size: 0 };
+          }
+        })(),
       ]);
 
       let userPlan: PlanType | undefined = undefined;

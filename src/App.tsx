@@ -1501,9 +1501,13 @@ export default function App() {
             });
 
             // Upsert / update transactions from shared wallet
+            // FIX (v5.3.33): Do NOT re-add txs marked as deleted.
+            // unmarkTxDeleted() here was resurrecting txs iOS deleted
+            // but whose shared-wallet copy hadn't propagated yet.
             sharedTxs.forEach((t) => {
               if (t && t.id) {
-                unmarkTxDeleted(t.id);
+                if (isTxDeleted(t.id)) return;
+                if (deletedTxIds && deletedTxIds.includes(t.id)) return;
                 const existing = map.get(t.id);
                 map.set(t.id, { ...(existing as any), ...(t as any) } as Transaction);
               }

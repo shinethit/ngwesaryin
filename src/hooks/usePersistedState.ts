@@ -1,9 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 
-/**
- * Custom hook to manage state persisted in localStorage.
- * Handles JSON parsing errors and provides a consistent interface.
- */
 export function usePersistedState<T>(
   key: string,
   initial: T,
@@ -13,6 +9,24 @@ export function usePersistedState<T>(
     try {
       const saved = localStorage.getItem(key);
       if (saved) {
+        // ⭐ Defensive: legacy raw string ဖြစ်နေရင် JSON.parse မလုပ်ဘဲ as-is ပြန်ပေး
+        // 'my', 'en', 'true', 'false', 'null' တွေ JSON tokens တွေနဲ့ မတူဘူး
+        const isLikelyRawString =
+          !saved.startsWith('"') &&
+          !saved.startsWith('{') &&
+          !saved.startsWith('[') &&
+          !saved.startsWith('t') &&
+          !saved.startsWith('f') &&
+          !saved.startsWith('n') &&
+          !/^-?\d/.test(saved);
+
+        if (isLikelyRawString) {
+          // Legacy format — assume it's the raw string value
+          if (!validator || validator(saved)) {
+            return saved as unknown as T;
+          }
+        }
+
         const parsed = JSON.parse(saved);
         if (!validator || validator(parsed)) {
           return parsed;
@@ -29,7 +43,7 @@ export function usePersistedState<T>(
   useEffect(() => {
     stateRef.current = state;
     try {
-      localStorage.setItem(key, JSON.stringify(state));
+      localStorage.setItem(key, JSON.stringify(state));  // ✅ always JSON
     } catch (e) {
       console.warn(`Error persisting state for ${key}:`, e);
     }

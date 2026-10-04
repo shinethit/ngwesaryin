@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { defineConfig, splitVendorChunkPlugin } from 'vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      splitVendorChunkPlugin(),
+      // ❌ splitVendorChunkPlugin() ဖြုတ်လိုက်ပြီ — manualChunks နဲ့ ရှုပ်နေတယ်
     ],
     build: {
       outDir: 'dist',
@@ -21,22 +21,38 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 3500,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom'],
-            'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-            'chart-vendor': ['recharts'],
+          // Function form — module path အလိုက် ခွဲ (object form ထက် ပိုတိကျ)
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+
+            // ⭐ React family — တစ်ခုထဲသော chunk ဖြစ်ရမယ်
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('/react-is/') ||
+              id.includes('/scheduler/')
+            ) {
+              return 'react-vendor';
+            }
+            if (id.includes('/firebase/') || id.includes('/@firebase/')) {
+              return 'firebase-vendor';
+            }
+            if (id.includes('/recharts/') || id.includes('/d3-')) {
+              return 'chart-vendor';
+            }
           },
         },
       },
     },
     resolve: {
-      dedupe: ['react', 'react-dom'],
+      // ⭐ react-is နဲ့ scheduler ပါ ထည့်ပြီ — Error #321 ရဲ့ အဓိက fix
+      dedupe: ['react', 'react-dom', 'react-is', 'scheduler'],
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
     optimizeDeps: {
-      include: ['react', 'react-dom'],
+      include: ['react', 'react-dom', 'react-is', 'scheduler', 'recharts'],
     },
     server: {
       port: 3000,

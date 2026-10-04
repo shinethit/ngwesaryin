@@ -185,6 +185,17 @@ const isWalletDeleted = (id: string): boolean => {
   }
 };
 
+// 🔧 One-time migration: legacy raw string ('my'/'en') → JSON format
+if (typeof window !== 'undefined') {
+  try {
+    const legacy = localStorage.getItem('ngwe_lang');
+    if (legacy === 'my' || legacy === 'en') {
+      localStorage.setItem('ngwe_lang', JSON.stringify(legacy));
+      console.log('[migration] ngwe_lang converted to JSON');
+    }
+  } catch {}
+}
+
 export default function App() {
   const {
     user,
@@ -244,6 +255,14 @@ export default function App() {
     }
     return 'free';
   }, [user, userProfile]);
+
+  // 🔧 One-time migration: legacy raw string ('my'/'en') ကို ရှင်း
+if (typeof window !== 'undefined') {
+  const legacy = localStorage.getItem('ngwe_lang');
+  if (legacy === 'my' || legacy === 'en') {
+    localStorage.removeItem('ngwe_lang');
+  }
+}
 
   const [lang, setLang] = usePersistedState<'my' | 'en'>('ngwe_lang', 'my');
 
@@ -1394,16 +1413,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Sync to local storage
-  useEffect(() => {
-    safeSetItem('ngwe_plan', plan);
-  }, [plan]);
-
-  useEffect(() => {
-    safeSetItem('ngwe_lang', lang);
-  }, [lang]);
-
-  useEffect(() => {
+    useEffect(() => {
     safeSetItem('ngwe_transactions', JSON.stringify(transactions));
   }, [transactions]);
 

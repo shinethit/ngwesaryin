@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { safeGetItem, safeSetItem, safeRemoveItem } from './utils/storage';
 import {
   INITIAL_BUDGETS,
@@ -185,7 +185,7 @@ const isWalletDeleted = (id: string): boolean => {
   }
 };
 
-// ðŸ”§ One-time migration: legacy raw string ('my'/'en') â†’ JSON format
+// 🔧 One-time migration: legacy raw string ('my'/'en') → JSON format
 if (typeof window !== 'undefined') {
   try {
     const legacy = localStorage.getItem('ngwe_lang');
@@ -256,7 +256,7 @@ export default function App() {
     return 'free';
   }, [user, userProfile]);
 
-  // ðŸ”§ One-time migration: legacy raw string ('my'/'en') á€€á€­á€¯ á€›á€¾á€„á€ºá€¸
+  // 🔧 One-time migration: legacy raw string ('my'/'en') ကို ရှင်း
 if (typeof window !== 'undefined') {
   const legacy = localStorage.getItem('ngwe_lang');
   if (legacy === 'my' || legacy === 'en') {
@@ -520,7 +520,7 @@ if (typeof window !== 'undefined') {
       (c) => c.id === 'cat_groceries' || c.id === 'cat_phone'
     );
     const hasMissingVehicle = !categories.some(
-      (c) => c.id === 'cat_vehicle' || c.name.includes('á€šá€¬á€‰á€ºá€…á€®á€™á€¶')
+      (c) => c.id === 'cat_vehicle' || c.name.includes('ယာဉ်စီမံ')
     );
 
     if (hasRedundant || hasMissingVehicle) {
@@ -567,7 +567,7 @@ if (typeof window !== 'undefined') {
       cloudTxIds
     );
     if (success) {
-      showToast(lang === 'my' ? 'Cloud á€•á€±á€«á€ºá€žá€­á€¯á€· á€¡á€±á€¬á€„á€ºá€™á€¼á€„á€ºá€…á€½á€¬ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Synced to Cloud successfully âœ“');
+      showToast(lang === 'my' ? 'Cloud ပေါ်သို့ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ ✓' : 'Synced to Cloud successfully ✓');
     }
   };
 
@@ -576,7 +576,7 @@ if (typeof window !== 'undefined') {
       setIsAccountModalOpen(true);
       return;
     }
-    showToast(lang === 'my' ? 'ðŸ”„ Cloud á€”á€¾á€„á€·á€º á€¡á€á€»á€€á€ºá€¡á€œá€€á€ºá€™á€»á€¬á€¸ á€á€»á€­á€á€ºá€†á€€á€ºá€”á€±á€•á€«á€žá€Šá€º...' : 'ðŸ”„ Syncing data with Cloud...');
+    showToast(lang === 'my' ? '🔄 Cloud နှင့် အချက်အလက်များ ချိတ်ဆက်နေပါသည်...' : '🔄 Syncing data with Cloud...');
     const ownWallets = computedWallets.filter((w) => !w.isSharedFromOther);
     await syncDataToCloud(
       transactions,
@@ -610,7 +610,7 @@ if (typeof window !== 'undefined') {
     const txsToPush = pendingTxs;
 
     if (txsToPush.length === 0) {
-      showToast(lang === 'my' ? 'Cloud á€”á€¾á€„á€·á€º á€¡á€á€»á€€á€ºá€¡á€œá€€á€ºá€™á€»á€¬á€¸ á€€á€­á€¯á€€á€ºá€Šá€®á€•á€¼á€®á€¸á€–á€¼á€…á€ºá€žá€Šá€º (á€¡á€žá€…á€ºá€á€„á€ºá€›á€”á€º á€™á€›á€¾á€­á€•á€«) âœ“' : 'Already in sync with Cloud (no changes to upload) âœ“');
+      showToast(lang === 'my' ? 'Cloud နှင့် အချက်အလက်များ ကိုက်ညီပြီးဖြစ်သည် (အသစ်တင်ရန် မရှိပါ) ✓' : 'Already in sync with Cloud (no changes to upload) ✓');
       return true;
     }
 
@@ -679,20 +679,20 @@ if (typeof window !== 'undefined') {
       if (totalPushed === txsToPush.length) {
         showToast(
           lang === 'my'
-            ? `Cloud Database á€žá€­á€¯á€· á€…á€¬á€›á€„á€ºá€¸ (${totalPushed}) á€á€¯á€œá€¯á€¶á€¸ á€¡á€±á€¬á€„á€ºá€™á€¼á€„á€ºá€…á€½á€¬ á€•á€­á€¯á€·á€†á€±á€¬á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“`
-            : `Synced all ${totalPushed} records to Cloud âœ“`
+            ? `Cloud Database သို့ စာရင်း (${totalPushed}) ခုလုံး အောင်မြင်စွာ ပို့ဆောင်ပြီးပါပြီ ✓`
+            : `Synced all ${totalPushed} records to Cloud ✓`
         );
       } else if (totalPushed > 0) {
         showToast(
           lang === 'my'
-            ? `âš ï¸ á€…á€¬á€›á€„á€ºá€¸ (${totalPushed}) á€á€¯ á€•á€­á€¯á€·á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®á‹ (${stillPendingCount}) á€á€¯ á€•á€±á€¸á€•á€­á€¯á€·á€›á€”á€º á€€á€»á€”á€ºá€›á€¾á€­á€”á€±á€žá€±á€¸á€•á€«á€žá€Šá€ºá‹`
-            : `âš ï¸ Synced ${totalPushed} records. ${stillPendingCount} pending retry.`
+            ? `⚠️ စာရင်း (${totalPushed}) ခု ပို့ပြီးပါပြီ။ (${stillPendingCount}) ခု ပေးပို့ရန် ကျန်ရှိနေသေးပါသည်။`
+            : `⚠️ Synced ${totalPushed} records. ${stillPendingCount} pending retry.`
         );
       } else {
         showToast(
           lang === 'my'
-            ? `âš ï¸ á€…á€¬á€›á€„á€ºá€¸á€™á€»á€¬á€¸ á€•á€±á€¸á€•á€­á€¯á€·á á€™á€›á€žá€±á€¸á€•á€«á‹ (${stillPendingCount}) á€á€¯ á€•á€±á€¸á€•á€­á€¯á€·á€›á€”á€º á€€á€»á€”á€ºá€›á€¾á€­á€”á€±á€•á€«á€žá€Šá€ºá‹`
-            : `âš ï¸ Could not send records to Cloud. ${stillPendingCount} remain pending.`
+            ? `⚠️ စာရင်းများ ပေးပို့၍ မရသေးပါ။ (${stillPendingCount}) ခု ပေးပို့ရန် ကျန်ရှိနေပါသည်။`
+            : `⚠️ Could not send records to Cloud. ${stillPendingCount} remain pending.`
         );
       }
       
@@ -947,7 +947,7 @@ if (typeof window !== 'undefined') {
           itemCount: totalReceived,
           details: cloudData ? `Pulled ${totalReceived} records from Cloud Firestore` : 'Failed to pull data',
         });
-        showToast(lang === 'my' ? 'Cloud á€™á€¾ á€’á€±á€á€¬á€™á€»á€¬á€¸á€€á€­á€¯ á€•á€±á€«á€„á€ºá€¸á€…á€•á€ºá€›á€šá€°á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Merged records from Cloud âœ“');
+        showToast(lang === 'my' ? 'Cloud မှ ဒေတာများကို ပေါင်းစပ်ရယူပြီးပါပြီ ✓' : 'Merged records from Cloud ✓');
       } else {
         finishSyncOperation(opId, 'failed', {
           details: 'No response from Cloud Firestore',
@@ -1072,8 +1072,6 @@ if (typeof window !== 'undefined') {
           setIsCloudLoaded(true);
         }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${targetUid}/transactions`)));
       }, 0));
-
-        // =============================================================
   
       // 2. Wallets
       timers.push(setTimeout(() => {
@@ -1260,7 +1258,7 @@ if (typeof window !== 'undefined') {
     };
   }, [user?.uid, activeWorkspaceId]);
 
-  // âš ï¸ REMOVED (v5.3.32): Auto-tick that re-enqueued any local tx missing
+  // ⚠️ REMOVED (v5.3.32): Auto-tick that re-enqueued any local tx missing
   // from cloudTxIds caused a deletion resurrection loop across devices.
   // syncQueue is now the sole source of pending writes.
 
@@ -1293,7 +1291,7 @@ if (typeof window !== 'undefined') {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        // Fire and forget â€” don't await, iOS may kill us
+        // Fire and forget — don't await, iOS may kill us
         flushPendingWrites();
       }
     };
@@ -1362,7 +1360,7 @@ if (typeof window !== 'undefined') {
     })();
   }, [user?.uid, wallets, collaborators, addCollaborator]);
 
-  // Global search shortcut (âŒ˜K / Ctrl+K)
+  // Global search shortcut (⌘K / Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -1521,10 +1519,10 @@ if (typeof window !== 'undefined') {
 
   // Handlers
   const handleClearAllData = async (force = false) => {
-    if (force || window.confirm(lang === 'my' ? 'á€œá€€á€ºá€›á€¾á€­ á€’á€±á€á€¬á€¡á€¬á€¸á€œá€¯á€¶á€¸ (á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸á€™á€»á€¬á€¸áŠ á€¡á€€á€¼á€½á€±á€¸á€…á€¬á€›á€„á€ºá€¸á€™á€»á€¬á€¸áŠ á€˜á€á€ºá€‚á€»á€€á€ºá€™á€»á€¬á€¸áŠ á€šá€¬á€‰á€ºá€…á€¬á€›á€„á€ºá€¸á€™á€»á€¬á€¸á€”á€¾á€„á€·á€º Wallet á€™á€»á€¬á€¸) á€€á€­á€¯ á€¡á€•á€¼á€®á€¸á€á€­á€¯á€„á€º á€–á€»á€€á€ºá€•á€…á€ºá€™á€Šá€ºá€™á€¾á€¬ á€žá€±á€á€»á€¬á€•á€«á€žá€œá€¬á€¸? (á€¤á€œá€¯á€•á€ºá€†á€±á€¬á€„á€ºá€á€»á€€á€ºá€€á€­á€¯ á€”á€±á€¬á€€á€ºá€•á€¼á€”á€ºá€†á€¯á€á€ºá á€™á€›á€•á€«)' : 'Are you sure you want to permanently delete ALL data? This cannot be undone.')) {
+    if (force || window.confirm(lang === 'my' ? 'လက်ရှိ ဒေတာအားလုံး (ငွေစာရင်းများ၊ အကြွေးစာရင်းများ၊ ဘတ်ဂျက်များ၊ ယာဉ်စာရင်းများနှင့် Wallet များ) ကို အပြီးတိုင် ဖျက်ပစ်မည်မှာ သေချာပါသလား? (ဤလုပ်ဆောင်ချက်ကို နောက်ပြန်ဆုတ်၍ မရပါ)' : 'Are you sure you want to permanently delete ALL data? This cannot be undone.')) {
       const defaultCashWallet: Wallet = {
         id: 'cash',
-        name: 'á€„á€½á€±á€žá€¬á€¸ (á€œá€€á€ºá€á€šá€º)',
+        name: 'ငွေသား (လက်ဝယ်)',
         nameEn: 'Cash',
         balance: 0,
         initialBalance: 0,
@@ -1559,7 +1557,7 @@ if (typeof window !== 'undefined') {
         await clearAllCloudData();
       }
 
-      showToast(lang === 'my' ? 'á€’á€±á€á€¬á€¡á€¬á€¸á€œá€¯á€¶á€¸á€€á€­á€¯ á€¡á€•á€¼á€®á€¸á€á€­á€¯á€„á€º á€›á€¾á€„á€ºá€¸á€œá€„á€ºá€¸á€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€® âœ“' : 'All data cleared successfully âœ“');
+      showToast(lang === 'my' ? 'ဒေတာအားလုံးကို အပြီးတိုင် ရှင်းလင်းလိုက်ပါပြီ ✓' : 'All data cleared successfully ✓');
       setIsAccountModalOpen(false);
     }
   };
@@ -1582,14 +1580,14 @@ if (typeof window !== 'undefined') {
 
       setTimeout(() => {
         if (Notification.permission === 'granted') {
-          new Notification(lang === 'my' ? 'á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸á€žá€½á€„á€ºá€¸á€›á€”á€º á€¡á€á€»á€­á€”á€ºá€€á€»á€•á€«á€•á€¼á€®' : 'Time to record transactions!', {
-            body: lang === 'my' ? 'á€’á€®á€”á€±á€·á€›á€²á€· á€á€„á€ºá€„á€½á€±/á€‘á€½á€€á€ºá€„á€½á€±á€á€½á€±á€€á€­á€¯ á€™á€¾á€á€ºá€á€™á€ºá€¸á€á€„á€ºá€œá€­á€¯á€€á€ºá€•á€«á‹' : 'Record your income/expense for today.',
+          new Notification(lang === 'my' ? 'ငွေစာရင်းသွင်းရန် အချိန်ကျပါပြီ' : 'Time to record transactions!', {
+            body: lang === 'my' ? 'ဒီနေ့ရဲ့ ဝင်ငွေ/ထွက်ငွေတွေကို မှတ်တမ်းတင်လိုက်ပါ။' : 'Record your income/expense for today.',
           });
         }
         setInterval(() => {
           if (Notification.permission === 'granted') {
-            new Notification(lang === 'my' ? 'á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸á€žá€½á€„á€ºá€¸á€›á€”á€º á€¡á€á€»á€­á€”á€ºá€€á€»á€•á€«á€•á€¼á€®' : 'Time to record transactions!', {
-              body: lang === 'my' ? 'á€’á€®á€”á€±á€·á€›á€²á€· á€á€„á€ºá€„á€½á€±/á€‘á€½á€€á€ºá€„á€½á€±á€á€½á€±á€€á€­á€¯ á€™á€¾á€á€ºá€á€™á€ºá€¸á€á€„á€ºá€œá€­á€¯á€€á€ºá€•á€«á‹' : 'Record your income/expense for today.',
+            new Notification(lang === 'my' ? 'ငွေစာရင်းသွင်းရန် အချိန်ကျပါပြီ' : 'Time to record transactions!', {
+              body: lang === 'my' ? 'ဒီနေ့ရဲ့ ဝင်ငွေ/ထွက်ငွေတွေကို မှတ်တမ်းတင်လိုက်ပါ။' : 'Record your income/expense for today.',
             });
           }
         }, 24 * 60 * 60 * 1000);
@@ -1628,14 +1626,14 @@ if (typeof window !== 'undefined') {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast(lang === 'my' ? 'Backup á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Backup downloaded âœ“');
+    showToast(lang === 'my' ? 'Backup သိမ်းဆည်းပြီးပါပြီ ✓' : 'Backup downloaded ✓');
   };
 
   const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (!window.confirm(lang === 'my' ? 'á€’á€±á€á€¬á€™á€»á€¬á€¸á€€á€­á€¯ á€¡á€…á€¬á€¸á€‘á€­á€¯á€¸ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€™á€Šá€ºá€™á€¾á€¬ á€žá€±á€á€»á€¬á€•á€«á€žá€œá€¬á€¸?' : 'Are you sure you want to restore from backup? This will replace current data.')) {
+    if (!window.confirm(lang === 'my' ? 'ဒေတာများကို အစားထိုး သိမ်းဆည်းမည်မှာ သေချာပါသလား?' : 'Are you sure you want to restore from backup? This will replace current data.')) {
       e.target.value = '';
       return;
     }
@@ -1655,9 +1653,9 @@ if (typeof window !== 'undefined') {
         if (parsed.vehicleMaintenance) setVehicleMaintenance(parsed.vehicleMaintenance);
         if (parsed.tirePressureLogs) setTirePressureLogs(parsed.tirePressureLogs);
         if (parsed.lang) setLang(parsed.lang);
-        showToast(lang === 'my' ? 'Backup á€€á€­á€¯ á€¡á€±á€¬á€„á€ºá€™á€¼á€„á€ºá€…á€½á€¬ á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Backup restored successfully âœ“');
+        showToast(lang === 'my' ? 'Backup ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ ✓' : 'Backup restored successfully ✓');
       } catch (err) {
-        alert(lang === 'my' ? 'á€–á€­á€¯á€„á€ºá€–á€á€ºá€›á€¬á€á€½á€„á€º á€¡á€™á€¾á€¬á€¸á€›á€¾á€­á€•á€«á€žá€Šá€º' : 'Error reading backup file');
+        alert(lang === 'my' ? 'ဖိုင်ဖတ်ရာတွင် အမှားရှိပါသည်' : 'Error reading backup file');
       }
     };
     reader.readAsText(file);
@@ -1679,7 +1677,7 @@ if (typeof window !== 'undefined') {
 
     if (plan === 'guest' && monthlyTxCount >= limits.maxTransactions) {
       if (window.confirm(lang === 'my' 
-        ? 'Guest Mode á€á€½á€„á€º á á€œá€œá€»á€¾á€„á€º á€™á€¾á€á€ºá€á€™á€ºá€¸ (áƒá€) á€á€¯á€žá€¬ á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€”á€­á€¯á€„á€ºá€•á€«á€žá€Šá€ºá‹ Google Account á€–á€¼á€„á€·á€º Sign in á€•á€¼á€¯á€œá€¯á€•á€ºá€•á€« á€žá€­á€¯á€·á€™á€Ÿá€¯á€á€º Premium á€žá€­á€¯á€· á€á€­á€¯á€¸á€™á€¼á€¾á€„á€·á€ºá€•á€«'
+        ? 'Guest Mode တွင် ၁ လလျှင် မှတ်တမ်း (၃၀) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ သို့မဟုတ် Premium သို့ တိုးမြှင့်ပါ'
         : 'Guest Mode allows up to 30 transactions per month. Please Sign In with Google or Upgrade.')) {
         setIsAuthModalOpen(true);
       }
@@ -1704,7 +1702,7 @@ if (typeof window !== 'undefined') {
     if (!canEdit) {
       showToast(
         lang === 'my'
-          ? `âš ï¸ á€¤ Wallet á€•á€­á€¯á€„á€ºá€›á€¾á€„á€ºá€™á€¾ ${tx.type === 'income' ? 'á€á€„á€ºá€„á€½á€±' : 'á€‘á€½á€€á€ºá€„á€½á€±'} á€•á€¼á€„á€ºá€†á€„á€ºá€á€½á€„á€·á€º á€•á€­á€á€ºá€‘á€¬á€¸á€•á€«á€žá€Šá€º`
+          ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${tx.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} ပြင်ဆင်ခွင့် ပိတ်ထားပါသည်`
           : 'Permission denied: wallet owner has disabled transaction editing'
       );
       return;
@@ -1716,7 +1714,7 @@ if (typeof window !== 'undefined') {
   const handleOpenAddDebt = () => {
     if (!limits.hasDebts || plan === 'guest') {
       if (window.confirm(lang === 'my'
-        ? 'Guest Mode á€á€½á€„á€º á€¡á€€á€¼á€½á€±á€¸á€…á€¬á€›á€„á€ºá€¸ á€žá€¯á€¶á€¸á€…á€½á€²á á€™á€›á€•á€«á€á€„á€ºá€—á€»á€¬á‹ á€…á€¬á€›á€„á€ºá€¸á€™á€¾á€á€ºá€á€™á€ºá€¸á€á€„á€ºá€›á€”á€º Google Account á€–á€¼á€„á€·á€º Sign in á€•á€¼á€¯á€œá€¯á€•á€ºá€•á€«'
+        ? 'Guest Mode တွင် အကြွေးစာရင်း သုံးစွဲ၍ မရပါခင်ဗျာ။ စာရင်းမှတ်တမ်းတင်ရန် Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
         : 'Debts feature is not available in Guest mode. Please Sign In with Google.')) {
         setIsAuthModalOpen(true);
       }
@@ -1748,7 +1746,7 @@ if (typeof window !== 'undefined') {
       if (!canEdit) {
         showToast(
           lang === 'my'
-            ? `âš ï¸ á€¤ Wallet á€•á€­á€¯á€„á€ºá€›á€¾á€„á€ºá€™á€¾ ${editingTransaction.type === 'income' ? 'á€á€„á€ºá€„á€½á€±' : 'á€‘á€½á€€á€ºá€„á€½á€±'} á€•á€¼á€„á€ºá€†á€„á€ºá€á€½á€„á€·á€º á€•á€­á€á€ºá€‘á€¬á€¸á€•á€«á€žá€Šá€º`
+            ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${editingTransaction.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} ပြင်ဆင်ခွင့် ပိတ်ထားပါသည်`
             : 'Permission denied: wallet owner has disabled transaction editing'
         );
         return;
@@ -1805,7 +1803,7 @@ if (typeof window !== 'undefined') {
       }
 
       setEditingTransaction(null);
-      showToast(lang === 'my' ? 'á€•á€¼á€„á€ºá€†á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Updated successfully âœ“');
+      showToast(lang === 'my' ? 'ပြင်ဆင်ပြီးပါပြီ ✓' : 'Updated successfully ✓');
       return;
     }
 
@@ -1815,7 +1813,7 @@ if (typeof window !== 'undefined') {
     if (!canAdd) {
       showToast(
         lang === 'my'
-          ? `âš ï¸ á€¤ Wallet á€•á€­á€¯á€„á€ºá€›á€¾á€„á€ºá€™á€¾ ${sanitizedTx.type === 'income' ? 'á€á€„á€ºá€„á€½á€±' : 'á€‘á€½á€€á€ºá€„á€½á€±'} á€¡á€žá€…á€ºá€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€á€½á€„á€·á€º á€•á€­á€á€ºá€‘á€¬á€¸á€•á€«á€žá€Šá€º`
+          ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${sanitizedTx.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} အသစ်ထည့်သွင်းခွင့် ပိတ်ထားပါသည်`
           : 'Permission denied: wallet owner has disabled adding transactions'
       );
       return;
@@ -1826,7 +1824,7 @@ if (typeof window !== 'undefined') {
       const monthlyTxCount = transactions.filter((t) => t.date && t.date.startsWith(currentMonthStr)).length;
       if (monthlyTxCount >= limits.maxTransactions) {
         if (window.confirm(lang === 'my'
-          ? 'Guest Mode á€á€½á€„á€º á á€œá€œá€»á€¾á€„á€º á€™á€¾á€á€ºá€á€™á€ºá€¸ (áƒá€) á€á€¯á€žá€¬ á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€”á€­á€¯á€„á€ºá€•á€«á€žá€Šá€ºá‹ Google Account á€–á€¼á€„á€·á€º Sign in á€•á€¼á€¯á€œá€¯á€•á€ºá€•á€«'
+          ? 'Guest Mode တွင် ၁ လလျှင် မှတ်တမ်း (၃၀) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
           : 'Guest Mode allows up to 30 transactions per month. Please Sign In with Google.')) {
           setIsAuthModalOpen(true);
         }
@@ -1840,7 +1838,7 @@ if (typeof window !== 'undefined') {
         (c) =>
           c.id === 'cat_vehicle' ||
           c.id === 'cat_vehicle_management' ||
-          c.name.includes('á€šá€¬á€‰á€ºá€…á€®á€™á€¶') ||
+          c.name.includes('ယာဉ်စီမံ') ||
           (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management'))
       );
       if (vehicleCategory && (sanitizedTx.category === 'cat_transport' || !sanitizedTx.category)) {
@@ -1881,7 +1879,7 @@ if (typeof window !== 'undefined') {
         category: 'cat_transfer',
         subCategoryId: 'sub_tf_out',
         date: sanitizedTx.date,
-        note: sanitizedTx.note || `[á€„á€½á€±á€œá€½á€¾á€²á€‘á€½á€€á€º] âž” ${toName}`,
+        note: sanitizedTx.note || `[ငွေလွှဲထွက်] ➔ ${toName}`,
         walletId: fromWalletId,
         isTransfer: true,
         transferType: 'transfer_out',
@@ -1897,7 +1895,7 @@ if (typeof window !== 'undefined') {
         category: 'cat_transfer',
         subCategoryId: 'sub_tf_in',
         date: sanitizedTx.date,
-        note: sanitizedTx.note || `[á€„á€½á€±á€œá€½á€¾á€²á€á€„á€º] â¬… ${fromName}`,
+        note: sanitizedTx.note || `[ငွေလွှဲဝင်] ⬅ ${fromName}`,
         walletId: toWalletId,
         isTransfer: true,
         transferType: 'transfer_in',
@@ -1931,7 +1929,7 @@ if (typeof window !== 'undefined') {
         }
       }
 
-      showToast(lang === 'my' ? 'á€„á€½á€±á€œá€½á€¾á€²á€•á€¼á€±á€¬á€„á€ºá€¸á€™á€¾á€¯ á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Transfer recorded successfully âœ“');
+      showToast(lang === 'my' ? 'ငွေလွှဲပြောင်းမှု ထည့်သွင်းပြီးပါပြီ ✓' : 'Transfer recorded successfully ✓');
       return;
     }
 
@@ -2041,7 +2039,7 @@ if (typeof window !== 'undefined') {
           date: sanitizedTx.date,
           odometer: odo,
           serviceType: vehicleLinkData.serviceType || 'general_repair',
-          title: vehicleLinkData.title || sanitizedTx.note || (lang === 'my' ? 'á€šá€¬á€‰á€ºá€•á€¼á€¯á€•á€¼á€„á€ºá€‘á€­á€”á€ºá€¸á€žá€­á€™á€ºá€¸á€™á€¾á€¯' : 'Vehicle Maintenance'),
+          title: vehicleLinkData.title || sanitizedTx.note || (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Maintenance'),
           cost: cleanAmount,
           sparePartBrand: vehicleLinkData.sparePartBrand,
           workshopName: vehicleLinkData.workshopName,
@@ -2113,13 +2111,13 @@ if (typeof window !== 'undefined') {
 
       showToast(
         lang === 'my'
-          ? 'á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸á€”á€¾á€„á€·á€º á€šá€¬á€‰á€ºá€™á€¾á€á€ºá€á€™á€ºá€¸ (Vehicle Log) á€žá€­á€¯á€· á€á€…á€ºá€•á€¼á€­á€¯á€„á€ºá€á€Šá€ºá€¸ á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“'
-          : 'Transaction & Vehicle record synced successfully âœ“'
+          ? 'ငွေစာရင်းနှင့် ယာဉ်မှတ်တမ်း (Vehicle Log) သို့ တစ်ပြိုင်တည်း ထည့်သွင်းပြီးပါပြီ ✓'
+          : 'Transaction & Vehicle record synced successfully ✓'
       );
       return;
     }
 
-    showToast(lang === 'my' ? 'á€™á€¾á€á€ºá€á€™á€ºá€¸ á€¡á€žá€…á€ºá€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®' : 'Transaction added');
+    showToast(lang === 'my' ? 'မှတ်တမ်း အသစ်ထည့်သွင်းပြီးပါပြီ' : 'Transaction added');
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -2134,7 +2132,7 @@ if (typeof window !== 'undefined') {
     if (!canDelete) {
       showToast(
         lang === 'my'
-          ? `âš ï¸ á€¤ Wallet á€•á€­á€¯á€„á€ºá€›á€¾á€„á€ºá€™á€¾ ${txToDelete.type === 'income' ? 'á€á€„á€ºá€„á€½á€±' : 'á€‘á€½á€€á€ºá€„á€½á€±'} á€™á€¾á€á€ºá€á€™á€ºá€¸á€–á€»á€€á€ºá€á€½á€„á€·á€º á€•á€­á€á€ºá€‘á€¬á€¸á€•á€«á€žá€Šá€º`
+          ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${txToDelete.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} မှတ်တမ်းဖျက်ခွင့် ပိတ်ထားပါသည်`
           : 'Permission denied: wallet owner has disabled deleting transactions'
       );
       return;
@@ -2189,7 +2187,7 @@ if (typeof window !== 'undefined') {
       })();
     }
 
-    showToast(lang === 'my' ? 'á€™á€¾á€á€ºá€á€™á€ºá€¸á€€á€­á€¯ á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€®' : 'Transaction deleted');
+    showToast(lang === 'my' ? 'မှတ်တမ်းကို ဖျက်လိုက်ပါပြီ' : 'Transaction deleted');
   };
 
   const handleAddDebt = (newDebt: Omit<Debt, 'id' | 'paidAmount' | 'repayments' | 'status' | 'createdAt'>) => {
@@ -2216,8 +2214,8 @@ if (typeof window !== 'undefined') {
       walletId: newDebt.walletId,
       date: newDebt.startDate,
       note: isReceivable
-        ? `[á€¡á€€á€¼á€½á€±á€¸á€‘á€¯á€á€ºá€•á€±á€¸á€á€¼á€„á€ºá€¸] âž” ${newDebt.personName}${newDebt.note ? ` (${newDebt.note})` : ''}`
-        : `[á€¡á€€á€¼á€½á€±á€¸á€›á€šá€°á€á€¼á€„á€ºá€¸] â¬… ${newDebt.personName}${newDebt.note ? ` (${newDebt.note})` : ''}`,
+        ? `[အကြွေးထုတ်ပေးခြင်း] ➔ ${newDebt.personName}${newDebt.note ? ` (${newDebt.note})` : ''}`
+        : `[အကြွေးရယူခြင်း] ⬅ ${newDebt.personName}${newDebt.note ? ` (${newDebt.note})` : ''}`,
       createdAt: Date.now(),
     };
 
@@ -2240,7 +2238,7 @@ if (typeof window !== 'undefined') {
       }, { merge: true });
     }
 
-    showToast(lang === 'my' ? 'á€¡á€€á€¼á€½á€±á€¸á€…á€¬á€›á€„á€ºá€¸á€”á€¾á€„á€·á€º Wallet á€á€„á€ºá€„á€½á€±/á€‘á€½á€€á€ºá€„á€½á€± á€…á€¬á€›á€„á€ºá€¸ á€á€»á€­á€á€ºá€†á€€á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Debt record & wallet transaction synced âœ“');
+    showToast(lang === 'my' ? 'အကြွေးစာရင်းနှင့် Wallet ဝင်ငွေ/ထွက်ငွေ စာရင်း ချိတ်ဆက်ပြီးပါပြီ ✓' : 'Debt record & wallet transaction synced ✓');
   };
 
   const handleDeleteDebt = (id: string) => {
@@ -2264,7 +2262,7 @@ if (typeof window !== 'undefined') {
       safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', txId));
     }
 
-    showToast(lang === 'my' ? 'á€¡á€€á€¼á€½á€±á€¸á€…á€¬á€›á€„á€ºá€¸á€€á€­á€¯ á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€®' : 'Debt record deleted');
+    showToast(lang === 'my' ? 'အကြွေးစာရင်းကို ဖျက်လိုက်ပါပြီ' : 'Debt record deleted');
   };
 
   const handleToggleDebtStatus = (id: string) => {
@@ -2283,7 +2281,7 @@ if (typeof window !== 'undefined') {
                 amount: remaining,
                 date: new Date().toISOString().split('T')[0],
                 walletId: d.walletId,
-                note: lang === 'my' ? '[á€¡á€€á€¼á€½á€±á€¸á€€á€»á€±á€‡á€šá€¬á€¸ á€¡á€œá€­á€¯á€¡á€œá€»á€±á€¬á€€á€º á€•á€±á€¸á€†á€•á€ºá€™á€¾á€¯]' : '[Auto settlement repayment]',
+                note: lang === 'my' ? '[အကြွေးကျေဇယား အလိုအလျောက် ပေးဆပ်မှု]' : '[Auto settlement repayment]',
                 createdAt: Date.now(),
               };
               updatedRepayments = [settlementRepayment, ...updatedRepayments];
@@ -2334,8 +2332,8 @@ if (typeof window !== 'undefined') {
       if (amount > remaining) {
         const overAmount = amount - remaining;
         const confirmMsg = lang === 'my'
-          ? `á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€™á€Šá€·á€º á€„á€½á€±á€•á€™á€¬á€ (${amount.toLocaleString()} Ks) á€žá€Šá€º á€•á€±á€¸á€›á€”á€ºá€€á€»á€”á€ºá€„á€½á€± (${remaining.toLocaleString()} Ks) á€‘á€€á€º ${overAmount.toLocaleString()} Ks á€•á€­á€¯á€œá€½á€”á€ºá€”á€±á€•á€«á€žá€Šá€ºá‹ á€¤á€™á€¾á€á€ºá€á€™á€ºá€¸á€¡á€á€­á€¯á€„á€ºá€¸ á€†á€€á€ºá€œá€€á€º á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€™á€Šá€ºá€œá€¬á€¸?`
-          : `This is ${overAmount.toLocaleString()} more than the remaining balance of ${remaining.toLocaleString()} â€” record it anyway?`;
+          ? `ထည့်သွင်းမည့် ငွေပမာဏ (${amount.toLocaleString()} Ks) သည် ပေးရန်ကျန်ငွေ (${remaining.toLocaleString()} Ks) ထက် ${overAmount.toLocaleString()} Ks ပိုလွန်နေပါသည်။ ဤမှတ်တမ်းအတိုင်း ဆက်လက် သိမ်းဆည်းမည်လား?`
+          : `This is ${overAmount.toLocaleString()} more than the remaining balance of ${remaining.toLocaleString()} — record it anyway?`;
         if (!window.confirm(confirmMsg)) {
           return;
         }
@@ -2351,8 +2349,8 @@ if (typeof window !== 'undefined') {
         walletId,
         date,
         note: isReceivable
-          ? `[á€¡á€€á€¼á€½á€±á€¸á€•á€¼á€”á€ºá€›á€„á€½á€±] â¬… ${targetDebt.personName}${note ? ` (${note})` : ''}`
-          : `[á€¡á€€á€¼á€½á€±á€¸á€•á€¼á€”á€ºá€†á€•á€ºá€„á€½á€±] âž” ${targetDebt.personName}${note ? ` (${note})` : ''}`,
+          ? `[အကြွေးပြန်ရငွေ] ⬅ ${targetDebt.personName}${note ? ` (${note})` : ''}`
+          : `[အကြွေးပြန်ဆပ်ငွေ] ➔ ${targetDebt.personName}${note ? ` (${note})` : ''}`,
         createdAt: Date.now(),
       };
 
@@ -2409,7 +2407,7 @@ if (typeof window !== 'undefined') {
       return next;
     });
 
-    showToast(lang === 'my' ? 'á€„á€½á€±á€†á€•á€ºá€™á€¾á€á€ºá€á€™á€ºá€¸á€”á€¾á€„á€·á€º Wallet á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸ á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Repayment recorded & wallet synced âœ“');
+    showToast(lang === 'my' ? 'ငွေဆပ်မှတ်တမ်းနှင့် Wallet ငွေစာရင်း ထည့်သွင်းပြီးပါပြီ ✓' : 'Repayment recorded & wallet synced ✓');
   };
 
   const handleEditRepayment = (
@@ -2452,7 +2450,7 @@ if (typeof window !== 'undefined') {
       return next;
     });
 
-    showToast(lang === 'my' ? 'á€„á€½á€±á€†á€•á€ºá€™á€¾á€á€ºá€á€™á€ºá€¸ á€•á€¼á€„á€ºá€†á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Repayment updated âœ“');
+    showToast(lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း ပြင်ဆင်ပြီးပါပြီ ✓' : 'Repayment updated ✓');
   };
 
   const handleDeleteRepayment = (debtId: string, repaymentId: string) => {
@@ -2486,7 +2484,7 @@ if (typeof window !== 'undefined') {
       return next;
     });
 
-    showToast(lang === 'my' ? 'á€„á€½á€±á€†á€•á€ºá€™á€¾á€á€ºá€á€™á€ºá€¸ á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€® âœ“' : 'Repayment deleted âœ“');
+    showToast(lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း ဖျက်လိုက်ပါပြီ ✓' : 'Repayment deleted ✓');
   };
 
   const handleAddWallet = (walletData: Omit<Wallet, 'id'>) => {
@@ -2494,7 +2492,7 @@ if (typeof window !== 'undefined') {
     if (ownWalletsCount >= limits.maxWallets) {
       if (plan === 'guest') {
         if (window.confirm(lang === 'my'
-          ? 'Guest Mode á€á€½á€„á€º Wallet (á) á€á€¯á€žá€¬ á€¡á€žá€¯á€¶á€¸á€•á€¼á€¯á€”á€­á€¯á€„á€ºá€•á€«á€žá€Šá€ºá‹ á€¡á€€á€±á€¬á€„á€·á€ºá€žá€…á€º á€‘á€•á€ºá€á€­á€¯á€¸á€›á€”á€º Google Account á€–á€¼á€„á€·á€º Sign in á€•á€¼á€¯á€œá€¯á€•á€ºá€•á€«'
+          ? 'Guest Mode တွင် Wallet (၁) ခုသာ အသုံးပြုနိုင်ပါသည်။ အကောင့်သစ် ထပ်တိုးရန် Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
           : 'Guest Mode allows 1 wallet only. Please Sign in with Google to add more wallets.')) {
           setIsAuthModalOpen(true);
         }
@@ -2514,7 +2512,7 @@ if (typeof window !== 'undefined') {
         userId: targetUid,
       }, { merge: true });
     }
-    showToast(lang === 'my' ? 'á€¡á€€á€±á€¬á€„á€·á€ºá€žá€…á€º á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®' : 'Wallet added successfully');
+    showToast(lang === 'my' ? 'အကောင့်သစ် ထည့်သွင်းပြီးပါပြီ' : 'Wallet added successfully');
   };
 
   const handleUpdateWallet = (updatedWallet: Wallet) => {
@@ -2533,7 +2531,7 @@ if (typeof window !== 'undefined') {
     if (user && (updatedWallet.isSharedFromOther || (updatedWallet.sharedWith && updatedWallet.sharedWith.length > 0))) {
       syncSharedWalletToCloud(updatedWallet, user);
     }
-    showToast(lang === 'my' ? 'á€¡á€€á€±á€¬á€„á€·á€º á€¡á€á€»á€€á€ºá€¡á€œá€€á€º á€•á€¼á€„á€ºá€†á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Wallet updated successfully âœ“');
+    showToast(lang === 'my' ? 'အကောင့် အချက်အလက် ပြင်ဆင်ပြီးပါပြီ ✓' : 'Wallet updated successfully ✓');
   };
 
   const handleDeleteWallet = async (walletId: string) => {
@@ -2545,7 +2543,7 @@ if (typeof window !== 'undefined') {
       if (
         window.confirm(
           lang === 'my'
-            ? `á€¤ Shared Wallet (${target.name}) á€™á€¾ á€‘á€½á€€á€ºá€á€½á€¬á€™á€Šá€ºá€™á€¾á€¬ á€žá€±á€á€»á€¬á€•á€«á€žá€œá€¬á€¸?\n(á€™á€¾á€á€ºá€á€»á€€á€º - Shared Wallet á€€á€­á€¯ á€•á€­á€¯á€„á€ºá€›á€¾á€„á€ºá€žá€¬ á€–á€»á€€á€ºá€•á€­á€¯á€„á€ºá€á€½á€„á€·á€ºá€›á€¾á€­á€•á€¼á€®á€¸áŠ á€–á€­á€á€ºá€á€±á€«á€ºá€á€¶á€‘á€¬á€¸á€›á€žá€°á€žá€Šá€º á€‘á€½á€€á€ºá€á€½á€¬á€á€¼á€„á€ºá€¸á€žá€¬ á€•á€¼á€¯á€œá€¯á€•á€ºá€”á€­á€¯á€„á€ºá€•á€«á€žá€Šá€º)`
+            ? `ဤ Shared Wallet (${target.name}) မှ ထွက်ခွာမည်မှာ သေချာပါသလား?\n(မှတ်ချက် - Shared Wallet ကို ပိုင်ရှင်သာ ဖျက်ပိုင်ခွင့်ရှိပြီး၊ ဖိတ်ခေါ်ခံထားရသူသည် ထွက်ခွာခြင်းသာ ပြုလုပ်နိုင်ပါသည်)`
             : `Are you sure you want to leave this shared wallet (${target.nameEn || target.name})?`
         )
       ) {
@@ -2553,7 +2551,7 @@ if (typeof window !== 'undefined') {
           await leaveSharedWallet(walletId, user.email, target.sharedDocId, target.ownerUid);
         }
         setWallets((prev) => prev.filter((w) => w.id !== walletId));
-        showToast(lang === 'my' ? 'Shared Wallet á€™á€¾ á€‘á€½á€€á€ºá€á€½á€¬á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®' : 'Left shared wallet');
+        showToast(lang === 'my' ? 'Shared Wallet မှ ထွက်ခွာပြီးပါပြီ' : 'Left shared wallet');
       }
       return;
     }
@@ -2563,7 +2561,7 @@ if (typeof window !== 'undefined') {
     if (ownWallets.length <= 1) {
       alert(
         lang === 'my'
-          ? 'á€¡á€”á€Šá€ºá€¸á€†á€¯á€¶á€¸ Wallet á€á€…á€ºá€á€¯ á€›á€¾á€­á€›á€•á€«á€™á€Šá€ºá‹ á€¤ Wallet á€€á€­á€¯ á€™á€–á€»á€€á€ºá€™á€® á€¡á€á€¼á€¬á€¸ Wallet á€á€…á€ºá€á€¯ á€¡á€›á€„á€ºá€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€«'
+          ? 'အနည်းဆုံး Wallet တစ်ခု ရှိရပါမည်။ ဤ Wallet ကို မဖျက်မီ အခြား Wallet တစ်ခု အရင်ထည့်သွင်းပါ'
           : 'At least one wallet is required. Please add another wallet before deleting this one.'
       );
       return;
@@ -2574,7 +2572,7 @@ if (typeof window !== 'undefined') {
       ownWallets.find((w) => w.id !== walletId);
 
     if (!fallbackWallet) {
-      alert(lang === 'my' ? 'á€¡á€”á€Šá€ºá€¸á€†á€¯á€¶á€¸ á€¡á€€á€±á€¬á€„á€·á€ºá€á€…á€ºá€á€¯ á€›á€¾á€­á€›á€•á€«á€™á€Šá€ºá‹' : 'At least one wallet is required.');
+      alert(lang === 'my' ? 'အနည်းဆုံး အကောင့်တစ်ခု ရှိရပါမည်။' : 'At least one wallet is required.');
       return;
     }
 
@@ -2583,17 +2581,17 @@ if (typeof window !== 'undefined') {
 
     let confirmMsg = '';
     if (lang === 'my') {
-      confirmMsg = `á€¤á€¡á€€á€±á€¬á€„á€·á€º (${target.name}) á€€á€­á€¯ á€–á€»á€€á€ºá€›á€”á€º á€žá€±á€á€»á€¬á€•á€«á€žá€œá€¬á€¸?`;
+      confirmMsg = `ဤအကောင့် (${target.name}) ကို ဖျက်ရန် သေချာပါသလား?`;
       if (isShared) {
-        confirmMsg += `\nâš ï¸ á€¤ Wallet á€€á€­á€¯ á€•á€­á€¯á€„á€ºá€›á€¾á€„á€ºá€™á€¾ á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€€ á€™á€»á€¾á€á€±á€‘á€¬á€¸á€žá€±á€¬ á€žá€°á€™á€»á€¬á€¸á€¡á€¬á€¸á€œá€¯á€¶á€¸á€‘á€¶á€™á€¾á€œá€Šá€ºá€¸ á€¡á€•á€¼á€®á€¸á€á€­á€¯á€„á€º á€•á€»á€€á€ºá€žá€½á€¬á€¸á€•á€«á€™á€Šá€ºá‹`;
+        confirmMsg += `\n⚠️ ဤ Wallet ကို ပိုင်ရှင်မှ ဖျက်လိုက်ပါက မျှဝေထားသော သူများအားလုံးထံမှလည်း အပြီးတိုင် ပျက်သွားပါမည်။`;
       }
       if (relatedTxCount > 0) {
-        confirmMsg += `\ná€›á€¾á€­á€•á€¼á€®á€¸á€žá€¬á€¸ á€…á€¬á€›á€„á€ºá€¸á€™á€¾á€á€ºá€á€™á€ºá€¸ ${relatedTxCount} á€á€¯á€€á€­á€¯ '${fallbackWallet.name}' á€žá€­á€¯á€· á€¡á€œá€­á€¯á€¡á€œá€»á€±á€¬á€€á€º á€•á€¼á€±á€¬á€„á€ºá€¸á€›á€½á€¾á€±á€·á€•á€±á€¸á€•á€«á€™á€Šá€ºá‹`;
+        confirmMsg += `\nရှိပြီးသား စာရင်းမှတ်တမ်း ${relatedTxCount} ခုကို '${fallbackWallet.name}' သို့ အလိုအလျောက် ပြောင်းရွှေ့ပေးပါမည်။`;
       }
     } else {
       confirmMsg = `Are you sure you want to delete this wallet (${target.nameEn || target.name})?`;
       if (isShared) {
-        confirmMsg += `\nâš ï¸ Deleting as owner will remove it from all shared collaborators immediately.`;
+        confirmMsg += `\n⚠️ Deleting as owner will remove it from all shared collaborators immediately.`;
       }
       if (relatedTxCount > 0) {
         confirmMsg += `\n${relatedTxCount} transactions will be reassigned to '${fallbackWallet.nameEn || fallbackWallet.name}'.`;
@@ -2640,7 +2638,7 @@ if (typeof window !== 'undefined') {
 
     showToast(
       lang === 'my'
-        ? (isShared ? 'Shared Wallet á€€á€­á€¯ á€¡á€•á€¼á€®á€¸á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€®' : 'á€¡á€€á€±á€¬á€„á€·á€º á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€®')
+        ? (isShared ? 'Shared Wallet ကို အပြီးဖျက်လိုက်ပါပြီ' : 'အကောင့် ဖျက်လိုက်ပါပြီ')
         : 'Wallet deleted successfully'
     );
   };
@@ -2663,7 +2661,7 @@ if (typeof window !== 'undefined') {
       }, { merge: true });
     }
 
-    showToast(lang === 'my' ? 'á€†á€­á€¯á€„á€ºá€¡á€žá€…á€º á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Shop added successfully âœ“');
+    showToast(lang === 'my' ? 'ဆိုင်အသစ် ထည့်သွင်းပြီးပါပြီ ✓' : 'Shop added successfully ✓');
   };
 
   const handleUpdateShop = (updatedShop: ShopContact) => {
@@ -2679,7 +2677,7 @@ if (typeof window !== 'undefined') {
       }, { merge: true });
     }
 
-    showToast(lang === 'my' ? 'á€†á€­á€¯á€„á€ºá€¡á€á€»á€€á€ºá€¡á€œá€€á€º á€•á€¼á€„á€ºá€†á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Shop updated successfully âœ“');
+    showToast(lang === 'my' ? 'ဆိုင်အချက်အလက် ပြင်ဆင်ပြီးပါပြီ ✓' : 'Shop updated successfully ✓');
   };
 
   const handleDeleteShop = (shopId: string) => {
@@ -2690,7 +2688,7 @@ if (typeof window !== 'undefined') {
       safeDeleteDoc(doc(db, 'users', targetUid, 'shops', shopId));
     }
 
-    showToast(lang === 'my' ? 'á€†á€­á€¯á€„á€ºá€¡á€á€»á€€á€ºá€¡á€œá€€á€º á€–á€»á€€á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Shop deleted successfully âœ“');
+    showToast(lang === 'my' ? 'ဆိုင်အချက်အလက် ဖျက်ပြီးပါပြီ ✓' : 'Shop deleted successfully ✓');
   };
 
   // ==========================================
@@ -2719,7 +2717,7 @@ if (typeof window !== 'undefined') {
       }, { merge: true });
     }
 
-    showToast(lang === 'my' ? 'á€šá€¬á€‰á€ºá€¡á€á€»á€€á€ºá€¡á€œá€€á€º á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Vehicle saved successfully âœ“');
+    showToast(lang === 'my' ? 'ယာဉ်အချက်အလက် သိမ်းဆည်းပြီးပါပြီ ✓' : 'Vehicle saved successfully ✓');
   };
 
   const handleDeleteVehicle = (vehicleId: string) => {
@@ -2734,7 +2732,7 @@ if (typeof window !== 'undefined') {
       safeDeleteDoc(doc(db, 'users', targetUid, 'vehicles', vehicleId));
     }
 
-    showToast(lang === 'my' ? 'á€šá€¬á€‰á€ºá€€á€­á€¯ á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€® âœ“' : 'Vehicle removed âœ“');
+    showToast(lang === 'my' ? 'ယာဉ်ကို ဖျက်လိုက်ပါပြီ ✓' : 'Vehicle removed ✓');
   };
 
   const handleSaveFuelLog = (logData: FuelLog) => {
@@ -2748,7 +2746,7 @@ if (typeof window !== 'undefined') {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
         c.id === 'cat_vehicle_management' ||
-        c.name.includes('á€šá€¬á€‰á€ºá€…á€®á€™á€¶') ||
+        c.name.includes('ယာဉ်စီမံ') ||
         (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management'))
       ) || categories.find((c) => c.type === 'expense') || categories[0];
 
@@ -2760,7 +2758,7 @@ if (typeof window !== 'undefined') {
         subCategoryId: 'sub_veh_fuel',
         walletId: log.walletId,
         date: log.date,
-        note: `[á€†á€®á€‘á€Šá€·á€ºá€…á€›á€­á€á€º] ${vehicleName} - ${log.liters.toLocaleString()} L @ ${log.pricePerLiter.toLocaleString()} Ks ${log.gasStation ? `(${log.gasStation})` : ''} ${log.odometer ? `[${log.odometer.toLocaleString()} km]` : ''}`,
+        note: `[ဆီထည့်စရိတ်] ${vehicleName} - ${log.liters.toLocaleString()} L @ ${log.pricePerLiter.toLocaleString()} Ks ${log.gasStation ? `(${log.gasStation})` : ''} ${log.odometer ? `[${log.odometer.toLocaleString()} km]` : ''}`,
         createdAt: log.createdAt || Date.now(),
       };
 
@@ -2800,7 +2798,7 @@ if (typeof window !== 'undefined') {
       handleSaveVehicle({ ...targetVehicle, currentOdometer: log.odometer });
     }
 
-    showToast(lang === 'my' ? 'á€†á€®á€‘á€Šá€·á€ºá€™á€¾á€á€ºá€á€™á€ºá€¸á€”á€¾á€„á€·á€º á€‘á€½á€€á€ºá€„á€½á€±á€…á€¬á€›á€„á€ºá€¸ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Fuel log & expense recorded âœ“');
+    showToast(lang === 'my' ? 'ဆီထည့်မှတ်တမ်းနှင့် ထွက်ငွေစာရင်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Fuel log & expense recorded ✓');
   };
 
   const handleDeleteFuelLog = (logId: string) => {
@@ -2831,7 +2829,7 @@ if (typeof window !== 'undefined') {
       safeDeleteDoc(doc(db, 'users', targetUid, 'fuelLogs', logId));
     }
 
-    showToast(lang === 'my' ? 'á€†á€®á€‘á€Šá€·á€ºá€™á€¾á€á€ºá€á€™á€ºá€¸ á€–á€»á€€á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Fuel log deleted âœ“');
+    showToast(lang === 'my' ? 'ဆီထည့်မှတ်တမ်း ဖျက်ပြီးပါပြီ ✓' : 'Fuel log deleted ✓');
   };
 
   const handleSaveMaintenance = (maintData: VehicleMaintenance) => {
@@ -2845,7 +2843,7 @@ if (typeof window !== 'undefined') {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
         c.id === 'cat_vehicle_management' ||
-        c.name.includes('á€šá€¬á€‰á€ºá€…á€®á€™á€¶') ||
+        c.name.includes('ယာဉ်စီမံ') ||
         (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management'))
       ) || categories.find((c) => c.type === 'expense') || categories[0];
 
@@ -2857,7 +2855,7 @@ if (typeof window !== 'undefined') {
         subCategoryId: 'sub_veh_maintenance',
         walletId: maint.walletId,
         date: maint.date,
-        note: `[á€šá€¬á€‰á€ºá€•á€¼á€¯á€•á€¼á€„á€ºá€‘á€­á€”á€ºá€¸á€žá€­á€™á€ºá€¸á€…á€›á€­á€á€º] ${vehicleName} - ${maint.serviceType}: ${maint.title} ${maint.workshopName ? `(${maint.workshopName})` : ''}`,
+        note: `[ယာဉ်ပြုပြင်ထိန်းသိမ်းစရိတ်] ${vehicleName} - ${maint.serviceType}: ${maint.title} ${maint.workshopName ? `(${maint.workshopName})` : ''}`,
         createdAt: maint.createdAt || Date.now(),
       };
 
@@ -2897,7 +2895,7 @@ if (typeof window !== 'undefined') {
       handleSaveVehicle({ ...targetVehicle, currentOdometer: maint.odometer });
     }
 
-    showToast(lang === 'my' ? 'á€•á€¼á€¯á€•á€¼á€„á€ºá€‘á€­á€”á€ºá€¸á€žá€­á€™á€ºá€¸á€™á€¾á€¯ á€™á€¾á€á€ºá€á€™á€ºá€¸ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Maintenance record saved âœ“');
+    showToast(lang === 'my' ? 'ပြုပြင်ထိန်းသိမ်းမှု မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Maintenance record saved ✓');
   };
 
   const handleDeleteMaintenance = (maintId: string) => {
@@ -2928,7 +2926,7 @@ if (typeof window !== 'undefined') {
       safeDeleteDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', maintId));
     }
 
-    showToast(lang === 'my' ? 'á€•á€¼á€¯á€•á€¼á€„á€ºá€‘á€­á€”á€ºá€¸á€žá€­á€™á€ºá€¸á€™á€¾á€¯ á€™á€¾á€á€ºá€á€™á€ºá€¸ á€–á€»á€€á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Maintenance record deleted âœ“');
+    showToast(lang === 'my' ? 'ပြုပြင်ထိန်းသိမ်းမှု မှတ်တမ်း ဖျက်ပြီးပါပြီ ✓' : 'Maintenance record deleted ✓');
   };
 
   const handleSaveTirePressure = (logData: TirePressureLog) => {
@@ -2942,7 +2940,7 @@ if (typeof window !== 'undefined') {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
         c.id === 'cat_vehicle_management' ||
-        c.name.includes('á€šá€¬á€‰á€ºá€…á€®á€™á€¶') ||
+        c.name.includes('ယာဉ်စီမံ') ||
         (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management'))
       ) || categories.find((c) => c.type === 'expense') || categories[0];
 
@@ -2954,7 +2952,7 @@ if (typeof window !== 'undefined') {
         subCategoryId: 'sub_veh_tire',
         walletId: log.walletId,
         date: log.date,
-        note: `[á€á€¬á€šá€¬á€œá€±á€‘á€­á€¯á€¸/á€…á€…á€ºá€†á€±á€¸á€] ${vehicleName} - ${log.note || 'á€œá€±á€á€»á€­á€”á€ºá€…á€…á€ºá€†á€±á€¸á€á€¼á€„á€ºá€¸'}`,
+        note: `[တာယာလေထိုး/စစ်ဆေးခ] ${vehicleName} - ${log.note || 'လေချိန်စစ်ဆေးခြင်း'}`,
         createdAt: log.createdAt || Date.now(),
       };
 
@@ -2990,7 +2988,7 @@ if (typeof window !== 'undefined') {
       }, { merge: true });
     }
 
-    showToast(lang === 'my' ? 'á€á€¬á€šá€¬á€œá€±á€–á€­á€¡á€¬á€¸ á€™á€¾á€á€ºá€á€™á€ºá€¸ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Tire pressure log saved âœ“');
+    showToast(lang === 'my' ? 'တာယာလေဖိအား မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Tire pressure log saved ✓');
   };
 
   const handleDeleteTirePressure = (logId: string) => {
@@ -3021,7 +3019,7 @@ if (typeof window !== 'undefined') {
       safeDeleteDoc(doc(db, 'users', targetUid, 'tirePressureLogs', logId));
     }
 
-    showToast(lang === 'my' ? 'á€á€¬á€šá€¬á€œá€±á€–á€­á€¡á€¬á€¸ á€™á€¾á€á€ºá€á€™á€ºá€¸ á€–á€»á€€á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Tire pressure log deleted âœ“');
+    showToast(lang === 'my' ? 'တာယာလေဖိအား မှတ်တမ်း ဖျက်ပြီးပါပြီ ✓' : 'Tire pressure log deleted ✓');
   };
 
   const handleUpdateWalletBalance = (id: string, newBalance: number) => {
@@ -3053,7 +3051,7 @@ if (typeof window !== 'undefined') {
       }
       return next;
     });
-    showToast(lang === 'my' ? 'á€œá€€á€ºá€€á€»á€”á€ºá€„á€½á€± á€•á€¼á€„á€ºá€†á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€®' : 'Balance updated');
+    showToast(lang === 'my' ? 'လက်ကျန်ငွေ ပြင်ဆင်ပြီးပါပြီ' : 'Balance updated');
   };
 
   const handleTransferFunds = (
@@ -3081,7 +3079,7 @@ if (typeof window !== 'undefined') {
       category: 'cat_transfer',
       subCategoryId: 'sub_tf_out',
       date: nowStr,
-      note: `[á€„á€½á€±á€œá€½á€¾á€²á€‘á€½á€€á€º] âž” ${toName}${note ? ` (${note})` : ''}`,
+      note: `[ငွေလွှဲထွက်] ➔ ${toName}${note ? ` (${note})` : ''}`,
       walletId: fromWallet?.id || fromWalletId,
       isTransfer: true,
       transferType: 'transfer_out',
@@ -3096,7 +3094,7 @@ if (typeof window !== 'undefined') {
       category: 'cat_transfer',
       subCategoryId: 'sub_tf_in',
       date: nowStr,
-      note: `[á€„á€½á€±á€œá€½á€¾á€²á€á€„á€º] â¬… ${fromName}${note ? ` (${note})` : ''}`,
+      note: `[ငွေလွှဲဝင်] ⬅ ${fromName}${note ? ` (${note})` : ''}`,
       walletId: toWallet?.id || toWalletId,
       isTransfer: true,
       transferType: 'transfer_in',
@@ -3129,13 +3127,13 @@ if (typeof window !== 'undefined') {
       }
     }
 
-    showToast(lang === 'my' ? 'á€„á€½á€±á€œá€½á€¾á€²á€•á€¼á€±á€¬á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“' : 'Transfer successful âœ“');
+    showToast(lang === 'my' ? 'ငွေလွှဲပြောင်းပြီးပါပြီ ✓' : 'Transfer successful ✓');
   };
 
   const handleShareWallet = async (walletId: string, email: string) => {
     if (!limits.hasWalletSharing || plan === 'guest') {
       if (window.confirm(lang === 'my'
-        ? 'Guest Mode á€á€½á€„á€º Wallet á€™á€»á€¾á€á€±á€á€¼á€„á€ºá€¸ á€™á€›á€›á€¾á€­á€”á€­á€¯á€„á€ºá€•á€«á‹ Google Account á€–á€¼á€„á€·á€º Sign in á€•á€¼á€¯á€œá€¯á€•á€ºá€•á€«'
+        ? 'Guest Mode တွင် Wallet မျှဝေခြင်း မရရှိနိုင်ပါ။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
         : 'Wallet sharing is not available in Guest mode. Please Sign in with Google.')) {
         setIsAuthModalOpen(true);
       }
@@ -3148,7 +3146,7 @@ if (typeof window !== 'undefined') {
 
     const currentShared = target.sharedWith || [];
     if (currentShared.includes(cleanEmail)) {
-      showToast(lang === 'my' ? 'á€¤ Email á€žá€Šá€º á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€žá€¬á€¸ á€–á€¼á€…á€ºá€•á€«á€žá€Šá€º' : 'This email is already added');
+      showToast(lang === 'my' ? 'ဤ Email သည် ထည့်သွင်းပြီးသား ဖြစ်ပါသည်' : 'This email is already added');
       return;
     }
 
@@ -3184,7 +3182,7 @@ if (typeof window !== 'undefined') {
         userId: user.uid,
       }, { merge: true });
     }
-    showToast(lang === 'my' ? `${cleanEmail} á€žá€­á€¯á€· Wallet á€™á€»á€¾á€á€±á€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€® âœ“` : `Wallet shared with ${cleanEmail} âœ“`);
+    showToast(lang === 'my' ? `${cleanEmail} သို့ Wallet မျှဝေလိုက်ပါပြီ ✓` : `Wallet shared with ${cleanEmail} ✓`);
   };
 
   const handleUnshareWallet = async (walletId: string, email: string) => {
@@ -3219,7 +3217,7 @@ if (typeof window !== 'undefined') {
         await removeCollaborator(cleanEmail).catch((err) => console.warn('Failed to remove collaborator from root:', err));
       }
     }
-    showToast(lang === 'my' ? 'á€™á€»á€¾á€á€±á€™á€¾á€¯ á€–á€šá€ºá€›á€¾á€¬á€¸á€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€®' : 'Sharing removed');
+    showToast(lang === 'my' ? 'မျှဝေမှု ဖယ်ရှားလိုက်ပါပြီ' : 'Sharing removed');
   };
 
   const handleUpdateWalletPermissions = async (
@@ -3247,7 +3245,7 @@ if (typeof window !== 'undefined') {
     if (user) {
       await syncSharedWalletToCloud(updatedWallet, user);
     }
-    showToast(lang === 'my' ? 'á€á€½á€„á€·á€ºá€•á€¼á€¯á€á€»á€€á€ºá€™á€»á€¬á€¸á€€á€­á€¯ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€® âœ“' : 'Permissions saved successfully âœ“');
+    showToast(lang === 'my' ? 'ခွင့်ပြုချက်များကို သိမ်းဆည်းလိုက်ပါပြီ ✓' : 'Permissions saved successfully ✓');
   };
 
   const handleReconcileBalance = (
@@ -3310,10 +3308,10 @@ if (typeof window !== 'undefined') {
         category: adjCategory?.id || 'other',
         date: new Date().toISOString().split('T')[0],
         note: note
-          ? `[á€…á€¬á€›á€„á€ºá€¸á€Šá€¾á€­] ${note} (${walletName})`
+          ? `[စာရင်းညှိ] ${note} (${walletName})`
           : isIncome
-          ? `[á€…á€¬á€›á€„á€ºá€¸á€Šá€¾á€­] á€œá€€á€ºá€€á€»á€”á€ºá€„á€½á€± á€•á€­á€¯á€„á€½á€±á€Šá€¾á€­á€á€»á€€á€º (${walletName})`
-          : `[á€…á€¬á€›á€„á€ºá€¸á€Šá€¾á€­] á€œá€€á€ºá€€á€»á€”á€ºá€„á€½á€± á€œá€­á€¯á€„á€½á€±á€Šá€¾á€­á€á€»á€€á€º (${walletName})`,
+          ? `[စာရင်းညှိ] လက်ကျန်ငွေ ပိုငွေညှိချက် (${walletName})`
+          : `[စာရင်းညှိ] လက်ကျန်ငွေ လိုငွေညှိချက် (${walletName})`,
         walletId: walletId,
         createdAt: Date.now(),
       };
@@ -3335,8 +3333,8 @@ if (typeof window !== 'undefined') {
 
     showToast(
       lang === 'my'
-        ? 'á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸ á€œá€€á€ºá€€á€»á€”á€ºá€„á€½á€±á€€á€­á€¯ á€¡á€±á€¬á€„á€ºá€™á€¼á€„á€ºá€…á€½á€¬ á€Šá€¾á€­á€•á€¼á€®á€¸á€•á€«á€•á€¼á€® âœ“'
-        : 'Wallet balance reconciled successfully âœ“'
+        ? 'ငွေစာရင်း လက်ကျန်ငွေကို အောင်မြင်စွာ ညှိပြီးပါပြီ ✓'
+        : 'Wallet balance reconciled successfully ✓'
     );
   };
 
@@ -3358,7 +3356,7 @@ if (typeof window !== 'undefined') {
     setPinSettings(updatedSettings);
     safeSetItem('ngwe_pin', JSON.stringify(updatedSettings));
     setIsLocked(true);
-    showToast(lang === 'my' ? 'á€œá€¯á€¶á€á€¼á€¯á€¶á€›á€±á€¸ PIN á€žá€á€ºá€™á€¾á€á€ºá á€¡á€€á€ºá€•á€ºá€€á€­á€¯ á€œá€±á€¬á€·á€á€ºá€á€»á€œá€­á€¯á€€á€ºá€•á€«á€•á€¼á€® ðŸ”’' : 'PIN set and App locked ðŸ”’');
+    showToast(lang === 'my' ? 'လုံခြုံရေး PIN သတ်မှတ်၍ အက်ပ်ကို လော့ခ်ချလိုက်ပါပြီ 🔒' : 'PIN set and App locked 🔒');
   };
 
   const handleAddBudget = (config: BudgetConfig) => {
@@ -3417,7 +3415,7 @@ if (typeof window !== 'undefined') {
     }
     showToast(
       lang === 'my'
-        ? `á€€á€á€¹á€á€žá€…á€º "${cat.name}" á€€á€­á€¯ á€¡á€±á€¬á€„á€ºá€™á€¼á€„á€ºá€…á€½á€¬ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®`
+        ? `ကဏ္ဍသစ် "${cat.name}" ကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ`
         : `Created custom category "${cat.name}"`
     );
   };
@@ -3439,7 +3437,7 @@ if (typeof window !== 'undefined') {
     }
     showToast(
       lang === 'my'
-        ? `á€€á€á€¹á€ "${updatedCat.name}" á€€á€­á€¯ á€•á€¼á€„á€ºá€†á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€®`
+        ? `ကဏ္ဍ "${updatedCat.name}" ကို ပြင်ဆင်ပြီးပါပြီ`
         : `Updated category "${updatedCat.name}"`
     );
   };
@@ -3457,7 +3455,7 @@ if (typeof window !== 'undefined') {
     
     if (relatedTxCount > 0) {
        if (!window.confirm(lang === 'my' 
-           ? `á€¤á€€á€á€¹á€á€á€½á€„á€º á€™á€¾á€á€ºá€á€™á€ºá€¸ ${relatedTxCount} á€á€¯ á€›á€¾á€­á€•á€«á€žá€Šá€ºá‹ á€–á€»á€€á€ºá€œá€­á€¯á€€á€ºá€•á€«á€€ áŽá€„á€ºá€¸á€á€­á€¯á€·á€€á€­á€¯ 'á€¡á€á€¼á€¬á€¸' á€€á€á€¹á€á€žá€­á€¯á€· á€•á€¼á€±á€¬á€„á€ºá€¸á€›á€½á€¾á€±á€·á€™á€Šá€ºá€–á€¼á€…á€ºá€•á€«á€žá€Šá€ºá‹ á€†á€€á€ºá€œá€¯á€•á€ºá€™á€Šá€ºá€œá€¬á€¸?` 
+           ? `ဤကဏ္ဍတွင် မှတ်တမ်း ${relatedTxCount} ခု ရှိပါသည်။ ဖျက်လိုက်ပါက ၎င်းတို့ကို 'အခြား' ကဏ္ဍသို့ ပြောင်းရွှေ့မည်ဖြစ်ပါသည်။ ဆက်လုပ်မည်လား?` 
            : `There are ${relatedTxCount} transactions in this category. They will be reassigned to 'Other'. Continue?`)) {
            return;
        }
@@ -3484,7 +3482,7 @@ if (typeof window !== 'undefined') {
     }
     showToast(
       lang === 'my'
-        ? `á€€á€á€¹á€ "${catToDelete.name}" á€€á€­á€¯ á€–á€»á€€á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€®`
+        ? `ကဏ္ဍ "${catToDelete.name}" ကို ဖျက်ပြီးပါပြီ`
         : `Deleted category "${catToDelete.name}"`
     );
   };
@@ -3520,7 +3518,7 @@ if (typeof window !== 'undefined') {
     }
     showToast(
       lang === 'my'
-        ? `á€€á€á€¹á€á€á€½á€² "${subCat.name}" á€€á€­á€¯ á€¡á€žá€…á€ºá€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®`
+        ? `ကဏ္ဍခွဲ "${subCat.name}" ကို အသစ်ထည့်သွင်းပြီးပါပြီ`
         : `Added sub-category "${subCat.name}"`
     );
   };
@@ -3555,7 +3553,7 @@ if (typeof window !== 'undefined') {
     if (deletedName) {
       showToast(
         lang === 'my'
-          ? `á€€á€á€¹á€á€á€½á€² "${deletedName}" á€€á€­á€¯ á€–á€»á€€á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€®`
+          ? `ကဏ္ဍခွဲ "${deletedName}" ကို ဖျက်ပြီးပါပြီ`
           : `Deleted sub-category "${deletedName}"`
       );
     }
@@ -3589,7 +3587,7 @@ if (typeof window !== 'undefined') {
     }
     showToast(
       lang === 'my'
-        ? `á€€á€á€¹á€á€á€½á€² "${updatedSub.name}" á€€á€­á€¯ á€•á€¼á€„á€ºá€†á€„á€ºá€•á€¼á€®á€¸á€•á€«á€•á€¼á€®`
+        ? `ကဏ္ဍခွဲ "${updatedSub.name}" ကို ပြင်ဆင်ပြီးပါပြီ`
         : `Updated sub-category "${updatedSub.name}"`
     );
   };
@@ -3607,7 +3605,7 @@ if (typeof window !== 'undefined') {
     if (result.mergedCount === 0) {
       showToast(
         lang === 'my'
-          ? 'á€‘á€•á€ºá€”á€±á€žá€±á€¬ á€žá€­á€¯á€·á€™á€Ÿá€¯á€á€º á€•á€±á€«á€„á€ºá€¸á€…á€•á€ºá€›á€”á€º á€€á€á€¹á€á€™á€»á€¬á€¸ á€™á€›á€¾á€­á€á€±á€¬á€·á€•á€« (á€¡á€¬á€¸á€œá€¯á€¶á€¸ á€›á€¾á€„á€ºá€¸á€œá€„á€ºá€¸á€•á€¼á€®á€¸á€–á€¼á€…á€ºá€•á€«á€žá€Šá€º)'
+          ? 'ထပ်နေသော သို့မဟုတ် ပေါင်းစပ်ရန် ကဏ္ဍများ မရှိတော့ပါ (အားလုံး ရှင်းလင်းပြီးဖြစ်ပါသည်)'
           : 'No duplicate or redundant categories found (all clean!)'
       );
       return;
@@ -3649,7 +3647,7 @@ if (typeof window !== 'undefined') {
 
     showToast(
       lang === 'my'
-        ? `á€€á€á€¹á€ ${result.mergedCount} á€á€¯á€€á€­á€¯ á€¡á€±á€¬á€„á€ºá€™á€¼á€„á€ºá€…á€½á€¬ á€•á€±á€«á€„á€ºá€¸á€…á€•á€ºá€›á€¾á€„á€ºá€¸á€œá€„á€ºá€¸á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®`
+        ? `ကဏ္ဍ ${result.mergedCount} ခုကို အောင်မြင်စွာ ပေါင်းစပ်ရှင်းလင်းပြီးပါပြီ`
         : `Successfully merged and cleaned up ${result.mergedCount} categories!`
     );
   };
@@ -3661,7 +3659,7 @@ if (typeof window !== 'undefined') {
         <div className="flex flex-col items-center gap-3">
           <FortuneLogo size="lg" style={logoStyle} animate />
           <p className="text-xs text-slate-500 font-medium">
-            {lang === 'my' ? 'á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸ á€…á€”á€…á€ºá€–á€½á€„á€·á€ºá€”á€±á€•á€«á€žá€Šá€º...' : 'Loading NgweSarYin...'}
+            {lang === 'my' ? 'ငွေစာရင်း စနစ်ဖွင့်နေပါသည်...' : 'Loading NgweSarYin...'}
           </p>
         </div>
       </div>
@@ -3767,7 +3765,7 @@ if (typeof window !== 'undefined') {
         <React.Suspense fallback={
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
             <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-medium">{lang === 'my' ? 'á€á€á€…á€±á€¬á€„á€·á€ºá€•á€«...' : 'Loading component...'}</span>
+            <span className="text-xs font-medium">{lang === 'my' ? 'ခဏစောင့်ပါ...' : 'Loading component...'}</span>
           </div>
         }>
         {activeTab === 'dashboard' && (
@@ -3860,15 +3858,15 @@ if (typeof window !== 'undefined') {
             {plan === 'guest' || !limits.hasDebts ? (
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs max-w-lg mx-auto my-6">
                 <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto text-2xl border border-amber-200 shadow-inner">
-                  ðŸ”’
+                  🔒
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    {lang === 'my' ? 'á€¡á€€á€¼á€½á€±á€¸ á€…á€¬á€›á€„á€ºá€¸ (Guest Mode á€á€½á€„á€º á€™á€›á€›á€¾á€­á€”á€­á€¯á€„á€ºá€•á€«)' : 'Debt Tracking Locked in Guest Mode'}
+                    {lang === 'my' ? 'အကြွေး စာရင်း (Guest Mode တွင် မရရှိနိုင်ပါ)' : 'Debt Tracking Locked in Guest Mode'}
                   </h2>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">
                     {lang === 'my'
-                      ? 'á€¡á€€á€¼á€½á€±á€¸á€”á€¾á€„á€·á€º á€¡á€›á€…á€ºá€€á€» á€™á€¾á€á€ºá€á€™á€ºá€¸á€™á€»á€¬á€¸ á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€›á€”á€º Google Account á€–á€¼á€„á€·á€º á€¡á€á€™á€²á€· Sign in á€•á€¼á€¯á€œá€¯á€•á€ºá€•á€« (á€žá€­á€¯á€·á€™á€Ÿá€¯á€á€º) Premium á€žá€­á€¯á€· á€¡á€†á€„á€·á€ºá€™á€¼á€¾á€„á€·á€ºá€•á€«'
+                      ? 'အကြွေးနှင့် အရစ်ကျ မှတ်တမ်းများ ထည့်သွင်းရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ (သို့မဟုတ်) Premium သို့ အဆင့်မြှင့်ပါ'
                       : 'To track debts and repayments, please Sign in with Google or Upgrade to Premium.'}
                   </p>
                 </div>
@@ -3877,7 +3875,7 @@ if (typeof window !== 'undefined') {
                   onClick={() => setIsAuthModalOpen(true)}
                   className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                 >
-                  {lang === 'my' ? 'Google Account á€–á€¼á€„á€·á€º á€á€„á€ºá€›á€±á€¬á€€á€ºá€™á€Šá€º' : 'Sign In with Google'}
+                  {lang === 'my' ? 'Google Account ဖြင့် ဝင်ရောက်မည်' : 'Sign In with Google'}
                 </button>
               </div>
             ) : (
@@ -3951,15 +3949,15 @@ if (typeof window !== 'undefined') {
             {plan === 'guest' || !limits.hasBudgets ? (
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs max-w-lg mx-auto my-6">
                 <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto text-2xl border border-amber-200 shadow-inner">
-                  ðŸ”’
+                  🔒
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    {lang === 'my' ? 'á€˜á€á€ºá€‚á€»á€€á€º á€…á€®á€™á€¶á€á€¼á€„á€ºá€¸ (Guest Mode á€á€½á€„á€º á€™á€›á€›á€¾á€­á€”á€­á€¯á€„á€ºá€•á€«)' : 'Budget Management Locked in Guest Mode'}
+                    {lang === 'my' ? 'ဘတ်ဂျက် စီမံခြင်း (Guest Mode တွင် မရရှိနိုင်ပါ)' : 'Budget Management Locked in Guest Mode'}
                   </h2>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">
                     {lang === 'my'
-                      ? 'á€á€„á€ºá€„á€½á€±/á€‘á€½á€€á€ºá€„á€½á€± % á€”á€¾á€„á€·á€º á€•á€¯á€¶á€žá€± á€˜á€á€ºá€‚á€»á€€á€º á€…á€®á€™á€¶á€á€”á€·á€ºá€á€½á€²á€”á€­á€¯á€„á€ºá€›á€”á€º Google Account á€–á€¼á€„á€·á€º á€¡á€á€™á€²á€· Sign in á€•á€¼á€¯á€œá€¯á€•á€ºá€•á€« (á€žá€­á€¯á€·á€™á€Ÿá€¯á€á€º) Premium á€žá€­á€¯á€· á€¡á€†á€„á€·á€ºá€™á€¼á€¾á€„á€·á€ºá€•á€«'
+                      ? 'ဝင်ငွေ/ထွက်ငွေ % နှင့် ပုံသေ ဘတ်ဂျက် စီမံခန့်ခွဲနိုင်ရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ (သို့မဟုတ်) Premium သို့ အဆင့်မြှင့်ပါ'
                       : 'To set and manage monthly budgets, please Sign in with Google or Upgrade to Premium.'}
                   </p>
                 </div>
@@ -3968,7 +3966,7 @@ if (typeof window !== 'undefined') {
                   onClick={() => setIsAuthModalOpen(true)}
                   className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                 >
-                  {lang === 'my' ? 'Google Account á€–á€¼á€„á€·á€º á€á€„á€ºá€›á€±á€¬á€€á€ºá€™á€Šá€º' : 'Sign In with Google'}
+                  {lang === 'my' ? 'Google Account ဖြင့် ဝင်ရောက်မည်' : 'Sign In with Google'}
                 </button>
               </div>
             ) : (
@@ -4017,11 +4015,11 @@ if (typeof window !== 'undefined') {
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
               <div className="text-center max-w-xl mx-auto mb-8">
                 <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
-                  {lang === 'my' ? 'Guest / Free / Premium á€á€”á€ºá€†á€±á€¬á€„á€ºá€™á€¾á€¯ á€¡á€†á€„á€·á€ºá€™á€»á€¬á€¸' : 'Guest vs Free vs Premium Membership Plans'}
+                  {lang === 'my' ? 'Guest / Free / Premium ဝန်ဆောင်မှု အဆင့်များ' : 'Guest vs Free vs Premium Membership Plans'}
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-2">
                   {lang === 'my'
-                    ? 'á€œá€°á€€á€¼á€®á€¸á€™á€„á€ºá€¸á á€œá€­á€¯á€¡á€•á€ºá€á€»á€€á€ºá€”á€¾á€„á€·á€ºá€€á€­á€¯á€€á€ºá€Šá€®á€žá€±á€¬ á€¡á€…á€®á€¡á€…á€‰á€ºá€€á€­á€¯ á€›á€½á€±á€¸á€á€»á€šá€ºá€¡á€žá€¯á€¶á€¸á€•á€¼á€¯á€”á€­á€¯á€„á€ºá€•á€«á€žá€Šá€º'
+                    ? 'လူကြီးမင်း၏ လိုအပ်ချက်နှင့်ကိုက်ညီသော အစီအစဉ်ကို ရွေးချယ်အသုံးပြုနိုင်ပါသည်'
                     : 'Choose the plan that best fits your financial management needs'}
                 </p>
               </div>
@@ -4037,29 +4035,29 @@ if (typeof window !== 'undefined') {
                       <h3 className="font-bold text-base text-slate-900">Guest Mode</h3>
                       {plan === 'guest' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-white">
-                          {lang === 'my' ? 'á€œá€€á€ºá€›á€¾á€­á€žá€¯á€¶á€¸á€”á€±á€žá€Šá€º' : 'Current'}
+                          {lang === 'my' ? 'လက်ရှိသုံးနေသည်' : 'Current'}
                         </span>
                       )}
                     </div>
                     <div className="text-xl font-black text-slate-900 mt-2">
-                      0 MMK <span className="text-xs font-normal text-slate-500">/ Account á€™á€œá€­á€¯</span>
+                      0 MMK <span className="text-xs font-normal text-slate-500">/ Account မလို</span>
                     </div>
 
                     <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                      <li className="flex items-center gap-1.5 font-medium">âœ“ {lang === 'my' ? 'á€œá€…á€‰á€º á€™á€¾á€á€ºá€á€™á€ºá€¸ áƒá€ á€á€¯' : '30 tx / month'}</li>
-                      <li className="flex items-center gap-1.5 font-medium">âœ“ {lang === 'my' ? 'Wallet á á€á€¯á€žá€¬ (Cash)' : '1 Wallet only'}</li>
-                      <li className="flex items-center gap-1.5 text-rose-600 font-medium">âœ• {lang === 'my' ? 'á€¡á€€á€¼á€½á€±á€¸ á€…á€¬á€›á€„á€ºá€¸ (á€™á€›á€•á€«)' : 'No Debt Tracking'}</li>
-                      <li className="flex items-center gap-1.5 text-rose-600 font-medium">âœ• {lang === 'my' ? 'á€…á€¯á€„á€½á€± á€•á€”á€ºá€¸á€á€­á€¯á€„á€º (á€™á€›á€•á€«)' : 'No Savings Target'}</li>
-                      <li className="flex items-center gap-1.5 text-rose-600 font-medium">âœ• {lang === 'my' ? 'á€˜á€á€ºá€‚á€»á€€á€º á€…á€®á€™á€¶á€á€¼á€„á€ºá€¸ (á€™á€›á€•á€«)' : 'No Budgeting'}</li>
-                      <li className="flex items-center gap-1.5 text-slate-400">âœ• {lang === 'my' ? 'Wallet á€™á€»á€¾á€á€±á€á€¼á€„á€ºá€¸ (á€™á€›á€•á€«)' : 'No Wallet Sharing'}</li>
-                      <li className="flex items-center gap-1.5 text-slate-400">âœ• {lang === 'my' ? 'Cloud Auto-Sync (á€™á€•á€«)' : 'No Cloud Sync'}</li>
+                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? 'လစဉ် မှတ်တမ်း ၃၀ ခု' : '30 tx / month'}</li>
+                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? 'Wallet ၁ ခုသာ (Cash)' : '1 Wallet only'}</li>
+                      <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'အကြွေး စာရင်း (မရပါ)' : 'No Debt Tracking'}</li>
+                      <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'စုငွေ ပန်းတိုင် (မရပါ)' : 'No Savings Target'}</li>
+                      <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'ဘတ်ဂျက် စီမံခြင်း (မရပါ)' : 'No Budgeting'}</li>
+                      <li className="flex items-center gap-1.5 text-slate-400">✕ {lang === 'my' ? 'Wallet မျှဝေခြင်း (မရပါ)' : 'No Wallet Sharing'}</li>
+                      <li className="flex items-center gap-1.5 text-slate-400">✕ {lang === 'my' ? 'Cloud Auto-Sync (မပါ)' : 'No Cloud Sync'}</li>
                     </ul>
                   </div>
 
                   <button
                     disabled={plan === 'guest'}
                     onClick={() => {
-                      showToast(lang === 'my' ? 'Guest Mode á€¡á€–á€¼á€…á€º á€¡á€žá€¯á€¶á€¸á€•á€¼á€¯á€”á€±á€•á€«á€žá€Šá€º' : 'Currently in Guest Mode');
+                      showToast(lang === 'my' ? 'Guest Mode အဖြစ် အသုံးပြုနေပါသည်' : 'Currently in Guest Mode');
                     }}
                     className={`mt-6 w-full py-2 rounded-xl font-bold text-xs transition-colors ${
                       plan === 'guest'
@@ -4067,7 +4065,7 @@ if (typeof window !== 'undefined') {
                         : 'border border-slate-300 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    {plan === 'guest' ? (lang === 'my' ? 'á€œá€€á€ºá€›á€¾á€­á€žá€¯á€¶á€¸á€”á€±á€žá€Šá€º' : 'Active Plan') : (lang === 'my' ? 'Guest á€¡á€†á€„á€·á€º' : 'Guest Tier')}
+                    {plan === 'guest' ? (lang === 'my' ? 'လက်ရှိသုံးနေသည်' : 'Active Plan') : (lang === 'my' ? 'Guest အဆင့်' : 'Guest Tier')}
                   </button>
                 </div>
 
@@ -4081,7 +4079,7 @@ if (typeof window !== 'undefined') {
                       <h3 className="font-bold text-base text-slate-900">Free Plan</h3>
                       {plan === 'free' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          {lang === 'my' ? 'á€œá€€á€ºá€›á€¾á€­á€žá€¯á€¶á€¸á€”á€±á€žá€Šá€º' : 'Current'}
+                          {lang === 'my' ? 'လက်ရှိသုံးနေသည်' : 'Current'}
                         </span>
                       )}
                     </div>
@@ -4090,15 +4088,15 @@ if (typeof window !== 'undefined') {
                     </div>
 
                     <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">âœ“ {lang === 'my' ? 'á€œá€…á€‰á€º á€™á€¾á€á€ºá€á€™á€ºá€¸ áá€á€ á€á€¯' : '100 tx / month'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">âœ“ {lang === 'my' ? 'á€¡á€€á€¼á€½á€±á€¸á€…á€¬á€›á€„á€ºá€¸ á… á€á€¯' : 'Up to 5 Debts'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">âœ“ {lang === 'my' ? 'Wallet á‚ á€á€¯' : '2 Wallets'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700">âœ“ {lang === 'my' ? 'Wallet á€™á€»á€¾á€á€±á€á€¼á€„á€ºá€¸ (á‚ á€šá€±á€¬á€€á€º)' : 'Share Wallet (2 members)'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">âœ“ {lang === 'my' ? 'á€…á€¯á€„á€½á€± á€•á€”á€ºá€¸á€á€­á€¯á€„á€º á€›á€›á€¾á€­á€™á€Šá€º' : 'Savings Target'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">âœ“ {lang === 'my' ? 'á€˜á€á€ºá€‚á€»á€€á€º á€€á€á€¹á€ á… á€á€¯' : '5 Budget Categories'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">âœ“ {lang === 'my' ? 'á€šá€¬á€‰á€ºá€…á€®á€™á€¶á€á€”á€·á€ºá€á€½á€²á€™á€¾á€¯ (á€šá€¬á€‰á€º á á€…á€®á€¸)' : 'Vehicle Tracking (1 Vehicle)'}</li>
-                      <li className="flex items-center gap-1.5 text-slate-500">âœ• {lang === 'my' ? 'Custom Categories (á€™á€•á€«)' : 'No Custom Categories'}</li>
-                      <li className="flex items-center gap-1.5 text-slate-400">âœ• {lang === 'my' ? 'Excel Export (á€™á€•á€«)' : 'No Excel Export'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'လစဉ် မှတ်တမ်း ၁၀၀ ခု' : '100 tx / month'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'အကြွေးစာရင်း ၅ ခု' : 'Up to 5 Debts'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'Wallet ၂ ခု' : '2 Wallets'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700">✓ {lang === 'my' ? 'Wallet မျှဝေခြင်း (၂ ယောက်)' : 'Share Wallet (2 members)'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'စုငွေ ပန်းတိုင် ရရှိမည်' : 'Savings Target'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'ဘတ်ဂျက် ကဏ္ဍ ၅ ခု' : '5 Budget Categories'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'ယာဉ်စီမံခန့်ခွဲမှု (ယာဉ် ၁ စီး)' : 'Vehicle Tracking (1 Vehicle)'}</li>
+                      <li className="flex items-center gap-1.5 text-slate-500">✕ {lang === 'my' ? 'Custom Categories (မပါ)' : 'No Custom Categories'}</li>
+                      <li className="flex items-center gap-1.5 text-slate-400">✕ {lang === 'my' ? 'Excel Export (မပါ)' : 'No Excel Export'}</li>
                     </ul>
                   </div>
 
@@ -4108,7 +4106,7 @@ if (typeof window !== 'undefined') {
                       if (plan === 'guest') {
                         setIsAuthModalOpen(true);
                       } else {
-                        showToast(lang === 'my' ? 'Free Plan á€¡á€–á€¼á€…á€º á€¡á€žá€¯á€¶á€¸á€•á€¼á€¯á€”á€±á€•á€«á€žá€Šá€º' : 'Currently on Free Plan');
+                        showToast(lang === 'my' ? 'Free Plan အဖြစ် အသုံးပြုနေပါသည်' : 'Currently on Free Plan');
                       }
                     }}
                     className={`mt-6 w-full py-2 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
@@ -4117,7 +4115,7 @@ if (typeof window !== 'undefined') {
                         : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
                     }`}
                   >
-                    {plan === 'free' ? (lang === 'my' ? 'á€œá€€á€ºá€›á€¾á€­á€žá€¯á€¶á€¸á€”á€±á€žá€Šá€º' : 'Active Plan') : (lang === 'my' ? 'Sign In á€–á€¼á€„á€·á€º Free á€žá€¯á€¶á€¸á€™á€Šá€º' : 'Sign In for Free')}
+                    {plan === 'free' ? (lang === 'my' ? 'လက်ရှိသုံးနေသည်' : 'Active Plan') : (lang === 'my' ? 'Sign In ဖြင့် Free သုံးမည်' : 'Sign In for Free')}
                   </button>
                 </div>
 
@@ -4131,11 +4129,11 @@ if (typeof window !== 'undefined') {
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 font-bold text-base text-amber-950">
-                        <span>âœ¨ Premium VIP</span>
+                        <span>✨ Premium VIP</span>
                       </div>
                       {plan === 'premium' ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
-                          {lang === 'my' ? 'á€œá€€á€ºá€›á€¾á€­á€žá€¯á€¶á€¸á€”á€±á€žá€Šá€º' : 'Active'}
+                          {lang === 'my' ? 'လက်ရှိသုံးနေသည်' : 'Active'}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-200 text-amber-900 uppercase">
@@ -4146,22 +4144,22 @@ if (typeof window !== 'undefined') {
                     <div className="text-xl font-black text-slate-900 mt-2">
                       2,000 MMK{' '}
                       <span className="text-[11px] font-normal text-slate-500">
-                        / á€œ {lang === 'my' ? '(á‚á€,á€á€á€/á€”á€¾á€…á€º)' : '(20k/yr)'}
+                        / လ {lang === 'my' ? '(၂၀,၀၀၀/နှစ်)' : '(20k/yr)'}
                       </span>
                     </div>
 
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 font-medium">
                       <li className="flex items-center gap-1.5 text-emerald-700 font-black">
-                        âœ“ {lang === 'my' ? '100% Ad-Free (á€€á€¼á€±á€¬á€ºá€„á€¼á€¬á€™á€•á€«)' : '100% Ad-Free'}
+                        ✓ {lang === 'my' ? '100% Ad-Free (ကြော်ငြာမပါ)' : '100% Ad-Free'}
                       </li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'á€™á€¾á€á€ºá€á€™á€ºá€¸ á€¡á€€á€”á€·á€ºá€¡á€žá€á€ºá€™á€²á€·' : 'Unlimited Transactions'}</li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'á€¡á€€á€¼á€½á€±á€¸ + á€¡á€›á€…á€ºá€€á€» á€¡á€€á€”á€·á€ºá€¡á€žá€á€ºá€™á€²á€·' : 'Unlimited Debts'}</li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'Wallet á€¡á€€á€”á€·á€ºá€¡á€žá€á€ºá€™á€²á€· + á€™á€»á€¾á€á€±á€á€¼á€„á€ºá€¸' : 'Unlimited Wallets & Sharing'}</li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'á€…á€¯á€„á€½á€± á€•á€”á€ºá€¸á€á€­á€¯á€„á€º á€¡á€•á€¼á€Šá€·á€ºá€¡á€' : 'Full Savings Target'}</li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'á€˜á€á€ºá€‚á€»á€€á€º á€¡á€€á€”á€·á€ºá€¡á€žá€á€ºá€™á€²á€·' : 'Unlimited Budgets'}</li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'á€šá€¬á€‰á€ºá€…á€®á€™á€¶á€á€”á€·á€ºá€á€½á€²á€™á€¾á€¯ á€¡á€€á€”á€·á€ºá€¡á€žá€á€ºá€™á€²á€· (Unlimited Fleet)' : 'Unlimited Vehicles & Fleet'}</li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'Custom Categories á€…á€­á€á€ºá€€á€¼á€­á€¯á€€á€º' : 'Custom Categories'}</li>
-                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">âœ“ {lang === 'my' ? 'Excel / CSV á€’á€±á€á€¬ á€‘á€¯á€á€ºá€šá€°á€á€¼á€„á€ºá€¸' : 'Excel / CSV Export'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'မှတ်တမ်း အကန့်အသတ်မဲ့' : 'Unlimited Transactions'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'အကြွေး + အရစ်ကျ အကန့်အသတ်မဲ့' : 'Unlimited Debts'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'Wallet အကန့်အသတ်မဲ့ + မျှဝေခြင်း' : 'Unlimited Wallets & Sharing'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'စုငွေ ပန်းတိုင် အပြည့်အဝ' : 'Full Savings Target'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'ဘတ်ဂျက် အကန့်အသတ်မဲ့' : 'Unlimited Budgets'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'ယာဉ်စီမံခန့်ခွဲမှု အကန့်အသတ်မဲ့ (Unlimited Fleet)' : 'Unlimited Vehicles & Fleet'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'Custom Categories စိတ်ကြိုက်' : 'Custom Categories'}</li>
+                      <li className="flex items-center gap-1.5 text-emerald-700 font-bold">✓ {lang === 'my' ? 'Excel / CSV ဒေတာ ထုတ်ယူခြင်း' : 'Excel / CSV Export'}</li>
                     </ul>
                   </div>
 
@@ -4171,7 +4169,7 @@ if (typeof window !== 'undefined') {
                     }}
                     className="mt-6 w-full py-2 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-xs active:scale-95 transition-all cursor-pointer"
                   >
-                    {plan === 'premium' ? (lang === 'my' ? 'Premium á€¡á€†á€„á€·á€º á€›á€›á€¾á€­á€•á€¼á€®á€¸' : 'Premium Active') : (lang === 'my' ? 'âœ¨ Premium á€›á€šá€°á€›á€”á€º á€”á€¾á€­á€•á€ºá€•á€«' : 'âœ¨ Upgrade to Premium')}
+                    {plan === 'premium' ? (lang === 'my' ? 'Premium အဆင့် ရရှိပြီး' : 'Premium Active') : (lang === 'my' ? '✨ Premium ရယူရန် နှိပ်ပါ' : '✨ Upgrade to Premium')}
                   </button>
                 </div>
               </div>
@@ -4181,11 +4179,11 @@ if (typeof window !== 'undefined') {
                   <div>
                     <h3 className="font-bold text-sm text-amber-950 flex items-center gap-1.5">
                       <KeyRound className="w-4 h-4 text-amber-600" />
-                      <span>{lang === 'my' ? 'Activation Code á€‘á€Šá€·á€ºá€žá€½á€„á€ºá€¸á€›á€”á€º / á€›á€šá€°á€›á€”á€º' : 'Activation Code & Payment'}</span>
+                      <span>{lang === 'my' ? 'Activation Code ထည့်သွင်းရန် / ရယူရန်' : 'Activation Code & Payment'}</span>
                     </h3>
                     <p className="text-xs text-amber-800 mt-1 leading-relaxed">
                       {lang === 'my'
-                        ? 'Admin á€‘á€¶á€™á€¾ á€›á€›á€¾á€­á€žá€±á€¬ Activation Code á€–á€¼á€„á€·á€º Premium á€–á€½á€„á€·á€ºá€›á€”á€º (á€žá€­á€¯á€·á€™á€Ÿá€¯á€á€º) KBZPay/WavePay á€–á€¼á€„á€·á€º á€á€šá€ºá€šá€°á€›á€”á€º'
+                        ? 'Admin ထံမှ ရရှိသော Activation Code ဖြင့် Premium ဖွင့်ရန် (သို့မဟုတ်) KBZPay/WavePay ဖြင့် ဝယ်ယူရန်'
                         : 'Redeem your activation code or view payment instructions to purchase Premium'}
                     </p>
                   </div>
@@ -4194,7 +4192,7 @@ if (typeof window !== 'undefined') {
                     className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
                     <KeyRound className="w-4 h-4" />
-                    <span>{lang === 'my' ? 'Code á€‘á€Šá€·á€ºá€™á€Šá€º / á€¡á€žá€±á€¸á€…á€­á€á€º' : 'Enter Code / Details'}</span>
+                    <span>{lang === 'my' ? 'Code ထည့်မည် / အသေးစိတ်' : 'Enter Code / Details'}</span>
                   </button>
                 </div>
               </div>
@@ -4203,13 +4201,13 @@ if (typeof window !== 'undefined') {
                 <div className="flex items-center gap-2 mb-2">
                   <Trash2 className="w-4 h-4 text-rose-600" />
                   <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider">
-                    {lang === 'my' ? 'á€’á€±á€á€¬ á€…á€®á€™á€¶á€á€”á€·á€ºá€á€½á€²á€™á€¾á€¯ (Data Management)' : 'Data Management'}
+                    {lang === 'my' ? 'ဒေတာ စီမံခန့်ခွဲမှု (Data Management)' : 'Data Management'}
                   </h3>
                 </div>
 
                 <p className="text-xs text-slate-600 mb-4 leading-relaxed">
                   {lang === 'my'
-                    ? 'á€…á€¬á€›á€„á€ºá€¸á€™á€¾á€á€ºá€á€™á€ºá€¸á€™á€»á€¬á€¸á€¡á€¬á€¸ á€žá€”á€·á€ºá€›á€¾á€„á€ºá€¸á€…á€„á€ºá€€á€¼á€šá€ºá€…á€½á€¬ á€¡á€žá€…á€ºá€•á€¼á€”á€ºá€œá€Šá€ºá€…á€á€„á€ºá€œá€­á€¯á€•á€«á€€ á€¤á€”á€±á€›á€¬á€™á€¾ á€›á€¾á€„á€ºá€¸á€œá€„á€ºá€¸á€”á€­á€¯á€„á€ºá€•á€«á€žá€Šá€º (á€žá€­á€¯á€·á€™á€Ÿá€¯á€á€º) Backup á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€”á€­á€¯á€„á€ºá€•á€«á€žá€Šá€º'
+                    ? 'စာရင်းမှတ်တမ်းများအား သန့်ရှင်းစင်ကြယ်စွာ အသစ်ပြန်လည်စတင်လိုပါက ဤနေရာမှ ရှင်းလင်းနိုင်ပါသည် (သို့မဟုတ်) Backup သိမ်းဆည်းနိုင်ပါသည်'
                     : 'Manage your local dataset, backup file, or reset records to start completely fresh.'}
                 </p>
 
@@ -4221,7 +4219,7 @@ if (typeof window !== 'undefined') {
                     className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span>{lang === 'my' ? 'á€’á€±á€á€¬á€¡á€¬á€¸á€œá€¯á€¶á€¸ á€–á€»á€€á€ºá€™á€Šá€º (Clear All Data)' : 'Clear All Data'}</span>
+                    <span>{lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည် (Clear All Data)' : 'Clear All Data'}</span>
                   </button>
 
                   <button
@@ -4230,12 +4228,12 @@ if (typeof window !== 'undefined') {
                     className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <Download className="w-4 h-4 text-slate-500" />
-                    <span>{lang === 'my' ? 'JSON Backup á€žá€­á€™á€ºá€¸á€™á€Šá€º' : 'Export Backup'}</span>
+                    <span>{lang === 'my' ? 'JSON Backup သိမ်းမည်' : 'Export Backup'}</span>
                   </button>
 
                   <label className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer">
                     <Upload className="w-4 h-4 text-slate-500" />
-                    <span>{lang === 'my' ? 'JSON Backup á€‘á€Šá€·á€ºá€™á€Šá€º' : 'Import Backup'}</span>
+                    <span>{lang === 'my' ? 'JSON Backup ထည့်မည်' : 'Import Backup'}</span>
                     <input
                       type="file"
                       accept=".json"
@@ -4295,14 +4293,14 @@ if (typeof window !== 'undefined') {
       <footer className="border-t border-slate-200 bg-white py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            <span className="font-semibold text-slate-700">á€„á€½á€±á€…á€¬á€›á€„á€ºá€¸ (NgweSarYin)</span> â€”{' '}
+            <span className="font-semibold text-slate-700">ငွေစာရင်း (NgweSarYin)</span> —{' '}
             {lang === 'my'
-              ? 'á€á€„á€ºá€„á€½á€±áŠ á€‘á€½á€€á€ºá€„á€½á€±á€”á€¾á€„á€·á€º á€¡á€€á€¼á€½á€±á€¸á€…á€¬á€›á€„á€ºá€¸ á€…á€®á€™á€¶á€á€”á€·á€ºá€á€½á€²á€™á€¾á€¯'
+              ? 'ဝင်ငွေ၊ ထွက်ငွေနှင့် အကြွေးစာရင်း စီမံခန့်ခွဲမှု'
               : 'Income, Expense & Debt Manager'}
           </div>
           <div className="flex items-center gap-2 text-[11px] text-slate-400">
-            <span>{lang === 'my' ? 'á€œá€¯á€¶á€á€¼á€¯á€¶á€…á€­á€á€ºá€á€»á€…á€½á€¬ á€žá€­á€™á€ºá€¸á€†á€Šá€ºá€¸á€‘á€¬á€¸á€•á€«á€žá€Šá€º' : 'Secure & Cloud-synced'}</span>
-            <span>â€¢</span>
+            <span>{lang === 'my' ? 'လုံခြုံစိတ်ချစွာ သိမ်းဆည်းထားပါသည်' : 'Secure & Cloud-synced'}</span>
+            <span>•</span>
             <button
               type="button"
               onClick={() => setIsVersionHistoryModalOpen(true)}
@@ -4310,7 +4308,7 @@ if (typeof window !== 'undefined') {
               title="Click to view full version history and changelog"
             >
               <span>{CURRENT_APP_VERSION}</span>
-              <span>({lang === 'my' ? 'á€—á€¬á€¸á€›á€¾á€„á€ºá€¸á€™á€¾á€á€ºá€á€™á€ºá€¸' : 'Changelog'})</span>
+              <span>({lang === 'my' ? 'ဗားရှင်းမှတ်တမ်း' : 'Changelog'})</span>
             </button>
           </div>
         </div>
@@ -4328,7 +4326,7 @@ if (typeof window !== 'undefined') {
             title="Dashboard"
           >
             <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[10px]">{lang === 'my' ? 'á€•á€„á€ºá€™' : 'Home'}</span>
+            <span className="text-[10px]">{lang === 'my' ? 'ပင်မ' : 'Home'}</span>
           </button>
 
           <button
@@ -4341,13 +4339,13 @@ if (typeof window !== 'undefined') {
             title="Transactions"
           >
             <ArrowLeftRight className="w-5 h-5" />
-            <span className="text-[10px]">{lang === 'my' ? 'á€…á€¬á€›á€„á€ºá€¸' : 'Records'}</span>
+            <span className="text-[10px]">{lang === 'my' ? 'စာရင်း' : 'Records'}</span>
           </button>
 
           <div className="-mt-6">
             <ClayFloatingCoinButton
               onClick={() => handleOpenAddTx('expense')}
-              label={lang === 'my' ? 'á€…á€¬á€›á€„á€ºá€¸á€žá€…á€º' : 'Add'}
+              label={lang === 'my' ? 'စာရင်းသစ်' : 'Add'}
             />
           </div>
 
@@ -4361,7 +4359,7 @@ if (typeof window !== 'undefined') {
             title="Debts"
           >
             <HandCoins className="w-5 h-5" />
-            <span className="text-[10px]">{lang === 'my' ? 'á€¡á€€á€¼á€½á€±á€¸' : 'Debts'}</span>
+            <span className="text-[10px]">{lang === 'my' ? 'အကြွေး' : 'Debts'}</span>
           </button>
 
           <button
@@ -4370,7 +4368,7 @@ if (typeof window !== 'undefined') {
             title="Menu & All Tabs"
           >
             <Menu className="w-5 h-5 text-slate-700" />
-            <span className="text-[10px] font-bold text-slate-700">{lang === 'my' ? 'á€™á€®á€”á€°á€¸' : 'Menu'}</span>
+            <span className="text-[10px] font-bold text-slate-700">{lang === 'my' ? 'မီနူး' : 'Menu'}</span>
           </button>
         </div>
       </div>
@@ -4446,8 +4444,8 @@ if (typeof window !== 'undefined') {
             onSelectPlan={(_newPlan) => {
               showToast(
                 lang === 'my'
-                  ? 'âœ¨ Premium á€¡á€†á€„á€·á€ºá€žá€­á€¯á€· á€¡á€±á€¬á€„á€ºá€™á€¼á€„á€ºá€…á€½á€¬ á€•á€¼á€±á€¬á€„á€ºá€¸á€œá€²á€•á€¼á€®á€¸á€•á€«á€•á€¼á€®'
-                  : 'âœ¨ Upgraded to Premium Plan'
+                  ? '✨ Premium အဆင့်သို့ အောင်မြင်စွာ ပြောင်းလဲပြီးပါပြီ'
+                  : '✨ Upgraded to Premium Plan'
               );
             }}
             lang={lang}

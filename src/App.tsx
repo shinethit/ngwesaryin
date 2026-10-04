@@ -1022,7 +1022,14 @@ export default function App() {
             });
 
             prevLocal.forEach((t) => {
-              if (t && t.id && (!confirmedServerTxIds.has(t.id) || syncQueue.isEntityPending('transactions', t.id)) && !isTxDeleted(t.id) && !deletedIds.includes(t.id)) {
+              if (!t || !t.id) return;
+              if (deletedIds.includes(t.id)) return;
+              if (isTxDeleted(t.id)) return;
+              if (map.has(t.id)) return;
+              const isPendingUpsert = syncQueue
+                .getQueue()
+                .some((q) => q.entityType === 'transactions' && q.entityId === t.id && q.operation === 'upsert');
+              if (isPendingUpsert) {
                 map.set(t.id, t);
               }
             });

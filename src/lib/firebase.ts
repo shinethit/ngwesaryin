@@ -497,8 +497,27 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
     return false;
   }
 
+  // ⚡ iOS Safari WebKit: deleteDoc() silently hangs. Issue REST DELETE first.
+  if (entityType === 'transactions' && entityId && targetUid) {
+    try {
+      const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
+      const restRes = await deleteTransactionDirectHttp(entityId, targetUid);
+      if (restRes.success) {
+        recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
+        import('./syncQueue')
+          .then(({ syncQueue }) => syncQueue.remove('transactions', entityId))
+          .catch(() => {});
+        return true;
+      }
+      console.warn('[safeDeleteDoc] REST delete failed, falling back to SDK:', restRes.error);
+    } catch (restErr) {
+      console.warn('[safeDeleteDoc] REST delete error:', restErr);
+    }
+  }
+
   try {
-    // Wrap deleteDoc in withTimeout(..., 8000) to prevent hanging
+    // ⚡ For transaction deletes we already used REST; if SDK ever runs it
+    // still has 8s timeout as fail-safe.
     await withTimeout(deleteDoc(docRef), 8000);
     isNetworkPausedForQuota = false;
     recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
@@ -512,6 +531,35 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+
+    // ─────────────────────────────────────────────────────────────
+    // iOS / Safari / PWA REST DELETE fallback.
+    // On iOS Safari WebKit, deleteDoc() frequently hangs or silently
+    // fails without throwing a catchable error, so the doc stays in
+    // Firestore forever (confirmed by cross-device tests where even
+    // clear-data + re-signin still shows the deleted record).
+    // Fall back to a direct HTTPS REST DELETE — immune to WebKit.
+    // ─────────────────────────────────────────────────────────────
+    if (!isQuotaExhaustedError(error) && !isPermissionError(error)) {
+      if (entityType === 'transactions' && entityId && targetUid) {
+        try {
+          const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
+          const httpRes = await deleteTransactionDirectHttp(entityId, targetUid);
+          if (httpRes.success) {
+            console.log(`[safeDeleteDoc] Recovered tx delete ${entityId} via REST`);
+            import('./syncQueue')
+              .then(({ syncQueue }) => {
+                syncQueue.remove('transactions', entityId);
+              })
+              .catch(() => {});
+            return true;
+          }
+        } catch (httpErr) {
+          console.warn('[safeDeleteDoc] REST delete fallback failed:', httpErr);
+        }
+      }
+    }
+
     // Automatically enqueue to transactional syncQueue for retry-on-failure
     if (entityType && entityId && targetUid) {
       import('./syncQueue')

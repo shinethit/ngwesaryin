@@ -75,8 +75,7 @@ function fromFirestoreRestValue(val: any): any {
 }
 
 /**
- * Directly writes all transactions to Firestore over HTTPS REST API.
- * 100% immune to iOS Safari WebKit IndexedDB lockups or SDK long polling pauses.
+ * Encodes a Firestore field path segment for use in REST updateMask URLs.
  */
 function encodeFieldPath(key: string): string {
   if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
@@ -103,7 +102,6 @@ export async function pushTransactionsDirectHttp(
     return { success: false, pushedCount: 0, succeededIds: [], quotaExceeded: false, error: 'User not signed in' };
   }
 
-  // FIX: [3]b At start: if isQuotaExhausted() return quotaExceeded: true without network call
   if (isQuotaExhausted()) {
     return { success: false, pushedCount: 0, succeededIds: [], quotaExceeded: true, error: 'Quota exhausted' };
   }
@@ -128,7 +126,7 @@ export async function pushTransactionsDirectHttp(
 
     const BATCH_SIZE = 5;
     for (let i = 0; i < validTransactions.length; i += BATCH_SIZE) {
-      if (quotaExceeded) break; // FIX: [3]b Stop sending further slices on quotaExceeded
+      if (quotaExceeded) break;
 
       const slice = validTransactions.slice(i, i + BATCH_SIZE);
       await Promise.all(
@@ -145,7 +143,6 @@ export async function pushTransactionsDirectHttp(
             }
           }
 
-          // FIX: [3]d Append updateMask.fieldPaths so PATCH behavior matches setDoc(..., { merge: true })
           const docUrl = `${baseUrl}/${encodeURIComponent(tx.id)}?${updateMasks.join('&')}`;
 
           const controller = new AbortController();
@@ -169,7 +166,6 @@ export async function pushTransactionsDirectHttp(
               const errText = await response.text().catch(() => '');
               let reason = '';
               if (response.status === 429 || errText.includes('Quota') || errText.includes('RESOURCE_EXHAUSTED')) {
-                // FIX: [3]b On first HTTP 429 / RESOURCE_EXHAUSTED set quotaExceeded = true and stop sending
                 quotaExceeded = true;
                 reason = `Google Cloud Firestore Write Quota Exceeded (HTTP 429)`;
                 try {
@@ -182,7 +178,6 @@ export async function pushTransactionsDirectHttp(
               } else {
                 reason = `REST HTTP ${response.status}: ${errText.slice(0, 160)}`;
               }
-
               lastFailureReason = reason;
             }
           } catch (fetchErr: any) {
@@ -194,7 +189,6 @@ export async function pushTransactionsDirectHttp(
     }
 
     const pushedCount = succeededIds.length;
-    // FIX: [3]c success is true ONLY when EVERY non-empty record was accepted
     const success = pushedCount === validTransactions.length && !quotaExceeded;
 
     return { success, pushedCount, succeededIds, quotaExceeded, error: lastFailureReason || undefined };
@@ -215,12 +209,10 @@ export async function pullTransactionsDirectHttp(
   }
 
   try {
-    // FIX: [3]f Use getIdToken(false) instead of getIdToken(true)
     const idToken = await auth.currentUser.getIdToken(false);
     const allDocs: any[] = [];
     let nextPageToken: string | undefined = undefined;
 
-    // FIX: [3]f Follow nextPageToken until exhausted
     do {
       let url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/users/${uid}/transactions?pageSize=300`;
       if (nextPageToken) {
@@ -261,10 +253,11 @@ export async function pullTransactionsDirectHttp(
     return { success: false, transactions: [], error: err?.message || String(err) };
   }
 }
+
 /**
  * Directly DELETE a transaction from Firestore via HTTPS REST API.
- * Bypasses Firestore SDK entirely — immune to iOS Safari WebKit IndexedDB
- * deadlocks which cause deleteDoc() to silently hang/fail.
+ * Bypasses Firestore SDK entirely — immune to iOS Safari WebKit
+ * deleteDoc() silent hangs. 404 is treated as idempotent success.
  */
 export async function deleteTransactionDirectHttp(
   txId: string,
@@ -295,7 +288,6 @@ export async function deleteTransactionDirectHttp(
     clearTimeout(timeoutTimer);
 
     if (response.ok || response.status === 404) {
-      // 404 = already deleted (idempotent), treat as success
       return { success: true };
     }
 
@@ -308,6 +300,7 @@ export async function deleteTransactionDirectHttp(
 
 /**
  * Directly DELETE a transaction from a shared wallet's subcollection via REST.
+ * 404 is treated as idempotent success.
  */
 export async function deleteSharedTransactionDirectHttp(
   sharedDocId: string,

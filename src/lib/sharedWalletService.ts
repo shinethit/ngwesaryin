@@ -67,18 +67,17 @@ export async function syncSharedWalletToCloud(
   try {
     const rawList = wallet.sharedWith || [];
     const normalizedSet = new Set<string>();
-    
+
     rawList.forEach((e) => {
       const trimmed = e.trim();
       if (trimmed && trimmed.includes('@') && trimmed.toLowerCase() !== currentUser.email?.toLowerCase()) {
         normalizedSet.add(trimmed.toLowerCase());
-        normalizedSet.add(trimmed); // Keep original casing as well for case-insensitive token matching
+        normalizedSet.add(trimmed);
       }
     });
 
     const normalizedSharedWith = Array.from(normalizedSet);
 
-    // If no one is shared with, remove the shared record if it exists
     if (normalizedSharedWith.length === 0) {
       await safeDeleteDoc(doc(db, 'sharedWallets', scopedDocId)).catch(() => null);
       if (wallet.id !== scopedDocId) {
@@ -113,11 +112,9 @@ export async function syncSharedWalletToCloud(
       payload.accountNumber = wallet.accountNumber.trim();
     }
 
-    // Save to the scoped document ID with sanitized payload
     const walletRef = doc(db, 'sharedWallets', scopedDocId);
     await safeSetDoc(walletRef, cleanForFirestore(payload), { merge: true });
 
-    // Sync transactions belonging to this wallet so collaborator has them immediately
     if (transactionsForThisWallet !== undefined) {
       try {
         const existingTxSnap = await getDocs(collection(db, 'sharedWallets', scopedDocId, 'transactions')).catch(() => null);
@@ -161,8 +158,7 @@ export async function deleteUserWalletFromCloud(
 ): Promise<boolean> {
   try {
     const rawWalletId = walletId.startsWith('shared_') ? walletId.replace(/^shared_[^_]+_/, '') : walletId;
-    
-    // Explicit doc deletions
+
     await safeDeleteDoc(doc(db, 'users', userId, 'wallets', rawWalletId)).catch(() => null);
     if (rawWalletId !== walletId) {
       await safeDeleteDoc(doc(db, 'users', userId, 'wallets', walletId)).catch(() => null);
@@ -171,7 +167,6 @@ export async function deleteUserWalletFromCloud(
       await safeDeleteDoc(doc(db, 'users', userId, 'wallets', originalId)).catch(() => null);
     }
 
-    // Also scan users/{userId}/wallets to purge any doc whose data().id or doc.id matches
     const wColl = collection(db, 'users', userId, 'wallets');
     const wDocs = await getDocs(wColl).catch(() => null);
     if (wDocs && !wDocs.empty) {
@@ -223,7 +218,6 @@ export async function deleteSharedWalletDoc(
 
     for (const docId of candidateIds) {
       try {
-        // First delete transactions in subcollection if accessible
         if (!isQuotaExhausted()) {
           const txColl = collection(db, 'sharedWallets', docId, 'transactions');
           const txDocs = await getDocs(txColl).catch(() => null);
@@ -235,15 +229,12 @@ export async function deleteSharedWalletDoc(
             await batch.commit().catch(() => null);
           }
         }
-
-        // Delete parent sharedWallet doc
         await safeDeleteDoc(doc(db, 'sharedWallets', docId)).catch(() => null);
       } catch (err) {
         // Continue cleaning other candidates
       }
     }
 
-    // Query-based cleanup: find any sharedWallets where ownerUid == ownerUid and matches this wallet
     if (ownerUid) {
       try {
         const q = query(collection(db, 'sharedWallets'), where('ownerUid', '==', ownerUid));
@@ -301,7 +292,6 @@ export function subscribeIncomingSharedWallets(
     return () => {};
   }
 
-  // Real-time listener on the top-level sharedWallets collection filtered by array-contains to protect read quota
   const q = query(
     collection(db, 'sharedWallets'),
     where('sharedWith', 'array-contains', cleanEmail)
@@ -316,21 +306,18 @@ export function subscribeIncomingSharedWallets(
         const data = d.data() as SharedWalletPayload;
         if (!data) return;
 
-        // Skip wallets that belong to the current user
         const isMine =
           (data.ownerUid && data.ownerUid === currentUid) ||
           (data.ownerEmail && data.ownerEmail.trim().toLowerCase() === cleanEmail);
 
         if (isMine) return;
 
-        // Check if this wallet is shared with the current user
         const sharedList: string[] = Array.isArray(data.sharedWith) ? data.sharedWith : [];
         const isSharedToMe = sharedList.some(
           (e) => typeof e === 'string' && e.trim().toLowerCase() === cleanEmail
         );
 
         if (isSharedToMe) {
-          // Canonical local ID strictly derived from the top-level sharedWallets doc ID
           const cleanDocId = d.id.replace(/^shared_/, '');
           const uniqueLocalId = `shared_${cleanDocId}`;
           const rawOriginalId = data.originalId || data.id || cleanDocId;
@@ -359,7 +346,6 @@ export function subscribeIncomingSharedWallets(
         }
       });
 
-      // Deduplicate incoming wallets by sharedDocId / uniqueLocalId
       const dedupedMap = new Map<string, Wallet>();
       incomingWallets.forEach((w) => {
         const key = w.sharedDocId || w.id;
@@ -451,17 +437,16 @@ export async function saveSharedWalletTransaction(
   const docIdToUse = resolveDocId(walletId, sharedDocId, undefined, currentUid);
   const path = `sharedWallets/${docIdToUse}/transactions/${tx.id}`;
   try {
-    // 1. Write to canonical sharedWallets subcollection FIRST to ensure immediate propagation
     const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', tx.id);
     await safeSetDoc(txRef, cleanForFirestore(tx), { merge: true });
 
-    // 2. Also write to user's personal transactions collection so pullDataFromCloud finds it immediately
-    if (currentUid) {
+    const ownerUidFromDocId = docIdToUse.includes('_') ? docIdToUse.split('_')[0] : undefined;
+    const isCurrentUserTheOwner = !ownerUidFromDocId || ownerUidFromDocId === currentUid;
+    if (currentUid && isCurrentUserTheOwner) {
       const userTxRef = doc(db, 'users', currentUid, 'transactions', tx.id);
       await safeSetDoc(userTxRef, cleanForFirestore({ ...tx, userId: currentUid }), { merge: true }).catch(() => null);
     }
 
-    // 3. Update parent shared wallet document balance (strictly matching security rules affectedKeys)
     const walletRef = doc(db, 'sharedWallets', docIdToUse);
     await safeSetDoc(
       walletRef,
@@ -472,17 +457,13 @@ export async function saveSharedWalletTransaction(
       { merge: true }
     ).catch((err) => console.warn('Shared wallet parent balance update notice:', err));
 
-    // 4. If ownerUid is embedded in docIdToUse (e.g. ownerUid_rawWalletId) and differs from currentUid, also update owner's personal collection
-    if (docIdToUse.includes('_')) {
-      const ownerUid = docIdToUse.split('_')[0];
-      if (ownerUid && ownerUid !== currentUid) {
-        const ownerTxRef = doc(db, 'users', ownerUid, 'transactions', tx.id);
-        await safeSetDoc(ownerTxRef, cleanForFirestore({ ...tx, userId: ownerUid }), { merge: true }).catch(() => null);
-        
-        const rawWalletId = docIdToUse.replace(`${ownerUid}_`, '');
-        const ownerWalletRef = doc(db, 'users', ownerUid, 'wallets', rawWalletId);
-        await safeSetDoc(ownerWalletRef, cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }), { merge: true }).catch(() => null);
-      }
+    if (ownerUidFromDocId && ownerUidFromDocId !== currentUid) {
+      const ownerTxRef = doc(db, 'users', ownerUidFromDocId, 'transactions', tx.id);
+      await safeSetDoc(ownerTxRef, cleanForFirestore({ ...tx, userId: ownerUidFromDocId }), { merge: true }).catch(() => null);
+
+      const rawWalletId = docIdToUse.replace(`${ownerUidFromDocId}_`, '');
+      const ownerWalletRef = doc(db, 'users', ownerUidFromDocId, 'wallets', rawWalletId);
+      await safeSetDoc(ownerWalletRef, cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }), { merge: true }).catch(() => null);
     }
 
     return true;
@@ -493,7 +474,12 @@ export async function saveSharedWalletTransaction(
 }
 
 /**
- * Delete a transaction inside a shared wallet and update the shared wallet balance across all related collections
+ * Delete a transaction inside a shared wallet and update the shared wallet balance across all related collections.
+ *
+ * FIX (v5.3.35): On iOS Safari WebKit the Firestore SDK's deleteDoc() can
+ * silently hang without throwing. We issue a direct HTTPS REST DELETE
+ * first (idempotent — 404 is treated as success), and fall back to the
+ * SDK only if the REST call fails.
  */
 export async function deleteSharedWalletTransaction(
   walletId: string,
@@ -505,26 +491,59 @@ export async function deleteSharedWalletTransaction(
   const docIdToUse = resolveDocId(walletId, sharedDocId, undefined, currentUid);
   const path = `sharedWallets/${docIdToUse}/transactions/${txId}`;
   try {
-    // 1. Delete from canonical sharedWallets subcollection
-    const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', txId);
-    await safeDeleteDoc(txRef).catch(() => null);
-
-    // Update shared wallet balance
-    const walletRef = doc(db, 'sharedWallets', docIdToUse);
-    await safeSetDoc(walletRef, cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }), { merge: true }).catch(() => null);
-
-    // 2. Delete from current user's personal collection
-    if (currentUid) {
-      const userTxRef = doc(db, 'users', currentUid, 'transactions', txId);
-      await safeDeleteDoc(userTxRef).catch(() => null);
+    // 1. Delete from canonical sharedWallets subcollection (REST-first).
+    try {
+      const { deleteSharedTransactionDirectHttp } = await import('./directFirestoreHttp');
+      const restRes = await deleteSharedTransactionDirectHttp(docIdToUse, txId);
+      if (!restRes.success) {
+        console.warn('[deleteSharedWalletTransaction] REST delete failed, SDK fallback:', restRes.error);
+        const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', txId);
+        await safeDeleteDoc(txRef).catch(() => null);
+      }
+    } catch (restErr) {
+      console.warn('[deleteSharedWalletTransaction] REST delete error, SDK fallback:', restErr);
+      const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', txId);
+      await safeDeleteDoc(txRef).catch(() => null);
     }
 
-    // 3. Delete from owner's personal collection if docIdToUse is scoped by ownerUid
+    // 2. Update shared wallet parent balance
+    const walletRef = doc(db, 'sharedWallets', docIdToUse);
+    await safeSetDoc(
+      walletRef,
+      cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }),
+      { merge: true }
+    ).catch(() => null);
+
+    // 3. Delete from current user's personal collection (REST-first).
+    if (currentUid) {
+      try {
+        const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
+        const restRes = await deleteTransactionDirectHttp(txId, currentUid);
+        if (!restRes.success) {
+          const userTxRef = doc(db, 'users', currentUid, 'transactions', txId);
+          await safeDeleteDoc(userTxRef).catch(() => null);
+        }
+      } catch {
+        const userTxRef = doc(db, 'users', currentUid, 'transactions', txId);
+        await safeDeleteDoc(userTxRef).catch(() => null);
+      }
+    }
+
+    // 4. Delete from owner's personal collection when applicable.
     if (docIdToUse.includes('_')) {
       const ownerUid = docIdToUse.split('_')[0];
       if (ownerUid && ownerUid !== currentUid) {
-        const ownerTxRef = doc(db, 'users', ownerUid, 'transactions', txId);
-        await safeDeleteDoc(ownerTxRef).catch(() => null);
+        try {
+          const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
+          const restRes = await deleteTransactionDirectHttp(txId, ownerUid);
+          if (!restRes.success) {
+            const ownerTxRef = doc(db, 'users', ownerUid, 'transactions', txId);
+            await safeDeleteDoc(ownerTxRef).catch(() => null);
+          }
+        } catch {
+          const ownerTxRef = doc(db, 'users', ownerUid, 'transactions', txId);
+          await safeDeleteDoc(ownerTxRef).catch(() => null);
+        }
 
         const rawWalletId = docIdToUse.replace(`${ownerUid}_`, '');
         const ownerWalletRef = doc(db, 'users', ownerUid, 'wallets', rawWalletId);
@@ -578,8 +597,6 @@ export async function leaveSharedWallet(
           delete updatedPerms[cleanEmail];
           delete updatedPerms[rawEmail];
 
-          // Collaborators must not deleteDoc (rules only allow owner to delete).
-          // Simply update sharedWith to exclude this collaborator.
           await safeSetDoc(
             walletRef,
             cleanForFirestore({

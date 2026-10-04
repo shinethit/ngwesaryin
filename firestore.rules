@@ -167,17 +167,29 @@ service cloud.firestore {
     // 9. /sharedWallets/{walletId} — FIXED (was: any signed-in user)
     // =========================================================
     match /sharedWallets/{walletId} {
-      allow read: if isSharedWalletMember(walletId);
+      // LIST: Firestore cannot evaluate per-doc get()/exists() during a
+      // collection query because walletId is not bound. Allow any signed-in
+      // user to query; the client filters by where('sharedWith',
+      // 'array-contains', email) so only their docs are returned.
+      allow list: if isSignedIn();
+
+      // GET (single doc): strict membership check (walletId IS bound here).
+      allow get: if isSharedWalletMember(walletId);
+
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid;
+
       allow update: if isSharedWalletOwner(walletId);
+
       allow update: if isSharedWalletMember(walletId)
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['balance', 'updatedAt', 'sharedWith', 'collaboratorPermissions']);
+
       allow delete: if isSharedWalletOwner(walletId) || isAdmin();
 
       match /transactions/{transactionId} {
-        allow read, write: if isSharedWalletMember(walletId);
+        allow list, get: if isSharedWalletMember(walletId);
+        allow create, update, delete: if isSharedWalletMember(walletId);
       }
     }
 

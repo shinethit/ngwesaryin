@@ -261,3 +261,89 @@ export async function pullTransactionsDirectHttp(
     return { success: false, transactions: [], error: err?.message || String(err) };
   }
 }
+/**
+ * Directly DELETE a transaction from Firestore via HTTPS REST API.
+ * Bypasses Firestore SDK entirely — immune to iOS Safari WebKit IndexedDB
+ * deadlocks which cause deleteDoc() to silently hang/fail.
+ */
+export async function deleteTransactionDirectHttp(
+  txId: string,
+  uid: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!auth.currentUser || !uid || !txId) {
+    return { success: false, error: 'Invalid params' };
+  }
+
+  try {
+    let idToken = '';
+    try {
+      idToken = await auth.currentUser.getIdToken(false);
+    } catch {
+      idToken = await auth.currentUser.getIdToken(true);
+    }
+
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/users/${uid}/transactions/${encodeURIComponent(txId)}`;
+
+    const controller = new AbortController();
+    const timeoutTimer = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${idToken}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutTimer);
+
+    if (response.ok || response.status === 404) {
+      // 404 = already deleted (idempotent), treat as success
+      return { success: true };
+    }
+
+    const errText = await response.text().catch(() => '');
+    return { success: false, error: `HTTP ${response.status}: ${errText.slice(0, 200)}` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Directly DELETE a transaction from a shared wallet's subcollection via REST.
+ */
+export async function deleteSharedTransactionDirectHttp(
+  sharedDocId: string,
+  txId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!auth.currentUser || !sharedDocId || !txId) {
+    return { success: false, error: 'Invalid params' };
+  }
+
+  try {
+    let idToken = '';
+    try {
+      idToken = await auth.currentUser.getIdToken(false);
+    } catch {
+      idToken = await auth.currentUser.getIdToken(true);
+    }
+
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/sharedWallets/${encodeURIComponent(sharedDocId)}/transactions/${encodeURIComponent(txId)}`;
+
+    const controller = new AbortController();
+    const timeoutTimer = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${idToken}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutTimer);
+
+    if (response.ok || response.status === 404) {
+      return { success: true };
+    }
+
+    const errText = await response.text().catch(() => '');
+    return { success: false, error: `HTTP ${response.status}: ${errText.slice(0, 200)}` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}

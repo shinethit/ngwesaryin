@@ -1338,7 +1338,14 @@ export default function App() {
     trackVisitorSession(user);
   }, [user, loading]);
 
-  // Self-healing: Ensure all wallet collaborators are authorized in the user's root document's collaborators array for Firestore security rules
+  // Self-healing: Ensure all wallet collaborators are authorized in the user's
+  // root document's collaborators array for Firestore security rules.
+  //
+  // FIX (v5.3.34): Guard with a ref so each email is healed at most once per
+  // session. Previously the effect re-ran on every wallets/collaborators tick,
+  // and if the write failed (rules/permission), addCollaborator re-fired in a
+  // tight loop, burning Firestore quota and blocking the sync queue.
+  const healedCollaboratorsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!user || wallets.length === 0 || !addCollaborator) return;
     const ownWallets = wallets.filter((w) => !w.isSharedFromOther);
@@ -1354,20 +1361,25 @@ export default function App() {
     });
 
     const rootCollaborators = new Set((collaborators || []).map((c) => c.toLowerCase()));
-    const missing = Array.from(walletCollaborators).filter((email) => !rootCollaborators.has(email));
+    const missing = Array.from(walletCollaborators).filter(
+      (email) => !rootCollaborators.has(email) && !healedCollaboratorsRef.current.has(email)
+    );
 
-    if (missing.length > 0) {
-      (async () => {
-        for (const email of missing) {
-          try {
-            await addCollaborator(email);
-            console.log(`Auto-healed root collaborator permission for ${email}`);
-          } catch (err) {
-            console.warn(`Failed to auto-heal collaborator permission for ${email}:`, err);
-          }
+    if (missing.length === 0) return;
+
+    // Mark as attempted BEFORE the async call so re-renders don't retry.
+    missing.forEach((email) => healedCollaboratorsRef.current.add(email));
+
+    (async () => {
+      for (const email of missing) {
+        try {
+          await addCollaborator(email);
+          console.log(`Auto-healed root collaborator permission for ${email}`);
+        } catch (err) {
+          console.warn(`Failed to auto-heal collaborator permission for ${email}:`, err);
         }
-      })();
-    }
+      }
+    })();
   }, [user?.uid, wallets, collaborators, addCollaborator]);
 
   // Global search shortcut (⌘K / Ctrl+K)
@@ -2187,6 +2199,23 @@ export default function App() {
         const sharedDocId = getSharedWalletDocId(targetWallet, user?.uid);
         deleteSharedWalletTransaction(targetWallet.id, txToDelete.id, targetWallet.balance, sharedDocId, user?.uid);
       }
+    }
+
+    // iOS Safari WebKit: force a direct REST DELETE on both collections
+    // in parallel to guarantee cloud deletion even when the SDK hangs.
+    if (user?.uid) {
+      const targetUid = activeWorkspaceId || user.uid;
+      (async () => {
+        try {
+          const { deleteTransactionDirectHttp } = await import('./lib/directFirestoreHttp');
+          await Promise.allSettled([
+            deleteTransactionDirectHttp(id, targetUid),
+            pairId ? deleteTransactionDirectHttp(pairId, targetUid) : Promise.resolve(),
+          ]);
+        } catch (e) {
+          console.warn('[delete] REST verify notice:', e);
+        }
+      })();
     }
 
     showToast(lang === 'my' ? 'မှတ်တမ်းကို ဖျက်လိုက်ပါပြီ' : 'Transaction deleted');

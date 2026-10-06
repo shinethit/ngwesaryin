@@ -18,14 +18,8 @@ interface AddFuelModalProps {
 // [v6.1.5] Default gas stations (user-customizable stations live in localStorage)
 const DEFAULT_GAS_STATIONS = [
   'Denko',
-  'PTL',
-  'Max Energy',
-  'Apex',
-  'Moon Sun',
-  'Shwe Taung',
   'BOC',
-  'Petrostar',
-  'Green Energy',
+  'Max Energy',
 ];
 
 export const AddFuelModal: React.FC<AddFuelModalProps> = ({

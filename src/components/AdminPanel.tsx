@@ -399,58 +399,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setVisitorsList(list);
     });
 
-    // 5. Live System-Wide Transactions Listener across ALL users
-    let unsubAllTxs = () => {};
-    try {
-      const allTxsQuery = query(collectionGroup(db, 'transactions'));
-      unsubAllTxs = onSnapshot(allTxsQuery, (snapshot) => {
-        const txsData = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          _docPath: d.ref.path,
-          _userId: (d.data() as any).userId || d.ref.parent?.parent?.id || '',
-        } as unknown as Transaction));
-        if (txsData.length > 0) {
-          setSystemTransactions(txsData);
-        }
-      }, (err) => {
-        console.warn('Realtime system transactions collectionGroup notice:', err);
-      });
-    } catch (e) {
-      console.warn('collectionGroup transactions setup notice:', e);
-    }
 
-    // 6. Live System-Wide Wallets Listener across ALL users
-    let unsubAllWallets = () => {};
-    try {
-      const allWalletsQuery = query(collectionGroup(db, 'wallets'));
-      unsubAllWallets = onSnapshot(allWalletsQuery, (snapshot) => {
-        const walletsData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Wallet));
-        if (walletsData.length > 0) {
-          setSystemWallets(walletsData);
-        }
-      }, (err) => {
-        console.warn('Realtime system wallets collectionGroup notice:', err);
-      });
-    } catch (e) {
-      console.warn('collectionGroup wallets setup notice:', e);
-    }
 
-    // 7. Live System-Wide Categories Listener across ALL users
-    let unsubAllCats = () => {};
-    try {
-      const allCatsQuery = query(collectionGroup(db, 'categories'));
-      unsubAllCats = onSnapshot(allCatsQuery, (snapshot) => {
-        const catsData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Category));
-        if (catsData.length > 0) {
-          setSystemCategories(catsData);
-        }
-      }, (err) => {
-        console.warn('Realtime system categories collectionGroup notice:', err);
-      });
-    } catch (e) {
-      console.warn('collectionGroup categories setup notice:', e);
-    }
+
+
+
 
     // 8. Contact Info
     loadContactInfoData();
@@ -464,9 +417,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       unsubDefaultUsers();
       unsubMsgs();
       unsubVisitors();
-      unsubAllTxs();
-      unsubAllWallets();
-      unsubAllCats();
+
     };
   }, [isOpen, isAdmin, user, loadSystemWideData]);
 
@@ -1690,6 +1641,75 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <div className="text-[11px] text-purple-700 font-medium">
                   {analyticsStats.countriesSorted.length} {lang === 'my' ? 'နိုင်ငံမှ ဝင်ရောက်' : 'countries recorded'}
                 </div>
+              </div>
+            </div>
+
+            {/* [QUOTA-GUARD v6.1.2] Per-User Financial Summary */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-600" />
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+                    {lang === 'my' ? '👥 အသုံးပြုစူမ်ာအလိုက် ဝင်ငွေ/ထွက်ငွေ အနှစ်ချုပ်' : 'Per-User Income / Expense Summary'}
+                  </h4>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {usersList.length} {lang === 'my' ? 'အကောင်' : 'accounts'}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-extrabold text-[10px]">
+                      <th className="py-2 px-3">User</th>
+                      <th className="py-2 px-3 text-right">Income</th>
+                      <th className="py-2 px-3 text-right">Expense</th>
+                      <th className="py-2 px-3 text-right">Net</th>
+                      <th className="py-2 px-3 text-center">Records</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {usersList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-400">
+                          {lang === 'my' ? 'အသုံးပြုစူ မရှိးသေးပါ' : 'No users yet'}
+                        </td>
+                      </tr>
+                    ) : (
+                      usersList.map((u) => {
+                        const userTxs = effectiveTransactions.filter((t) => ((t as any)._userId || t.userId) === u.id);
+                        const income = userTxs.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+                        const expense = userTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+                        const net = income - expense;
+                        return (
+                          <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-3">
+                              <div className="font-bold text-slate-800 truncate max-w-[200px]">
+                                {u.displayName || (u.email ? u.email.split('@')[0] : 'User')}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono truncate max-w-[200px]">
+                                {u.email || u.id}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-bold whitespace-nowrap">
+                              +{income.toLocaleString()}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-rose-700 font-bold whitespace-nowrap">
+                              -{expense.toLocaleString()}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap text-slate-800">
+                              {net >= 0 ? '+' : ''}{net.toLocaleString()}
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-mono text-slate-600">
+                              {userTxs.length}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 

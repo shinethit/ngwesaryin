@@ -259,49 +259,6 @@ export function calculateFuelStats(logs: FuelLog[]): FuelStats {
 }
 
 /**
- * [v6.1.10] Calculate cost per km across all vehicle expenses.
- * Total Cost = Fuel + Maintenance + Tire
- * Distance = max(fuel odometer) - min(fuel odometer) — from fuel logs only
- */
-export interface CostPerKmResult {
-  costPerKm: number | null;
-  totalCost: number;
-  totalDistance: number;
-  fuelLogCount: number;
-  hasEnoughData: boolean;
-}
-
-export function calculateCostPerKm(
-  fuelLogs: FuelLog[],
-  maintenanceLogs: VehicleMaintenance[],
-  tireLogs: TirePressureLog[]
-): CostPerKmResult {
-  const fuelTotal = fuelLogs.reduce((s, l) => s + (Number(l.totalCost) || 0), 0);
-  const maintTotal = maintenanceLogs.reduce((s, l) => s + (Number(l.cost) || 0), 0);
-  const tireTotal = tireLogs.reduce((s, l) => s + (Number(l.cost) || 0), 0);
-  const totalCost = fuelTotal + maintTotal + tireTotal;
-
-  const odometers = fuelLogs
-    .map((l) => Number(l.odometer) || 0)
-    .filter((o) => o > 0);
-
-  let totalDistance = 0;
-  if (odometers.length >= 2) {
-    totalDistance = Math.max(...odometers) - Math.min(...odometers);
-  }
-
-  const hasEnoughData = odometers.length >= 2 && totalDistance > 0;
-
-  return {
-    costPerKm: hasEnoughData ? Number((totalCost / totalDistance).toFixed(2)) : null,
-    totalCost,
-    totalDistance,
-    fuelLogCount: fuelLogs.length,
-    hasEnoughData,
-  };
-}
-
-/**
  * Fuel price chart points generator for Recharts
  */
 export function getFuelPriceTrendData(logs: FuelLog[]): Array<{

@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { Fuel, Wrench, Disc, Calendar, TrendingUp, Gauge } from 'lucide-react';
+import { Fuel, Wrench, Disc, Calendar, TrendingUp } from 'lucide-react';
 import { FuelLog, VehicleMaintenance, TirePressureLog } from '../../types';
-import { calculateCostPerKm } from '../../utils/vehicleAnalytics';
 
 type RangePreset = '1m' | '3m' | '6m' | '1y' | 'all' | 'custom';
 
@@ -83,12 +82,6 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
     [filteredTire]
   );
   const grandTotal = fuelTotal + maintTotal + tireTotal;
-
-  // [v6.1.10] Cost per Km
-  const costPerKmData = useMemo(
-    () => calculateCostPerKm(filteredFuel, filteredMaint, filteredTire),
-    [filteredFuel, filteredMaint, filteredTire]
-  );
 
   const presets: { id: RangePreset; labelMy: string; labelEn: string }[] = [
     { id: '1m', labelMy: '၁ လ', labelEn: '1M' },

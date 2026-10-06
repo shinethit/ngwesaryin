@@ -40,6 +40,8 @@ import { AddTirePressureModal } from './AddTirePressureModal';
 import { FuelExpenseGuideModal } from './FuelExpenseGuideModal';
 import { FuelPriceChart } from './FuelPriceChart';
 import { TireVisualizer } from './TireVisualizer';
+import { usePersistedState } from '../../hooks/usePersistedState';
+import { VehicleCostSummaryCard } from './VehicleCostSummaryCard';
 
 interface VehiclesViewProps {
   vehicles: Vehicle[];
@@ -82,6 +84,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 }) => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(() => vehicles[0]?.id || '');
   const [activeTab, setActiveTab] = useState<SubTab>('fuel');
+
+  // [v6.1.6] Vehicle Cost Summary with Date Range
+  const [costRangePreset, setCostRangePreset] = usePersistedState<'1m' | '3m' | '6m' | '1y' | 'all' | 'custom'>(
+    'ngwe_veh_cost_range',
+    'all'
+  );
+  const [costRangeCustomStart, setCostRangeCustomStart] = useState<string>('');
+  const [costRangeCustomEnd, setCostRangeCustomEnd] = useState<string>('');
 
   const handleSaveVehicleAndSelect = (v: Partial<Vehicle>) => {
     onSaveVehicle(v);
@@ -643,6 +653,20 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           </p>
         </div>
       </div>
+
+            {/* [v6.1.6] Vehicle Cost Summary with Date Range */}
+      <VehicleCostSummaryCard
+        fuelLogs={vehicleFuelLogs}
+        maintenanceLogs={vehicleMaintenanceLogs}
+        tireLogs={vehicleTireLogs}
+        lang={lang}
+        preset={costRangePreset}
+        onPresetChange={setCostRangePreset}
+        customStart={costRangeCustomStart}
+        customEnd={costRangeCustomEnd}
+        onCustomStartChange={setCostRangeCustomStart}
+        onCustomEndChange={setCostRangeCustomEnd}
+      />
 
       {/* Tabs Navigation */}
       <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit">

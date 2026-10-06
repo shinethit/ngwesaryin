@@ -1,21 +1,32 @@
 const fs = require('fs');
 const path = require('path');
-
 const ROOT = process.cwd();
 
-// ============ File 1: vehicleAnalytics.ts ============
+const cardPath = path.join(ROOT, 'src', 'components', 'vehicles', 'VehicleCostSummaryCard.tsx');
 const analyticsPath = path.join(ROOT, 'src', 'utils', 'vehicleAnalytics.ts');
-fs.copyFileSync(analyticsPath, analyticsPath + '.bak');
+
+let card = fs.readFileSync(cardPath, 'utf8').replace(/\r\n/g, '\n');
 let analytics = fs.readFileSync(analyticsPath, 'utf8').replace(/\r\n/g, '\n');
 
-const analyticsAnchor = `/**
- * Fuel price chart points generator for Recharts
- */`;
+console.log('=== DIAGNOSTIC ===');
+console.log('[Analytics] calculateCostPerKm:', analytics.includes('export function calculateCostPerKm') ? 'YES' : 'NO');
+console.log('[Card] Gauge import       :', card.includes(', Gauge }') || card.includes(' Gauge,') || card.includes('Gauge }') ? 'YES' : 'NO');
+console.log('[Card] calculateCostPerKm import:', card.includes('calculateCostPerKm') ? 'YES' : 'NO');
+console.log('[Card] costPerKmData useMemo    :', card.includes('costPerKmData') ? 'YES' : 'NO');
+console.log('[Card] UI block [v6.1.10]       :', card.includes('[v6.1.10]') ? 'YES' : 'NO');
+console.log('');
 
-const analyticsInsert = `/**
+// ========== FIX 1: Analytics helper ==========
+if (!analytics.includes('export function calculateCostPerKm')) {
+  console.log('[FIX] Adding calculateCostPerKm to vehicleAnalytics.ts...');
+  fs.copyFileSync(analyticsPath, analyticsPath + '.bak');
+
+  const anchor = `/**\n * Fuel price chart points generator for Recharts\n */`;
+  if (!analytics.includes(anchor)) {
+    console.error('  ✗ Anchor not found. Aborting analytics.');
+  } else {
+    const insert = `/**
  * [v6.1.10] Calculate cost per km across all vehicle expenses.
- * Total Cost = Fuel + Maintenance + Tire
- * Distance = max(fuel odometer) - min(fuel odometer) — from fuel logs only
  */
 export interface CostPerKmResult {
   costPerKm: number | null;
@@ -34,102 +45,85 @@ export function calculateCostPerKm(
   const maintTotal = maintenanceLogs.reduce((s, l) => s + (Number(l.cost) || 0), 0);
   const tireTotal = tireLogs.reduce((s, l) => s + (Number(l.cost) || 0), 0);
   const totalCost = fuelTotal + maintTotal + tireTotal;
-
-  const odometers = fuelLogs
-    .map((l) => Number(l.odometer) || 0)
-    .filter((o) => o > 0);
-
+  const odometers = fuelLogs.map((l) => Number(l.odometer) || 0).filter((o) => o > 0);
   let totalDistance = 0;
-  if (odometers.length >= 2) {
-    totalDistance = Math.max(...odometers) - Math.min(...odometers);
-  }
-
+  if (odometers.length >= 2) totalDistance = Math.max(...odometers) - Math.min(...odometers);
   const hasEnoughData = odometers.length >= 2 && totalDistance > 0;
-
   return {
     costPerKm: hasEnoughData ? Number((totalCost / totalDistance).toFixed(2)) : null,
-    totalCost,
-    totalDistance,
+    totalCost, totalDistance,
     fuelLogCount: fuelLogs.length,
     hasEnoughData,
   };
 }
 
-${analyticsAnchor}`;
-
-if (!analytics.includes(analyticsAnchor)) {
-  console.error('[1] Anchor not found in vehicleAnalytics.ts');
-  process.exit(1);
-}
-if (analytics.includes('calculateCostPerKm')) {
-  console.log('[1] calculateCostPerKm already exists - skip');
+${anchor}`;
+    analytics = analytics.replace(anchor, insert);
+    fs.writeFileSync(analyticsPath, analytics, { encoding: 'utf8' });
+    console.log('  ✓ Analytics updated');
+  }
 } else {
-  analytics = analytics.replace(analyticsAnchor, analyticsInsert);
-  fs.writeFileSync(analyticsPath, analytics, { encoding: 'utf8' });
-  console.log('[1] vehicleAnalytics.ts updated');
+  console.log('[OK] Analytics already has helper');
 }
 
-// ============ File 2: VehicleCostSummaryCard.tsx ============
-const cardPath = path.join(ROOT, 'src', 'components', 'vehicles', 'VehicleCostSummaryCard.tsx');
-fs.copyFileSync(cardPath, cardPath + '.bak');
-let card = fs.readFileSync(cardPath, 'utf8').replace(/\r\n/g, '\n');
-
-// 2a. Gauge icon
-const iconOld = `import { Fuel, Wrench, Disc, Calendar, TrendingUp } from 'lucide-react';`;
-const iconNew = `import { Fuel, Wrench, Disc, Calendar, TrendingUp, Gauge } from 'lucide-react';`;
-if (card.includes(iconNew)) {
-  console.log('[2a] Gauge already imported');
-} else if (card.includes(iconOld)) {
-  card = card.replace(iconOld, iconNew);
-  console.log('[2a] Gauge imported');
+// ========== FIX 2a: Gauge import ==========
+if (!card.includes('Gauge')) {
+  console.log('[FIX] Adding Gauge to lucide imports...');
+  fs.copyFileSync(cardPath, cardPath + '.bak');
+  const oldIcon = `import { Fuel, Wrench, Disc, Calendar, TrendingUp } from 'lucide-react';`;
+  if (card.includes(oldIcon)) {
+    card = card.replace(oldIcon, `import { Fuel, Wrench, Disc, Calendar, TrendingUp, Gauge } from 'lucide-react';`);
+    console.log('  ✓ Gauge imported');
+  } else {
+    console.error('  ✗ Icon line not found — check manually');
+  }
 } else {
-  console.error('[2a] Icon anchor not found');
-  process.exit(1);
+  console.log('[OK] Gauge already imported');
 }
 
-// 2b. Helper import
-const helperOld = `import { FuelLog, VehicleMaintenance, TirePressureLog } from '../../types';`;
-const helperNew = `import { FuelLog, VehicleMaintenance, TirePressureLog } from '../../types';\nimport { calculateCostPerKm } from '../../utils/vehicleAnalytics';`;
-if (card.includes("calculateCostPerKm } from")) {
-  console.log('[2b] Helper already imported');
-} else if (card.includes(helperOld)) {
-  card = card.replace(helperOld, helperNew);
-  console.log('[2b] Helper imported');
+// ========== FIX 2b: helper import ==========
+if (!card.includes('calculateCostPerKm }') && !card.includes("calculateCostPerKm,")) {
+  console.log('[FIX] Adding calculateCostPerKm import...');
+  const oldImport = `import { FuelLog, VehicleMaintenance, TirePressureLog } from '../../types';`;
+  if (card.includes(oldImport)) {
+    card = card.replace(oldImport, `${oldImport}\nimport { calculateCostPerKm } from '../../utils/vehicleAnalytics';`);
+    console.log('  ✓ Helper imported');
+  } else {
+    console.error('  ✗ Types import line not found');
+  }
 } else {
-  console.error('[2b] Helper anchor not found');
-  process.exit(1);
+  console.log('[OK] Helper already imported');
 }
 
-// 2c. useMemo
-const memoAnchor = `  const grandTotal = fuelTotal + maintTotal + tireTotal;`;
-const memoInsert = `  const grandTotal = fuelTotal + maintTotal + tireTotal;
+// ========== FIX 2c: useMemo ==========
+if (!card.includes('costPerKmData')) {
+  console.log('[FIX] Adding useMemo...');
+  const memoAnchor = `  const grandTotal = fuelTotal + maintTotal + tireTotal;`;
+  if (card.includes(memoAnchor)) {
+    card = card.replace(memoAnchor, `${memoAnchor}
 
   // [v6.1.10] Cost per Km
   const costPerKmData = useMemo(
     () => calculateCostPerKm(filteredFuel, filteredMaint, filteredTire),
     [filteredFuel, filteredMaint, filteredTire]
-  );`;
-if (card.includes('costPerKmData')) {
-  console.log('[2c] useMemo already exists');
-} else if (card.includes(memoAnchor)) {
-  card = card.replace(memoAnchor, memoInsert);
-  console.log('[2c] useMemo added');
+  );`);
+    console.log('  ✓ useMemo added');
+  } else {
+    console.error('  ✗ grandTotal anchor not found');
+  }
 } else {
-  console.error('[2c] grandTotal anchor not found');
-  process.exit(1);
+  console.log('[OK] useMemo already there');
 }
 
-// 2d. UI block
-const uiAnchor = `          <div className="text-[10px] font-bold text-emerald-400">MMK</div>
-        </div>
-      </div>
-    </div>
-  );
-};`;
+// ========== FIX 2d: UI block (regex-based, robust) ==========
+if (!card.includes('[v6.1.10]')) {
+  console.log('[FIX] Inserting UI block...');
 
-const uiInsert = `          <div className="text-[10px] font-bold text-emerald-400">MMK</div>
-        </div>
-      </div>
+  // Regex to find the closing of Grand Total block + return
+  // Matches: <div ...MMK</div> </div> </div> </div> ); };
+  const pattern = /(<div className="text-\[10px\] font-bold text-emerald-400">MMK<\/div>\s*<\/div>\s*<\/div>)(\s*<\/div>\s*\);\s*};)/;
+
+  const uiBlock = `$1
 
       {/* [v6.1.10] Cost per Km */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-emerald-50 border border-indigo-200/70 flex items-center justify-between">
@@ -156,28 +150,20 @@ const uiInsert = `          <div className="text-[10px] font-bold text-emerald-4
             <div className="font-bold text-sm text-slate-400">N/A</div>
           )}
         </div>
-      </div>
-    </div>
-  );
-};`;
+      </div>$2`;
 
-if (card.includes('[v6.1.10]')) {
-  console.log('[2d] UI block already exists');
-} else if (card.includes(uiAnchor)) {
-  card = card.replace(uiAnchor, uiInsert);
-  console.log('[2d] UI block added');
+  if (pattern.test(card)) {
+    card = card.replace(pattern, uiBlock);
+    console.log('  ✓ UI block inserted via regex');
+  } else {
+    console.error('  ✗ Regex did not match. Manual insertion needed.');
+    console.error('  → Show me the last 30 lines of VehicleCostSummaryCard.tsx');
+  }
 } else {
-  console.error('[2d] UI anchor not found');
-  process.exit(1);
+  console.log('[OK] UI block already present');
 }
 
 fs.writeFileSync(cardPath, card, { encoding: 'utf8' });
-console.log('[2] VehicleCostSummaryCard.tsx updated');
-
 console.log('');
-console.log('Done! Next steps:');
-console.log('  1. npm run build');
-console.log('  2. git add .');
-console.log('  3. git commit -m "v6.1.10: Cost per Km"');
-console.log('  4. git push origin main');
-console.log('  5. Cleanup .bak + script');
+console.log('=== DONE ===');
+console.log('Next: npm run build');

@@ -4,6 +4,7 @@ export interface EnrichedFuelLog extends FuelLog {
   calculatedDistance?: number;
   calculatedEfficiency?: number; // km/L
   calculatedCostPerDistance?: number; // MMK per km
+  isFirstFill?: boolean; // [v6.1.4] true only for the earliest fuel log
 }
 
 export interface FuelStats {
@@ -184,6 +185,8 @@ export function enrichFuelLogs(fuelLogs: FuelLog[]): EnrichedFuelLog[] {
       calculatedDistance: distance,
       calculatedEfficiency: efficiency,
       calculatedCostPerDistance: costPerDist,
+      // [v6.1.4] Only the earliest log (i === 0) is the "first ever fill-up"
+      isFirstFill: i === 0,
     });
   }
 

@@ -777,7 +777,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
                     {/* Right: Calculated Mileage & Total Cost & Edit */}
                     <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60">
-                      {/* Efficiency Badge */}
+                      {/* Efficiency Badge + Full/Partial Status [v6.1.4] */}
                       {log.calculatedEfficiency ? (
                         <div className="text-right">
                           <div className="flex items-baseline justify-end gap-1">
@@ -791,10 +791,17 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                               {log.calculatedCostPerDistance} Ks / km
                             </span>
                           )}
+                          <span className="text-[9px] text-emerald-600 font-medium block">
+                            ✓ တိုင်ကီပြည့်
+                          </span>
+                        </div>
+                      ) : log.isFirstFill ? (
+                        <div className="text-right text-[10px] font-bold text-indigo-600">
+                          🆕 ပထမဆုံး တိုင်ကီဖြည့်
                         </div>
                       ) : (
-                        <div className="text-right text-[10px] text-slate-400">
-                          {log.isFullTank ? 'ပထမဆုံး တိုင်ကီပြည့်' : 'တစိတ်တပိုင်းဖြည့်'}
+                        <div className="text-right text-[10px] text-slate-500 font-medium">
+                          {log.isFullTank ? '✓ တိုင်ကီပြည့်' : '◐ တစိတ်တပိုင်းဖြည့်'}
                         </div>
                       )}
 

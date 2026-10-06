@@ -85,12 +85,10 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       setWorkshopName('');
       setExpectedLifespanKm(5000);
       setExpectedLifespanDays(180);
-      const carWallet = wallets.find(
-        (w) =>
-          (w.name && (w.name.includes('ကား') || w.name.includes('ယာဉ်'))) ||
-          (w.nameEn && (w.nameEn.toLowerCase().includes('car') || w.nameEn.toLowerCase().includes('vehicle')))
-      );
-      setWalletId(v?.walletId || carWallet?.id || wallets[0]?.id || '');
+      // [FIX v6.1.3] Only use vehicle.walletId if that wallet STILL exists.
+      // Never auto-find wallets by name — that resurrects deleted "Car Wallet" entries.
+      const vehicleWalletExists = v?.walletId && wallets.some((w) => w.id === v.walletId);
+      setWalletId(vehicleWalletExists ? v!.walletId! : (wallets[0]?.id || ''));
       setSyncToExpense(true);
       setNote('');
     }

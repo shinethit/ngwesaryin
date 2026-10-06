@@ -2742,6 +2742,12 @@ if (typeof window !== 'undefined') {
     const txId = logData.transactionId || `tx_fuel_${logId}`;
     const log: FuelLog = { ...logData, id: logId, transactionId: txId, createdAt: logData.createdAt || Date.now() };
 
+    // [FIX v6.1.3] Resolve wallet — if log.walletId no longer exists, fall back to first wallet.
+    const resolvedWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))
+      ? log.walletId
+      : (computedWallets[0]?.id || '');
+    log = { ...log, walletId: resolvedWalletId };
+
     if (log.syncToExpense !== false && log.totalCost > 0 && log.walletId) {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
@@ -2839,6 +2845,12 @@ if (typeof window !== 'undefined') {
     const txId = maintData.transactionId || `tx_maint_${maintId}`;
     const maint: VehicleMaintenance = { ...maintData, id: maintId, transactionId: txId, createdAt: maintData.createdAt || Date.now() };
 
+    // [FIX v6.1.3] Resolve wallet — if maint.walletId no longer exists, fall back to first wallet.
+    const resolvedMaintWalletId = (maint.walletId && computedWallets.some((w) => w.id === maint.walletId))
+      ? maint.walletId
+      : (computedWallets[0]?.id || '');
+    maint = { ...maint, walletId: resolvedMaintWalletId };
+
     if (maint.syncToExpense !== false && maint.cost > 0 && maint.walletId) {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
@@ -2935,6 +2947,12 @@ if (typeof window !== 'undefined') {
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
     const txId = logData.transactionId || `tx_tire_${tireId}`;
     const log: TirePressureLog = { ...logData, id: tireId, transactionId: txId, createdAt: logData.createdAt || Date.now() };
+
+    // [FIX v6.1.3] Resolve wallet — if log.walletId no longer exists, fall back to first wallet.
+    const resolvedTireWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))
+      ? log.walletId
+      : (computedWallets[0]?.id || '');
+    log = { ...log, walletId: resolvedTireWalletId };
 
     if (log.syncToExpense !== false && log.cost && log.cost > 0 && log.walletId) {
       const vehicleCat = categories.find((c) =>

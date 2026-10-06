@@ -79,7 +79,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
       setTireCondition('good');
       setServicePlace('');
       setCost('');
-      setWalletId(v?.walletId || wallets[0]?.id || '');
+      // [FIX v6.1.3] Only use vehicle.walletId if that wallet STILL exists.
+      const vehicleWalletExists = v?.walletId && wallets.some((w) => w.id === v.walletId);
+      setWalletId(vehicleWalletExists ? v!.walletId! : (wallets[0]?.id || ''));
       setSyncToExpense(false);
       setNote('');
     }

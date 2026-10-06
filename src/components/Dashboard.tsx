@@ -614,6 +614,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <SmartCalendarCard
           transactions={transactions}
           categories={categories}
+          wallets={wallets}
           lang={lang}
         />
       </div>

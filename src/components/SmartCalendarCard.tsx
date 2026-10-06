@@ -18,6 +18,16 @@ const getLocalDateString = (d: Date = new Date()): string => {
   return `${year}-${month}-${day}`;
 };
 
+// [v6.1.7] Compact number format for tight calendar cells
+// Converts to lakhs (÷ 100,000) with up to 5 decimals, strips trailing zeros
+// Examples: 100000 → "1" | 50000 → "0.5" | 63000 → "0.63"
+//           72300 → "0.723" | 72350 → "0.7235" | 85015 → "0.85015"
+const formatShortLakhs = (amount: number): string => {
+  if (!Number.isFinite(amount) || amount === 0) return '0';
+  const lakhs = Math.abs(amount) / 100000;
+  return lakhs.toFixed(5).replace(/\.?0+$/, '');
+};
+
 export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   transactions,
   categories = [],
@@ -126,7 +136,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
               {lang === 'my' ? 'စမတ်ပြက္ခဒိန် ဝင်/ထွက်/ကျန် (Smart Calendar Summary)' : 'Smart Calendar Daily Summary'}
             </h3>
             <p className="text-[11px] text-slate-500 font-medium">
-              {lang === 'my' ? 'ရက်စွဲအလိုက် ငွေဝင်၊ ထွက်၊ လက်ကျန်များကို ပြက္ခဒိန်ပေါ်တွင် ချက်ချင်းကြည့်ရှုပါ' : 'Daily In, Out, and Net balance view on calendar'}
+              {lang === 'my' ? 'ရက်စွဲအလိုက် ဝင်၊ ထွက်၊ ကျန် — သိန်းဂဏန်းဖြင့် (×100,000)' : 'Daily In, Out, Net — in lakhs (×100,000)'}
             </p>
           </div>
         </div>
@@ -199,12 +209,12 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                   <div className="space-y-0.5 text-[9px] font-mono">
                     {metrics.income > 0 && (
                       <div className="text-emerald-700 font-bold truncate" title={`In: +${formatMMK(metrics.income)}`}>
-                        +{formatMMK(metrics.income)}
+                        +{formatShortLakhs(metrics.income)}
                       </div>
                     )}
                     {metrics.expense > 0 && (
                       <div className="text-rose-600 font-bold truncate" title={`Out: -${formatMMK(metrics.expense)}`}>
-                        -{formatMMK(metrics.expense)}
+                        -{formatShortLakhs(metrics.expense)}
                       </div>
                     )}
                     {metrics.income === 0 && metrics.expense === 0 && (
@@ -245,15 +255,15 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           <div className="grid grid-cols-3 gap-2.5 text-xs font-mono font-bold">
             <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-emerald-700">{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</div>
-              <div className="text-xs sm:text-sm font-black">+{formatMMK(selectedDaySummary.income)}</div>
+              <div className="text-xs sm:text-sm font-black" title={`+${formatMMK(selectedDaySummary.income)}`}>+{formatShortLakhs(selectedDaySummary.income)}</div>
             </div>
             <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-900 border border-rose-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-rose-700">{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</div>
-              <div className="text-xs sm:text-sm font-black">-{formatMMK(selectedDaySummary.expense)}</div>
+              <div className="text-xs sm:text-sm font-black" title={`-${formatMMK(selectedDaySummary.expense)}`}>-{formatShortLakhs(selectedDaySummary.expense)}</div>
             </div>
             <div className={`p-2.5 rounded-2xl border text-center shadow-2xs ${selectedDaySummary.net >= 0 ? 'bg-indigo-50 text-indigo-950 border-indigo-200' : 'bg-rose-50 text-rose-950 border-rose-200'}`}>
               <div className="text-[10px] font-sans font-semibold opacity-85">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
-              <div className="text-xs sm:text-sm font-black">{selectedDaySummary.net >= 0 ? '+' : ''}{formatMMK(selectedDaySummary.net)}</div>
+              <div className="text-xs sm:text-sm font-black" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net >= 0 ? '+' : ''}{formatShortLakhs(selectedDaySummary.net)}</div>
             </div>
           </div>
 

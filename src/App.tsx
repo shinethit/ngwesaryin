@@ -2746,7 +2746,7 @@ if (typeof window !== 'undefined') {
     const resolvedWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))
       ? log.walletId
       : (computedWallets[0]?.id || '');
-    log = { ...log, walletId: resolvedWalletId };
+    log.walletId = resolvedWalletId;
 
     if (log.syncToExpense !== false && log.totalCost > 0 && log.walletId) {
       const vehicleCat = categories.find((c) =>
@@ -2849,7 +2849,7 @@ if (typeof window !== 'undefined') {
     const resolvedMaintWalletId = (maint.walletId && computedWallets.some((w) => w.id === maint.walletId))
       ? maint.walletId
       : (computedWallets[0]?.id || '');
-    maint = { ...maint, walletId: resolvedMaintWalletId };
+    maint.walletId = resolvedMaintWalletId;
 
     if (maint.syncToExpense !== false && maint.cost > 0 && maint.walletId) {
       const vehicleCat = categories.find((c) =>
@@ -2952,7 +2952,7 @@ if (typeof window !== 'undefined') {
     const resolvedTireWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))
       ? log.walletId
       : (computedWallets[0]?.id || '');
-    log = { ...log, walletId: resolvedTireWalletId };
+    log.walletId = resolvedTireWalletId;
 
     if (log.syncToExpense !== false && log.cost && log.cost > 0 && log.walletId) {
       const vehicleCat = categories.find((c) =>

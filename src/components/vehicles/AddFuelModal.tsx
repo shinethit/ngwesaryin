@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Fuel, Gauge, DollarSign, CheckCircle2, AlertCircle, Save, Trash2, Sparkles, Building2 } from 'lucide-react';
 import { FuelLog, Vehicle, Wallet } from '../../types';
+import { usePersistedState } from '../../hooks/usePersistedState';
 
 interface AddFuelModalProps {
   isOpen: boolean;
@@ -14,7 +15,8 @@ interface AddFuelModalProps {
   lang: 'my' | 'en';
 }
 
-const GAS_STATIONS = [
+// [v6.1.5] Default gas stations (user-customizable stations live in localStorage)
+const DEFAULT_GAS_STATIONS = [
   'Denko',
   'PTL',
   'Max Energy',
@@ -24,7 +26,6 @@ const GAS_STATIONS = [
   'BOC',
   'Petrostar',
   'Green Energy',
-  'Other',
 ];
 
 export const AddFuelModal: React.FC<AddFuelModalProps> = ({
@@ -48,6 +49,46 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
   const [fuelType, setFuelType] = useState('Octane 92');
   const [gasStation, setGasStation] = useState('Denko');
   const [customGasStation, setCustomGasStation] = useState('');
+
+  // [v6.1.5] User-managed custom gas stations (persisted in localStorage)
+  const [customStations, setCustomStations] = usePersistedState<string[]>('ngwe_custom_gas_stations', []);
+  const [showStationManager, setShowStationManager] = useState(false);
+  const [newStationName, setNewStationName] = useState('');
+
+  const allStations = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: string[] = [];
+    DEFAULT_GAS_STATIONS.forEach((s) => {
+      if (s && !seen.has(s)) { seen.add(s); merged.push(s); }
+    });
+    customStations.forEach((s) => {
+      if (s && !seen.has(s)) { seen.add(s); merged.push(s); }
+    });
+    return merged;
+  }, [customStations]);
+
+  const handleAddStation = () => {
+    const name = newStationName.trim();
+    if (!name) return;
+    if (allStations.includes(name)) {
+      setGasStation(name);
+      setNewStationName('');
+      setShowStationManager(false);
+      return;
+    }
+    setCustomStations((prev) => [...prev, name]);
+    setGasStation(name);
+    setNewStationName('');
+    setShowStationManager(false);
+  };
+
+  const handleDeleteStation = (name: string) => {
+    if (!window.confirm(`Delete "${name}" from your stations?`)) return;
+    setCustomStations((prev) => prev.filter((s) => s !== name));
+    if (gasStation === name) {
+      setGasStation(DEFAULT_GAS_STATIONS[0]);
+    }
+  };
   const [walletId, setWalletId] = useState('');
   const [syncToExpense, setSyncToExpense] = useState(true);
   const [note, setNote] = useState('');
@@ -67,8 +108,10 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       setTotalCost(editingLog.totalCost);
       setIsFullTank(editingLog.isFullTank);
       setFuelType(editingLog.fuelType || 'Octane 92');
-      if (GAS_STATIONS.includes(editingLog.gasStation || '')) {
-        setGasStation(editingLog.gasStation || 'Denko');
+      // [v6.1.5] Known stations = default + custom
+      const knownStations = new Set([...DEFAULT_GAS_STATIONS, ...customStations]);
+      if (editingLog.gasStation && knownStations.has(editingLog.gasStation)) {
+        setGasStation(editingLog.gasStation);
         setCustomGasStation('');
       } else {
         setGasStation('Other');
@@ -378,42 +421,43 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
             </div>
           </div>
 
-          {/* Gas Station */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {lang === 'my' ? 'ဆီဆိုင် အမည်' : 'Gas Station'}
-              </label>
-              <div className="relative">
-                <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <select
-                  value={gasStation}
-                  onChange={(e) => setGasStation(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
-                >
-                  {GAS_STATIONS.map((gs) => (
-                    <option key={gs} value={gs}>
-                      {gs}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {gasStation === 'Other' ? (
+          {/* Gas Station + Wallet [v6.1.5] */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  {lang === 'my' ? 'ဆီဆိုင် အမည် ရေးရန်' : 'Enter Station Name'}
-                </label>
-                <input
-                  type="text"
-                  value={customGasStation}
-                  onChange={(e) => setCustomGasStation(e.target.value)}
-                  placeholder="Station name..."
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    {lang === 'my' ? 'ဆီဆိုင် အမည်' : 'Gas Station'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowStationManager((v) => !v)}
+                    className="text-[10px] font-bold text-amber-700 hover:text-amber-900 hover:underline cursor-pointer"
+                  >
+                    {showStationManager
+                      ? (lang === 'my' ? '✕ ပိတ်' : '✕ Close')
+                      : (lang === 'my' ? '⚙️ စီမံ' : '⚙️ Manage')}
+                  </button>
+                </div>
+                <div className="relative">
+                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <select
+                    value={gasStation}
+                    onChange={(e) => setGasStation(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                  >
+                    {allStations.map((gs) => (
+                      <option key={gs} value={gs}>
+                        {gs}
+                      </option>
+                    ))}
+                    <option value="Other">
+                      {lang === 'my' ? '➕ အခြား / အသစ်ရေးရန်' : '➕ Other / Custom'}
+                    </option>
+                  </select>
+                </div>
               </div>
-            ) : (
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   {lang === 'my' ? 'ငွေပေးချေသည့် ပိုက်ဆံအိတ် *' : 'Payment Wallet *'}
@@ -429,6 +473,78 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            {gasStation === 'Other' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'my' ? 'ဆီဆိုင် အမည် ရေးရန်' : 'Enter Station Name'}
+                </label>
+                <input
+                  type="text"
+                  value={customGasStation}
+                  onChange={(e) => setCustomGasStation(e.target.value)}
+                  placeholder="Station name..."
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            )}
+
+            {/* Station Manager Panel */}
+            {showStationManager && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900">
+                    {lang === 'my' ? '⚙️ ဆီဆိုင် စီမံခန့်ခွဲမှု' : '⚙️ Manage Stations'}
+                  </span>
+                  <span className="text-[10px] text-amber-700 font-mono">
+                    {customStations.length} {lang === 'my' ? 'ခု ကိုယ်ပိုင်' : 'custom'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newStationName}
+                    onChange={(e) => setNewStationName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStation(); } }}
+                    placeholder={lang === 'my' ? 'ဆီဆိုင် အသစ် အမည်...' : 'New station name...'}
+                    className="flex-1 px-3 py-1.5 text-xs bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddStation}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  >
+                    + {lang === 'my' ? 'ထည့်' : 'Add'}
+                  </button>
+                </div>
+
+                {customStations.length > 0 ? (
+                  <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                    {customStations.map((s) => (
+                      <div
+                        key={s}
+                        className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-amber-200/70 text-xs"
+                      >
+                        <span className="text-slate-800 truncate">{s}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteStation(s)}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-700 italic text-center py-1">
+                    {lang === 'my' ? 'ကိုယ်ပိုင် ဆီဆိုင် မရှိသေးပါ' : 'No custom stations yet'}
+                  </p>
+                )}
               </div>
             )}
           </div>

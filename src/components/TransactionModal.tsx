@@ -193,6 +193,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   );
 
   // Quick add sub-category inline state
+  // [v6.3.6] Track last edited field for any-2-of-3 auto-compute
+  const [unitQtyLastEdited, setUnitQtyLastEdited] = useState<'price' | 'qty' | 'total' | null>(null);
+  const shoppingLastEditedRef = useRef<Record<string, 'price' | 'qty' | 'amount'>>({});
+
   const [showQuickAddSub, setShowQuickAddSub] = useState(false);
   const [newSubName, setNewSubName] = useState('');
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
@@ -287,6 +291,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
       if (editTransaction) {
         if (isNewlyOpened || isEditTxChanged) {
+          setUnitQtyLastEdited(null);
+          shoppingLastEditedRef.current = {};
           setType(editTransaction.type);
           setAmount(String(editTransaction.amount));
           setCategoryId(editTransaction.category || '');
@@ -320,6 +326,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setNewSubName('');
         }
       } else if (isNewlyOpened) {
+        setUnitQtyLastEdited(null);
+        shoppingLastEditedRef.current = {};
         // Only initialize default values when the modal first opens (prefer last used wallet)
         const lastUsedWalletId = typeof localStorage !== 'undefined' ? localStorage.getItem('fortune_last_used_wallet_id') : null;
         let chosenWalletId =
@@ -418,48 +426,83 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [isOpen, editTransaction, initialType, initialWalletId, wallets, user]);
 
-  // Recalculate Unit Price x Qty -> Amount
-  const handleUnitQtyChange = (pStr: string, qStr: string) => {
-    setUnitPrice(pStr);
-    setQuantity(qStr);
-    const p = parseFloat(pStr) || 0;
-    const q = parseFloat(qStr) || 0;
-    const total = p * q;
-    setAmount(total > 0 ? String(total) : '');
+  // [v6.3.6] Any 2 of Price/Qty/Total known -> compute 3rd (lastEdited priority)
+  const computeUnitQtyThird = (edited: 'price' | 'qty' | 'total', pNum: number, qNum: number, tot: number) => {
+    const last = unitQtyLastEdited;
+    if (edited === 'price') {
+      if (last === 'qty') { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); }
+      else if (last === 'total') { if (pNum > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); }
+      else { if (qNum > 0) { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); } else if (pNum > 0 && tot > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); }
+    } else if (edited === 'qty') {
+      if (last === 'price') { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); }
+      else if (last === 'total') { if (qNum > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); }
+      else { if (pNum > 0) { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); } else if (qNum > 0 && tot > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); }
+    } else {
+      if (last === 'price') { if (pNum > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); }
+      else if (last === 'qty') { if (qNum > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); }
+      else { if (pNum > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); else if (qNum > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); else { setQuantity('1'); setUnitPrice(String(tot)); } }
+    }
+    setUnitQtyLastEdited(edited);
   };
 
-  // Shopping List item row helper
+  const handleUnitQtyChange = (field: 'price' | 'qty', val: string) => {
+    const p = field === 'price' ? val : unitPrice;
+    const q = field === 'qty' ? val : quantity;
+    const pNum = parseFloat(p) || 0;
+    const qNum = parseFloat(q) || 0;
+    const tot = parseFloat(amount) || 0;
+    if (field === 'price') setUnitPrice(val); else setQuantity(val);
+    computeUnitQtyThird(field, pNum, qNum, tot);
+  };
+
+  const handleUnitQtyAmountChange = (amtStr: string) => {
+    setAmount(amtStr);
+    const tot = parseFloat(amtStr) || 0;
+    if (tot <= 0) { setUnitQtyLastEdited('total'); return; }
+    const pNum = parseFloat(unitPrice) || 0;
+    const qNum = parseFloat(quantity) || 0;
+    computeUnitQtyThird('total', pNum, qNum, tot);
+  };
+
+  // Shopping List item row — [v6.3.6] any 2 of Price/Qty/Total -> compute 3rd
   const updateShoppingItem = (id: string, field: keyof TransactionItem, val: any) => {
     setShoppingItems((prev) => {
       const updated = prev.map((item) => {
         if (item.id === id) {
           const newItem = { ...item, [field]: val };
-
-          // If updating name, check for auto-matching category/subCategory ONLY (Never auto-overwrite price)
           if (field === 'name' && typeof val === 'string' && val.trim().length >= 1) {
             const match = findMatchingItemInfo(val, unifiedItemSuggestions);
             if (match && match.categoryId && (!categoryId || categoryId === 'cat_food' || categoryId === 'cat_expense_other')) {
               setCategoryId(match.categoryId);
-              if (match.subCategoryId) {
-                setSubCategoryId(match.subCategoryId);
-              }
+              if (match.subCategoryId) setSubCategoryId(match.subCategoryId);
             }
           }
-
-          if (field === 'price' || field === 'quantity') {
-            const p = field === 'price' ? parseFloat(val) || 0 : item.price;
-            const q = field === 'quantity' ? parseFloat(val) || 0 : item.quantity;
-            newItem.amount = p * q;
+          const pNum = parseFloat(newItem.price as any) || 0;
+          const qNum = parseFloat(newItem.quantity as any) || 0;
+          const aNum = parseFloat(newItem.amount as any) || 0;
+          const last = shoppingLastEditedRef.current[id] || null;
+          if (field === 'price') {
+            if (last === 'qty') newItem.amount = Number((pNum * qNum).toFixed(2));
+            else if (last === 'amount') { if (pNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); }
+            else { if (qNum > 0) newItem.amount = Number((pNum * qNum).toFixed(2)); else if (pNum > 0 && aNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); }
+            shoppingLastEditedRef.current[id] = 'price';
+          } else if (field === 'quantity') {
+            if (last === 'price') newItem.amount = Number((pNum * qNum).toFixed(2));
+            else if (last === 'amount') { if (qNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
+            else { if (pNum > 0) newItem.amount = Number((pNum * qNum).toFixed(2)); else if (qNum > 0 && aNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
+            shoppingLastEditedRef.current[id] = 'qty';
+          } else if (field === 'amount') {
+            if (last === 'price') { if (pNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); }
+            else if (last === 'qty') { if (qNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
+            else { if (pNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); else if (qNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); else { newItem.quantity = 1; newItem.price = aNum; } }
+            shoppingLastEditedRef.current[id] = 'amount';
           }
           return newItem;
         }
         return item;
       });
-
-      // Update total amount
       const totalSum = updated.reduce((sum, item) => sum + (item.amount || 0), 0);
       setAmount(totalSum > 0 ? String(totalSum) : '');
-
       return updated;
     });
   };
@@ -1831,7 +1874,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       type="number"
                       placeholder="e.g. 700"
                       value={unitPrice}
-                      onChange={(e) => handleUnitQtyChange(e.target.value, quantity)}
+                      onChange={(e) => handleUnitQtyChange('price', e.target.value)}
                       className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 text-sm"
                     />
                   </div>
@@ -1842,27 +1885,32 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     </label>
                     <input
                       type="number"
+                      step="any"
                       placeholder="1"
-                      min="1"
                       value={quantity}
-                      onChange={(e) => handleUnitQtyChange(unitPrice, e.target.value)}
+                      onChange={(e) => handleUnitQtyChange('qty', e.target.value)}
                       className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 text-sm"
                     />
                   </div>
                 </div>
 
-                {/* Calculation Summary Badge */}
-                <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-emerald-100">
-                  <span className="text-xs text-slate-600 font-semibold">
-                    {lang === 'my' ? 'တွက်ချက်ရလဒ်:' : 'Calculated Total:'}
+                {/* Total editable — any 2 of 3 auto */}
+                <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-emerald-100">
+                  <span className="text-xs text-slate-600 font-semibold shrink-0">
+                    {lang === 'my' ? 'တွက်ချက်ရလဒ်:' : 'Total:'}
                   </span>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-500 font-mono mr-2">
-                      {formatMMK(parseFloat(unitPrice) || 0)} × {quantity || 0}
+                  <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+                    <span className="text-xs text-slate-500 font-mono shrink-0">
+                      {formatMMK(parseFloat(unitPrice) || 0)} × {quantity || 0} =
                     </span>
-                    <span className="text-sm font-bold text-emerald-800 font-mono">
-                      = {formatMMK((parseFloat(unitPrice) || 0) * (parseFloat(quantity) || 0))}
-                    </span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={amount}
+                      onChange={(e) => handleUnitQtyAmountChange(e.target.value)}
+                      placeholder="0"
+                      className="w-28 px-2 py-1 text-sm font-bold text-emerald-800 font-mono text-right bg-emerald-50 border border-emerald-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
                   </div>
                 </div>
               </div>
@@ -1961,7 +2009,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                             </label>
                             <input
                               type="number"
-                              min="1"
+                              step="any"
                               placeholder="1"
                               value={item.quantity || ''}
                               onChange={(e) => updateShoppingItem(item.id || '', 'quantity', e.target.value)}

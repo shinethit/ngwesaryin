@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.3.3';
-export const CURRENT_BUILD_NUMBER = 153;
+export const CURRENT_APP_VERSION = 'v6.3.6';
+export const CURRENT_BUILD_NUMBER = 156;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.3.6',
+    buildNumber: 156,
+    releaseDate: '2026-10-08',
+    releaseTime: '12:00 AM (MMT)',
+    titleMy: 'ငွေစာရင်း — Price/Qty/Total သုံးမျိုးထဲက ၂ မျိုးသိရင် ကျန် ၁ မျိုး auto',
+    titleEn: 'Transaction — Any 2 of Price/Qty/Total → Auto 3rd',
+    tag: 'feature',
+    tagLabelMy: 'တွက်ချက်မှု တိုးတက်မှု',
+    tagLabelEn: 'Calculation Improvement',
+    descriptionMy: 'ဈေးနှုန်း၊ အရေအတွက် နှင့် စုစုပေါင်း သုံးမျိုးထဲက ကြိုက်ရာ ၂ မျိုးသိရှိပါက ကျန်တစ်မျိုးကို အလိုအလျောက် တွက်ချက်ပေးပါပြီ။',
+    descriptionEn: 'Knowing any 2 of Price/Qty/Total, the third is auto-computed with last-edited priority.',
+    changesMy: [
+      'နောက်ဆုံး ရိုက်ထည့်သည့် အကွက်ကို ထိန်းထားပြီး ကျန်တစ်ခုကို တွက်ချက်ပေးပါသည်။',
+      'ဈေးနှုန်း + စုစုပေါင်း သိရင် အရေအတွက် auto ။',
+      'အရေအတွက် + စုစုပေါင်း သိရင် ဈေးနှုန်း auto ။',
+      'အရေအတွက်ကို ဒသမ ၂ လုံးအထိ တွက်ချက်ပါသည်။',
+      'Shopping List ပစ္စည်းတစ်ခုချင်းစီတွင်လည်း ထို့အတူ အလုပ်လုပ်ပါသည်။',
+    ],
+    changesEn: [
+      'Preserves the last edited field and computes the remaining third.',
+      'Price + Total → Qty auto-computed.',
+      'Qty + Total → Price auto-computed.',
+      'Quantity is computed up to 2 decimals.',
+      'Shopping list items also support this logic per item.',
+    ],
+  },
   {
     version: 'v6.3.3',
     buildNumber: 153,

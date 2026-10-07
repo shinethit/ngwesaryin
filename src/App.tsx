@@ -529,6 +529,7 @@ if (typeof window !== 'undefined') {
   useCloudListeners({
     user,
     activeWorkspaceId,
+    activeTab,
     plan,
     transactions,
     debts,

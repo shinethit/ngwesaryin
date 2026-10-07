@@ -39,6 +39,7 @@ import { INITIAL_WALLETS } from '../data/initialData';
 interface UseCloudListenersParams {
   user: { uid: string } | null;
   activeWorkspaceId: string | null | undefined;
+  activeTab: string;
   plan: PlanType;
   // Snapshot values (read only at mount-time; used only in initial-empty sync)
   transactions: Transaction[];
@@ -77,6 +78,7 @@ interface UseCloudListenersParams {
 export function useCloudListeners({
   user,
   activeWorkspaceId,
+  activeTab,
   plan,
   transactions,
   debts,
@@ -112,6 +114,22 @@ export function useCloudListeners({
   const [isCloudLoaded, setIsCloudLoaded] = useState(false);
   const hasInitialSyncedRef = useRef(false);
   const isRemoteUpdateRef = useRef(false);
+  const [vehicleListenersActive, setVehicleListenersActive] = useState(false);
+
+  // [v6.7] Lazy-activate vehicle listeners when user opens Vehicles tab
+  //        or already has persisted vehicle data.
+  useEffect(() => {
+    if (vehicleListenersActive) return;
+    if (
+      activeTab === 'vehicles' ||
+      vehicles.length > 0 ||
+      fuelLogs.length > 0 ||
+      vehicleMaintenance.length > 0 ||
+      tirePressureLogs.length > 0
+    ) {
+      setVehicleListenersActive(true);
+    }
+  }, [activeTab, vehicles.length, fuelLogs.length, vehicleMaintenance.length, tirePressureLogs.length, vehicleListenersActive]);
 
   useEffect(() => {
     if (!user) {
@@ -124,8 +142,7 @@ export function useCloudListeners({
     const unsubscribers: (() => void)[] = [];
     const timers: NodeJS.Timeout[] = [];
 
-    const setupListeners = () => {
-      // 1. Transactions
+    // 1. Transactions
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'transactions'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
@@ -337,6 +354,20 @@ export function useCloudListeners({
         }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${targetUid}/shops`)));
       }, 1000));
 
+    return () => {
+      timers.forEach(clearTimeout);
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [user?.uid, activeWorkspaceId]);
+
+  // [v6.7] Vehicle listeners (lazy) — only when vehicleListenersActive
+  useEffect(() => {
+    if (!user || !vehicleListenersActive) return;
+
+    const targetUid = activeWorkspaceId || user.uid;
+    const unsubscribers: (() => void)[] = [];
+    const timers: NodeJS.Timeout[] = [];
+
       // 7. Vehicles
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'vehicles'), (snap) => {
@@ -404,15 +435,11 @@ export function useCloudListeners({
           });
         }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${targetUid}/tirePressureLogs`)));
       }, 1800));
-    };
-
-    setupListeners();
-
     return () => {
       timers.forEach(clearTimeout);
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [user?.uid, activeWorkspaceId]);
+  }, [user?.uid, activeWorkspaceId, vehicleListenersActive]);
 
 
   return { isCloudLoaded };

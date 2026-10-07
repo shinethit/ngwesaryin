@@ -32,6 +32,15 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/firebase/') || id.includes('/@firebase/')) {
               return 'firebase-vendor';
             }
+            if (id.includes('/recharts/') || id.includes('/d3-')) {
+              return 'charts-vendor';
+            }
+            if (id.includes('/lucide-react/')) {
+              return 'icons-vendor';
+            }
+            if (id.includes('/date-fns/') || id.includes('/dayjs/')) {
+              return 'date-vendor';
+            }
           },
         },
       },

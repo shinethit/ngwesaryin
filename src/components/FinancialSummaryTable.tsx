@@ -36,7 +36,8 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
   // Two distinct financial systems requested by user:
   // 1. inflow_outflow (ဝင်ငွေ / ထွက်ငွေ စနစ်)
   // 2. opening_closing (စတင်လက်ကျန် / ပိတ်လက်ကျန် စနစ်)
-  const [financialSystem, setFinancialSystem] = React.useState<'inflow_outflow' | 'opening_closing'>('inflow_outflow');
+  // [v6.7c] Opening/Closing is the default view
+  const [financialSystem, setFinancialSystem] = React.useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
 
   const net = income - expense;
   const totalCount = incomeCount + expenseCount;
@@ -114,18 +115,6 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
           <div className="flex items-center bg-slate-100 p-1 rounded-xl self-stretch sm:self-auto border border-slate-200/80">
             <button
               type="button"
-              onClick={() => setFinancialSystem('inflow_outflow')}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                financialSystem === 'inflow_outflow'
-                  ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>{lang === 'my' ? '၁။ Inflow / Outflow' : '1. Inflow / Outflow'}</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setFinancialSystem('opening_closing')}
               className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 financialSystem === 'opening_closing'
@@ -134,7 +123,19 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>{lang === 'my' ? '၂။ Opening / Closing' : '2. Opening / Closing'}</span>
+              <span>{lang === 'my' ? '၁။ Opening / Closing' : '1. Opening / Closing'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFinancialSystem('inflow_outflow')}
+              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                financialSystem === 'inflow_outflow'
+                  ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>{lang === 'my' ? '၂။ Inflow / Outflow' : '2. Inflow / Outflow'}</span>
             </button>
           </div>
         </div>

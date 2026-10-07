@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.3.9';
-export const CURRENT_BUILD_NUMBER = 158;
+export const CURRENT_APP_VERSION = 'v6.4';
+export const CURRENT_BUILD_NUMBER = 159;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.4',
+    buildNumber: 159,
+    releaseDate: '2026-10-08',
+    releaseTime: '1:30 AM (MMT)',
+    titleMy: 'ငွေစာရင်း — တွက်ချက်မှု Debounce (Stable Typing)',
+    titleEn: 'Transaction — Debounced Live Calculation',
+    tag: 'fix',
+    tagLabelMy: 'တွက်ချက်မှု ပြုပြင်ချက်',
+    tagLabelEn: 'Calculation Fix',
+    descriptionMy: 'စုစုပေါင်း ရိုက်ထည့်စဉ် ဈေးနှုန်း/အရေအတွက် မလိုအပ်ဘဲ လှုပ်ရှားမှု မဖြစ်စေရန် 500ms debounce ထည့်ထားပါသည်။',
+    descriptionEn: 'Live calculation is now debounced by 500ms, preventing field flicker during typing.',
+    changesMy: [
+      'တန်ဖိုး (Total) ရိုက်ထည့်စဉ် ၅၀၀ms ရပ်လိုက်မှ ဈေးနှုန်း/အရေအတွက် တွက်ချက်ပါသည်။',
+      'ရိုက်နေစဉ် တန်ဖိုးများ မလှုပ်တော့ပါ။',
+      'Direct / Unit Qty / Shopping List အားလုံးတွင် တူညီစွာ အလုပ်လုပ်ပါသည်။',
+    ],
+    changesEn: [
+      'Total input now debounces by 500ms before recalculating Price/Qty.',
+      'Values no longer flicker while typing.',
+      'Applies to Direct, Unit Qty, and Shopping List modes.',
+    ],
+  },
   {
     version: 'v6.3.9',
     buildNumber: 158,

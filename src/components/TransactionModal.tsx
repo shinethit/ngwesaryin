@@ -196,6 +196,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   // [v6.3.6] Track last edited field for any-2-of-3 auto-compute
   const [unitQtyLastEdited, setUnitQtyLastEdited] = useState<'price' | 'qty' | 'total' | null>(null);
   const shoppingLastEditedRef = useRef<Record<string, 'price' | 'qty' | 'amount'>>({});
+  // [v6.4] Debounce timers for smooth typing
+  const unitQtyAmountTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const shoppingAmountTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   const [showQuickAddSub, setShowQuickAddSub] = useState(false);
   const [newSubName, setNewSubName] = useState('');
@@ -291,6 +294,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
       if (editTransaction) {
         if (isNewlyOpened || isEditTxChanged) {
+          if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
+          Object.values(shoppingAmountTimersRef.current).forEach(clearTimeout);
+          shoppingAmountTimersRef.current = {};
           setUnitQtyLastEdited(null);
           shoppingLastEditedRef.current = {};
           setType(editTransaction.type);
@@ -456,12 +462,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const handleUnitQtyAmountChange = (amtStr: string) => {
+    // [v6.4] Update raw value immediately, but debounce the reverse-calc
     setAmount(amtStr);
-    const tot = parseFloat(amtStr) || 0;
-    if (tot <= 0) { setUnitQtyLastEdited('total'); return; }
-    const pNum = parseFloat(unitPrice) || 0;
-    const qNum = parseFloat(quantity) || 0;
-    computeUnitQtyThird('total', pNum, qNum, tot);
+    if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
+    unitQtyAmountTimerRef.current = setTimeout(() => {
+      const tot = parseFloat(amtStr) || 0;
+      if (tot <= 0) { setUnitQtyLastEdited('total'); return; }
+      const pNum = parseFloat(unitPrice) || 0;
+      const qNum = parseFloat(quantity) || 0;
+      computeUnitQtyThird('total', pNum, qNum, tot);
+    }, 500);
   };
 
   // Shopping List item row — [v6.3.6] any 2 of Price/Qty/Total -> compute 3rd
@@ -492,9 +502,24 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             else { if (pNum > 0) newItem.amount = Number((pNum * qNum).toFixed(2)); else if (qNum > 0 && aNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
             shoppingLastEditedRef.current[id] = 'qty';
           } else if (field === 'amount') {
-            if (last === 'price') { if (pNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); }
-            else if (last === 'qty') { if (qNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
-            else { if (pNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); else if (qNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); else { newItem.quantity = 1; newItem.price = aNum; } }
+            // [v6.4] Immediate raw value update, debounced reverse-calc
+            newItem.amount = aNum;
+            if (shoppingAmountTimersRef.current[id]) clearTimeout(shoppingAmountTimersRef.current[id]);
+            const capturedId = id;
+            shoppingAmountTimersRef.current[id] = setTimeout(() => {
+              setShoppingItems((prevItems) => prevItems.map((it) => {
+                if (it.id !== capturedId) return it;
+                const item = { ...it };
+                const p = item.price || 0;
+                const q = item.quantity || 0;
+                const a = item.amount || 0;
+                const lastNow = shoppingLastEditedRef.current[capturedId];
+                if (lastNow === 'price') { if (p > 0) item.quantity = Number((a / p).toFixed(2)); }
+                else if (lastNow === 'qty') { if (q > 0) item.price = Number((a / q).toFixed(2)); }
+                else { if (p > 0) item.quantity = Number((a / p).toFixed(2)); else if (q > 0) item.price = Number((a / q).toFixed(2)); else { item.quantity = 1; item.price = a; } }
+                return item;
+              }));
+            }, 500);
             shoppingLastEditedRef.current[id] = 'amount';
           }
           return newItem;

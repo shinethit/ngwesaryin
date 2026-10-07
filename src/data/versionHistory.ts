@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.3.2';
-export const CURRENT_BUILD_NUMBER = 152;
+export const CURRENT_APP_VERSION = 'v6.3.3';
+export const CURRENT_BUILD_NUMBER = 153;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.3.3',
+    buildNumber: 153,
+    releaseDate: '2026-10-07',
+    releaseTime: '11:00 PM (MMT)',
+    titleMy: 'အကြွေး — စာသားနှင့် Cloud Override ပြုပြင်ခြင်း',
+    titleEn: 'Debt — Labels & Cloud Override Protection',
+    tag: 'fix',
+    tagLabelMy: 'အရေးကြီး ပြင်ဆင်ချက်',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အကြွေးပြန်ဆပ်ခြင်း စာသားများကို ပြုပြင်ပြီး၊ local ပြောင်းလဲမှုများကို cloud snapshot မှ ပြန်မဖျက်နိုင်ရန် ကာကွယ်ပါသည်။',
+    descriptionEn: 'Fixed debt repayment labels and added cloud lag protection.',
+    changesMy: [
+      '"ကြွေးရှင် ပြန်ဆပ်ခြင်း" ကို "ကြွေးယူသူမှ ပြန်ဆပ်ခြင်း" သို့ ပြောင်းပါသည်။',
+      'cat_debt_payment label အသစ် ထည့်ပါသည် (ကြွေးရှင်ထံ ပြန်ဆပ်ခြင်း)။',
+      'Debt local write ၂၀ စက္ကန့်အတွင်း cloud snapshot မှ ပြန်မဖျက်နိုင်ရန် ကာကွယ်ပါသည်။',
+    ],
+    changesEn: [
+      'Fixed "Creditor Repays" to "Borrower Repays".',
+      'Added cat_debt_payment label.',
+      'Added 20s cloud lag protection for local debt writes.',
+    ],
+  },
   {
     version: 'v6.3.2',
     buildNumber: 152,

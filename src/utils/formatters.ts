@@ -103,7 +103,8 @@ export const getCategoryDisplayName = (
     cat_transfer: { my: 'ငွေလွှဲပြောင်းမှု', en: 'Transfer' },
     cat_debt_issued: { my: 'ချေးငွေ ထုတ်ပေးခြင်း', en: 'Debt Issued' },
     cat_debt_received: { my: 'ချေးငွေ ရယူခြင်း', en: 'Debt Received' },
-    cat_debt_repayment: { my: 'ကြွေးရှင် ပြန်ဆပ်ခြင်း', en: 'Debt Repayment' },
+    cat_debt_repayment: { my: 'ကြွေးယူသူမှ ပြန်ဆပ်ခြင်း', en: 'Borrower Repays' },
+    cat_debt_payment: { my: 'ကြွေးရှင်ထံ ပြန်ဆပ်ခြင်း', en: 'Repay to Lender' },
   };
   if (map[categoryId]) {
     return lang === 'my' ? map[categoryId].my : map[categoryId].en;

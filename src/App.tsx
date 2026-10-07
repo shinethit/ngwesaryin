@@ -342,6 +342,16 @@ if (typeof window !== 'undefined') {
   const lastResumeSyncAtRef = useRef<number>(0);
   const walletPushRequestedRef = useRef<Set<string>>(new Set());
   const migratedRepaymentsRef = useRef(false); // [v6.1.11] one-shot legacy migration
+  // [v6.3.3] Cloud lag protection: skip cloud snapshot for recently locally-written debt IDs
+  const debtLocalWriteRef = useRef<Map<string, number>>(new Map());
+  const markDebtLocalWrite = (id: string) => {
+    debtLocalWriteRef.current.set(id, Date.now());
+  };
+  const isDebtRecentlyWritten = (id: string): boolean => {
+    const ts = debtLocalWriteRef.current.get(id);
+    if (!ts) return false;
+    return Date.now() - ts < 20000; // 20s protection window
+  };
 
   const handleUpdateConfirmedCloudTxIds = useCallback((newlyConfirmedIds: string[]) => {
     if (!newlyConfirmedIds || newlyConfirmedIds.length === 0) return;
@@ -1129,7 +1139,17 @@ if (typeof window !== 'undefined') {
           isRemoteUpdateRef.current = true;
           const cloudDebts = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Debt));
           setDebts((prevLocal) => {
-            const merged = mergeById(prevLocal, cloudDebts);
+            // [v6.3.3] Skip cloud entries for IDs we just wrote locally (cloud lag protection)
+            const now = Date.now();
+            const filtered = cloudDebts.filter((d) => {
+              const ts = debtLocalWriteRef.current.get(d.id);
+              return !(ts && (now - ts) < 20000);
+            });
+            // GC expired entries
+            Array.from(debtLocalWriteRef.current.entries()).forEach(([id, ts]) => {
+              if (now - ts > 20000) debtLocalWriteRef.current.delete(id);
+            });
+            const merged = mergeById(prevLocal, filtered);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_debts', JSON.stringify(merged));
             return merged;
@@ -2430,6 +2450,7 @@ if (typeof window !== 'undefined') {
       paidAmount: newPaid,
     };
 
+    markDebtLocalWrite(id); // [v6.3.3] protect from cloud override
     setDebts((prev) => {
       const next = prev.map((d) => (d.id === id ? updatedDebt : d));
       safeSetItem('ngwe_debts', JSON.stringify(next));
@@ -2551,6 +2572,7 @@ if (typeof window !== 'undefined') {
       }
     }
 
+    markDebtLocalWrite(debtId); // [v6.3.3]
     setDebts((prev) => {
       const next = prev.map((d) => {
         if (d.id === debtId) {

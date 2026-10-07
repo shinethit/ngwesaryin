@@ -2,7 +2,8 @@ import type { Dispatch, SetStateAction } from 'react';
 import { isQuotaExhausted } from '../lib/firebase';
 import { syncQueue } from '../lib/syncQueue';
 import { recordSyncOperationStart, finishSyncOperation } from '../lib/syncOperationLogger';
-import { isTxDeleted, unmarkTxDeleted } from '../utils/deletedMarkers';
+import { isTxDeleted, unmarkTxDeleted, isWalletDeleted } from '../utils/deletedMarkers';
+import { safeSetItem } from '../utils/storage';
 import type {
   BudgetConfig,
   Category,
@@ -16,6 +17,12 @@ import type {
   VehicleMaintenance,
   Wallet,
 } from '../types';
+
+import {
+  INITIAL_WALLETS,
+  INITIAL_CATEGORIES,
+  INITIAL_BUDGETS,
+} from '../data/initialData';
 
 interface UseSyncOperationsParams {
   user: { uid: string } | null;
@@ -35,6 +42,16 @@ interface UseSyncOperationsParams {
   fuelLogs: FuelLog[];
   vehicleMaintenance: VehicleMaintenance[];
   tirePressureLogs: TirePressureLog[];
+  setTransactions: Dispatch<SetStateAction<Transaction[]>>;
+  setDebts: Dispatch<SetStateAction<Debt[]>>;
+  setWallets: Dispatch<SetStateAction<Wallet[]>>;
+  setCategories: Dispatch<SetStateAction<Category[]>>;
+  setBudgets: Dispatch<SetStateAction<BudgetConfig[]>>;
+  setShops: Dispatch<SetStateAction<ShopContact[]>>;
+  setVehicles: Dispatch<SetStateAction<Vehicle[]>>;
+  setFuelLogs: Dispatch<SetStateAction<FuelLog[]>>;
+  setVehicleMaintenance: Dispatch<SetStateAction<VehicleMaintenance[]>>;
+  setTirePressureLogs: Dispatch<SetStateAction<TirePressureLog[]>>;
   cloudTxIds: Set<string>;
   setCloudTxIds: Dispatch<SetStateAction<Set<string>>>;
   syncDataToCloud: (...args: any[]) => Promise<boolean>;
@@ -60,6 +77,16 @@ export function useSyncOperations({
   fuelLogs,
   vehicleMaintenance,
   tirePressureLogs,
+  setTransactions,
+  setDebts,
+  setWallets,
+  setCategories,
+  setBudgets,
+  setShops,
+  setVehicles,
+  setFuelLogs,
+  setVehicleMaintenance,
+  setTirePressureLogs,
   cloudTxIds,
   setCloudTxIds,
   syncDataToCloud,

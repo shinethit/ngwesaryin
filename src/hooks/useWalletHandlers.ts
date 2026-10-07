@@ -12,6 +12,7 @@ import {
 } from '../lib/sharedWalletService';
 import { isWalletMatch } from '../utils/walletBalance';
 import { DEFAULT_WALLET_PERMISSIONS } from '../utils/permissions';
+import { markWalletDeleted, unmarkWalletDeleted } from '../utils/deletedMarkers';
 import type {
   Category,
   PlanLimits,
@@ -36,8 +37,8 @@ interface UseWalletHandlersParams {
   transactions: Transaction[];
   setTransactions: Dispatch<SetStateAction<Transaction[]>>;
   categories: Category[];
-  addCollaborator: (email: string) => Promise<void>;
-  removeCollaborator: (email: string) => Promise<void>;
+  addCollaborator: (email: string) => Promise<{ success: boolean; error?: string }>;
+  removeCollaborator: (email: string) => Promise<boolean>;
 }
 
 /**

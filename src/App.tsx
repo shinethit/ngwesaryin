@@ -267,6 +267,7 @@ if (typeof window !== 'undefined') {
   const walletsLatestRef = useRef(wallets);
   walletsLatestRef.current = wallets;
 
+  const isRemoteUpdateRef = useRef(false);
   const lastResumeSyncAtRef = useRef<number>(0);
   const migratedRepaymentsRef = useRef(false); // [v6.1.11] one-shot legacy migration
   // [v6.3.3] Cloud lag protection: skip cloud snapshot for recently locally-written debt IDs
@@ -506,6 +507,16 @@ if (typeof window !== 'undefined') {
     fuelLogs,
     vehicleMaintenance,
     tirePressureLogs,
+    setTransactions,
+    setDebts,
+    setWallets,
+    setCategories,
+    setBudgets,
+    setShops,
+    setVehicles,
+    setFuelLogs,
+    setVehicleMaintenance,
+    setTirePressureLogs,
     cloudTxIds,
     setCloudTxIds,
     syncDataToCloud,
@@ -1010,6 +1021,34 @@ if (typeof window !== 'undefined') {
   };
 
   const {
+    handleSaveVehicle,
+    handleDeleteVehicle,
+    handleSaveFuelLog,
+    handleDeleteFuelLog,
+    handleSaveMaintenance,
+    handleDeleteMaintenance,
+    handleSaveTirePressure,
+    handleDeleteTirePressure,
+  } = useVehicleHandlers({
+    user,
+    activeWorkspaceId,
+    lang,
+    showToast,
+    computedWallets,
+    categories,
+    vehicles,
+    setVehicles,
+    fuelLogs,
+    setFuelLogs,
+    vehicleMaintenance,
+    setVehicleMaintenance,
+    tirePressureLogs,
+    setTirePressureLogs,
+    transactions,
+    setTransactions,
+  });
+
+  const {
     handleOpenAddTx,
     handleOpenEditTx,
     handleOpenAddDebt,
@@ -1033,6 +1072,7 @@ if (typeof window !== 'undefined') {
     setEditingTransaction,
     transactions,
     setTransactions,
+    debts,
     wallets,
     computedWallets,
     categories,
@@ -1065,6 +1105,7 @@ if (typeof window !== 'undefined') {
     setIsPremiumModalOpen,
     debts,
     setDebts,
+    wallets,
     transactions,
     setTransactions,
     setCloudTxIds,
@@ -1132,33 +1173,6 @@ if (typeof window !== 'undefined') {
     setShops,
   });
 
-  const {
-    handleSaveVehicle,
-    handleDeleteVehicle,
-    handleSaveFuelLog,
-    handleDeleteFuelLog,
-    handleSaveMaintenance,
-    handleDeleteMaintenance,
-    handleSaveTirePressure,
-    handleDeleteTirePressure,
-  } = useVehicleHandlers({
-    user,
-    activeWorkspaceId,
-    lang,
-    showToast,
-    computedWallets,
-    categories,
-    vehicles,
-    setVehicles,
-    fuelLogs,
-    setFuelLogs,
-    vehicleMaintenance,
-    setVehicleMaintenance,
-    tirePressureLogs,
-    setTirePressureLogs,
-    transactions,
-    setTransactions,
-  });
 
 
   const handleLockApp = () => {

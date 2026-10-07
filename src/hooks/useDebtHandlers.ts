@@ -4,7 +4,12 @@ import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { markTxDeleted } from '../utils/deletedMarkers';
-import type { Debt, PlanLimits, PlanType, Transaction } from '../types';
+import { isWalletMatch } from '../utils/walletBalance';
+import {
+  getSharedWalletDocId,
+  deleteSharedWalletTransaction,
+} from '../lib/sharedWalletService';
+import type { Debt, PlanLimits, PlanType, Transaction, Wallet } from '../types';
 
 interface UseDebtHandlersParams {
   user: { uid: string } | null;
@@ -17,6 +22,7 @@ interface UseDebtHandlersParams {
   setIsPremiumModalOpen: (open: boolean) => void;
   debts: Debt[];
   setDebts: Dispatch<SetStateAction<Debt[]>>;
+  wallets: Wallet[];
   transactions: Transaction[];
   setTransactions: Dispatch<SetStateAction<Transaction[]>>;
   setCloudTxIds: Dispatch<SetStateAction<Set<string>>>;
@@ -38,6 +44,7 @@ export function useDebtHandlers({
   setIsPremiumModalOpen,
   debts,
   setDebts,
+  wallets,
   transactions,
   setTransactions,
   setCloudTxIds,

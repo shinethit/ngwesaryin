@@ -14,10 +14,45 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.1.0';
-export const CURRENT_BUILD_NUMBER = 148;
+export const CURRENT_APP_VERSION = 'v6.2';
+export const CURRENT_BUILD_NUMBER = 149;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.2',
+    buildNumber: 149,
+    releaseDate: '2026-10-07',
+    releaseTime: '6:00 PM (MMT)',
+    titleMy: 'အကြွေးပြန်ဆပ်မှတ်တမ်း + ယာဉ်ကုန်ကျစရိတ် အနှစ်ချုပ်',
+    titleEn: 'Debt Repayment Sync + Vehicle Cost per Km',
+    tag: 'major',
+    tagLabelMy: 'အင်္ဂါရပ်အသစ်များ',
+    tagLabelEn: 'New Features',
+    descriptionMy: 'အကြွေးပြန်ဆပ်မှတ်တမ်းများကို ငွေစာရင်းနှင့် အလိုအလျောက် ချိတ်ဆက်ခြင်း၊ ယာဉ်တစ်စီးအတွက် တစ်ကီလိုမီတာ ကုန်ကျစရိတ် တွက်ချက်ခြင်းနှင့် အခြားသော UI တိုးတက်မှုများ ပါဝင်ပါသည်။',
+    descriptionEn: 'Auto-sync debt repayments with transactions, Cost per Km for vehicles, and other UI improvements.',
+    changesMy: [
+      'အကြွေးပြန်ဆပ်မှတ်တမ်း ဖျက်လိုက်ပါက တွဲဖက်ငွေစာရင်းကိုပါ ဖျက်ပြီး Wallet လက်ကျန်ငွေ အလိုအလျောက် ပြန်ပြောင်းပေးပါပြီ။',
+      'အကြွေးပြန်ဆပ်မှတ်တမ်း ပြင်ဆင်လိုက်ပါက တွဲဖက်ငွေစာရင်းကိုပါ update လုပ်ပေးပါပြီ။',
+      'အကြွေးဖျက်သောအခါ တွဲဖက်ငွေစာရင်းများအားလုံး cleanup လုပ်ပါပြီ။',
+      'ရှေးဟောင်း (legacy) ငွေဆပ်မှတ်တမ်းများကို auto-migrate လုပ်ပေးပါပြီ။',
+      'ယာဉ်ကုန်ကျစရိတ် အနှစ်ချုပ်စာမျက်နှာတွင် တစ်ကီလိုမီတာ ကုန်ကျစရိတ် ပြသပါပြီ။',
+      'ဆီဆိုင် Default စာရင်းကို ၃ ခုသာ ထားရှိပါသည် (Denko, BOC, Max Energy)။',
+      'Smart Calendar တွင် Wallet filter နှင့် Lakh format ပြုပြင်ပါပြီ။',
+      'ယာဉ် Phantom Wallet ပြန်ပေါ်ခြင်းကို ကာကွယ်ပါပြီ။',
+      'Admin Panel quota အသုံးပြုမှုကို ၈၀-၉၅% လျှော့ချပါပြီ။',
+    ],
+    changesEn: [
+      'Deleting a repayment now deletes its linked transaction and reverts wallet balance.',
+      'Editing a repayment now updates the linked transaction.',
+      'Deleting a debt cleans up all linked transactions.',
+      'Legacy repayments auto-migrated on startup.',
+      'Cost per Km displayed on Vehicle Cost Summary card.',
+      'Default gas stations reduced to 3 (Denko, BOC, Max Energy).',
+      'Smart Calendar Wallet filter + Lakh format improvements.',
+      'Vehicle Phantom Wallet reappearing fixed.',
+      'Admin Panel quota usage reduced by 80-95%.',
+    ],
+  },
     {
     version: 'v6.1.0',
     buildNumber: 148,

@@ -85,6 +85,8 @@ import { mergeById, mergeByKey } from './utils/mergeById';
 import { usePersistedState } from './hooks/usePersistedState';
 import { hashPin, generateSalt, isHashedPinFormat } from './utils/pinHash';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+// [v6.8-i18n] Centralized translations
+import { t } from './utils/i18n';
 import { useVehicleHandlers } from './hooks/useVehicleHandlers';
 import { useDataHandlers } from './hooks/useDataHandlers';
 import { useWalletHandlers } from './hooks/useWalletHandlers';
@@ -895,7 +897,7 @@ export default function App() {
         : `Type "${expected}" to permanently delete ALL data:`;
       const input = window.prompt(promptMsg);
       if (input !== expected) {
-        showToast(lang === 'my' ? 'ဖျက်ခြင်း ပယ်ဖျက်လိုက်ပါပြီ' : 'Delete cancelled');
+        showToast(t('toast.deleteCancelled', lang));
         return;
       }
     }
@@ -957,7 +959,7 @@ export default function App() {
         await clearAllCloudData();
       }
 
-      showToast(lang === 'my' ? 'ဒေတာအားလုံးကို အပြီးတိုင် ရှင်းလင်းလိုက်ပါပြီ ✓' : 'All data cleared successfully ✓');
+      showToast(t('toast.allDataCleared', lang));
       setIsAccountModalOpen(false);
     }
   };
@@ -1035,7 +1037,7 @@ export default function App() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast(lang === 'my' ? 'Backup သိမ်းဆည်းပြီးပါပြီ ✓' : 'Backup downloaded ✓');
+    showToast(t('toast.backupSaved', lang));
   };
 
   const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1070,9 +1072,9 @@ export default function App() {
         if (parsed.vehicleMaintenance) setVehicleMaintenance(parsed.vehicleMaintenance);
         if (parsed.tirePressureLogs) setTirePressureLogs(parsed.tirePressureLogs);
         if (parsed.lang) setLang(parsed.lang);
-        showToast(lang === 'my' ? 'Backup ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ ✓' : 'Backup restored successfully ✓');
+        showToast(t('toast.backupRestored', lang));
       } catch (err) {
-        alert(lang === 'my' ? 'ဖိုင်ဖတ်ရာတွင် အမှားရှိပါသည်' : 'Error reading backup file');
+        alert(t('errors.fileRead', lang));
       }
     };
     reader.readAsText(file);
@@ -1278,7 +1280,7 @@ export default function App() {
     setPinSettings(updatedSettings);
     safeSetItem('ngwe_pin', JSON.stringify(updatedSettings));
     setIsLocked(true);
-    showToast(lang === 'my' ? 'လုံခြုံရေး PIN သတ်မှတ်၍ အက်ပ်ကို လော့ခ်ချလိုက်ပါပြီ 🔒' : 'PIN set and App locked 🔒');
+    showToast(t('toast.pinSet', lang));
   };
 
   // Loading screen
@@ -1288,7 +1290,7 @@ export default function App() {
         <div className="flex flex-col items-center gap-3">
           <FortuneLogo size="lg" style={logoStyle} animate />
           <p className="text-xs text-slate-500 font-medium">
-            {lang === 'my' ? 'ငွေစာရင်း စနစ်ဖွင့်နေပါသည်...' : 'Loading NgweSarYin...'}
+            {t('loading.appStarting', lang)}
           </p>
         </div>
       </div>
@@ -1401,7 +1403,7 @@ export default function App() {
         <React.Suspense fallback={
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
             <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-medium">{lang === 'my' ? 'ခဏစောင့်ပါ...' : 'Loading component...'}</span>
+            <span className="text-xs font-medium">{t('loading.component', lang)}</span>
           </div>
         }>
         {activeTab === 'dashboard' && (
@@ -1693,7 +1695,7 @@ export default function App() {
                   <button
                     disabled={plan === 'guest'}
                     onClick={() => {
-                      showToast(lang === 'my' ? 'Guest Mode အဖြစ် အသုံးပြုနေပါသည်' : 'Currently in Guest Mode');
+                      showToast(t('toast.guestMode', lang));
                     }}
                     className={`mt-6 w-full py-2 rounded-xl font-bold text-xs transition-colors ${
                       plan === 'guest'
@@ -1742,7 +1744,7 @@ export default function App() {
                       if (plan === 'guest') {
                         setIsAuthModalOpen(true);
                       } else {
-                        showToast(lang === 'my' ? 'Free Plan အဖြစ် အသုံးပြုနေပါသည်' : 'Currently on Free Plan');
+                        showToast(t('toast.freePlanActive', lang));
                       }
                     }}
                     className={`mt-6 w-full py-2 rounded-xl font-bold text-xs transition-colors cursor-pointer ${

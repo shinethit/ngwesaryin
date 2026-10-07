@@ -34,6 +34,8 @@ import type {
   Wallet,
 } from '../types';
 
+import { INITIAL_WALLETS } from '../data/initialData';
+
 interface UseCloudListenersParams {
   user: { uid: string } | null;
   activeWorkspaceId: string | null | undefined;

@@ -13,6 +13,7 @@ import {
 } from '../lib/sharedWalletService';
 import type {
   Category,
+  Debt,
   FuelLog,
   PlanLimits,
   PlanType,
@@ -43,6 +44,7 @@ interface UseTransactionHandlersParams {
   setEditingTransaction: (t: Transaction | null) => void;
   transactions: Transaction[];
   setTransactions: Dispatch<SetStateAction<Transaction[]>>;
+  debts: Debt[];
   wallets: Wallet[];
   computedWallets: Wallet[];
   categories: Category[];
@@ -75,6 +77,7 @@ export function useTransactionHandlers({
   setEditingTransaction,
   transactions,
   setTransactions,
+  debts,
   wallets,
   computedWallets,
   categories,

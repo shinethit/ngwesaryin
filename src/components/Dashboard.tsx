@@ -43,7 +43,7 @@ import {
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, DataScope } from '../types';
 import { formatMMK, formatDateDisplay, isOverdue, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
-import { safeGetItem, safeSetItem } from '../utils/storage';
+import { safeGetItem } from '../utils/storage';
 import { CategoryIcon } from './CategoryIcon';
 import { MonthlySavingsTarget } from './MonthlySavingsTarget';
 import { MonthlyComparisonCard } from './MonthlyComparisonCard';
@@ -110,14 +110,64 @@ export const Dashboard: React.FC<DashboardProps> = ({
   cloudTxIds,
 }) => {
   const { user, isSyncing, lastSyncedAt, syncDataToCloud } = useAuth();
-  const [timeFilter, setTimeFilter] = useState<'this_month' | 'all'>(() => {
-    const saved = safeGetItem('ngwe_dash_time_filter');
-    return (saved as 'this_month' | 'all') || 'all';
-  });
+  // v6.5 — Extended time filter (presets + custom range). Not persisted (default: this_month).
+  type TimeFilterOption = 'all' | 'this_month' | 'this_week' | 'last_30' | 'this_year' | 'custom';
+  const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('this_month');
+  const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
+  const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
+  const [tempFrom, setTempFrom] = useState('');
+  const [tempTo, setTempTo] = useState('');
+  const periodDropdownRef = React.useRef<HTMLDivElement>(null);
 
-  const handleSetTimeFilter = (filter: 'this_month' | 'all') => {
+  const handleSetTimeFilter = (filter: TimeFilterOption) => {
     setTimeFilter(filter);
-    safeSetItem('ngwe_dash_time_filter', filter);
+    if (filter !== 'custom') setCustomRange(null);
+  };
+
+  const openPeriodDropdown = () => {
+    if (!isPeriodDropdownOpen) {
+      setTempFrom(customRange?.from || '');
+      setTempTo(customRange?.to || '');
+    }
+    setIsPeriodDropdownOpen((v) => !v);
+  };
+
+  const applyCustomRange = () => {
+    if (!tempFrom || !tempTo) {
+      alert(lang === 'my' ? 'ရက်စွဲ နှစ်ခုလုံး ဖြည့်ပါ' : 'Please fill both dates');
+      return;
+    }
+    if (tempFrom > tempTo) {
+      alert(lang === 'my' ? 'စတင်ရက် သည် ဆုံးရက် ထက် မကြီးရပါ' : 'From date cannot be after To date');
+      return;
+    }
+    setCustomRange({ from: tempFrom, to: tempTo });
+    setTimeFilter('custom');
+    setIsPeriodDropdownOpen(false);
+  };
+
+  React.useEffect(() => {
+    if (!isPeriodDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (periodDropdownRef.current && !periodDropdownRef.current.contains(e.target as Node)) {
+        setIsPeriodDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isPeriodDropdownOpen]);
+
+  const getTimeFilterLabel = (filter: TimeFilterOption, range: { from: string; to: string } | null, l: 'my' | 'en') => {
+    switch (filter) {
+      case 'this_week': return l === 'my' ? 'ဒီအပတ်' : 'This Week';
+      case 'last_30':   return l === 'my' ? '၃၀ ရက်' : 'Last 30';
+      case 'this_year': return l === 'my' ? 'ဒီနှစ်' : 'This Year';
+      case 'custom':
+        return range
+          ? range.from.slice(5) + ' – ' + range.to.slice(5)
+          : (l === 'my' ? 'စိတ်ကြိုက်' : 'Custom');
+      default: return l === 'my' ? 'ကာလအလိုက်' : 'Period';
+    }
   };
   const [selectedWalletId, setSelectedWalletId] = useState<string>('all');
   const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
@@ -223,14 +273,53 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return `${y}-${m}`;
   }, []);
 
-  const filteredTransactions = React.useMemo(() => {
-    return scopedTransactions.filter((t) => {
-      if (timeFilter === 'this_month') {
-        return t.date && t.date.startsWith(currentMonthStr);
+  // v6.5 — Compute date bounds from timeFilter
+  const dateBounds = React.useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const d = now.getDate();
+    const toStr = (dt: Date) => {
+      const yy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getDate()).padStart(2, '0');
+      return yy + '-' + mm + '-' + dd;
+    };
+
+    switch (timeFilter) {
+      case 'all':
+        return null;
+      case 'this_month':
+        return { from: y + '-' + String(m + 1).padStart(2, '0') + '-01', to: toStr(now) };
+      case 'this_week': {
+        const day = now.getDay();
+        const diff = day === 0 ? 6 : day - 1;
+        const monday = new Date(now);
+        monday.setDate(d - diff);
+        return { from: toStr(monday), to: toStr(now) };
       }
-      return true;
+      case 'last_30': {
+        const start = new Date(now);
+        start.setDate(d - 29);
+        return { from: toStr(start), to: toStr(now) };
+      }
+      case 'this_year':
+        return { from: y + '-01-01', to: toStr(now) };
+      case 'custom':
+        return customRange;
+      default:
+        return null;
+    }
+  }, [timeFilter, customRange]);
+
+  const filteredTransactions = React.useMemo(() => {
+    if (!dateBounds) return scopedTransactions;
+    const { from, to } = dateBounds;
+    return scopedTransactions.filter((t) => {
+      if (!t.date) return false;
+      return t.date >= from && t.date <= to;
     });
-  }, [scopedTransactions, timeFilter, currentMonthStr]);
+  }, [scopedTransactions, dateBounds]);
 
   // Category map & Wallet map
   const catMap = React.useMemo(() => new Map<string, Category>(categories.map((c) => [c.id, c])), [categories]);
@@ -442,8 +531,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             />
           </div>
 
-          {/* Time Filter Buttons */}
-          <div className="flex items-center gap-1.5">
+          {/* Time Filter Buttons + Period Dropdown (v6.5) */}
+          <div className="flex items-center gap-1.5 relative" ref={periodDropdownRef}>
             <button
               onClick={() => handleSetTimeFilter('all')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-xl cursor-pointer transition-all active:scale-95 ${
@@ -464,6 +553,78 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
               {lang === 'my' ? 'ယခုလ စာရင်း' : 'This Month'}
             </button>
+            <button
+              type="button"
+              onClick={openPeriodDropdown}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
+                timeFilter === 'this_week' || timeFilter === 'last_30' || timeFilter === 'this_year' || timeFilter === 'custom'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 border border-slate-200/80'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{getTimeFilterLabel(timeFilter, customRange, lang)}</span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+
+            {isPeriodDropdownOpen && (
+              <div className="absolute top-full mt-1 right-0 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 min-w-[230px] max-w-[calc(100vw-2rem)]">
+                <button
+                  type="button"
+                  onClick={() => { handleSetTimeFilter('this_week'); setIsPeriodDropdownOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
+                >
+                  {'📆 '}{lang === 'my' ? 'ဒီအပတ်' : 'This Week'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleSetTimeFilter('last_30'); setIsPeriodDropdownOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
+                >
+                  {'📆 '}{lang === 'my' ? 'ပြီးခဲ့သည့် ၃၀ ရက်' : 'Last 30 Days'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleSetTimeFilter('this_year'); setIsPeriodDropdownOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
+                >
+                  {'📆 '}{lang === 'my' ? 'ဒီနှစ်' : 'This Year'}
+                </button>
+
+                <div className="border-t border-slate-100 my-1.5" />
+
+                <div className="px-2 pb-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    {lang === 'my' ? 'စိတ်ကြိုက် ရက်စွဲ' : 'Custom Range'}
+                  </div>
+                  <label className="block text-[11px] text-slate-600 mb-0.5 font-medium">
+                    {lang === 'my' ? 'မှ' : 'From'}
+                  </label>
+                  <input
+                    type="date"
+                    value={tempFrom}
+                    onChange={(e) => setTempFrom(e.target.value)}
+                    className="w-full mb-1.5 px-2 py-1 text-xs border border-slate-200 rounded-lg focus:border-emerald-500 outline-none"
+                  />
+                  <label className="block text-[11px] text-slate-600 mb-0.5 font-medium">
+                    {lang === 'my' ? 'သည်' : 'To'}
+                  </label>
+                  <input
+                    type="date"
+                    value={tempTo}
+                    onChange={(e) => setTempTo(e.target.value)}
+                    className="w-full mb-2 px-2 py-1 text-xs border border-slate-200 rounded-lg focus:border-emerald-500 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCustomRange}
+                    className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors active:scale-95"
+                  >
+                    {lang === 'my' ? 'အသုံးပြုမည်' : 'Apply'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -648,7 +809,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Monthly Empty Filter Helper Banner */}
-      {timeFilter === 'this_month' && filteredTransactions.length === 0 && scopedTransactions.length > 0 && (
+      {timeFilter !== 'all' && filteredTransactions.length === 0 && scopedTransactions.length > 0 && (
         <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3.5 px-4 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2.5 font-medium">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />

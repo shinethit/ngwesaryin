@@ -14,10 +14,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.3';
-export const CURRENT_BUILD_NUMBER = 150;
+export const CURRENT_APP_VERSION = 'v6.3.1';
+export const CURRENT_BUILD_NUMBER = 151;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.3.1',
+    buildNumber: 151,
+    releaseDate: '2026-10-07',
+    releaseTime: '9:00 PM (MMT)',
+    titleMy: 'ငွေဆပ်မှတ်တမ်း — Scope Bug ပြုပြင်ခြင်း',
+    titleEn: 'Repayment — Scope Bug Fix',
+    tag: 'fix',
+    tagLabelMy: 'အရေးကြီး ပြင်ဆင်ချက်',
+    tagLabelEn: 'Critical Bug Fix',
+    descriptionMy: 'ငွေဆပ်မှတ်တမ်း မှတ်သောအခါ တွဲဖက်ငွေစာရင်း (Income/Expense) ထဲသို့ မရောက်ခဲ့သော bug ကို ပြုပြင်ပါသည်။',
+    descriptionEn: 'Fixed a scope bug that prevented repayment transactions from being recorded.',
+    changesMy: [
+      'repTxId variable ၏ scope ကို if-block အပြင်သို့ ရွှေ့ပါသည်။',
+      'ငွေဆပ်မှတ်တမ်း မှတ်လိုက်ပါက ဝင်ငွေ/ထွက်ငွေ စာရင်းထဲသို့ အလိုအလျောက် ရောက်ပါပြီ။',
+    ],
+    changesEn: [
+      'Moved repTxId variable outside the if-block.',
+      'Repayment records now appear in the Income/Expense summary immediately.',
+    ],
+  },
   {
     version: 'v6.3',
     buildNumber: 150,

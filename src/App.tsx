@@ -2431,6 +2431,7 @@ if (typeof window !== 'undefined') {
     walletId: string,
     note?: string
   ) => {
+    let repTxId = '';  // [FIX v6.3.1] scope fix — declared before if block
     const targetDebt = debts.find((d) => d.id === debtId);
     if (targetDebt) {
       const currentPaid = (targetDebt.repayments && targetDebt.repayments.length > 0)
@@ -2448,7 +2449,7 @@ if (typeof window !== 'undefined') {
       }
 
       const isReceivable = targetDebt.type === 'receivable';
-      const repTxId = `tx_rep_${debtId}_${Date.now()}`;
+      repTxId = `tx_rep_${debtId}_${Date.now()}`;  // [FIX v6.3.1] assigned, not declared
       const repTx: Transaction = {
         id: repTxId,
         type: isReceivable ? 'income' : 'expense',

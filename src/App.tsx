@@ -46,7 +46,7 @@ import { NotificationModal } from './components/NotificationModal';
 import { LoginScreen } from './components/LoginScreen';
 import { FortuneLogo, LogoStyle } from './components/FortuneLogo';
 import { ClayFloatingCoinButton } from './components/ClayIllustrations';
-import { RotateCcw, LayoutDashboard, ArrowLeftRight, HandCoins, Search, Cloud, Settings, KeyRound, Trash2, Download, Upload, Menu } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, HandCoins, Search, Cloud, KeyRound, Trash2, Download, Upload, Menu } from 'lucide-react';
 import { SubCategory, PinLockSettings } from './types';
 import { useAuth, parseExpiryTime } from './context/AuthContext';
 import { doc, collection, onSnapshot, writeBatch } from 'firebase/firestore';
@@ -208,13 +208,6 @@ export default function App() {
     return 'free';
   }, [user, userProfile]);
 
-  // 🔧 One-time migration: legacy raw string ('my'/'en') ကို ရှင်း
-if (typeof window !== 'undefined') {
-  const legacy = localStorage.getItem('ngwe_lang');
-  if (legacy === 'my' || legacy === 'en') {
-    localStorage.removeItem('ngwe_lang');
-  }
-}
 
   const [lang, setLang] = usePersistedState<'my' | 'en'>('ngwe_lang', 'my');
 
@@ -227,17 +220,6 @@ if (typeof window !== 'undefined') {
   };
 
   const [transactions, setTransactions] = usePersistedState<Transaction[]>('ngwe_transactions', []);
-  
-  // Custom initialization for deduplication
-  const [transactionsState, setTransactionsState] = useState<Transaction[]>(() => {
-    const saved = transactions;
-    return saved ? deduplicateById(saved) : [];
-  });
-  
-  // Override setTransactions for deduplication
-  const updateTransactions = (newTransactions: Transaction[]) => {
-    setTransactions(deduplicateById(newTransactions));
-  };
 
   const [debts, setDebts] = usePersistedState<Debt[]>('ngwe_debts', []);
   const [wallets, setWallets] = usePersistedState<Wallet[]>('ngwe_wallets', INITIAL_WALLETS);
@@ -986,16 +968,10 @@ if (typeof window !== 'undefined') {
   const langRef = useRef(lang);
   langRef.current = lang;
 
-  // Initialize app: version check and daily reminder
+  // [v6.7h] Version check moved to hasCheckedVersion useEffect (was duplicated)
+  // Initialize app: daily reminder
   useEffect(() => {
-    // 1. Version check
-    const savedVersion = safeGetItem('ngwe_app_version');
-    if (savedVersion !== CURRENT_APP_VERSION) {
-      setIsVersionHistoryModalOpen(true);
-      safeSetItem('ngwe_app_version', CURRENT_APP_VERSION);
-    }
-
-    // 2. 9 PM Daily Reminder — with cleanup
+    // 9 PM Daily Reminder — with cleanup
     const scheduleReminder = () => {
       const now = new Date();
       const ninePM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0, 0);

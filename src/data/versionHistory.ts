@@ -14,10 +14,72 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.4';
-export const CURRENT_BUILD_NUMBER = 159;
+export const CURRENT_APP_VERSION = 'v6.6';
+export const CURRENT_BUILD_NUMBER = 161;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.6',
+    buildNumber: 161,
+    releaseDate: '2026-10-08',
+    releaseTime: '4:00 PM (MMT)',
+    titleMy: 'ကြီးမားသော Code Refactor — App.tsx ကို Custom Hooks ၇ ခုအဖြစ် ခွဲထုတ်ခြင်း',
+    titleEn: 'Major Code Refactor — App.tsx Split into 7 Custom Hooks',
+    tag: 'major',
+    tagLabelMy: 'Architecture Refactor',
+    tagLabelEn: 'Architecture Refactor',
+    descriptionMy: '4,600 line ရှိသော App.tsx ကြီးကို ~1,580 lines (66% reduction) အထိ လျှော့ချပြီး maintainable ဖြစ်စေရန် custom hooks ၇ ခုအဖြစ် ခွဲထုတ်ခဲ့ပါသည်။ TypeScript errors ၃၆ ခုကိုပါ ဖြေရှင်းပြီး build clean ဖြစ်စေပါသည်။',
+    descriptionEn: 'Reduced 4,600-line App.tsx to ~1,580 lines (66% reduction) by extracting 7 custom hooks. Resolved all 36 TypeScript errors and achieved a clean build.',
+    changesMy: [
+      'App.tsx ကို 4,600 lines မှ ~1,580 lines အထိ ခွဲထုတ်ခြင်း (66% လျှော့ချ)',
+      'Custom Hooks ၇ ခု — useVehicleHandlers, useDataHandlers, useWalletHandlers, useDebtHandlers, useTransactionHandlers, useSyncOperations, useCloudListeners',
+      'Utility ဖိုင်သစ် ၂ ခု — lazyWithRetry, deletedMarkers',
+      'Firestore snapshot listeners ၁၀ ခုကို useCloudListeners hook တစ်ခုအဖြစ် စုစည်းခြင်း',
+      'Vehicle / Debt / Wallet / Transaction handlers အားလုံး သီးသန့် hook များအဖြစ် ခွဲထုတ်ခြင်း',
+      'TypeScript errors ၃၆ ခု (missing imports + param type mismatches) ဖြေရှင်းခြင်း',
+      'npx tsc --noEmit ဖြင့် type-check လုပ်ပြီး 0 errors ဖြစ်စေခြင်း',
+      'Merge conflict အန္တရာယ် လျှော့ချခြင်းနှင့် ဖိုင် ၇ ခုအထိ ခွဲထုတ်သဖြင့် code review လွယ်ကူစေခြင်း',
+    ],
+    changesEn: [
+      'Reduced App.tsx from 4,600 to ~1,580 lines (66% reduction)',
+      'Created 7 custom hooks: useVehicleHandlers, useDataHandlers, useWalletHandlers, useDebtHandlers, useTransactionHandlers, useSyncOperations, useCloudListeners',
+      'Created 2 utility files: lazyWithRetry, deletedMarkers',
+      'Consolidated 10 Firestore snapshot listeners into a single useCloudListeners hook',
+      'Isolated Vehicle / Debt / Wallet / Transaction handlers into dedicated hooks',
+      'Fixed all 36 TypeScript errors (missing imports + param type mismatches)',
+      'Achieved 0 errors with npx tsc --noEmit',
+      'Reduced merge conflict risk and improved code review ergonomics with 7 focused files',
+    ],
+  },
+  {
+    version: 'v6.5',
+    buildNumber: 160,
+    releaseDate: '2026-10-08',
+    releaseTime: '2:00 PM (MMT)',
+    titleMy: 'Dashboard — စိတ်ကြိုက် ကာလအပိုင်းအခြား စစ်ထုတ်ခြင်း (Custom Date Range Filter)',
+    titleEn: 'Dashboard — Custom Date Range Filter with Presets',
+    tag: 'feature',
+    tagLabelMy: 'လုပ်ဆောင်ချက်အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ယခင် တစ်သက်တာ နှင့် ယခုလ ၂ ခုသာရှိခဲ့သော Dashboard filter တွင် ဒီအပတ် / ၃၀ ရက် / ဒီနှစ် / စိတ်ကြိုက်ရက်စွဲ များပါ ထပ်တိုးခဲ့ပါသည်။ Native date picker (iOS/Android) ဖြင့် ရက်စွဲအတိအကျ ရွေးချယ်နိုင်ပါပြီ။',
+    descriptionEn: 'Extended Dashboard filter beyond All-Time and This Month with This Week / Last 30 Days / This Year / Custom Range presets and native date picker support.',
+    changesMy: [
+      'Filter chip အသစ် ၃ ခု — ဒီအပတ်၊ ပြီးခဲ့သည့် ၃၀ ရက်၊ ဒီနှစ်',
+      'စိတ်ကြိုက်ရက်စွဲ (Custom Range) — မှ / သည် ရက်စွဲ ၂ ခု ရွေးချယ်နိုင်သော Dropdown',
+      'Native date input (iOS/Android OS picker) ဖြင့် ရက်စွဲ ရွေးချယ်နိုင်ခြင်း',
+      'Default filter ကို ယခုလ အဖြစ် သတ်မှတ်ခြင်း (session-only, persist မလုပ်ပါ)',
+      'မှ > သည် ဖြစ်နေပါက alert ဖြင့် သတိပေးခြင်း',
+      'Filter ရွေးချယ်မှုအလိုက် KPI cards / chart / recent transactions အားလုံး အလိုအလျောက် update ဖြစ်စေခြင်း',
+    ],
+    changesEn: [
+      'Added 3 new filter presets — This Week, Last 30 Days, This Year',
+      'Custom Range — From / To date picker via dropdown menu',
+      'Native date input triggers OS date picker on iOS and Android',
+      'Default filter is This Month (session-only, not persisted)',
+      'Validation: alert when From date is after To date',
+      'Auto-updates KPI cards / charts / recent transactions on filter change',
+    ],
+  },
   {
     version: 'v6.4',
     buildNumber: 159,

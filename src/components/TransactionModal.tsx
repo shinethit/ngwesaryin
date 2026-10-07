@@ -2022,9 +2022,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                             <label className="block text-[10px] text-amber-900 font-bold mb-0.5">
                               {lang === 'my' ? 'တန်ဖိုး' : 'Total'}
                             </label>
-                            <div className="px-2 py-1.5 bg-amber-50 border border-amber-200/90 rounded-xl font-bold font-mono text-amber-950 text-xs truncate">
-                              {formatMMK(item.amount || 0)}
-                            </div>
+                            <input
+                              type="number"
+                              step="any"
+                              value={item.amount || ''}
+                              onChange={(e) => updateShoppingItem(item.id || '', 'amount', e.target.value)}
+                              placeholder="0"
+                              className="w-full px-2 py-1.5 bg-amber-50 border border-amber-200/90 rounded-xl font-bold font-mono text-amber-950 text-xs text-right focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            />
                           </div>
                         </div>
 

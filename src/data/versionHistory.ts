@@ -14,10 +14,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.3.8';
-export const CURRENT_BUILD_NUMBER = 157;
+export const CURRENT_APP_VERSION = 'v6.3.9';
+export const CURRENT_BUILD_NUMBER = 158;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.3.9',
+    buildNumber: 158,
+    releaseDate: '2026-10-08',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'ဗားရှင်းမှတ်တမ်း — Update အရေအတွက် အလိုအလျောက် တွက်ချက်ခြင်း',
+    titleEn: 'Version History — Dynamic Update Count',
+    tag: 'fix',
+    tagLabelMy: 'အသေးစား ပြင်ဆင်ချက်',
+    tagLabelEn: 'Minor Fix',
+    descriptionMy: 'ဗားရှင်းမှတ်တမ်း ခေါင်းစီးတွင် စုစုပေါင်း Update အရေအတွက်ကို hardcoded မဟုတ်ဘဲ အလိုအလျောက် တွက်ချက်ပြသပါသည်။',
+    descriptionEn: 'The version modal now shows the live total count instead of a hardcoded number.',
+    changesMy: [
+      'ခေါင်းစီးရှိ "Update ၁၀ ကြိမ်" ကို VERSION_HISTORY.length ဖြင့် အလိုအလျောက် တွက်ချက်ပါသည်။',
+      'ဗားရှင်းအသစ် ထည့်တိုင်း အရေအတွက် အလိုအလျောက် မှန်ကန်လာပါမည်။',
+    ],
+    changesEn: [
+      '"10 releases" is now computed from VERSION_HISTORY.length.',
+      'Count updates automatically whenever a new version is added.',
+    ],
+  },
   {
     version: 'v6.3.8',
     buildNumber: 157,

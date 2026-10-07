@@ -163,7 +163,9 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                 {lang === 'my' ? 'နောက်ဆုံးပေါ် ဗားရှင်း' : 'Latest Release'}
               </div>
               <div className="text-[11px] text-emerald-800">
-                {lang === 'my' ? 'စတင်ချိန်မှ စုစုပေါင်း Update ၁၀ ကြိမ်' : '10 releases from launch to current'}
+                {lang === 'my'
+                  ? `စတင်ချိန်မှ စုစုပေါင်း Update ${VERSION_HISTORY.length} ကြိမ်`
+                  : `${VERSION_HISTORY.length} releases from launch to current`}
               </div>
             </div>
           </div>

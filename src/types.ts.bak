@@ -46,8 +46,6 @@ export interface Repayment {
   date: string;
   walletId: string;
   note?: string;
-  /** [v6.1.11] Linked wallet transaction id so edit/delete stays in sync. */
-  transactionId?: string;
   createdAt: number;
 }
 

@@ -570,14 +570,6 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                                   {isReceivable ? '+' : '-'}{formatMMK(rep.amount)}
                                 </span>
                                 <div className="flex items-center gap-1">
-                                  {rep.transactionId && (
-                                    <span
-                                      className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 shrink-0"
-                                      title={lang === 'my' ? `တွဲဖက်ငွေစာရင်း ID: ${rep.transactionId}` : `Linked transaction ID: ${rep.transactionId}`}
-                                    >
-                                      🔗 #{rep.transactionId.slice(-6)}
-                                    </span>
-                                  )}
                                   {onEditRepayment && (
                                     <button
                                       type="button"

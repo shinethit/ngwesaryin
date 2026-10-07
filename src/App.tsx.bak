@@ -341,7 +341,6 @@ if (typeof window !== 'undefined') {
 
   const lastResumeSyncAtRef = useRef<number>(0);
   const walletPushRequestedRef = useRef<Set<string>>(new Set());
-  const migratedRepaymentsRef = useRef(false); // [v6.1.11] one-shot legacy migration
 
   const handleUpdateConfirmedCloudTxIds = useCallback((newlyConfirmedIds: string[]) => {
     if (!newlyConfirmedIds || newlyConfirmedIds.length === 0) return;
@@ -1407,62 +1406,6 @@ if (typeof window !== 'undefined') {
     }
   }, [wallets, transactions]);
 
-  // [v6.1.11] One-shot auto-migration: link legacy debt repayments → transactionId
-  useEffect(() => {
-    if (migratedRepaymentsRef.current) return;
-    if (debts.length === 0 || transactions.length === 0) return;
-
-    let changed = false;
-    const updatedDebts = debts.map((d) => {
-      if (!d.repayments || d.repayments.length === 0) return d;
-      const isReceivable = d.type === 'receivable';
-      const expectedType = isReceivable ? 'income' : 'expense';
-      const expectedCat = isReceivable ? 'cat_debt_repayment' : 'cat_debt_payment';
-      let debtChanged = false;
-
-      const updatedRepayments = d.repayments.map((r) => {
-        if (r.transactionId) return r;
-        const matched = transactions.find(
-          (t) =>
-            t.type === expectedType &&
-            t.category === expectedCat &&
-            t.amount === r.amount &&
-            t.date === r.date &&
-            t.walletId === r.walletId &&
-            (t.note || '').includes(d.personName)
-        );
-        if (matched) {
-          debtChanged = true;
-          return { ...r, transactionId: matched.id };
-        }
-        return r;
-      });
-
-      if (debtChanged) {
-        changed = true;
-        return { ...d, repayments: updatedRepayments };
-      }
-      return d;
-    });
-
-    migratedRepaymentsRef.current = true;
-
-    if (changed) {
-      setDebts(updatedDebts);
-      safeSetItem('ngwe_debts', JSON.stringify(updatedDebts));
-      console.log('[v6.1.11] Migrated legacy debt repayments → transactionId links');
-      if (user?.uid) {
-        const targetUid = activeWorkspaceId || user.uid;
-        updatedDebts.forEach((d) => {
-          safeSetDoc(doc(db, 'users', targetUid, 'debts', d.id), {
-            ...d,
-            userId: targetUid,
-          }, { merge: true });
-        });
-      }
-    }
-  }, [debts.length, transactions.length]);
-
   // Real-time listener for incoming shared wallets from collaborators
   useEffect(() => {
     if (!user || !user.email) {
@@ -2299,78 +2242,27 @@ if (typeof window !== 'undefined') {
   };
 
   const handleDeleteDebt = (id: string) => {
-    const targetDebtForDel = debts.find((d) => d.id === id);
-
-    // [v6.1.11] Collect ALL linked transaction ids (main + every repayment)
-    const txIdsToDelete = new Set<string>();
-    txIdsToDelete.add(`tx_debt_${id}`);
-    if (targetDebtForDel?.repayments) {
-      targetDebtForDel.repayments.forEach((r) => {
-        if (r.transactionId) txIdsToDelete.add(r.transactionId);
-      });
-
-      // Fallback for legacy repayments without transactionId
-      const isReceivable = targetDebtForDel.type === 'receivable';
-      const expectedType = isReceivable ? 'income' : 'expense';
-      const expectedCat = isReceivable ? 'cat_debt_repayment' : 'cat_debt_payment';
-      targetDebtForDel.repayments.forEach((r) => {
-        if (r.transactionId) return;
-        const matched = transactions.find(
-          (t) =>
-            t.type === expectedType &&
-            t.category === expectedCat &&
-            t.amount === r.amount &&
-            t.date === r.date &&
-            t.walletId === r.walletId &&
-            (t.note || '').includes(targetDebtForDel.personName)
-        );
-        if (matched) txIdsToDelete.add(matched.id);
-      });
-    }
-
     setDebts((prev) => {
       const next = prev.filter((d) => d.id !== id);
       safeSetItem('ngwe_debts', JSON.stringify(next));
       return next;
     });
 
-    txIdsToDelete.forEach((tid) => markTxDeleted(tid));
+    const txId = `tx_debt_${id}`;
+    markTxDeleted(txId);
     setTransactions((prev) => {
-      const next = prev.filter((t) => !txIdsToDelete.has(t.id));
+      const next = prev.filter((t) => t.id !== txId && !t.id.startsWith(`tx_rep_${id}`));
       safeSetItem('ngwe_transactions', JSON.stringify(next));
       return next;
     });
 
-    setCloudTxIds((prev) => {
-      const next = new Set(prev);
-      txIdsToDelete.forEach((tid) => next.delete(tid));
-      safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
-      return next;
-    });
-    txIdsToDelete.forEach((tid) => syncQueue.remove('transactions', tid));
-
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
       safeDeleteDoc(doc(db, 'users', targetUid, 'debts', id));
-      txIdsToDelete.forEach((tid) => {
-        safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid));
-      });
-
-      (async () => {
-        try {
-          const { deleteTransactionDirectHttp } = await import('./lib/directFirestoreHttp');
-          await Promise.allSettled(Array.from(txIdsToDelete).map((tid) => deleteTransactionDirectHttp(tid, targetUid)));
-        } catch (e) {
-          console.warn('[deleteDebt] REST verify notice:', e);
-        }
-      })();
+      safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', txId));
     }
 
-    showToast(
-      lang === 'my'
-        ? `အကြွေးစာရင်းနှင့် တွဲဖက်ငွေစာရင်း (${txIdsToDelete.size}) ခု ဖျက်လိုက်ပါပြီ`
-        : `Debt record & ${txIdsToDelete.size} linked transactions deleted`
-    );
+    showToast(lang === 'my' ? 'အကြွေးစာရင်းကို ဖျက်လိုက်ပါပြီ' : 'Debt record deleted');
   };
 
   const handleToggleDebtStatus = (id: string) => {
@@ -2448,7 +2340,7 @@ if (typeof window !== 'undefined') {
       }
 
       const isReceivable = targetDebt.type === 'receivable';
-      const repTxId = `tx_rep_${debtId}_${Date.now()}`;
+      const repTxId = `tx_rep_${Date.now()}`;
       const repTx: Transaction = {
         id: repTxId,
         type: isReceivable ? 'income' : 'expense',
@@ -2486,7 +2378,6 @@ if (typeof window !== 'undefined') {
             date,
             walletId,
             note,
-            transactionId: repTxId,
             createdAt: Date.now(),
           };
           const nextRepayments = [newRepayment, ...(d.repayments || [])];
@@ -2527,43 +2418,6 @@ if (typeof window !== 'undefined') {
     walletId: string,
     note?: string
   ) => {
-    // [v6.1.11] Update the linked transaction so wallet & summary stay in sync
-    const targetDebtForEdit = debts.find((d) => d.id === debtId);
-    const targetRepForEdit = targetDebtForEdit?.repayments?.find((r) => r.id === repaymentId);
-    const linkedTxIdForEdit = targetRepForEdit?.transactionId;
-
-    if (linkedTxIdForEdit && targetDebtForEdit) {
-      const isReceivable = targetDebtForEdit.type === 'receivable';
-      const updatedLinkedTx: Transaction = {
-        id: linkedTxIdForEdit,
-        type: isReceivable ? 'income' : 'expense',
-        amount,
-        category: isReceivable ? 'cat_debt_repayment' : 'cat_debt_payment',
-        walletId,
-        date,
-        note: isReceivable
-          ? `[အကြွေးပြန်ရငွေ] ⬅ ${targetDebtForEdit.personName}${note ? ` (${note})` : ''}`
-          : `[အကြွေးပြန်ဆပ်ငွေ] ➔ ${targetDebtForEdit.personName}${note ? ` (${note})` : ''}`,
-        createdAt: Date.now(),
-      };
-
-      setTransactions((prev) => {
-        const next = prev.some((t) => t.id === linkedTxIdForEdit)
-          ? prev.map((t) => (t.id === linkedTxIdForEdit ? updatedLinkedTx : t))
-          : [updatedLinkedTx, ...prev];
-        safeSetItem('ngwe_transactions', JSON.stringify(next));
-        return next;
-      });
-
-      if (user?.uid) {
-        const targetUid = activeWorkspaceId || user.uid;
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', linkedTxIdForEdit), {
-          ...updatedLinkedTx,
-          userId: targetUid,
-        }, { merge: true });
-      }
-    }
-
     setDebts((prev) => {
       const next = prev.map((d) => {
         if (d.id === debtId) {
@@ -2600,67 +2454,6 @@ if (typeof window !== 'undefined') {
   };
 
   const handleDeleteRepayment = (debtId: string, repaymentId: string) => {
-    // [v6.1.11] Delete the linked transaction so wallet & summary revert.
-    const targetDebtForDel = debts.find((d) => d.id === debtId);
-    const targetRepForDel = targetDebtForDel?.repayments?.find((r) => r.id === repaymentId);
-    let linkedTxIdToDel = targetRepForDel?.transactionId;
-
-    // Fallback: locate legacy tx by matching amount + date + wallet + person
-    if (!linkedTxIdToDel && targetDebtForDel && targetRepForDel) {
-      const isReceivable = targetDebtForDel.type === 'receivable';
-      const expectedType = isReceivable ? 'income' : 'expense';
-      const expectedCat = isReceivable ? 'cat_debt_repayment' : 'cat_debt_payment';
-      const matched = transactions.find(
-        (t) =>
-          t.type === expectedType &&
-          t.category === expectedCat &&
-          t.amount === targetRepForDel.amount &&
-          t.date === targetRepForDel.date &&
-          t.walletId === targetRepForDel.walletId &&
-          (t.note || '').includes(targetDebtForDel.personName)
-      );
-      if (matched) linkedTxIdToDel = matched.id;
-    }
-
-    if (linkedTxIdToDel) {
-      markTxDeleted(linkedTxIdToDel);
-      const linkedTx = transactions.find((t) => t.id === linkedTxIdToDel);
-      const linkedWallet = linkedTx ? wallets.find((w) => isWalletMatch(w, linkedTx.walletId)) : undefined;
-
-      setTransactions((prev) => {
-        const next = prev.filter((t) => t.id !== linkedTxIdToDel);
-        safeSetItem('ngwe_transactions', JSON.stringify(next));
-        return next;
-      });
-
-      setCloudTxIds((prev) => {
-        const next = new Set(prev);
-        next.delete(linkedTxIdToDel as string);
-        safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
-        return next;
-      });
-      syncQueue.remove('transactions', linkedTxIdToDel);
-
-      if (user?.uid) {
-        const targetUid = activeWorkspaceId || user.uid;
-        safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', linkedTxIdToDel));
-
-        if (linkedWallet && (linkedWallet.isSharedFromOther || (linkedWallet.sharedWith && linkedWallet.sharedWith.length > 0))) {
-          const sharedDocId = getSharedWalletDocId(linkedWallet, user.uid);
-          deleteSharedWalletTransaction(linkedWallet.id, linkedTxIdToDel, linkedWallet.balance, sharedDocId, user.uid);
-        }
-
-        (async () => {
-          try {
-            const { deleteTransactionDirectHttp } = await import('./lib/directFirestoreHttp');
-            await deleteTransactionDirectHttp(linkedTxIdToDel as string, targetUid);
-          } catch (e) {
-            console.warn('[deleteRepayment] REST verify notice:', e);
-          }
-        })();
-      }
-    }
-
     setDebts((prev) => {
       const next = prev.map((d) => {
         if (d.id === debtId) {
@@ -2691,7 +2484,7 @@ if (typeof window !== 'undefined') {
       return next;
     });
 
-    showToast(lang === 'my' ? 'ငွေဆပ်မှတ်တမ်းနှင့် တွဲဖက်ငွေစာရင်း ဖျက်လိုက်ပါပြီ ✓' : 'Repayment & linked transaction deleted ✓');
+    showToast(lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း ဖျက်လိုက်ပါပြီ ✓' : 'Repayment deleted ✓');
   };
 
   const handleAddWallet = (walletData: Omit<Wallet, 'id'>) => {

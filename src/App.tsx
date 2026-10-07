@@ -84,31 +84,15 @@ import { areArraysEqual, deduplicateById } from './utils/syncGuards';
 import { mergeById, mergeByKey } from './utils/mergeById';
 import { usePersistedState } from './hooks/usePersistedState';
 import { hashPin, generateSalt, isHashedPinFormat } from './utils/pinHash';
-
-// Helper to retry dynamic script imports if a network glitch occurs or after new build chunk deployment
-function lazyWithRetry<T extends React.ComponentType<any>>(
-  factory: () => Promise<{ default: T }>
-): React.LazyExoticComponent<T> {
-  return React.lazy(async () => {
-    try {
-      return await factory();
-    } catch (error: any) {
-      console.warn('Module import error, retrying once...', error);
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        return await factory();
-      } catch (retryError) {
-        const lastReload = sessionStorage.getItem('chunk_reload_attempted_at');
-        const now = Date.now();
-        if (!lastReload || now - Number(lastReload) > 30000) {
-          sessionStorage.setItem('chunk_reload_attempted_at', String(now));
-          window.location.reload();
-        }
-        throw retryError;
-      }
-    }
-  });
-}
+import { lazyWithRetry } from './utils/lazyWithRetry';
+import {
+  markTxDeleted,
+  unmarkTxDeleted,
+  isTxDeleted,
+  markWalletDeleted,
+  unmarkWalletDeleted,
+  isWalletDeleted,
+} from './utils/deletedMarkers';
 
 // Lazy loaded heavy/secondary components
 const AdminPanel = lazyWithRetry(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
@@ -121,69 +105,6 @@ const PremiumModal = lazyWithRetry(() => import('./components/PremiumModal').the
 const ShareAppModal = lazyWithRetry(() => import('./components/ShareAppModal').then(m => ({ default: m.ShareAppModal })));
 const ShopsView = lazyWithRetry(() => import('./components/ShopsView').then(m => ({ default: m.ShopsView })));
 const VehiclesView = lazyWithRetry(() => import('./components/vehicles/VehiclesView').then(m => ({ default: m.VehiclesView })));
-
-// Deleted transaction persistence set helper to prevent resurrected transactions
-const markTxDeleted = (id: string) => {
-  try {
-    const saved = safeGetItem('ngwe_deleted_tx_ids');
-    const set = saved ? new Set<string>(JSON.parse(saved)) : new Set<string>();
-    set.add(id);
-    safeSetItem('ngwe_deleted_tx_ids', JSON.stringify(Array.from(set)));
-  } catch {}
-};
-
-const unmarkTxDeleted = (id: string) => {
-  try {
-    const saved = safeGetItem('ngwe_deleted_tx_ids');
-    if (!saved) return;
-    const set = new Set<string>(JSON.parse(saved));
-    set.delete(id);
-    safeSetItem('ngwe_deleted_tx_ids', JSON.stringify(Array.from(set)));
-  } catch {}
-};
-
-const isTxDeleted = (id: string): boolean => {
-  try {
-    const saved = safeGetItem('ngwe_deleted_tx_ids');
-    if (!saved) return false;
-    const set = new Set<string>(JSON.parse(saved));
-    return set.has(id);
-  } catch {
-    return false;
-  }
-};
-
-const markWalletDeleted = (id: string) => {
-  try {
-    const saved = safeGetItem('ngwe_deleted_wallet_ids');
-    const set = saved ? new Set<string>(JSON.parse(saved)) : new Set<string>();
-    set.add(id);
-    safeSetItem('ngwe_deleted_wallet_ids', JSON.stringify(Array.from(set)));
-  } catch {}
-};
-
-const unmarkWalletDeleted = (id: string) => {
-  try {
-    const saved = safeGetItem('ngwe_deleted_wallet_ids');
-    if (!saved) return;
-    const set = new Set<string>(JSON.parse(saved));
-    if (set.has(id)) {
-      set.delete(id);
-      safeSetItem('ngwe_deleted_wallet_ids', JSON.stringify(Array.from(set)));
-    }
-  } catch {}
-};
-
-const isWalletDeleted = (id: string): boolean => {
-  try {
-    const saved = safeGetItem('ngwe_deleted_wallet_ids');
-    if (!saved) return false;
-    const set = new Set<string>(JSON.parse(saved));
-    return set.has(id);
-  } catch {
-    return false;
-  }
-};
 
 // 🔧 One-time migration: legacy raw string ('my'/'en') → JSON format
 if (typeof window !== 'undefined') {

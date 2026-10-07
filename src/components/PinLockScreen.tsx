@@ -15,6 +15,9 @@ interface PinLockScreenProps {
   pinSalt: string;
   lang: 'my' | 'en';
   onUnlock: () => void;
+  // [v6.7g] Called when a legacy plaintext PIN successfully unlocks.
+  //         Parent hashes + persists it. Optional — safe to omit.
+  onLegacyPinVerified?: (plainPin: string) => void;
   onForgotPin?: () => void;
 }
 
@@ -23,6 +26,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
   pinSalt,
   lang,
   onUnlock,
+  onLegacyPinVerified,
   onForgotPin,
 }) => {
   const [pin, setPin] = useState('');
@@ -52,6 +56,16 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
         if (cancelled) return;
 
         if (isCorrect) {
+          // [v6.7g] Legacy plaintext PIN succeeded → notify parent to migrate.
+          //         Fire-and-forget: parent's callback is async and
+          //         survives our unmount (it lives in App.tsx closure).
+          if (!isHashedPinFormat({ pin: pinHash, pinSalt }) && onLegacyPinVerified) {
+            try {
+              onLegacyPinVerified(pin);
+            } catch (e) {
+              console.warn('[PinLockScreen] legacy migration callback failed:', e);
+            }
+          }
           onUnlock();
         } else {
           setError(true);
@@ -84,7 +98,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [pin, pinHash, pinSalt, onUnlock, isVerifying]);
+  }, [pin, pinHash, pinSalt, onUnlock, onLegacyPinVerified, isVerifying]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

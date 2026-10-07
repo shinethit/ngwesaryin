@@ -120,6 +120,23 @@ const getTodayLocalStr = (): string => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
+// [v6.7f] Validates JSON import payload structure
+const validateImportPayload = (parsed: any): { valid: boolean; error?: string } => {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { valid: false, error: 'not an object' };
+  }
+  const arrayFields = ['transactions', 'debts', 'wallets', 'categories', 'budgets', 'shops', 'vehicles', 'fuelLogs', 'vehicleMaintenance', 'tirePressureLogs'];
+  for (const field of arrayFields) {
+    if (parsed[field] !== undefined && !Array.isArray(parsed[field])) {
+      return { valid: false, error: 'field "' + field + '" must be an array' };
+    }
+  }
+  if (parsed.lang !== undefined && parsed.lang !== 'my' && parsed.lang !== 'en') {
+    return { valid: false, error: 'lang must be "my" or "en"' };
+  }
+  return { valid: true };
+};
+
 // 🔧 One-time migration: legacy raw string ('my'/'en') → JSON format
 if (typeof window !== 'undefined') {
   try {
@@ -888,7 +905,39 @@ if (typeof window !== 'undefined') {
 
   // Handlers
   const handleClearAllData = async (force = false) => {
-    if (force || window.confirm(lang === 'my' ? 'လက်ရှိ ဒေတာအားလုံး (ငွေစာရင်းများ၊ အကြွေးစာရင်းများ၊ ဘတ်ဂျက်များ၊ ယာဉ်စာရင်းများနှင့် Wallet များ) ကို အပြီးတိုင် ဖျက်ပစ်မည်မှာ သေချာပါသလား? (ဤလုပ်ဆောင်ချက်ကို နောက်ပြန်ဆုတ်၍ မရပါ)' : 'Are you sure you want to permanently delete ALL data? This cannot be undone.')) {
+    // [v6.7f] Require typing confirmation + auto-backup
+    if (!force) {
+      const expected = lang === 'my' ? 'ဖျက်မည်' : 'DELETE';
+      const promptMsg = lang === 'my'
+        ? `ဒေတာအားလုံး အပြီးတိုင် ဖျက်ရန် "${expected}" လို့ ရိုက်ထည့်ပါ:`
+        : `Type "${expected}" to permanently delete ALL data:`;
+      const input = window.prompt(promptMsg);
+      if (input !== expected) {
+        showToast(lang === 'my' ? 'ဖျက်ခြင်း ပယ်ဖျက်လိုက်ပါပြီ' : 'Delete cancelled');
+        return;
+      }
+    }
+    // [v6.7f] Auto-backup before clearing
+    try {
+      const backupData = {
+        transactions, debts, wallets: computedWallets, categories, budgets,
+        shops, vehicles, fuelLogs, vehicleMaintenance, tirePressureLogs, plan, lang,
+      };
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ngwesaryin_predelete_${getTodayLocalStr()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (backupErr) {
+      console.warn('[clearAll] auto-backup failed:', backupErr);
+    }
+
+    if (true) {
       const defaultCashWallet: Wallet = {
         id: 'cash',
         name: 'ငွေသား (လက်ဝယ်)',
@@ -931,6 +980,12 @@ if (typeof window !== 'undefined') {
     }
   };
 
+  // [v6.7f] Refs for notification timers (cleanup on unmount)
+  const reminderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reminderIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const langRef = useRef(lang);
+  langRef.current = lang;
+
   // Initialize app: version check and daily reminder
   useEffect(() => {
     // 1. Version check
@@ -940,34 +995,43 @@ if (typeof window !== 'undefined') {
       safeSetItem('ngwe_app_version', CURRENT_APP_VERSION);
     }
 
-    // 2. 9 PM Daily Reminder
+    // 2. 9 PM Daily Reminder — with cleanup
     const scheduleReminder = () => {
       const now = new Date();
       const ninePM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0, 0);
       let delay = ninePM.getTime() - now.getTime();
       if (delay < 0) delay += 24 * 60 * 60 * 1000;
 
-      setTimeout(() => {
+      reminderTimeoutRef.current = setTimeout(() => {
+        const l = langRef.current;
         if (Notification.permission === 'granted') {
-          new Notification(lang === 'my' ? 'ငွေစာရင်းသွင်းရန် အချိန်ကျပါပြီ' : 'Time to record transactions!', {
-            body: lang === 'my' ? 'ဒီနေ့ရဲ့ ဝင်ငွေ/ထွက်ငွေတွေကို မှတ်တမ်းတင်လိုက်ပါ။' : 'Record your income/expense for today.',
+          new Notification(l === 'my' ? 'ငွေစာရင်းသွင်းရန် အချိန်ကျပါပြီ' : 'Time to record transactions!', {
+            body: l === 'my' ? 'ဒီနေ့ရဲ့ ဝင်ငွေ/ထွက်ငွေတွေကို မှတ်တမ်းတင်လိုက်ပါ။' : 'Record your income/expense for today.',
           });
         }
-        setInterval(() => {
+        reminderIntervalRef.current = setInterval(() => {
+          const ll = langRef.current;
           if (Notification.permission === 'granted') {
-            new Notification(lang === 'my' ? 'ငွေစာရင်းသွင်းရန် အချိန်ကျပါပြီ' : 'Time to record transactions!', {
-              body: lang === 'my' ? 'ဒီနေ့ရဲ့ ဝင်ငွေ/ထွက်ငွေတွေကို မှတ်တမ်းတင်လိုက်ပါ။' : 'Record your income/expense for today.',
+            new Notification(ll === 'my' ? 'ငွေစာရင်းသွင်းရန် အချိန်ကျပါပြီ' : 'Time to record transactions!', {
+              body: ll === 'my' ? 'ဒီနေ့ရဲ့ ဝင်ငွေ/ထွက်ငွေတွေကို မှတ်တမ်းတင်လိုက်ပါ။' : 'Record your income/expense for today.',
             });
           }
         }, 24 * 60 * 60 * 1000);
       }, delay);
     };
 
-    if ('Notification' in window) {
+    if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') scheduleReminder();
       });
+    } else if ('Notification' in window && Notification.permission === 'granted') {
+      scheduleReminder();
     }
+
+    return () => {
+      if (reminderTimeoutRef.current) clearTimeout(reminderTimeoutRef.current);
+      if (reminderIntervalRef.current) clearInterval(reminderIntervalRef.current);
+    };
   }, []);
 
   const handleExportJson = () => {
@@ -1011,6 +1075,14 @@ if (typeof window !== 'undefined') {
     reader.onload = (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
+        // [v6.7f] Validate schema before applying
+        const validation = validateImportPayload(parsed);
+        if (!validation.valid) {
+          alert(lang === 'my'
+            ? `Backup ဖိုင် မမှန်ပါ: ${validation.error}`
+            : `Invalid backup file: ${validation.error}`);
+          return;
+        }
         if (parsed.transactions) setTransactions(parsed.transactions);
         if (parsed.debts) setDebts(parsed.debts);
         if (parsed.wallets) setWallets(parsed.wallets);
@@ -1190,6 +1262,27 @@ if (typeof window !== 'undefined') {
 
 
 
+  // [v6.7g] Migrate a legacy plaintext PIN to hashed (PBKDF2+salt) on
+  //         successful unlock. Runs at most once per legacy user.
+  const handleLegacyPinMigration = useCallback(async (plainPin: string) => {
+    try {
+      if (!plainPin || plainPin.length !== 4) return;
+      const salt = generateSalt();
+      const pinHash = await hashPin(plainPin, salt);
+      const migrated: PinLockSettings = {
+        isEnabled: true,
+        pin: pinHash,
+        pinSalt: salt,
+        requireOnStart: pinSettings.requireOnStart ?? true,
+      };
+      setPinSettings(migrated);
+      safeSetItem('ngwe_pin', JSON.stringify(migrated));
+      console.log('[v6.7g] Legacy PIN migrated to PBKDF2-hashed format');
+    } catch (err) {
+      console.warn('[v6.7g] Legacy PIN migration failed:', err);
+    }
+  }, [pinSettings.requireOnStart]);
+
   const handleLockApp = () => {
     // [v6.7e] Support both legacy (4-char) and hashed (64-char) PINs
     if (pinSettings.isEnabled && pinSettings.pin) {
@@ -1245,6 +1338,7 @@ if (typeof window !== 'undefined') {
         pinSalt={pinSettings.pinSalt || ''}
         lang={lang}
         onUnlock={() => setIsLocked(false)}
+        onLegacyPinVerified={handleLegacyPinMigration}
         onForgotPin={() => {
           // [v6.7e] PIN recovery requires re-auth; do NOT just unlock
           const msg = lang === 'my'

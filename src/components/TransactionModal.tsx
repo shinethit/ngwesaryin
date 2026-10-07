@@ -1638,7 +1638,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </button>
               </div>
 
-          {/* Item / Product Name (or Income Title) with Unified Suggestions (Distinct & Placed Above Amount) */}
+          {/* Item / Product Name — hidden in Shopping List mode to avoid double entry */}
+          {entryMode !== 'shopping_list' && (
           <div className="space-y-1.5 p-3 bg-slate-50/80 rounded-2xl border border-slate-200">
             <div className="flex items-center justify-between">
               <label className="block text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5">
@@ -1709,6 +1710,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             )}
           </div>
+          )}
 
           {/* Amount Entry Mode Selector Tabs */}
           <div className="space-y-2">

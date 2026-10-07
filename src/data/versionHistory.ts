@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.3.6';
-export const CURRENT_BUILD_NUMBER = 156;
+export const CURRENT_APP_VERSION = 'v6.3.8';
+export const CURRENT_BUILD_NUMBER = 157;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.3.8',
+    buildNumber: 157,
+    releaseDate: '2026-10-08',
+    releaseTime: '12:30 AM (MMT)',
+    titleMy: 'ငွေစာရင်း — Shopping List တွင် Item Name ထပ်ခြင်း ဖျောက်ခြင်း',
+    titleEn: 'Transaction — Hide Redundant Item Name in Shopping List',
+    tag: 'fix',
+    tagLabelMy: 'UI ပြုပြင်ချက်',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'Shopping List ရွေးထားစဉ် အပေါ်ရှိ Item Name အကွက်ကို ဖျောက်ထားပြီး၊ item တစ်ခုချင်းစီတွင်သာ အမည်ထည့်ရန် လွယ်ကူစေပါသည်။',
+    descriptionEn: 'The top Item Name field is hidden in Shopping List mode to prevent double entry.',
+    changesMy: [
+      'Shopping List mode တွင် အပေါ်ရှိ Item Name အကွက်နှင့် Suggestion Pills များကို ဖျောက်ထားပါသည်။',
+      'Direct / Unit Qty mode များတွင် ပုံမှန်အတိုင်း ပြသပါသည်။',
+      'Item name ထပ်နေမှုကို လျှော့ချပြီး၊ note ထဲတွင် item list မှ auto-generate လုပ်ပါသည်။',
+    ],
+    changesEn: [
+      'Item Name field and suggestion pills are hidden in Shopping List mode.',
+      'Direct and Unit Qty modes remain unchanged.',
+      'Reduces duplicate entry; note is auto-generated from item list.',
+    ],
+  },
   {
     version: 'v6.3.6',
     buildNumber: 156,

@@ -40,3 +40,10 @@ yarn-error.log*
 *.backup
 
 *.backup
+# [v6.1.11] Temp scripts & backups — do NOT commit
+*.bak
+fix-*.cjs
+insert-*.cjs
+debug-*.cjs
+test_fetch*
+test-shared*

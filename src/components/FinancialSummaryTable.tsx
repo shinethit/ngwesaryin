@@ -57,11 +57,8 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
       });
 
       const wNet = wInflow - wOutflow;
-      const opening = typeof w.initialBalance === 'number' && !isNaN(w.initialBalance)
-        ? w.initialBalance
-        : w.id === 'cash'
-        ? 0
-        : Math.max(0, (Number(w.balance) || 0) - wNet);
+      // [v6.7b] Opening = current balance - filtered net (correct for any time filter)
+      const opening = (Number(w.balance) || 0) - wNet;
       const closing = opening + wNet;
 
       return {

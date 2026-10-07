@@ -2374,54 +2374,127 @@ if (typeof window !== 'undefined') {
   };
 
   const handleToggleDebtStatus = (id: string) => {
+    // [v6.3.2] auto-settle creates linked transaction; reopen deletes it
+    const targetDebt = debts.find((d) => d.id === id);
+    if (!targetDebt) return;
+
+    const newStatus = targetDebt.status === 'active' ? 'settled' : 'active';
+    const isReceivable = targetDebt.type === 'receivable';
+    const today = new Date().toISOString().split('T')[0];
+
+    let newSettlementTx: Transaction | null = null;
+    let deletedSettlementTxIds: string[] = [];
+    let updatedRepayments = [...(targetDebt.repayments || [])];
+
+    if (newStatus === 'settled') {
+      const currentPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      const remaining = targetDebt.totalAmount - currentPaid;
+      if (remaining > 0) {
+        const settlementTxId = `tx_rep_${id}_settle_${Date.now()}`;
+        updatedRepayments = [{
+          id: `rep_settle_${Date.now()}`,
+          amount: remaining,
+          date: today,
+          walletId: targetDebt.walletId,
+          note: lang === 'my' ? '[အကြွေးကျေဇယား အလိုအလျောက် ပေးဆပ်မှု]' : '[Auto settlement repayment]',
+          transactionId: settlementTxId,
+          createdAt: Date.now(),
+        }, ...updatedRepayments];
+
+        newSettlementTx = {
+          id: settlementTxId,
+          type: isReceivable ? 'income' : 'expense',
+          amount: remaining,
+          category: isReceivable ? 'cat_debt_repayment' : 'cat_debt_payment',
+          walletId: targetDebt.walletId,
+          date: today,
+          note: isReceivable
+            ? `[အကြွေးပြန်ရငွေ] ⬅ ${targetDebt.personName} (အကြွေးကျေဇယား)`
+            : `[အကြွေးပြန်ဆပ်ငွေ] ➔ ${targetDebt.personName} (အကြွေးကျေဇယား)`,
+          createdAt: Date.now(),
+        };
+      }
+    } else {
+      const settlementReps = updatedRepayments.filter((r) => r.id.startsWith('rep_settle_'));
+      deletedSettlementTxIds = settlementReps
+        .map((r) => r.transactionId)
+        .filter((tid): tid is string => Boolean(tid));
+      updatedRepayments = updatedRepayments.filter((r) => !r.id.startsWith('rep_settle_'));
+    }
+
+    const newPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const updatedDebt: Debt = {
+      ...targetDebt,
+      status: newStatus,
+      repayments: updatedRepayments,
+      paidAmount: newPaid,
+    };
+
     setDebts((prev) => {
-      const next = prev.map((d) => {
-        if (d.id === id) {
-          const newStatus = d.status === 'active' ? 'settled' : 'active';
-          let updatedRepayments = d.repayments || [];
-
-          if (newStatus === 'settled') {
-            const currentPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-            const remaining = d.totalAmount - currentPaid;
-            if (remaining > 0) {
-              const settlementRepayment: Repayment = {
-                id: `rep_settle_${Date.now()}`,
-                amount: remaining,
-                date: new Date().toISOString().split('T')[0],
-                walletId: d.walletId,
-                note: lang === 'my' ? '[အကြွေးကျေဇယား အလိုအလျောက် ပေးဆပ်မှု]' : '[Auto settlement repayment]',
-                createdAt: Date.now(),
-              };
-              updatedRepayments = [settlementRepayment, ...updatedRepayments];
-            }
-          } else {
-            updatedRepayments = updatedRepayments.filter((r) => !r.id.startsWith('rep_settle_'));
-          }
-
-          const newPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-
-          const updatedDebt: Debt = {
-            ...d,
-            status: newStatus,
-            repayments: updatedRepayments,
-            paidAmount: newPaid,
-          };
-
-          if (user?.uid) {
-            const targetUid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', targetUid, 'debts', id), {
-              ...updatedDebt,
-              userId: targetUid,
-            }, { merge: true });
-          }
-
-          return updatedDebt;
-        }
-        return d;
-      });
+      const next = prev.map((d) => (d.id === id ? updatedDebt : d));
       safeSetItem('ngwe_debts', JSON.stringify(next));
       return next;
     });
+
+    if (newSettlementTx) {
+      const tx = newSettlementTx;
+      setTransactions((prev) => {
+        const next = [tx, ...prev];
+        safeSetItem('ngwe_transactions', JSON.stringify(next));
+        return next;
+      });
+    }
+
+    if (deletedSettlementTxIds.length > 0) {
+      deletedSettlementTxIds.forEach((tid) => markTxDeleted(tid));
+      setTransactions((prev) => {
+        const next = prev.filter((t) => !deletedSettlementTxIds.includes(t.id));
+        safeSetItem('ngwe_transactions', JSON.stringify(next));
+        return next;
+      });
+      setCloudTxIds((prev) => {
+        const next = new Set(prev);
+        deletedSettlementTxIds.forEach((tid) => next.delete(tid));
+        safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
+        return next;
+      });
+      deletedSettlementTxIds.forEach((tid) => syncQueue.remove('transactions', tid));
+    }
+
+    if (user?.uid) {
+      const targetUid = activeWorkspaceId || user.uid;
+      safeSetDoc(doc(db, 'users', targetUid, 'debts', id), {
+        ...updatedDebt,
+        userId: targetUid,
+      }, { merge: true });
+
+      if (newSettlementTx) {
+        safeSetDoc(doc(db, 'users', targetUid, 'transactions', newSettlementTx.id), {
+          ...newSettlementTx,
+          userId: targetUid,
+        }, { merge: true });
+      }
+
+      if (deletedSettlementTxIds.length > 0) {
+        deletedSettlementTxIds.forEach((tid) => {
+          safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid));
+        });
+        (async () => {
+          try {
+            const { deleteTransactionDirectHttp } = await import('./lib/directFirestoreHttp');
+            await Promise.allSettled(deletedSettlementTxIds.map((tid) => deleteTransactionDirectHttp(tid, targetUid)));
+          } catch (e) {
+            console.warn('[toggleDebtStatus] REST verify notice:', e);
+          }
+        })();
+      }
+    }
+
+    showToast(
+      lang === 'my'
+        ? (newStatus === 'settled' ? 'အကြွေးကြေပြီ — ငွေစာရင်းထဲ ထည့်ပြီးပါပြီ ✓' : 'အကြွေးပြန်ဖွင့်ပြီ — ငွေစာရင်းမှ ဖျက်ပြီးပါပြီ ✓')
+        : (newStatus === 'settled' ? 'Debt settled — transaction recorded ✓' : 'Debt reopened — settlement removed ✓')
+    );
   };
 
   const handleRecordRepaymentSubmit = (

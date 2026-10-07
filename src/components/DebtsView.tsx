@@ -502,7 +502,11 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-2xs"
                         >
                           <CreditCard className="w-3.5 h-3.5" />
-                          <span>{lang === 'my' ? '+ ငွေဆပ်မှတ်မည်' : '+ Record Payment'}</span>
+                          <span>
+                            {isReceivable
+                              ? (lang === 'my' ? '+ ငွေပြန်လက်ခံမည်' : '+ Receive Payment')
+                              : (lang === 'my' ? '+ ငွေဆပ်မည်' : '+ Make Payment')}
+                          </span>
                         </button>
                       )}
 

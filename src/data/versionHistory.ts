@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.3.1';
-export const CURRENT_BUILD_NUMBER = 151;
+export const CURRENT_APP_VERSION = 'v6.3.2';
+export const CURRENT_BUILD_NUMBER = 152;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.3.2',
+    buildNumber: 152,
+    releaseDate: '2026-10-07',
+    releaseTime: '10:00 PM (MMT)',
+    titleMy: 'အကြွေးစာရင်း — အကြွေးကြေဇယား Tx နှင့် ခလုတ်စာသား ပြုပြင်ခြင်း',
+    titleEn: 'Debt — Settle Transaction & Dynamic Button Labels',
+    tag: 'fix',
+    tagLabelMy: 'အရေးကြီး ပြင်ဆင်ချက်',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အကြွေးကြေပြီ နှိပ်သောအခါ ကျန်ငွေကို ငွေစာရင်းထဲ အလိုအလျောက် ထည့်ပေးပါပြီ။ ငွေဆပ်ခလုတ်စာသားကို ရရန်ရှိ/ပေးရန်ရှိ အလိုက် ပြောင်းလဲပြသပါပြီ။',
+    descriptionEn: 'Auto-settle now records a transaction. Payment button label switches based on receivable/payable.',
+    changesMy: [
+      'အကြွေးကြေပြီ နှိပ်သောအခါ ကျန်ငွေအတွက် ငွေစာရင်း (Income/Expense) အလိုအလျောက် ဖန်တီးပါပြီ။',
+      'အကြွေးပြန်ဖွင့်သောအခါ ထိုငွေစာရင်းကိုပါ ဖျက်ပေးပါပြီ။',
+      'ရရန်ရှိ အကြွေးအတွက် "+ ငွေပြန်လက်ခံမည်" ခလုတ်စာသား ပြသပါသည်။',
+      'ပေးရန်ရှိ အကြွေးအတွက် "+ ငွေဆပ်မည်" ခလုတ်စာသား ပြသပါသည်။',
+    ],
+    changesEn: [
+      'Auto-settle now creates a linked Income/Expense transaction.',
+      'Reopening deletes the settlement transaction.',
+      'Receivable uses "+ Receive Payment" button label.',
+      'Payable uses "+ Make Payment" button label.',
+    ],
+  },
   {
     version: 'v6.3.1',
     buildNumber: 151,

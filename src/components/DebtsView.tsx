@@ -423,6 +423,13 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                             }`}>
                               {formatMMK(debt.status === 'settled' ? debt.totalAmount : remaining)}
                             </span>
+                            <span className="text-slate-300">•</span>
+                            <span
+                              className="text-slate-600 text-[11px] font-mono shrink-0 flex items-center gap-0.5"
+                              title={lang === 'my' ? 'အကြွေးစတင်သည့်ရက်စွဲ' : 'Start date'}
+                            >
+                              📅 {lang === 'my' ? 'စတင်:' : 'Since:'} {debt.startDate}
+                            </span>
                             {debt.phone && (
                               <>
                                 <span className="text-slate-300">•</span>

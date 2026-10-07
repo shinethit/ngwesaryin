@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.2';
-export const CURRENT_BUILD_NUMBER = 149;
+export const CURRENT_APP_VERSION = 'v6.3';
+export const CURRENT_BUILD_NUMBER = 150;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.3',
+    buildNumber: 150,
+    releaseDate: '2026-10-07',
+    releaseTime: '8:00 PM (MMT)',
+    titleMy: 'အကြွေးစာရင်း — စတင်ရက်စွဲ ပြသခြင်း',
+    titleEn: 'Debt Card — Start Date Display',
+    tag: 'feature',
+    tagLabelMy: 'UI တိုးတက်မှု',
+    tagLabelEn: 'UI Improvement',
+    descriptionMy: 'အကြွေးစာရင်းကတ်တွင် အကြွေးစတင်သည့်ရက်စွဲကို ပြသပေးပါပြီ။',
+    descriptionEn: 'Debt cards now display the start date for each record.',
+    changesMy: [
+      'အကြွေးကတ်တွင် စတင်ရက်စွဲ (Start Date) ကို ဖုန်းနံပါတ်ဘေးတွင် 📅 icon ဖြင့် ပြသပါသည်။',
+      'မြန်မာ/English အလိုက် လေဘယ် (စတင် / Since) ပြောင်းလဲပြသပါသည်။',
+      'ရက်စွဲကို Hover လုပ်ပါက အပြည့်အစုံ မြင်နိုင်ပါသည်။',
+    ],
+    changesEn: [
+      'Debt cards now show start date with 📅 icon next to phone number.',
+      'Label switches between "စတင်" (my) and "Since" (en) based on language.',
+      'Hover tooltip shows full label.',
+    ],
+  },
   {
     version: 'v6.2',
     buildNumber: 149,

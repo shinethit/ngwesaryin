@@ -113,6 +113,13 @@ const ShareAppModal = lazyWithRetry(() => import('./components/ShareAppModal').t
 const ShopsView = lazyWithRetry(() => import('./components/ShopsView').then(m => ({ default: m.ShopsView })));
 const VehiclesView = lazyWithRetry(() => import('./components/vehicles/VehiclesView').then(m => ({ default: m.VehiclesView })));
 
+// [v6.7e] Local date helper (avoids UTC offset bugs)
+const getTodayLocalStr = (): string => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 // 🔧 One-time migration: legacy raw string ('my'/'en') → JSON format
 if (typeof window !== 'undefined') {
   try {
@@ -338,7 +345,7 @@ if (typeof window !== 'undefined') {
   };
 
   const handleMarkAllNotificationsAsRead = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayLocalStr();
     const currentMonthStr = todayStr.substring(0, 7);
     const ids: string[] = [];
 
@@ -358,7 +365,7 @@ if (typeof window !== 'undefined') {
   };
 
   const unreadNotificationCount = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayLocalStr();
     const currentMonthStr = todayStr.substring(0, 7);
     let count = 0;
 
@@ -387,9 +394,16 @@ if (typeof window !== 'undefined') {
       spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + t.amount;
     });
 
+    const monthlyIncome = transactions
+      .filter((t) => t.type === 'income' && t.date && t.date.startsWith(currentMonthStr) && !isTransferTransaction(t))
+      .reduce((sum, t) => sum + t.amount, 0);
+
     budgets.forEach((budget) => {
       const spent = spendingByCategory[budget.categoryId] || 0;
-      const limit = budget.value;
+      // [v6.7e] Percentage budget: value is % of monthly income
+      const limit = budget.calcType === 'percentage'
+        ? (monthlyIncome * budget.value) / 100
+        : budget.value;
       if (limit > 0) {
         const percentage = (spent / limit) * 100;
         if (percentage >= 100) {
@@ -976,7 +990,7 @@ if (typeof window !== 'undefined') {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ngwesaryin_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `ngwesaryin_backup_${getTodayLocalStr()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1177,7 +1191,8 @@ if (typeof window !== 'undefined') {
 
 
   const handleLockApp = () => {
-    if (pinSettings.isEnabled && pinSettings.pin && pinSettings.pin.length === 4) {
+    // [v6.7e] Support both legacy (4-char) and hashed (64-char) PINs
+    if (pinSettings.isEnabled && pinSettings.pin) {
       setIsLocked(true);
     } else {
       setIsPinSetupModalOpen(true);
@@ -1231,8 +1246,14 @@ if (typeof window !== 'undefined') {
         lang={lang}
         onUnlock={() => setIsLocked(false)}
         onForgotPin={() => {
+          // [v6.7e] PIN recovery requires re-auth; do NOT just unlock
+          const msg = lang === 'my'
+            ? 'PIN ပြန်လည်သတ်မှတ်ရန် Google Account ပြန်ဝင်ရန် (သို့) ဒေတာအားလုံး ဖျက်ရန် လိုအပ်ပါသည်။\n\nဆက်လုပ်မလား?'
+            : 'PIN recovery requires signing in with Google again or clearing all data.\n\nContinue?';
+          if (!window.confirm(msg)) return;
           setIsLocked(false);
-          setIsAccountModalOpen(true);
+          setIsAuthModalOpen(true);
+          setShowLoginModal(true);
         }}
       />
     );
@@ -2065,6 +2086,13 @@ if (typeof window !== 'undefined') {
           />
         )}
       </React.Suspense>
+
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
 
       <GlobalSearchModal
         isOpen={isSearchModalOpen}

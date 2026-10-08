@@ -165,8 +165,20 @@ export function calculateFinancialHealth(
   let score = 80;
   let scoreDisplay = '80%';
 
+  // 0. [v6.9] Negative total wallet balance = deficit (regardless of period flow)
+  //    Fix: A user with positive monthly flow but negative wallet position
+  //    is still in deficit — health must reflect that.
+  if (totalWalletBalance < 0) {
+    tier = 'negative';
+    const deficitVsIncome = totalIncome > 0
+      ? Math.abs(totalWalletBalance) / totalIncome
+      : 1;
+    const negativePoints = Math.min(100, Math.round(deficitVsIncome * 50));
+    score = -negativePoints;
+    scoreDisplay = `${score}%`;
+  }
   // 1. Check for Negative Deficit first: "အနှုတ်ထွက်နေရင် အနက် နဲ့ အနီ"
-  if (netSavings < 0 || (totalIncome === 0 && totalExpense > 0)) {
+  else if (netSavings < 0 || (totalIncome === 0 && totalExpense > 0)) {
     tier = 'negative';
     const deficitRatio = totalIncome > 0 ? Math.abs(netSavings) / totalIncome : 1;
     // Score reflects deficit severity (negative or low floor)
@@ -522,8 +534,8 @@ export function calculateFinancialHealth(
         badgeText: { my: 'အနက်+အနီ ⚠️ အနှုတ်', en: 'Black+Red ⚠️ Deficit' },
         shortTitle: { my: 'အနှုတ်ပြနေသည်', en: 'Negative Deficit' },
         summary: {
-          my: 'ဝင်ငွေထက် အသုံးစရိတ် ပိုမိုများပြားနေသဖြင့် လစဉ်အရှုံးပေါ်နေပါသည် (အနက် နှင့် အနီ ရောင်ဖြင့် သတိပေးထားပါသည်)!',
-          en: 'Spending is exceeding your income, leading to cash depletion (highlighted in Black & Red warning)!',
+          my: 'လက်ကျန်ငွေ အနုတ်ပြနေခြင်း သို့မဟုတ် ဝင်ငွေထက် သုံးစွဲမှုပိုများနေခြင်းကြောင့် ငွေကြေးအခြေအနေ ဆိုးဝါးနေပါသည် (အနက် နှင့် အနီ ရောင်ဖြင့် သတိပေးထားပါသည်)!',
+          en: 'Negative wallet balance or spending exceeding income — financial position is critical (flagged in Black & Red)!',
         },
         advice: {
           my: 'ထွက်ငွေများကို ချက်ချင်းထိန်းချုပ်ပါ၊ ထပ်မံအကြွေးယူခြင်းကို ရှောင်ရှားပြီး မလိုအပ်သော အသုံးစရိတ်များကို အရေးပေါ် ရပ်တန့်ပါ',

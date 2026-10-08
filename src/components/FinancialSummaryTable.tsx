@@ -307,7 +307,7 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {lang === 'my' ? 'အစ' : 'Initial'}
                 </span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-slate-800 truncate" title={formatMMK(breakdownTotals.opening)}>
+              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-800'}`} title={formatMMK(breakdownTotals.opening)}>
                 {formatMMK(breakdownTotals.opening)}
               </div>
             </div>
@@ -339,7 +339,7 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {lang === 'my' ? 'လက်ရှိ' : 'Final'}
                 </span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-indigo-900 truncate" title={formatMMK(breakdownTotals.closing)}>
+              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-indigo-900'}`} title={formatMMK(breakdownTotals.closing)}>
                 {formatMMK(breakdownTotals.closing)}
               </div>
             </div>
@@ -385,13 +385,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                               </div>
                             </div>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono font-semibold text-slate-600" title={formatCurrency(opening, w.currency)}>
+                          <td className={`py-3 px-3 text-right font-mono font-semibold ${opening < 0 ? 'text-rose-600' : 'text-slate-600'}`} title={formatCurrency(opening, w.currency)}>
                             {formatTableLakhs(opening, w.currency, lang)}
                           </td>
                           <td className={`py-3 px-3 text-right font-mono font-bold ${wNet >= 0 ? 'text-emerald-700' : 'text-rose-700'}`} title={formatCurrency(wNet, w.currency)}>
                             {wNet >= 0 ? `+${formatTableLakhs(wNet, w.currency, lang)}` : formatTableLakhs(wNet, w.currency, lang)}
                           </td>
-                          <td className="py-3 px-3 text-right font-mono font-black text-slate-900" title={formatCurrency(closing, w.currency)}>
+                          <td className={`py-3 px-3 text-right font-mono font-black ${closing < 0 ? 'text-rose-600' : 'text-slate-900'}`} title={formatCurrency(closing, w.currency)}>
                             {formatTableLakhs(closing, w.currency, lang)}
                           </td>
                         </tr>
@@ -404,13 +404,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                         <td className="py-3 px-3 font-black">
                           {lang === 'my' ? 'စုစုပေါင်း (Total)' : 'Total'}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-700">
+                        <td className={`py-3 px-3 text-right font-mono font-bold ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-700'}`}>
                           {formatTableLakhs(breakdownTotals.opening, 'MMK', lang)}
                         </td>
                         <td className={`py-3 px-3 text-right font-mono font-bold ${breakdownTotals.net >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
                           {breakdownTotals.net >= 0 ? `+${formatTableLakhs(breakdownTotals.net, 'MMK', lang)}` : formatTableLakhs(breakdownTotals.net, 'MMK', lang)}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-black text-slate-950">
+                        <td className={`py-3 px-3 text-right font-mono font-black ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-slate-950'}`}>
                           {formatTableLakhs(breakdownTotals.closing, 'MMK', lang)}
                         </td>
                       </tr>

@@ -156,10 +156,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return safeGetItem('ngwe_active_workspace');
   });
 
-  // Strict Admin Email Verification: ONLY khunthanshwe@gmail.com is allowed Admin access
+  // [v6.9-phase1a] Master admin email — env var with hardcoded fallback.
+  // NOTE: firestore.rules still has this email hardcoded (rules cannot
+  // read env vars). If you change the email, update BOTH places.
+  const MASTER_ADMIN_EMAIL = (
+    (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string | undefined) ||
+    'khunthanshwe@gmail.com'
+  ).trim().toLowerCase();
+
   const isMasterAdminEmail = (email?: string | null): boolean => {
     if (!email) return false;
-    return email.trim().toLowerCase() === 'khunthanshwe@gmail.com';
+    return email.trim().toLowerCase() === MASTER_ADMIN_EMAIL;
   };
 
   const isAdmin = isMasterAdminEmail(user?.email) && isAdminState;
@@ -1432,17 +1439,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSyncError(null);
 
       const subcollections = ['transactions', 'debts', 'wallets', 'categories', 'budgets', 'shops', 'vehicles', 'fuelLogs', 'vehicleMaintenance', 'tirePressureLogs'];
+      // [v6.9-phase1a] Track deletion failures so we can report honestly
+      // instead of returning success even when some deletes failed.
+      let deletionFailures = 0;
+      const failedPaths: string[] = [];
       for (const subcol of subcollections) {
         try {
           const snap = await getDocs(collection(db, 'users', targetUid, subcol)).catch(() => null);
           if (snap && !snap.empty) {
             for (const docItem of snap.docs) {
-              await safeDeleteDoc(docItem.ref).catch(() => null);
+              const ok = await safeDeleteDoc(docItem.ref);
+              if (!ok) {
+                deletionFailures++;
+                failedPaths.push(subcol + '/' + docItem.id);
+              }
             }
           }
         } catch (subErr) {
-          console.warn(`Error clearing subcollection ${subcol}:`, subErr);
+          console.warn('Error clearing subcollection ' + subcol + ':', subErr);
+          deletionFailures++;
+          failedPaths.push(subcol);
         }
+      }
+      if (deletionFailures > 0) {
+        console.error('[clearAllCloudData] ' + deletionFailures + ' deletion(s) failed:', failedPaths.slice(0, 20));
+        setSyncError(
+          'Cloud ဒေတာ ' + deletionFailures + ' ခု ဖျက်ခြင်း မပြီးမြောက်ပါ။ အင်တာနက် စစ်ပြီး ပြန်ကြိုးစားပါ။'
+        );
+        return false;
       }
 
       // Re-create initial default wallet in Firestore so account remains valid

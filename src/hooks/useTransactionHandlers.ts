@@ -547,8 +547,10 @@ export function useTransactionHandlers({
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    markTxDeleted(id);
-
+    // [v6.9-phase1a] Permission check MUST run before markTxDeleted.
+    // Before: marker was set first, so even a blocked delete still
+    // left a phantom deletion marker → cloud listener later refused
+    // to re-add that tx, effectively hiding it locally.
     const txToDelete = transactions.find((t) => t.id === id);
     if (!txToDelete) return;
 
@@ -563,6 +565,9 @@ export function useTransactionHandlers({
       );
       return;
     }
+
+    // Permission OK — mark as deleted
+    markTxDeleted(id);
 
     // 1. Calculate next state synchronously (including paired transfer if any)
     const pairId = txToDelete.transferPairId;

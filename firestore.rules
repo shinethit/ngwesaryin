@@ -136,9 +136,12 @@ service cloud.firestore {
     // =========================================================
     // 6. /feedbacks/{feedbackId}
     // =========================================================
+    // [v6.9-phase1a] Feedbacks — was: anyone read/write (spam + privacy leak)
     match /feedbacks/{feedbackId} {
-      allow get, list: if true;
-      allow create: if true;
+      allow get, list: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
@@ -146,9 +149,10 @@ service cloud.firestore {
     // =========================================================
     // 7. /visitors/{visitorId} — FIXED (was: anyone can read/write)
     // =========================================================
+    // [v6.9-phase1a] Visitors — was: any signed-in user could list all visitor PII
     match /visitors/{visitorId} {
       allow create, update: if true;
-      allow get, list: if isAdmin() || isSignedIn();
+      allow get, list: if isAdmin();
       allow delete: if isAdmin();
     }
 

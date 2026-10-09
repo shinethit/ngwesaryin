@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.23.5';
-export const CURRENT_BUILD_NUMBER = 191;
+export const CURRENT_APP_VERSION = 'v6.23.6';
+export const CURRENT_BUILD_NUMBER = 192;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.23.6',
+    buildNumber: 192,
+    releaseDate: '2026-10-10',
+    releaseTime: '8:00 AM (MMT)',
+    titleMy: 'Delete Verification — safeDeleteDoc Return Value စစ်ဆေးခြင်း',
+    titleEn: 'Delete Verification — safeDeleteDoc Return-Value Check',
+    tag: 'fix',
+    tagLabelMy: 'ဒေတာ တိကျမှု ပြင်ဆင်ချက်',
+    tagLabelEn: 'Data Integrity Fix',
+    descriptionMy: 'deleteSharedWalletTransaction() တွင် safeDeleteDoc() ရဲ့ boolean return value ကို မစစ်ဘဲ success လို့ မှတ်မိခဲ့သော bug ကို ပြင်ဆင်လိုက်ပါသည်။ safeDeleteDoc() က false ပြန်ပါက function က false ပြန်ပြီး caller က retry လုပ်နိုင်ပါပြီ။',
+    descriptionEn: 'Fixed a bug in deleteSharedWalletTransaction: safeDeleteDoc returns a boolean but its value was ignored, allowing a fake-success path. Now checks the return value and returns false on failure.',
+    changesMy: [
+      'v6.23.6 — safeDeleteDoc() return value ကို စစ်ဆေးခြင်း (canonical + mirror paths)',
+      'v6.23.6 — false ပြန်ပါက function က false ပြန်ပေးခြင်း (retry လုပ်နိုင်စေရန်)',
+      'v6.23.6 — Mirror failures ကို syncQueue ထဲ auto-enqueue ဖြစ်စေခြင်း',
+    ],
+    changesEn: [
+      'v6.23.6 — Now checks safeDeleteDoc() return value (canonical + mirror)',
+      'v6.23.6 — Function returns false on failure so caller can retry',
+      'v6.23.6 — Mirror failures auto-enqueue to syncQueue',
+    ],
+  },
   {
     version: 'v6.23.5',
     buildNumber: 191,

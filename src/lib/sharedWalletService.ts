@@ -638,10 +638,16 @@ export async function deleteSharedWalletTransaction(
     if (!canonicalDeleted) {
       try {
         const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', txId);
-        await safeDeleteDoc(txRef);
+        // [v6.23.6] safeDeleteDoc returns Promise<boolean> — it does NOT
+        // throw on failure. Capture the return value; do not assume success.
+        const deleted = await safeDeleteDoc(txRef);
+        if (!deleted) {
+          console.error('[v6.23.6] canonical shared tx delete returned false (REST + SDK both failed)');
+          return false;
+        }
         canonicalDeleted = true;
       } catch (sdkErr) {
-        console.error('[v6.23.5] canonical shared tx delete failed (REST + SDK):', sdkErr);
+        console.error('[v6.23.6] canonical shared tx delete threw:', sdkErr);
         return false;
       }
     }
@@ -656,10 +662,15 @@ export async function deleteSharedWalletTransaction(
         const restRes = await deleteTransactionDirectHttp(txId, currentUid);
         if (!restRes.success) {
           const userTxRef = doc(db, 'users', currentUid, 'transactions', txId);
-          await safeDeleteDoc(userTxRef);
+          // [v6.23.6] Mirror only — safeDeleteDoc returns boolean.
+          // If false, safeDeleteDoc enqueues to syncQueue internally.
+          const deleted = await safeDeleteDoc(userTxRef);
+          if (!deleted) {
+            console.warn('[v6.23.6] user personal mirror delete deferred to queue');
+          }
         }
       } catch (e) {
-        console.warn('[v6.23.5] user personal delete mirror notice:', e);
+        console.warn('[v6.23.6] user personal delete mirror notice:', e);
       }
 
       const walletRef = doc(db, 'sharedWallets', docIdToUse);

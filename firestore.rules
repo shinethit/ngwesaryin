@@ -52,11 +52,15 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin() || isCollaborator(userId);
     }
 
-    // [v6.9-phase1b] Write permission = owner OR collaborator ONLY.
-    // Admins are excluded from writes on user data (analytics only).
-    function canWrite(userId) {
-      return isOwner(userId) || isCollaborator(userId);
+    // [v6.22.0] Two-tier write permission:
+    //   - canWriteOwnerOnly(userId): owner only (used by user subcollections
+    //     since collaborator writes are scoped to shared wallets)
+    //   - canWrite(userId): owner OR collaborator (kept for backwards
+    //     compatibility but no longer wired to subcollection rules)
+    function canWriteOwnerOnly(userId) {
+      return isOwner(userId);
     }
+
 
     // [v6.9-phase1c] Premium field write protection.
     // A user may only upgrade their plan ONCE, and only via:
@@ -324,14 +328,18 @@ service cloud.firestore {
       // Owner can update anything (sharing, permissions, metadata).
       allow update: if isSharedWalletOwner(walletId);
 
-      // Member can ONLY update balance + updatedAt.
-      // Explicitly forbid sharedWith / collaboratorPermissions changes.
+      // [v6.22.0] Member can ONLY update updatedAt (heartbeat).
+      // Balance is now OWNER-ONLY (data integrity — see v6.21.1 review).
+      // Any member-created transaction triggers balance recompute on the
+      // next owner app boot via computeContentFingerprint sync, so the
+      // balance stays fresh without allowing direct tampering.
       allow update: if isSharedWalletMember(walletId)
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['balance', 'updatedAt'])
+            .hasOnly(['updatedAt'])
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.sharedWith == resource.data.sharedWith
-        && request.resource.data.collaboratorPermissions == resource.data.collaboratorPermissions;
+        && request.resource.data.collaboratorPermissions == resource.data.collaboratorPermissions
+        && request.resource.data.balance == resource.data.balance;
 
       allow delete: if isSharedWalletOwner(walletId) || isAdmin();
 
@@ -417,7 +425,7 @@ service cloud.firestore {
       // [v6.16.0] Amount/type/walletId/date validation also on UPDATE
       match /transactions/{transactionId} {
         allow read: if canAccess(userId);
-        allow create: if canWrite(userId)
+        allow create: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == transactionId
           && request.resource.data.amount is number
@@ -430,7 +438,7 @@ service cloud.firestore {
           && request.resource.data.date is string
           && request.resource.data.date.size() >= 8
           && request.resource.data.date.size() <= 30;
-        allow update: if canWrite(userId)
+        allow update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == transactionId
           && request.resource.data.amount is number
@@ -443,13 +451,13 @@ service cloud.firestore {
           && request.resource.data.date is string
           && request.resource.data.date.size() >= 8
           && request.resource.data.date.size() <= 30;
-        allow delete: if canWrite(userId);
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Debts -----
       match /debts/{debtId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == debtId;
       }
@@ -457,7 +465,7 @@ service cloud.firestore {
       // ----- Wallets -----
       match /wallets/{walletId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == walletId;
       }
@@ -465,7 +473,7 @@ service cloud.firestore {
       // ----- Categories -----
       match /categories/{categoryId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == categoryId;
       }
@@ -473,21 +481,21 @@ service cloud.firestore {
       // ----- Budgets (doc id = categoryId, no id field required) -----
       match /budgets/{budgetId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId;
       }
 
       // ----- Savings Targets -----
       match /savingsTargets/{targetId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId;
       }
 
       // ----- Shops -----
       match /shops/{shopId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == shopId;
       }
@@ -495,7 +503,7 @@ service cloud.firestore {
       // ----- Vehicles -----
       match /vehicles/{vehicleId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == vehicleId;
       }
@@ -503,7 +511,7 @@ service cloud.firestore {
       // ----- Fuel Logs -----
       match /fuelLogs/{fuelLogId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == fuelLogId;
       }
@@ -511,7 +519,7 @@ service cloud.firestore {
       // ----- Vehicle Maintenance -----
       match /vehicleMaintenance/{maintenanceId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == maintenanceId;
       }
@@ -519,7 +527,7 @@ service cloud.firestore {
       // ----- Tire Pressure Logs -----
       match /tirePressureLogs/{logId} {
         allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
+        allow write: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == logId;
       }

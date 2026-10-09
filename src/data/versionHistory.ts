@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.21.1';
-export const CURRENT_BUILD_NUMBER = 184;
+export const CURRENT_APP_VERSION = 'v6.22';
+export const CURRENT_BUILD_NUMBER = 185;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.22.0',
+    buildNumber: 185,
+    releaseDate: '2026-10-10',
+    releaseTime: '12:30 AM (MMT)',
+    titleMy: 'လုံခြုံရေး — Balance Integrity + Workspace Split (Phase 5)',
+    titleEn: 'Security — Balance Integrity + Workspace Split (Phase 5)',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး နှင့် ဒေတာ တိကျမှု',
+    tagLabelEn: 'Security & Data Integrity',
+    descriptionMy: 'Member များသည် shared wallet balance ကို တိုက်ရိုက်မပြင်နိုင်တော့ဘဲ owner သာ ပြင်နိုင်ပါသည်။ Workspace collaborator များသည် user subcollections များကို မရေးနိုင်တော့ဘဲ owner သာလျှင် ရေးနိုင်ပါသည်။',
+    descriptionEn: 'Fixed the two remaining findings from the v6.21.1 review: members can no longer edit shared wallet balance, and workspace collaborators no longer write to user subcollections.',
+    changesMy: [
+      'v6.22.0 — Shared wallet balance ကို owner သာ ပြင်နိုင်စေခြင်း',
+      'v6.22.0 — canWriteOwnerOnly(userId) helper အသစ်',
+      'v6.22.0 — User subcollections အားလုံးတွင် canWrite → canWriteOwnerOnly',
+      'v6.22.0 — Unused canWrite helper ဖျက်သိမ်းခြင်း',
+      'v6.22.0 — Rules deployed (warning ကင်း)',
+      'v6.22.0 — Handover v6.21 cleanup (version mismatch fix)',
+    ],
+    changesEn: [
+      'v6.22.0 — Shared wallet balance now owner-only',
+      'v6.22.0 — Added canWriteOwnerOnly(userId) helper',
+      'v6.22.0 — Switched user subcollections to canWriteOwnerOnly',
+      'v6.22.0 — Removed unused canWrite helper',
+      'v6.22.0 — Rules deployed (no warnings)',
+      'v6.22.0 — Cleaned v6.21 handover (version mismatch)',
+    ],
+  },
   {
     version: 'v6.21.1',
     buildNumber: 184,

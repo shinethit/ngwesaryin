@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.15';
-export const CURRENT_BUILD_NUMBER = 177;
+export const CURRENT_APP_VERSION = 'v6.16';
+export const CURRENT_BUILD_NUMBER = 178;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.16.0',
+    buildNumber: 178,
+    releaseDate: '2026-10-09',
+    releaseTime: '11:30 PM (MMT)',
+    titleMy: 'လုံခြုံရေး ခိုင်မာစေခြင်း — Firestore Rules ပြင်ဆင်မှု အဆင့် (၁)',
+    titleEn: 'Security Hardening — Firestore Rules Phase 1',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး မြှင့်တင်ခြင်း',
+    tagLabelEn: 'Security Hardening',
+    descriptionMy: 'လုံခြုံရေးစစ်ဆေးချက်မှ တွေ့ရှိသော အရေးကြီးသည့် အချက် ၅ ခုကို Firestore Security Rules တွင် ပြင်ဆင်လိုက်ပါသည်။',
+    descriptionEn: 'Fixed 5 high-priority security findings in Firestore Security Rules: transaction update validation, visitors field whitelist, public_shops ownership immutability, user creation plan restriction, and shared wallet transaction CRUD split.',
+    changesMy: [
+      'v6.16.0 — Transaction update တွင် amount/type/walletId/date validation ထည့်သွင်းခြင်း',
+      'v6.16.0 — Visitors records တွင် field whitelist နှင့် immutable critical fields ထည့်ခြင်း',
+      'v6.16.0 — public_shops update တွင် ownership immutability ထည့်ခြင်း',
+      'v6.16.0 — User document create တွင် plan ကို free/guest သာ ခွင့်ပြုခြင်း',
+      'v6.16.0 — Shared wallet transaction CRUD split + payload validation',
+      'Rules backup file အလိုအလျောက် ဖန်တီးခြင်း',
+    ],
+    changesEn: [
+      'v6.16.0 — Added amount/type/walletId/date validation to transaction update',
+      'v6.16.0 — Added field whitelist + immutable critical fields to visitor records',
+      'v6.16.0 — Added ownership immutability to public_shops update',
+      'v6.16.0 — Restricted user document creation plan to free/guest (except master admin)',
+      'v6.16.0 — Split shared wallet transaction CRUD + payload validation',
+      'Automatic rules backup file created',
+    ],
+  },
   {
     version: 'v6.15.0',
     buildNumber: 177,

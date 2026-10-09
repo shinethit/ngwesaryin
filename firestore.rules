@@ -190,7 +190,31 @@ service cloud.firestore {
     // =========================================================
     // [v6.9-phase1a] Visitors — was: any signed-in user could list all visitor PII
     match /visitors/{visitorId} {
-      allow create, update: if true;
+      // [v6.16.0] Field whitelist + immutable critical fields on update.
+      allow create: if request.resource.data.country is string
+        && request.resource.data.country.size() <= 100
+        && request.resource.data.countryCode is string
+        && request.resource.data.countryCode.size() <= 8
+        && request.resource.data.city is string
+        && request.resource.data.city.size() <= 100
+        && request.resource.data.device in ['mobile', 'desktop', 'tablet']
+        && request.resource.data.browser is string
+        && request.resource.data.browser.size() <= 100
+        && request.resource.data.visitCount is number
+        && request.resource.data.visitCount >= 1
+        && request.resource.data.visitCount <= 10000000
+        && request.resource.data.firstSeenAt is number
+        && request.resource.data.lastActiveAt is number;
+
+      allow update: if request.resource.data.country == resource.data.country
+        && request.resource.data.countryCode == resource.data.countryCode
+        && request.resource.data.device == resource.data.device
+        && request.resource.data.browser == resource.data.browser
+        && request.resource.data.visitCount is number
+        && request.resource.data.visitCount >= 1
+        && request.resource.data.visitCount <= 10000000
+        && request.resource.data.lastActiveAt is number;
+
       allow get, list: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -202,7 +226,13 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isSignedIn()
         && request.resource.data.addedByUid == request.auth.uid;
-      allow update, delete: if isSignedIn()
+      // [v6.16.0] Ownership fields immutable on update.
+      allow update: if isSignedIn()
+        && (resource.data.addedByUid == request.auth.uid || isAdmin())
+        && request.resource.data.addedByUid == resource.data.addedByUid
+        && request.resource.data.addedBy == resource.data.addedBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isSignedIn()
         && (resource.data.addedByUid == request.auth.uid || isAdmin());
     }
 
@@ -230,9 +260,22 @@ service cloud.firestore {
 
       allow delete: if isSharedWalletOwner(walletId) || isAdmin();
 
+      // [v6.16.0] Split CRUD + payload validation for shared transactions.
       match /transactions/{transactionId} {
         allow list, get: if isSharedWalletMember(walletId);
-        allow create, update, delete: if isSharedWalletMember(walletId);
+        allow create: if isSharedWalletMember(walletId)
+          && request.resource.data.id == transactionId
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 0
+          && request.resource.data.amount <= 999999999999
+          && request.resource.data.type in ['income', 'expense', 'transfer'];
+        allow update: if isSharedWalletMember(walletId)
+          && request.resource.data.id == transactionId
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 0
+          && request.resource.data.amount <= 999999999999
+          && request.resource.data.type in ['income', 'expense', 'transfer'];
+        allow delete: if isSharedWalletMember(walletId);
       }
     }
 
@@ -248,7 +291,13 @@ service cloud.firestore {
     match /users/{userId} {
       // ----- Root user document -----
       allow read: if canAccess(userId);
-      allow create: if isOwner(userId);
+      // [v6.16.0] Prevent self-registration with 'premium' plan.
+      allow create: if isOwner(userId)
+        && request.resource.data.userId == userId
+        && (
+          request.resource.data.plan in ['free', 'guest']
+          || isMasterAdmin()
+        );
       // [v6.9-phase1c] Owner can update non-premium fields freely.
       // Premium upgrades must satisfy canUpgradePremium().
       // Master admin bypass for manual support.
@@ -263,6 +312,7 @@ service cloud.firestore {
       allow delete: if isMasterAdmin();
 
       // ----- Transactions -----
+      // [v6.16.0] Amount/type/walletId/date validation also on UPDATE
       match /transactions/{transactionId} {
         allow read: if canAccess(userId);
         allow create: if canWrite(userId)
@@ -270,10 +320,27 @@ service cloud.firestore {
           && request.resource.data.id == transactionId
           && request.resource.data.amount is number
           && request.resource.data.amount >= 0
-          && request.resource.data.type in ['income', 'expense', 'transfer'];
+          && request.resource.data.amount <= 999999999999
+          && request.resource.data.type in ['income', 'expense', 'transfer']
+          && request.resource.data.walletId is string
+          && request.resource.data.walletId.size() > 0
+          && request.resource.data.walletId.size() <= 128
+          && request.resource.data.date is string
+          && request.resource.data.date.size() >= 8
+          && request.resource.data.date.size() <= 30;
         allow update: if canWrite(userId)
           && request.resource.data.userId == userId
-          && request.resource.data.id == transactionId;
+          && request.resource.data.id == transactionId
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 0
+          && request.resource.data.amount <= 999999999999
+          && request.resource.data.type in ['income', 'expense', 'transfer']
+          && request.resource.data.walletId is string
+          && request.resource.data.walletId.size() > 0
+          && request.resource.data.walletId.size() <= 128
+          && request.resource.data.date is string
+          && request.resource.data.date.size() >= 8
+          && request.resource.data.date.size() <= 30;
         allow delete: if canWrite(userId);
       }
 

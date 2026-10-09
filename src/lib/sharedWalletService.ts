@@ -164,7 +164,8 @@ export async function syncSharedWalletToCloud(
           const txRef = doc(db, 'sharedWallets', scopedDocId, 'transactions', tx.id);
           batch.set(txRef, cleanForFirestore(tx), { merge: true });
         }
-        await batch.commit().catch(() => null);
+        // [v6.23.4] CRITICAL write — must NOT silently fail.
+        await batch.commit();
       }
     }
 

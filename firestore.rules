@@ -457,79 +457,89 @@ service cloud.firestore {
       // ----- Debts -----
       match /debts/{debtId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == debtId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Wallets -----
       match /wallets/{walletId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == walletId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Categories -----
       match /categories/{categoryId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == categoryId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Budgets (doc id = categoryId, no id field required) -----
       match /budgets/{budgetId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Savings Targets -----
       match /savingsTargets/{targetId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Shops -----
       match /shops/{shopId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == shopId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Vehicles -----
       match /vehicles/{vehicleId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == vehicleId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Fuel Logs -----
       match /fuelLogs/{fuelLogId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == fuelLogId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Vehicle Maintenance -----
       match /vehicleMaintenance/{maintenanceId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == maintenanceId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
 
       // ----- Tire Pressure Logs -----
       match /tirePressureLogs/{logId} {
         allow read: if canAccess(userId);
-        allow write: if canWriteOwnerOnly(userId)
+        allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == logId;
+        allow delete: if canWriteOwnerOnly(userId);
       }
     }
   }

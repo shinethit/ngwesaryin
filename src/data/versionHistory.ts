@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.23.3';
-export const CURRENT_BUILD_NUMBER = 189;
+export const CURRENT_APP_VERSION = 'v6.23.4';
+export const CURRENT_BUILD_NUMBER = 190;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.23.4',
+    buildNumber: 190,
+    releaseDate: '2026-10-10',
+    releaseTime: '5:00 AM (MMT)',
+    titleMy: 'ငွေစာရင်း ဒေတာ ခိုင်မာစေခြင်း — Delete Rules ပြင်ဆင်မှု',
+    titleEn: 'Financial Core Hardening — Delete Rules Fix',
+    tag: 'security',
+    tagLabelMy: 'ငွေစာရင်း ဒေတာ လုံခြုံရေး',
+    tagLabelEn: 'Financial Data Integrity',
+    descriptionMy: 'Subcollection ၉ ခုတွင် allow write တစ်ခုတည်းဖြင့် ကာကွယ်ထားတာကြောင့် delete operation များတွင် request.resource.data ကို access လုပ်မိပြီး rules fail ဖြစ်ခဲ့ပါသည်။ ယခုအခါ create/update နှင့် delete ကို သီးခြား ခွဲထားလိုက်ပါသည်။',
+    descriptionEn: 'Fixed: rules for 9 user subcollections used a single allow write that accessed request.resource.data — null on delete — rejecting all deletes. Split into create/update + delete paths.',
+    changesMy: [
+      'v6.23.4 — Subcollection ၉ ခုကို allow create/update + allow delete အဖြစ် ခွဲခြားခြင်း',
+      'v6.23.4 — Delete operation တွင် request.resource.data access မလုပ်တော့ခြင်း',
+      'v6.23.4 — Delete scenarios tests ၅ ခု ထည့်သွင်းခြင်း',
+      'v6.23.4 — sharedWalletService batch.commit() ကျရှုံးမှုကို error ပြန်ပေးခြင်း',
+      'v6.23.4 — Rules tests ၁၆ ခုလုံး pass',
+    ],
+    changesEn: [
+      'v6.23.4 — Split 9 subcollection rules into create/update + delete',
+      'v6.23.4 — Deletes no longer access request.resource.data',
+      'v6.23.4 — Added 5 delete-scenario tests',
+      'v6.23.4 — batch.commit() no longer swallows errors',
+      'v6.23.4 — All 16 rules tests pass',
+    ],
+  },
   {
     version: 'v6.23.3',
     buildNumber: 189,

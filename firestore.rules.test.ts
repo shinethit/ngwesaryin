@@ -222,4 +222,59 @@ describe('Firestore Rules — shared wallet security', () => {
     // Outsider reads own refs → succeeds
     await assertSucceeds(getDoc(doc(asOutsider(), 'sharedWalletRefs', OUTSIDER_EMAIL, 'wallets', 'some_id')));
   });
+
+  // ── v6.23.4 — Delete rules ──
+  it('11. Owner can DELETE own debt', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'debts', 'debt_1'), {
+        id: 'debt_1', userId: OWNER_UID, type: 'receivable',
+        personName: 'Test', totalAmount: 100, paidAmount: 0,
+        walletId: 'w1', status: 'active', repayments: [],
+        startDate: '2026-10-10', createdAt: Date.now(),
+      });
+    });
+    await assertSucceeds(deleteDoc(doc(asOwner(), 'users', OWNER_UID, 'debts', 'debt_1')));
+  });
+
+  it('12. Outsider cannot DELETE owner debt', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'debts', 'debt_2'), {
+        id: 'debt_2', userId: OWNER_UID, type: 'receivable',
+        personName: 'Test', totalAmount: 100, paidAmount: 0,
+        walletId: 'w1', status: 'active', repayments: [],
+        startDate: '2026-10-10', createdAt: Date.now(),
+      });
+    });
+    await assertFails(deleteDoc(doc(asOutsider(), 'users', OWNER_UID, 'debts', 'debt_2')));
+  });
+
+  it('13. Owner can DELETE own wallet', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'wallets', 'w1'), {
+        id: 'w1', userId: OWNER_UID, name: 'Test', nameEn: 'Test',
+        balance: 0, color: '#000', icon: 'Wallet', createdAt: Date.now(),
+      });
+    });
+    await assertSucceeds(deleteDoc(doc(asOwner(), 'users', OWNER_UID, 'wallets', 'w1')));
+  });
+
+  it('14. Owner can DELETE own category', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'categories', 'c1'), {
+        id: 'c1', userId: OWNER_UID, name: 'Test', nameEn: 'Test',
+        type: 'expense', icon: 'Tag', color: '#000', createdAt: Date.now(),
+      });
+    });
+    await assertSucceeds(deleteDoc(doc(asOwner(), 'users', OWNER_UID, 'categories', 'c1')));
+  });
+
+  it('15. Owner can DELETE own budget', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'budgets', 'b1'), {
+        id: 'b1', userId: OWNER_UID, categoryId: 'c1',
+        calcType: 'fixed', value: 100, walletId: 'all',
+      });
+    });
+    await assertSucceeds(deleteDoc(doc(asOwner(), 'users', OWNER_UID, 'budgets', 'b1')));
+  });
 });

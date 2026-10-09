@@ -998,7 +998,7 @@ export default function App() {
       }, delay);
     };
 
-    // [v6.12] Only schedule if permission ALREADY granted.
+    // [v6.13] Only schedule if permission ALREADY granted.
     // We no longer auto-request at app start — that pops a dialog
     // before the user has seen the app and makes recovery hard
     // if they accidentally deny. Permission is requested manually
@@ -1007,7 +1007,7 @@ export default function App() {
       scheduleReminder();
     }
 
-    // [v6.12] Manual permission request handler.
+    // [v6.13] Manual permission request handler.
     // Settings UI fires: window.dispatchEvent(new Event('ngwe:request-notification'))
     const handleRequestNotification = () => {
       if (!('Notification' in window)) {

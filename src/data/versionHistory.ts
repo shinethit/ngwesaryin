@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.12';
-export const CURRENT_BUILD_NUMBER = 173;
+export const CURRENT_APP_VERSION = 'v6.13';
+export const CURRENT_BUILD_NUMBER = 174;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.13.0',
+    buildNumber: 174,
+    releaseDate: '2026-10-09',
+    releaseTime: '7:00 PM (MMT)',
+    titleMy: 'Data Foundation — Entity updatedAt Fields',
+    titleEn: 'Data Foundation — Entity updatedAt Fields',
+    tag: 'feature',
+    tagLabelMy: 'ဒေတာ အခြေခံ ခိုင်မာစေခြင်း',
+    tagLabelEn: 'Data Foundation',
+    descriptionMy: 'Entity အမျိုးအစားအားလုံးတွင် မရှိမဖြစ်လိုအပ်သော "updatedAt" field ကို ထည့်သွင်းလိုက်ပါသည်။ ဤအခြေခံသည် နောက်လာမည့် v7.0 multi-device conflict resolution အတွက် အခြေခံအုတ်မြစ်ဖြစ်ပြီး audit trail အနေနှင့်လည်း အသုံးပြုနိုင်ပါသည်။ Migration မလိုအပ်ဘဲ ရှိပြီးသား record များနှင့် တိုက်ရိုက် အလုပ်လုပ်ပါသည်။',
+    descriptionEn: 'Added the foundational "updatedAt" timestamp field to all entity types. This provides the groundwork for v7.0 multi-device conflict resolution and enables audit trails. No migration required — works with existing records.',
+    changesMy: [
+      'v6.13 — Entity ၉ မျိုးတွင် updatedAt?: number field ထည့်သွင်းခြင်း (Transaction, Debt, Wallet, Category, BudgetConfig, ShopContact, FuelLog, VehicleMaintenance, TirePressureLog)',
+      'Handler ၅ ဖိုင်တွင် add/edit action တိုင်း updatedAt: Date.now() populate ပြုလုပ်ခြင်း',
+      'S3 content-hash sync signature နှင့် အလိုအလျောက် ကိုက်ညီသဖြင့် sync က updatedAt အပြောင်းအလဲကို တိကျစွာ ဖမ်းယူနိုင်ခြင်း',
+      'Migration မလိုအပ်ဘဲ ရှိပြီးသား record များ လုံးဝ မထိခိုက်ခြင်း',
+      'Multi-device conflict resolution အတွက် အခြေခံ ပြင်ဆင်ပြီးစီးခြင်း (v7.0 အတွက်)',
+      'Audit trail အနေနှင့် "last edited" အချိန်ကို ရယူနိုင်ခြင်း',
+    ],
+    changesEn: [
+      'v6.13 — Added updatedAt?: number to 9 entity types (Transaction, Debt, Wallet, Category, BudgetConfig, ShopContact, FuelLog, VehicleMaintenance, TirePressureLog)',
+      'Populated updatedAt: Date.now() across 5 handler files on all add/edit actions',
+      'Automatically compatible with S3 content-hash sync — updatedAt changes trigger correct sync',
+      'No migration required — existing records untouched',
+      'Groundwork laid for v7.0 multi-device conflict resolution',
+      'Enables "last edited" audit trail throughout the app',
+    ],
+  },
   {
     version: 'v6.12.0',
     buildNumber: 173,

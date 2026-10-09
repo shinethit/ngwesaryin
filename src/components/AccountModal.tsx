@@ -922,6 +922,71 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </p>
         </div>
 
+        {/* [v6.9-phase3a] Reminder Notifications Section */}
+        {typeof window !== 'undefined' && 'Notification' in window && (
+          <div className="mt-6 pt-5 border-t border-slate-100">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <h3 className="text-xs font-bold text-slate-700">
+                {lang === 'my' ? 'သတိပေးချက်များ (Reminders)' : 'Reminders & Notifications'}
+              </h3>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-sm text-slate-900">
+                    {lang === 'my' ? 'နေ့စဉ် သတိပေးချက်' : 'Daily Reminder'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                    {lang === 'my'
+                      ? 'ည ၉ နာရီတွင် ဒီနေ့၏ စာရင်းများ သွင်းရန် သတိပေးမည်'
+                      : 'Get a reminder at 9 PM to record daily transactions'}
+                  </div>
+                  <div className="mt-1.5">
+                    {Notification.permission === 'granted' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" />
+                        {lang === 'my' ? 'ဖွင့်ပြီး' : 'Enabled'}
+                      </span>
+                    )}
+                    {Notification.permission === 'denied' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                        <AlertCircle className="w-3 h-3" />
+                        {lang === 'my' ? 'ပိတ်ထား (Browser Settings)' : 'Blocked (Browser Settings)'}
+                      </span>
+                    )}
+                    {Notification.permission === 'default' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        {lang === 'my' ? 'မဖွင့်ရသေး' : 'Not enabled'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new Event('ngwe:request-notification'));
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer active:scale-95 ${
+                    Notification.permission === 'granted'
+                      ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                  }`}
+                >
+                  {Notification.permission === 'granted'
+                    ? (lang === 'my' ? 'ပြန်စမ်း' : 'Re-check')
+                    : (lang === 'my' ? 'ဖွင့်မည်' : 'Enable')}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 leading-tight">
+                {lang === 'my'
+                  ? '💡 သတိပေးချက်များကို App စတင်ဖွင့်ချိန်တွင် မတောင်းတော့ပါ။ ဤနေရာမှ ကိုယ်တိုင် ဖွင့်ပါ။'
+                  : '💡 Reminders are no longer requested at app startup. Enable them here manually.'}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Security / PIN Lock Section */}
         {pinSettings && onUpdatePinSettings && (
           <div className="mt-6 pt-5 border-t border-slate-100">

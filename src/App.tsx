@@ -998,17 +998,53 @@ export default function App() {
       }, delay);
     };
 
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') scheduleReminder();
-      });
-    } else if ('Notification' in window && Notification.permission === 'granted') {
+    // [v6.9-phase3a] Only schedule if permission ALREADY granted.
+    // We no longer auto-request at app start — that pops a dialog
+    // before the user has seen the app and makes recovery hard
+    // if they accidentally deny. Permission is requested manually
+    // via Settings (AccountModal) which dispatches 'ngwe:request-notification'.
+    if ('Notification' in window && Notification.permission === 'granted') {
       scheduleReminder();
     }
+
+    // [v6.9-phase3a] Manual permission request handler.
+    // Settings UI fires: window.dispatchEvent(new Event('ngwe:request-notification'))
+    const handleRequestNotification = () => {
+      if (!('Notification' in window)) {
+        alert(langRef.current === 'my'
+          ? 'ဤ Browser တွင် Notification မထောက်ပံ့ပါ။'
+          : 'This browser does not support notifications.');
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        scheduleReminder();
+        alert(langRef.current === 'my'
+          ? '✅ Reminder များ ဖွင့်ပြီးဖြစ်ပါသည်။'
+          : '✅ Reminders are already enabled.');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        alert(langRef.current === 'my'
+          ? '⚠️ Notification ကို Browser မှာ ပိတ်ထားပါသည်။ Browser Settings မှာ ပြန်ဖွင့်ပါ။'
+          : '⚠️ Notifications are blocked. Please re-enable in your browser settings.');
+        return;
+      }
+      // permission === 'default' — safe to prompt now (user clicked)
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          scheduleReminder();
+          alert(langRef.current === 'my'
+            ? '✅ သတိပေးချက်များ ဖွင့်ပြီးပါပြီ။'
+            : '✅ Reminders enabled successfully.');
+        }
+      });
+    };
+    window.addEventListener('ngwe:request-notification', handleRequestNotification);
 
     return () => {
       if (reminderTimeoutRef.current) clearTimeout(reminderTimeoutRef.current);
       if (reminderIntervalRef.current) clearInterval(reminderIntervalRef.current);
+      window.removeEventListener('ngwe:request-notification', handleRequestNotification);
     };
   }, []);
 

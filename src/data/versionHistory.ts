@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.23.4';
-export const CURRENT_BUILD_NUMBER = 190;
+export const CURRENT_APP_VERSION = 'v6.23.5';
+export const CURRENT_BUILD_NUMBER = 191;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.23.5',
+    buildNumber: 191,
+    releaseDate: '2026-10-10',
+    releaseTime: '7:00 AM (MMT)',
+    titleMy: 'Sync နှင့် ဒေတာ တိကျမှု — နောက်ဆုံးအဆင့်',
+    titleEn: 'Sync & Data Integrity — Final Pass',
+    tag: 'security',
+    tagLabelMy: 'ဒေတာ တိကျမှု ပြီးစီး',
+    tagLabelEn: 'Data Integrity Complete',
+    descriptionMy: 'saveSharedWalletTransaction() နှင့် deleteSharedWalletTransaction() ရဲ့ mirror writes များကို owner-only guards ဖြင့် ပြင်ဆင်လိုက်ပါသည်။ Canonical delete ကျရှုံးပါက false ပြန်ပေးပြီး retry လုပ်နိုင်ပါပြီ။ Collaborator မှ owner collection ကို မရေးတော့ဘဲ rules ကိုက်ညီမှု ပြည့်စုံသွားပါသည်။',
+    descriptionEn: 'Fixed partial-success paths in save/delete shared transactions with owner-only mirror guards. Canonical delete failures now return false for retry. Collaborators no longer attempt owner-collection writes.',
+    changesMy: [
+      'v6.23.5 — saveSharedWalletTransaction တွင် owner-only mirror guards ထည့်ခြင်း',
+      'v6.23.5 — deleteSharedWalletTransaction canonical fail → false ပြန်ပေးခြင်း',
+      'v6.23.5 — Collaborator မှ owner collection မရေးတော့ခြင်း',
+      'v6.23.5 — Rules tests အသစ် ၅ ခု (16-20), စုစုပေါင်း ၂၁',
+      'v6.23.5 — package.json နှင့် package-lock.json version ညှိခြင်း (6.23.5)',
+    ],
+    changesEn: [
+      'v6.23.5 — Added owner-only mirror guards to saveSharedWalletTransaction',
+      'v6.23.5 — Canonical delete failures in deleteSharedWalletTransaction now return false',
+      'v6.23.5 — Collaborators no longer attempt owner-collection writes',
+      'v6.23.5 — Added 5 new tests (16-20). Total: 21.',
+      'v6.23.5 — Aligned package.json and package-lock.json versions (6.23.5)',
+    ],
+  },
   {
     version: 'v6.23.4',
     buildNumber: 190,

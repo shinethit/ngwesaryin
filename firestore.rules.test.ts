@@ -268,6 +268,54 @@ describe('Firestore Rules — shared wallet security', () => {
     await assertSucceeds(deleteDoc(doc(asOwner(), 'users', OWNER_UID, 'categories', 'c1')));
   });
 
+  it('16. Outsider cannot DELETE owner wallet', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'wallets', 'w_outs'), {
+        id: 'w_outs', userId: OWNER_UID, name: 'T', nameEn: 'T',
+        balance: 0, color: '#000', icon: 'Wallet', createdAt: Date.now(),
+      });
+    });
+    await assertFails(deleteDoc(doc(asOutsider(), 'users', OWNER_UID, 'wallets', 'w_outs')));
+  });
+
+  it('17. Outsider cannot DELETE owner category', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'categories', 'c_outs'), {
+        id: 'c_outs', userId: OWNER_UID, name: 'T', nameEn: 'T',
+        type: 'expense', icon: 'Tag', color: '#000', createdAt: Date.now(),
+      });
+    });
+    await assertFails(deleteDoc(doc(asOutsider(), 'users', OWNER_UID, 'categories', 'c_outs')));
+  });
+
+  it('18. Outsider cannot DELETE owner budget', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'budgets', 'b_outs'), {
+        id: 'b_outs', userId: OWNER_UID, categoryId: 'c1',
+        calcType: 'fixed', value: 100, walletId: 'all',
+      });
+    });
+    await assertFails(deleteDoc(doc(asOutsider(), 'users', OWNER_UID, 'budgets', 'b_outs')));
+  });
+
+  it('19. Create with mismatched userId is rejected', async () => {
+    await assertFails(setDoc(doc(asOwner(), 'users', OWNER_UID, 'debts', 'bad_id'), {
+      id: 'bad_id', userId: 'OTHER_UID', type: 'receivable',
+      personName: 'T', totalAmount: 100, paidAmount: 0,
+      walletId: 'w1', status: 'active', repayments: [],
+      startDate: '2026-10-10', createdAt: Date.now(),
+    }));
+  });
+
+  it('20. Create with mismatched docId is rejected', async () => {
+    await assertFails(setDoc(doc(asOwner(), 'users', OWNER_UID, 'debts', 'doc_a'), {
+      id: 'doc_b', userId: OWNER_UID, type: 'receivable',
+      personName: 'T', totalAmount: 100, paidAmount: 0,
+      walletId: 'w1', status: 'active', repayments: [],
+      startDate: '2026-10-10', createdAt: Date.now(),
+    }));
+  });
+
   it('15. Owner can DELETE own budget', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'users', OWNER_UID, 'budgets', 'b1'), {

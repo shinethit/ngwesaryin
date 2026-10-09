@@ -563,33 +563,41 @@ export async function saveSharedWalletTransaction(
   const docIdToUse = resolveDocId(walletId, sharedDocId, undefined, currentUid);
   const path = `sharedWallets/${docIdToUse}/transactions/${tx.id}`;
   try {
+    // ── CANONICAL WRITE (must succeed) ──────────────────────
     const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', tx.id);
     await safeSetDoc(txRef, cleanForFirestore(tx), { merge: true });
 
     const ownerUidFromDocId = docIdToUse.includes('_') ? docIdToUse.split('_')[0] : undefined;
-    const isCurrentUserTheOwner = !ownerUidFromDocId || ownerUidFromDocId === currentUid;
-    if (currentUid && isCurrentUserTheOwner) {
+    const isOwner = !ownerUidFromDocId || ownerUidFromDocId === currentUid;
+
+    // ── MIRRORS (owner-only) ────────────────────────────────
+    // [v6.23.5] Do NOT write to owner's personal collections from a
+    // collaborator session — v6.22 rules (canWriteOwnerOnly) forbid it,
+    // and the owner reconciles via live shared-tx listener + next sync.
+    // Also skip shared-wallet balance mirror for non-owners (rules only
+    // permit updatedAt heartbeat for members).
+    if (isOwner && currentUid) {
       const userTxRef = doc(db, 'users', currentUid, 'transactions', tx.id);
-      await safeSetDoc(userTxRef, cleanForFirestore({ ...tx, userId: currentUid }), { merge: true }).catch(() => null);
-    }
+      try {
+        await safeSetDoc(userTxRef, cleanForFirestore({ ...tx, userId: currentUid }), { merge: true });
+      } catch (mirrorErr) {
+        // safeSetDoc internally enqueues to syncQueue on failure.
+        console.warn('[v6.23.5] owner personal tx mirror failed (queued):', mirrorErr);
+      }
 
-    const walletRef = doc(db, 'sharedWallets', docIdToUse);
-    await safeSetDoc(
-      walletRef,
-      cleanForFirestore({
-        balance: newWalletBalance,
-        updatedAt: new Date().toISOString(),
-      }),
-      { merge: true }
-    ).catch((err) => console.warn('Shared wallet parent balance update notice:', err));
-
-    if (ownerUidFromDocId && ownerUidFromDocId !== currentUid) {
-      const ownerTxRef = doc(db, 'users', ownerUidFromDocId, 'transactions', tx.id);
-      await safeSetDoc(ownerTxRef, cleanForFirestore({ ...tx, userId: ownerUidFromDocId }), { merge: true }).catch(() => null);
-
-      const rawWalletId = docIdToUse.replace(`${ownerUidFromDocId}_`, '');
-      const ownerWalletRef = doc(db, 'users', ownerUidFromDocId, 'wallets', rawWalletId);
-      await safeSetDoc(ownerWalletRef, cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }), { merge: true }).catch(() => null);
+      const walletRef = doc(db, 'sharedWallets', docIdToUse);
+      try {
+        await safeSetDoc(
+          walletRef,
+          cleanForFirestore({
+            balance: newWalletBalance,
+            updatedAt: new Date().toISOString(),
+          }),
+          { merge: true }
+        );
+      } catch (mirrorErr) {
+        console.warn('[v6.23.5] shared wallet balance mirror failed:', mirrorErr);
+      }
     }
 
     return true;
@@ -617,63 +625,52 @@ export async function deleteSharedWalletTransaction(
   const docIdToUse = resolveDocId(walletId, sharedDocId, undefined, currentUid);
   const path = `sharedWallets/${docIdToUse}/transactions/${txId}`;
   try {
-    // 1. Delete from canonical sharedWallets subcollection (REST-first).
+    // ── CANONICAL DELETE (must succeed, else return false) ──────
+    // [v6.23.5] REST-first, SDK fallback with strict error check.
+    let canonicalDeleted = false;
     try {
       const { deleteSharedTransactionDirectHttp } = await import('./directFirestoreHttp');
       const restRes = await deleteSharedTransactionDirectHttp(docIdToUse, txId);
-      if (!restRes.success) {
-        console.warn('[deleteSharedWalletTransaction] REST delete failed, SDK fallback:', restRes.error);
-        const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', txId);
-        await safeDeleteDoc(txRef).catch(() => null);
-      }
+      if (restRes.success) canonicalDeleted = true;
     } catch (restErr) {
-      console.warn('[deleteSharedWalletTransaction] REST delete error, SDK fallback:', restErr);
-      const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', txId);
-      await safeDeleteDoc(txRef).catch(() => null);
+      console.warn('[v6.23.5] REST canonical delete threw, trying SDK:', restErr);
+    }
+    if (!canonicalDeleted) {
+      try {
+        const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', txId);
+        await safeDeleteDoc(txRef);
+        canonicalDeleted = true;
+      } catch (sdkErr) {
+        console.error('[v6.23.5] canonical shared tx delete failed (REST + SDK):', sdkErr);
+        return false;
+      }
     }
 
-    // 2. Update shared wallet parent balance
-    const walletRef = doc(db, 'sharedWallets', docIdToUse);
-    await safeSetDoc(
-      walletRef,
-      cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }),
-      { merge: true }
-    ).catch(() => null);
+    // ── MIRRORS (owner-only) ────────────────────────────────────
+    const ownerUid = docIdToUse.includes('_') ? docIdToUse.split('_')[0] : undefined;
+    const isOwner = !ownerUid || ownerUid === currentUid;
 
-    // 3. Delete from current user's personal collection (REST-first).
-    if (currentUid) {
+    if (isOwner && currentUid) {
       try {
         const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
         const restRes = await deleteTransactionDirectHttp(txId, currentUid);
         if (!restRes.success) {
           const userTxRef = doc(db, 'users', currentUid, 'transactions', txId);
-          await safeDeleteDoc(userTxRef).catch(() => null);
+          await safeDeleteDoc(userTxRef);
         }
-      } catch {
-        const userTxRef = doc(db, 'users', currentUid, 'transactions', txId);
-        await safeDeleteDoc(userTxRef).catch(() => null);
+      } catch (e) {
+        console.warn('[v6.23.5] user personal delete mirror notice:', e);
       }
-    }
 
-    // 4. Delete from owner's personal collection when applicable.
-    if (docIdToUse.includes('_')) {
-      const ownerUid = docIdToUse.split('_')[0];
-      if (ownerUid && ownerUid !== currentUid) {
-        try {
-          const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
-          const restRes = await deleteTransactionDirectHttp(txId, ownerUid);
-          if (!restRes.success) {
-            const ownerTxRef = doc(db, 'users', ownerUid, 'transactions', txId);
-            await safeDeleteDoc(ownerTxRef).catch(() => null);
-          }
-        } catch {
-          const ownerTxRef = doc(db, 'users', ownerUid, 'transactions', txId);
-          await safeDeleteDoc(ownerTxRef).catch(() => null);
-        }
-
-        const rawWalletId = docIdToUse.replace(`${ownerUid}_`, '');
-        const ownerWalletRef = doc(db, 'users', ownerUid, 'wallets', rawWalletId);
-        await safeSetDoc(ownerWalletRef, cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }), { merge: true }).catch(() => null);
+      const walletRef = doc(db, 'sharedWallets', docIdToUse);
+      try {
+        await safeSetDoc(
+          walletRef,
+          cleanForFirestore({ balance: newWalletBalance, updatedAt: new Date().toISOString() }),
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn('[v6.23.5] balance mirror notice:', e);
       }
     }
 

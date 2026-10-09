@@ -82,7 +82,10 @@ describe('isTransferTransaction', () => {
 // =================================================
 // isWalletMatch
 // =================================================
-describe('isWalletMatch', () => {
+// =================================================
+// isWalletMatch — STRICT mode (default; no name matching)
+// =================================================
+describe('isWalletMatch (strict)', () => {
   it('returns false for empty target', () => {
     expect(isWalletMatch(W(), '')).toBe(false);
     expect(isWalletMatch(W(), null)).toBe(false);
@@ -105,16 +108,72 @@ describe('isWalletMatch', () => {
     expect(isWalletMatch(W({ id: 'w1', sharedDocId: 'uid123_w1' }), 'uid123_w1')).toBe(true);
   });
 
-  it('matches by name (case-insensitive)', () => {
-    expect(isWalletMatch(W({ id: 'w1', name: 'Cash' }), 'cash')).toBe(true);
-  });
-
   it('strips shared_<uid>_ prefix from target', () => {
     expect(isWalletMatch(W({ id: 'w1' }), 'shared_uid123_w1')).toBe(true);
   });
 
   it('handles shared_ prefixed wallet id', () => {
     expect(isWalletMatch(W({ id: 'shared_uid123_w1' }), 'w1')).toBe(true);
+  });
+
+  it('does NOT match by name in strict mode (S5 fix)', () => {
+    expect(isWalletMatch(W({ id: 'w1', name: 'Cash' }), 'Cash')).toBe(false);
+    expect(isWalletMatch(W({ id: 'w1', name: 'Cash' }), 'cash')).toBe(false);
+    expect(isWalletMatch(W({ id: 'w1', nameEn: 'Cash' }), 'Cash')).toBe(false);
+  });
+
+  it('does NOT fuzzy-match a substring of the wallet name', () => {
+    expect(isWalletMatch(W({ id: 'w1', name: 'My Savings Wallet' }), 'savings')).toBe(false);
+  });
+});
+
+// =================================================
+// isWalletMatch — LEGACY mode (allowNameMatch: true)
+// =================================================
+describe('isWalletMatch (legacy mode)', () => {
+  it('matches by exact name when allowNameMatch is true', () => {
+    expect(isWalletMatch(W({ id: 'w1', name: 'Cash' }), 'Cash', { allowNameMatch: true })).toBe(true);
+    expect(isWalletMatch(W({ id: 'w1', name: 'Cash' }), 'cash', { allowNameMatch: true })).toBe(true);
+    expect(isWalletMatch(W({ id: 'w1', nameEn: 'Cash' }), 'cash', { allowNameMatch: true })).toBe(true);
+  });
+
+  it('fuzzy-matches a >5-char substring of the wallet name', () => {
+    expect(isWalletMatch(W({ id: 'w1', name: 'My Savings Wallet' }), 'savings', { allowNameMatch: true })).toBe(true);
+  });
+
+  it('does not fuzzy-match when target looks like an ID', () => {
+    expect(isWalletMatch(W({ id: 'w1', name: 'Wallet ABC' }), 'wallet_abc', { allowNameMatch: true })).toBe(false);
+  });
+
+  it('still matches by exact id even with allowNameMatch', () => {
+    expect(isWalletMatch(W({ id: 'cash', name: 'Cash' }), 'cash', { allowNameMatch: true })).toBe(true);
+  });
+});
+
+// =================================================
+// isWalletMatch — duplicate-name regression (S5)
+// =================================================
+describe('isWalletMatch (duplicate-name regression)', () => {
+  it('two wallets sharing the same name never cross-match by ID', () => {
+    const a = W({ id: 'cash_1', name: 'Cash' });
+    const b = W({ id: 'cash_2', name: 'Cash' });
+    expect(isWalletMatch(a, 'Cash')).toBe(false);
+    expect(isWalletMatch(b, 'Cash')).toBe(false);
+    expect(isWalletMatch(a, 'cash_1')).toBe(true);
+    expect(isWalletMatch(b, 'cash_1')).toBe(false);
+    expect(isWalletMatch(a, 'cash_2')).toBe(false);
+    expect(isWalletMatch(b, 'cash_2')).toBe(true);
+  });
+
+  it('calculateWalletLiveBalance does not double-count for duplicate-named wallets', () => {
+    const a = W({ id: 'cash_1', name: 'Cash', initialBalance: 0 });
+    const b = W({ id: 'cash_2', name: 'Cash', initialBalance: 0 });
+    const txs = [
+      T({ amount: 500, type: 'income', walletId: 'cash_1' }),
+      T({ id: 'tx2', amount: 300, type: 'income', walletId: 'cash_2' }),
+    ];
+    expect(calculateWalletLiveBalance(a, txs)).toBe(500);
+    expect(calculateWalletLiveBalance(b, txs)).toBe(300);
   });
 });
 

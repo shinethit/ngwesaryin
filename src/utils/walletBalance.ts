@@ -36,45 +36,51 @@ export function isTransferTransaction(tx: Transaction | Partial<Transaction> | u
 }
 
 /**
- * Checks if a given wallet matches a target wallet ID, handling:
- * - Exact matches (wallet.id === targetId)
- * - Original ID matches (wallet.originalId === targetId)
- * - Shared Firestore doc ID matches (wallet.sharedDocId === targetId)
- * - Prefixed shared IDs: e.g. "shared_<uid>_<id>" vs "<id>"
- * - Name matching fallback
+ * Options for isWalletMatch.
  */
+export interface IsWalletMatchOptions {
+  /**
+   * Allow name-based matching (case-insensitive exact + bounded
+   * substring fuzzy). Default: false. Reserved for the LEGACY repair
+   * path (resolveTransactionWallet note-based fallbacks) where the
+   * target string is a wallet display name extracted from an old
+   * transaction note, not a stable identifier.
+   */
+  allowNameMatch?: boolean;
+}
+
 /**
- * Checks if a given wallet matches a target wallet ID or name.
+ * Checks whether a wallet matches a target identifier (or, optionally,
+ * a display name).
+ *
+ * [v6.12.0 S5] Default (strict) mode matches ONLY by stable IDs:
+ *   - wallet.id
+ *   - wallet.originalId
+ *   - wallet.sharedDocId
+ *   - shared_<uid>_<id> prefix stripping (still ID-based)
+ *
+ * Prevents two wallets with the same display name (e.g. duplicate
+ * "Cash") from aliasing each other's transactions.
+ *
+ * Name matching (exact case-insensitive + bounded substring fuzzy) is
+ * opt-in via { allowNameMatch: true }, and is only used by the legacy
+ * repair path.
  */
-export function isWalletMatch(wallet: Wallet, targetWalletId: string | undefined | null): boolean {
+export function isWalletMatch(
+  wallet: Wallet,
+  targetWalletId: string | undefined | null,
+  options: IsWalletMatchOptions = {}
+): boolean {
   if (!wallet || !targetWalletId) return false;
   const target = targetWalletId.trim();
   if (!target) return false;
 
+  // 1. Strict ID-based matches (always on)
   if (wallet.id === target) return true;
   if (wallet.originalId && wallet.originalId === target) return true;
   if (wallet.sharedDocId && wallet.sharedDocId === target) return true;
 
-  // Case-insensitive name comparisons
-  const cleanTarget = target.toLowerCase();
-  const wName = (wallet.name || '').trim().toLowerCase();
-  const wNameEn = (wallet.nameEn || '').trim().toLowerCase();
-
-  if (wName && wName === cleanTarget) return true;
-  if (wNameEn && wNameEn === cleanTarget) return true;
-
-  // Safe fuzzy name matching ONLY if cleanTarget is a human name string (NOT an ID or GUID)
-  const isTargetAnId = cleanTarget.includes('_') || cleanTarget.startsWith('wallet') || cleanTarget.startsWith('tx') || /\d{4,}/.test(cleanTarget);
-  if (!isTargetAnId) {
-    if (wName && wName.length >= 3 && cleanTarget.length >= 3) {
-      if (wName === cleanTarget || (cleanTarget.length > 5 && wName.includes(cleanTarget))) return true;
-    }
-    if (wNameEn && wNameEn.length >= 3 && cleanTarget.length >= 3) {
-      if (wNameEn === cleanTarget || (cleanTarget.length > 5 && wNameEn.includes(cleanTarget))) return true;
-    }
-  }
-
-  // If target starts with shared_
+  // 2. shared_<uid>_<id> prefix stripping (still ID-based)
   if (target.startsWith('shared_')) {
     const rawTarget = target.replace(/^shared_[^_]+_/, '');
     if (
@@ -90,29 +96,66 @@ export function isWalletMatch(wallet: Wallet, targetWalletId: string | undefined
     }
   }
 
-  // If wallet.id starts with shared_
   if (wallet.id.startsWith('shared_')) {
     const rawWalletId = wallet.id.replace(/^shared_[^_]+_/, '');
     if (target === rawWalletId || (wallet.originalId && target === wallet.originalId)) {
       return true;
     }
     const strippedOnce = wallet.id.replace(/^shared_/, '');
-    if (target === strippedOnce) {
-      return true;
+    if (target === strippedOnce) return true;
+  }
+
+  if (
+    wallet.sharedDocId &&
+    (wallet.sharedDocId.endsWith('_' + target) || wallet.sharedDocId === target)
+  ) {
+    return true;
+  }
+
+  if (wallet.id && (target.endsWith('_' + wallet.id) || target === 'shared_' + wallet.id)) {
+    return true;
+  }
+  if (
+    wallet.originalId &&
+    (target.endsWith('_' + wallet.originalId) || target === 'shared_' + wallet.originalId)
+  ) {
+    return true;
+  }
+
+  // 3. Name-based matches (opt-in legacy only)
+  if (options.allowNameMatch) {
+    const cleanTarget = target.toLowerCase();
+    const wName = (wallet.name || '').trim().toLowerCase();
+    const wNameEn = (wallet.nameEn || '').trim().toLowerCase();
+
+    if (wName && wName === cleanTarget) return true;
+    if (wNameEn && wNameEn === cleanTarget) return true;
+
+    // Bounded substring fuzzy — only when target looks like a human
+    // name, not an ID/GUID.
+    const isTargetAnId =
+      cleanTarget.includes('_') ||
+      cleanTarget.startsWith('wallet') ||
+      cleanTarget.startsWith('tx') ||
+      /\d{4,}/.test(cleanTarget);
+    if (!isTargetAnId) {
+      if (
+        wName &&
+        wName.length >= 3 &&
+        cleanTarget.length > 5 &&
+        wName.includes(cleanTarget)
+      ) {
+        return true;
+      }
+      if (
+        wNameEn &&
+        wNameEn.length >= 3 &&
+        cleanTarget.length > 5 &&
+        wNameEn.includes(cleanTarget)
+      ) {
+        return true;
+      }
     }
-  }
-
-  // If wallet.sharedDocId contains target (e.g. "<uid>_<walletId>")
-  if (wallet.sharedDocId && (wallet.sharedDocId.endsWith(`_${target}`) || wallet.sharedDocId === target)) {
-    return true;
-  }
-
-  // If target contains wallet.id or wallet.originalId (e.g. "<uid>_<walletId>")
-  if (wallet.id && (target.endsWith(`_${wallet.id}`) || target === `shared_${wallet.id}`)) {
-    return true;
-  }
-  if (wallet.originalId && (target.endsWith(`_${wallet.originalId}`) || target === `shared_${wallet.originalId}`)) {
-    return true;
   }
 
   return false;
@@ -177,9 +220,22 @@ export function resolveTransactionWallet(
 
   // 1. ALWAYS prioritize direct valid txWalletId matching FIRST
   if (txWalletId) {
-    if (map.has(txWalletId)) return map.get(txWalletId);
-    const directMatch = wallets.find((w) => isWalletMatch(w, txWalletId));
-    if (directMatch) return directMatch;
+    // [v6.12.0 S5] Strict ID-first resolution — no name shortcut.
+    const directIdMatch =
+      wallets.find((w) => w.id === txWalletId) ||
+      wallets.find((w) => w.originalId === txWalletId) ||
+      wallets.find((w) => w.sharedDocId === txWalletId);
+    if (directIdMatch) return directIdMatch;
+
+    // Strict isWalletMatch (handles shared_<uid>_<id> stripping etc.)
+    const strictMatch = wallets.find((w) => isWalletMatch(w, txWalletId));
+    if (strictMatch) return strictMatch;
+
+    // Legacy fallback — name matching only for historical data
+    const legacyMatch = wallets.find((w) =>
+      isWalletMatch(w, txWalletId, { allowNameMatch: true })
+    );
+    if (legacyMatch) return legacyMatch;
   }
 
   const note = tx?.note || '';
@@ -197,7 +253,10 @@ export function resolveTransactionWallet(
     if (!senderWallet) {
       const senderMatch = note.match(/⬅\s*([^\s(]+)/);
       if (senderMatch) {
-        senderWallet = wallets.find((w) => isWalletMatch(w, senderMatch[1]));
+        // [v6.12.0 S5] Legacy path — senderMatch[1] is a name from the note.
+        senderWallet = wallets.find((w) =>
+          isWalletMatch(w, senderMatch[1], { allowNameMatch: true })
+        );
       }
     }
     const recipientWallet = wallets.find((w) => !senderWallet || w.id !== senderWallet.id) || wallets[1] || wallets[0];
@@ -215,7 +274,10 @@ export function resolveTransactionWallet(
     if (!targetWallet) {
       const targetMatch = note.match(/➔\s*([^\s(]+)/);
       if (targetMatch) {
-        targetWallet = wallets.find((w) => isWalletMatch(w, targetMatch[1]));
+        // [v6.12.0 S5] Legacy path — targetMatch[1] is a name from the note.
+        targetWallet = wallets.find((w) =>
+          isWalletMatch(w, targetMatch[1], { allowNameMatch: true })
+        );
       }
     }
     const senderWallet = wallets.find((w) => !targetWallet || w.id !== targetWallet.id) || wallets[0];

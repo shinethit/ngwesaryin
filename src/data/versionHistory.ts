@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.23';
-export const CURRENT_BUILD_NUMBER = 186;
+export const CURRENT_APP_VERSION = 'v6.23.1';
+export const CURRENT_BUILD_NUMBER = 187;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.23.1',
+    buildNumber: 187,
+    releaseDate: '2026-10-10',
+    releaseTime: '2:30 AM (MMT)',
+    titleMy: 'Test Infrastructure — Rules Test Dependencies ပြန်လည်ဖြည့်စွက်ခြင်း',
+    titleEn: 'Test Infrastructure — Restore Rules Test Dependencies',
+    tag: 'fix',
+    tagLabelMy: 'Test ပြုပြင်မှု',
+    tagLabelEn: 'Test Fix',
+    descriptionMy: 'v6.23.0 တွင် Cloudflare build ကို ကျော်လွှားရန် @firebase/rules-unit-testing နှင့် firebase-tools ကို ဖျက်လိုက်ခြင်းကြောင့် local typecheck နှင့် test:rules များ ပျက်ခဲ့ပါသည်။ .npmrc (legacy-peer-deps) ဖြင့် Cloudflare install ကို handle လုပ်ပြီး dependency နှစ်ခုလုံးကို ပြန်လည် ဖြည့်စွက်လိုက်ပါသည်။',
+    descriptionEn: 'Restored @firebase/rules-unit-testing and firebase-tools (removed in v6.23.0 to work around Cloudflare install). The .npmrc file handles the peer conflict so both Cloudflare and local installs work.',
+    changesMy: [
+      'v6.23.1 — @firebase/rules-unit-testing ကို devDependency အဖြစ် ပြန်လည်ထည့်သွင်းခြင်း',
+      'v6.23.1 — firebase-tools ကို devDependency အဖြစ် ပြန်လည်ထည့်သွင်းခြင်း',
+      'v6.23.1 — .npmrc (legacy-peer-deps=true) ကို ထိန်းသိမ်းထားခြင်း',
+      'v6.23.1 — typecheck / unit tests / build အားလုံး အောင်မြင်ခြင်း',
+      'v6.23.1 — npm run test:rules ကို clean environment တွင် run နိုင်ခြင်း',
+    ],
+    changesEn: [
+      'v6.23.1 — Restored @firebase/rules-unit-testing as devDependency',
+      'v6.23.1 — Restored firebase-tools as devDependency',
+      'v6.23.1 — Kept .npmrc (legacy-peer-deps=true)',
+      'v6.23.1 — typecheck / unit tests / build all pass',
+      'v6.23.1 — npm run test:rules works on clean environment',
+    ],
+  },
   {
     version: 'v6.23.0',
     buildNumber: 186,

@@ -52,6 +52,12 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin() || isCollaborator(userId);
     }
 
+    // [v6.9-phase1b] Write permission = owner OR collaborator ONLY.
+    // Admins are excluded from writes on user data (analytics only).
+    function canWrite(userId) {
+      return isOwner(userId) || isCollaborator(userId);
+    }
+
     // Shared wallet membership check
     function isSharedWalletMember(walletId) {
       return isSignedIn()
@@ -200,51 +206,110 @@ service cloud.firestore {
     // =========================================================
     // 10. /users/{userId} and all subcollections
     // =========================================================
+    // [v6.9-phase1b] Split read vs write and validate payloads.
+    //   ROOT doc:  owner/master admin write; collaborator read-only
+    //   SUBS:      owner + collaborator write; admin read-only
+    //   Validation: userId must match path; id (where present) must
+    //               match doc; amount/type constrained on transactions.
+    // =========================================================
     match /users/{userId} {
-      allow read, write: if canAccess(userId);
+      // ----- Root user document -----
+      allow read: if canAccess(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isMasterAdmin();
+      allow delete: if isMasterAdmin();
 
+      // ----- Transactions -----
       match /transactions/{transactionId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow create: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == transactionId
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 0
+          && request.resource.data.type in ['income', 'expense', 'transfer'];
+        allow update: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == transactionId;
+        allow delete: if canWrite(userId);
       }
 
+      // ----- Debts -----
       match /debts/{debtId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == debtId;
       }
 
+      // ----- Wallets -----
       match /wallets/{walletId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == walletId;
       }
 
+      // ----- Categories -----
       match /categories/{categoryId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == categoryId;
       }
 
+      // ----- Budgets (doc id = categoryId, no id field required) -----
       match /budgets/{budgetId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId;
       }
 
+      // ----- Savings Targets -----
       match /savingsTargets/{targetId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId;
       }
 
+      // ----- Shops -----
       match /shops/{shopId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == shopId;
       }
 
+      // ----- Vehicles -----
       match /vehicles/{vehicleId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == vehicleId;
       }
 
+      // ----- Fuel Logs -----
       match /fuelLogs/{fuelLogId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == fuelLogId;
       }
 
+      // ----- Vehicle Maintenance -----
       match /vehicleMaintenance/{maintenanceId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == maintenanceId;
       }
 
+      // ----- Tire Pressure Logs -----
       match /tirePressureLogs/{logId} {
-        allow read, write: if canAccess(userId);
+        allow read: if canAccess(userId);
+        allow write: if canWrite(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == logId;
       }
     }
   }

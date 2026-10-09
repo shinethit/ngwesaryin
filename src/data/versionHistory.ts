@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.11';
-export const CURRENT_BUILD_NUMBER = 172;
+export const CURRENT_APP_VERSION = 'v6.12';
+export const CURRENT_BUILD_NUMBER = 173;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.12.0',
+    buildNumber: 173,
+    releaseDate: '2026-10-09',
+    releaseTime: '6:00 PM (MMT)',
+    titleMy: 'Wallet Identity Reliability — Exact-ID Matching (S5)',
+    titleEn: 'Wallet Identity Reliability — Exact-ID Matching (S5)',
+    tag: 'security',
+    tagLabelMy: 'ဒေတာ တိကျမှု မြှင့်တင်ခြင်း',
+    tagLabelEn: 'Identity Reliability',
+    descriptionMy: 'Wallet တူညီမှု စစ်ဆေးသည့် isWalletMatch() ကို name-based fuzzy matching မှ strict ID-based matching သို့ ပြောင်းလဲလိုက်ပါသည်။ "Cash" ကဲ့သို့ အမည်တူ Wallet ၂ ခု ရှိပါက ယခင်က အချင်းချင်း alias ဖြစ်ပြီး လက်ကျန်ငွေများ ရောနှောနိုင်ခဲ့သည်။ ယခုအခါ ID ဖြင့်သာ စစ်ဆေးသဖြင့် ထိုပြဿနာ လုံးဝ မရှိတော့ပါ။',
+    descriptionEn: 'Changed isWalletMatch() from name-based fuzzy matching to strict ID-based matching by default. Duplicate-named wallets (e.g. two "Cash") can no longer alias each other, eliminating balance cross-contamination.',
+    changesMy: [
+      'S5 — isWalletMatch() default ကို strict ID-only ဖြစ်စေခြင်း (id / originalId / sharedDocId)',
+      'Name matching ကို { allowNameMatch: true } ဖြင့်သာ ခေါ်သုံးနိုင်စေခြင်း',
+      'Name matching ကို resolveTransactionWallet ရဲ့ legacy repair path တွင်သာ သုံးစေခြင်း',
+      'အမည်တူ Wallet ၂ ခုရှိလျှင် လက်ကျန်ငွေ ရောနှောခြင်း လုံးဝ ရပ်တန့်',
+      'Test အသစ် ၇ ခု ထည့်သွင်းခြင်း (strict / legacy / duplicate-name regression)',
+      'Test စုစုပေါင်း 33 → 40 သို့ တိုးမြှင့်ခြင်း',
+    ],
+    changesEn: [
+      'S5 — isWalletMatch() defaults to strict ID-only matching (id / originalId / sharedDocId)',
+      'Name matching available only via { allowNameMatch: true } opt-in',
+      'Name matching restricted to the legacy repair path in resolveTransactionWallet',
+      'Duplicate-named wallets can no longer cross-contaminate balances',
+      'Added 7 new tests (strict mode / legacy mode / duplicate-name regression)',
+      'Total test count 33 → 40',
+    ],
+  },
   {
     version: 'v6.11.0',
     buildNumber: 172,

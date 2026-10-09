@@ -74,13 +74,24 @@ service cloud.firestore {
       return resource.data.plan != 'premium'
         && request.resource.data.plan == 'premium'
         && (
-          // Path A: first-time trial claim
+          // [v6.17.0] Path A: first-time trial claim — hardened.
+          // Requires: never previously had premium, exactly 3 months,
+          // a plausible ISO timestamp, and no code claimed.
           (
             request.resource.data.trialClaimed == true
             && resource.data.get('trialClaimed', false) != true
+            && resource.data.get('premiumActivatedAt', null) == null
+            && request.resource.data.premiumMonths == 3
+            && request.resource.data.premiumExpiresAt is string
+            && request.resource.data.premiumExpiresAt.size() >= 20
+            && request.resource.data.premiumExpiresAt.size() <= 30
+            && (
+              request.resource.data.premiumCodeUsed == null
+              || request.resource.data.premiumCodeUsed == ''
+            )
           )
           ||
-          // Path B: valid activation code owned by user
+          // Path B: valid activation code owned by user — unchanged
           (
             request.resource.data.premiumCodeUsed is string
             && request.resource.data.premiumCodeUsed.size() > 0
@@ -106,10 +117,6 @@ service cloud.firestore {
       return isSignedIn()
         && exists(/databases/$(database)/documents/sharedWallets/$(walletId))
         && get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     // =========================================================
@@ -240,10 +247,13 @@ service cloud.firestore {
     // 9. /sharedWallets/{walletId} — FIXED (was: any signed-in user)
     // =========================================================
     match /sharedWallets/{walletId} {
-      // LIST: Firestore cannot evaluate per-doc get()/exists() during a
-      // collection query because walletId is not bound. Allow any signed-in
-      // user to query; the client filters by where('sharedWith',
-      // 'array-contains', email) so only their docs are returned.
+      // ⚠️ KNOWN LIMITATION (as of v6.17.0):
+      // Firestore rules cannot enforce WHERE-clause filtering on list
+      // queries. The client queries with where('sharedWith',
+      // 'array-contains', email) but this is NOT a server-side
+      // restriction — a signed-in user could query the collection
+      // directly. Full fix requires moving to a per-user ref
+      // collection (architecture change). See handover v6.17.
       allow list: if isSignedIn();
 
       // GET (single doc): strict membership check (walletId IS bound here).

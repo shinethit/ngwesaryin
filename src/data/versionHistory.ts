@@ -14,10 +14,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.16';
-export const CURRENT_BUILD_NUMBER = 178;
+export const CURRENT_APP_VERSION = 'v6.17';
+export const CURRENT_BUILD_NUMBER = 179;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.17.0',
+    buildNumber: 179,
+    releaseDate: '2026-10-09',
+    releaseTime: '11:59 PM (MMT)',
+    titleMy: 'လုံခြုံရေး ခိုင်မာစေခြင်း — Firestore Rules ပြင်ဆင်မှု အဆင့် (၂)',
+    titleEn: 'Security Hardening — Firestore Rules Phase 2',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး မြှင့်တင်ခြင်း',
+    tagLabelEn: 'Security Hardening',
+    descriptionMy: 'Premium trial claim လမ်းကြောင်းကို ပိုမိုတင်းကျပ်လိုက်ပါသည်။ ပထမဆုံးအကြိမ် ရယူသူများအတွက်သာ ၃ လ အတိအကျသာ ခွင့်ပြုပြီး၊ premiumMonths ကို အလိုအလျောက် ပြင်ဆင်၍ အကန့်အသတ်မရှိ ရယူနိုင်ခြင်းကို ပိတ်လိုက်ပါသည်။',
+    descriptionEn: 'Hardened the premium trial claim path. First-time claims are restricted to exactly 3 months and prior premium history is checked. The self-write premium bypass via DevTools is now blocked.',
+    changesMy: [
+      'v6.17.0 — canUpgradePremium() trial path တွင် premiumMonths == 3 သာ ခွင့်ပြုခြင်း',
+      'v6.17.0 — Trial ရယူသူသည် premiumActivatedAt = null ဖြစ်ရမည် (ယခင် Premium ရရှိဖူးသူများ ငြင်းပယ်)',
+      'v6.17.0 — Trial ရယူစဉ် premiumCodeUsed ဗလာဖြစ်ရမည် (code ရယူခြင်းနှင့် ရောနှောခြင်း ပိတ်)',
+      'v6.17.0 — premiumExpiresAt သည် ISO timestamp format (20-30 chars) ဖြစ်ရမည်',
+      'v6.17.0 — isValidId() အသုံးမပြုသော function ကို ဖျက်သိမ်းခြင်း',
+      'v6.17.0 — sharedWallets list limitation ကို rules ထဲတွင် documentation comment ဖြင့် မှတ်တမ်းတင်ခြင်း',
+      'v6.17.0 — Rules ကို Firebase သို့ deploy ပြီးစီး',
+    ],
+    changesEn: [
+      'v6.17.0 — Trial path restricted to premiumMonths == 3',
+      'v6.17.0 — Trial requires premiumActivatedAt == null (prior premium history rejects)',
+      'v6.17.0 — Trial requires empty premiumCodeUsed',
+      'v6.17.0 — premiumExpiresAt must be a plausible ISO timestamp (20-30 chars)',
+      'v6.17.0 — Removed unused isValidId() function',
+      'v6.17.0 — Documented sharedWallets list limitation in rules comments',
+      'v6.17.0 — Rules deployed to Firebase',
+    ],
+  },
   {
     version: 'v6.16.0',
     buildNumber: 178,

@@ -28,7 +28,7 @@ import { syncQueue } from '../lib/syncQueue';
 import { Transaction, Debt, Wallet, Category, Budget, PlanType, InvitedWorkspace, ShopContact, Vehicle, FuelLog, VehicleMaintenance, TirePressureLog } from '../types';
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/storage';
 import { getSharedWalletDocId } from '../lib/sharedWalletService';
-import { computeSyncSignature, computeContentFingerprint } from '../utils/syncGuards';
+import { computeSyncSignature } from '../utils/syncGuards';
 import { isWalletMatch } from '../utils/walletBalance';
 
 interface AuthContextType {
@@ -796,20 +796,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const uid = auth.currentUser.uid;
     const targetUid = overrideWorkspaceId || currentWorkspaceId || uid;
 
-    // [v6.10.0 S3] Content-aware signature. Full per-entity hash replaces
-    // the old count+sum+firstId heuristic, which silently missed note/
-    // category/date/walletId edits and offsetting amount changes.
+    const txsSum = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const debtsSum = debts.reduce((sum, d) => sum + (d.totalAmount || 0) + (d.paidAmount || 0), 0);
+
     const currentSig = computeSyncSignature(
-      computeContentFingerprint(transactions),
-      computeContentFingerprint(debts),
-      computeContentFingerprint(wallets),
-      computeContentFingerprint(categories),
-      computeContentFingerprint(budgets, (b) => b.categoryId),
-      computeContentFingerprint(shops),
-      computeContentFingerprint(vehicles),
-      computeContentFingerprint(fuelLogs),
-      computeContentFingerprint(maintenanceLogs),
-      computeContentFingerprint(tireLogs)
+      transactions.length,
+      txsSum,
+      transactions[0]?.id || '',
+      debts.length,
+      debtsSum,
+      debts[0]?.id || '',
+      wallets.map((w) => `${w.id}:${w.balance}`).join(','),
+      categories?.length || 0,
+      budgets.map((b) => `${b.categoryId}:${b.value}`).join(','),
+      shops?.length || 0,
+      vehicles?.length || 0,
+      fuelLogs?.length || 0,
+      maintenanceLogs?.length || 0,
+      tireLogs?.length || 0
     );
 
     if (lastSyncedSignatureRef.current === currentSig && !forceSync) {

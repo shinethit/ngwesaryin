@@ -31,24 +31,101 @@ export function deduplicateById<T extends { id: string }>(items: T[]): T[] {
 }
 
 /**
- * Computes a fast lightweight fingerprint of the syncable state.
- * If this fingerprint matches the last synced state, cloud sync can be safely skipped.
+ * Sync fingerprint helpers
+ * -------------------------
+ * Short-circuits cloud sync when local state has not actually changed.
+ *
+ * Design:
+ * - Hashes CONTENT of every entity, not counts/sums/first-id. Before this,
+ *   editing a tx note/category/date/walletId (or offsetting two amounts)
+ *   would not change the signature, so the write was silently skipped and
+ *   other devices never saw the edit.
+ * - Order-independent: entities are sorted by key before hashing.
+ * - Non-content fields (userId, _userId, _docPath, _docSource) are
+ *   stripped so Firestore metadata does not create false positives.
+ * - FNV-1a 32-bit is enough for change detection at personal-app scale.
+ */
+
+const FINGERPRINT_IGNORED_KEYS = new Set([
+  'userId',
+  '_userId',
+  '_docPath',
+  '_docSource',
+]);
+
+function stableStringify(value: any): string {
+  if (value === null || value === undefined) return 'null';
+  const t = typeof value;
+  if (t === 'number') return Number.isFinite(value) ? String(value) : 'null';
+  if (t === 'string') return JSON.stringify(value);
+  if (t === 'boolean') return value ? '1' : '0';
+  if (Array.isArray(value)) {
+    return '[' + value.map(stableStringify).join(',') + ']';
+  }
+  if (t === 'object') {
+    const keys = Object.keys(value)
+      .filter((k) => !FINGERPRINT_IGNORED_KEYS.has(k))
+      .sort();
+    return (
+      '{' +
+      keys.map((k) => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') +
+      '}'
+    );
+  }
+  return 'null';
+}
+
+function fnv1a(str: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
+/**
+ * Deterministic content fingerprint of an entity array.
+ * @param items entities to hash (order-independent)
+ * @param keyOf stable id extractor; defaults to item.id ?? item.categoryId
+ */
+export function computeContentFingerprint<T>(
+  items: T[] | undefined | null,
+  keyOf: (item: T) => string = (item: any) =>
+    String(item?.id ?? item?.categoryId ?? '')
+): string {
+  if (!items || items.length === 0) return '0';
+  const sorted = [...items].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));
+  const body = sorted.map((it) => stableStringify(it)).join('\u0001');
+  return items.length + '_' + fnv1a(body);
+}
+
+/**
+ * Compact sync signature composed of per-collection fingerprints.
+ * If it matches the last-synced value, the cloud write can be skipped.
  */
 export function computeSyncSignature(
-  txsCount: number,
-  txsSum: number,
-  txsFirstId: string,
-  debtsCount: number,
-  debtsSum: number,
-  debtsFirstId: string,
-  walletsSummary: string,
-  catsCount: number,
-  budgetsSummary: string,
-  shopsCount: number,
-  vehiclesCount: number,
-  fuelCount: number,
-  maintCount: number,
-  tireCount: number
+  txsFingerprint: string,
+  debtsFingerprint: string,
+  walletsFingerprint: string,
+  categoriesFingerprint: string,
+  budgetsFingerprint: string,
+  shopsFingerprint: string,
+  vehiclesFingerprint: string,
+  fuelFingerprint: string,
+  maintFingerprint: string,
+  tiresFingerprint: string
 ): string {
-  return `txs:${txsCount}_${txsSum}_${txsFirstId}|debts:${debtsCount}_${debtsSum}_${debtsFirstId}|wallets:${walletsSummary}|cats:${catsCount}|budgets:${budgetsSummary}|shops:${shopsCount}|vehs:${vehiclesCount}|fuel:${fuelCount}|maint:${maintCount}|tires:${tireCount}`;
+  return (
+    'txs:' + txsFingerprint +
+    '|debts:' + debtsFingerprint +
+    '|wallets:' + walletsFingerprint +
+    '|cats:' + categoriesFingerprint +
+    '|budgets:' + budgetsFingerprint +
+    '|shops:' + shopsFingerprint +
+    '|vehs:' + vehiclesFingerprint +
+    '|fuel:' + fuelFingerprint +
+    '|maint:' + maintFingerprint +
+    '|tires:' + tiresFingerprint
+  );
 }

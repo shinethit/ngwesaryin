@@ -52,45 +52,6 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin() || isCollaborator(userId);
     }
 
-    // [v6.9-phase1b] Write permission = owner OR collaborator ONLY.
-    // Admins are excluded from writes on user data (analytics only).
-    function canWrite(userId) {
-      return isOwner(userId) || isCollaborator(userId);
-    }
-
-    // [v6.9-phase1c] Premium field write protection.
-    // A user may only upgrade their plan ONCE, and only via:
-    //   Path A: first-time free trial (trialClaimed goes false->true)
-    //   Path B: valid unused activation code they redeemed themselves
-    // After the initial upgrade, self-writes to premium fields are blocked.
-    function touchingPremiumFields(newData, oldData) {
-      return newData.diff(oldData).affectedKeys().hasAny([
-        'plan', 'premiumExpiresAt', 'premiumActivatedAt',
-        'premiumMonths', 'premiumCodeUsed'
-      ]);
-    }
-
-    function canUpgradePremium() {
-      return resource.data.plan != 'premium'
-        && request.resource.data.plan == 'premium'
-        && (
-          // Path A: first-time trial claim
-          (
-            request.resource.data.trialClaimed == true
-            && resource.data.get('trialClaimed', false) != true
-          )
-          ||
-          // Path B: valid activation code owned by user
-          (
-            request.resource.data.premiumCodeUsed is string
-            && request.resource.data.premiumCodeUsed.size() > 0
-            && exists(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed))
-            && get(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed)).data.isUsed == true
-            && get(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed)).data.usedBy == request.auth.uid
-          )
-        );
-    }
-
     // Shared wallet membership check
     function isSharedWalletMember(walletId) {
       return isSignedIn()
@@ -175,12 +136,9 @@ service cloud.firestore {
     // =========================================================
     // 6. /feedbacks/{feedbackId}
     // =========================================================
-    // [v6.9-phase1a] Feedbacks — was: anyone read/write (spam + privacy leak)
     match /feedbacks/{feedbackId} {
-      allow get, list: if isAdmin()
-        || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid;
+      allow get, list: if true;
+      allow create: if true;
       allow update, delete: if isAdmin()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
@@ -188,10 +146,9 @@ service cloud.firestore {
     // =========================================================
     // 7. /visitors/{visitorId} — FIXED (was: anyone can read/write)
     // =========================================================
-    // [v6.9-phase1a] Visitors — was: any signed-in user could list all visitor PII
     match /visitors/{visitorId} {
       allow create, update: if true;
-      allow get, list: if isAdmin();
+      allow get, list: if isAdmin() || isSignedIn();
       allow delete: if isAdmin();
     }
 
@@ -239,120 +196,51 @@ service cloud.firestore {
     // =========================================================
     // 10. /users/{userId} and all subcollections
     // =========================================================
-    // [v6.9-phase1b] Split read vs write and validate payloads.
-    //   ROOT doc:  owner/master admin write; collaborator read-only
-    //   SUBS:      owner + collaborator write; admin read-only
-    //   Validation: userId must match path; id (where present) must
-    //               match doc; amount/type constrained on transactions.
-    // =========================================================
     match /users/{userId} {
-      // ----- Root user document -----
-      allow read: if canAccess(userId);
-      allow create: if isOwner(userId);
-      // [v6.9-phase1c] Owner can update non-premium fields freely.
-      // Premium upgrades must satisfy canUpgradePremium().
-      // Master admin bypass for manual support.
-      allow update: if isMasterAdmin()
-        || (
-          isOwner(userId)
-          && (
-            !touchingPremiumFields(request.resource.data, resource.data)
-            || canUpgradePremium()
-          )
-        );
-      allow delete: if isMasterAdmin();
+      allow read, write: if canAccess(userId);
 
-      // ----- Transactions -----
       match /transactions/{transactionId} {
-        allow read: if canAccess(userId);
-        allow create: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == transactionId
-          && request.resource.data.amount is number
-          && request.resource.data.amount >= 0
-          && request.resource.data.type in ['income', 'expense', 'transfer'];
-        allow update: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == transactionId;
-        allow delete: if canWrite(userId);
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Debts -----
       match /debts/{debtId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == debtId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Wallets -----
       match /wallets/{walletId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == walletId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Categories -----
       match /categories/{categoryId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == categoryId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Budgets (doc id = categoryId, no id field required) -----
       match /budgets/{budgetId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Savings Targets -----
       match /savingsTargets/{targetId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Shops -----
       match /shops/{shopId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == shopId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Vehicles -----
       match /vehicles/{vehicleId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == vehicleId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Fuel Logs -----
       match /fuelLogs/{fuelLogId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == fuelLogId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Vehicle Maintenance -----
       match /vehicleMaintenance/{maintenanceId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == maintenanceId;
+        allow read, write: if canAccess(userId);
       }
 
-      // ----- Tire Pressure Logs -----
       match /tirePressureLogs/{logId} {
-        allow read: if canAccess(userId);
-        allow write: if canWrite(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.id == logId;
+        allow read, write: if canAccess(userId);
       }
     }
   }

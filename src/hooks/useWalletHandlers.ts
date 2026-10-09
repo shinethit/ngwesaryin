@@ -79,7 +79,7 @@ export function useWalletHandlers({
       return;
     }
     const id = `wallet_${Date.now()}`;
-    const newWallet = { ...walletData, id };
+    const newWallet = { ...walletData, id, updatedAt: Date.now() };
     unmarkWalletDeleted(id);
     setWallets((prev) => [...prev, newWallet]);
     if (user?.uid) {
@@ -93,6 +93,7 @@ export function useWalletHandlers({
   };
 
   const handleUpdateWallet = (updatedWallet: Wallet) => {
+    updatedWallet = { ...updatedWallet, updatedAt: Date.now() };
     setWallets((prev) => {
       const next = prev.map((w) => (w.id === updatedWallet.id ? updatedWallet : w));
       safeSetItem('ngwe_wallets', JSON.stringify(next));
@@ -229,7 +230,7 @@ export function useWalletHandlers({
       const next = prev.map((w) => {
         if (w.id === id) {
           const oldInitial = w.initialBalance ?? 0;
-          return { ...w, initialBalance: oldInitial + diff, balance: newBalance };
+          return { ...w, initialBalance: oldInitial + diff, balance: newBalance, updatedAt: Date.now() };
         }
         return w;
       });
@@ -283,6 +284,7 @@ export function useWalletHandlers({
       transferType: 'transfer_out',
       transferPairId: inId,
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
 
     const inTx: Transaction = {
@@ -298,6 +300,7 @@ export function useWalletHandlers({
       transferType: 'transfer_in',
       transferPairId: outId,
       createdAt: Date.now() + 1,
+      updatedAt: Date.now() + 1,
     };
 
     setTransactions((prev) => {
@@ -364,6 +367,7 @@ export function useWalletHandlers({
       ownerUid: target.ownerUid || user?.uid,
       ownerEmail: target.ownerEmail || user?.email || '',
       ownerName: target.ownerName || user?.displayName || user?.email?.split('@')[0] || 'Owner',
+      updatedAt: Date.now(),
     };
 
     const nextWallets = wallets.map((w) => (w.id === walletId ? updatedWallet : w));
@@ -395,6 +399,7 @@ export function useWalletHandlers({
       ...target,
       sharedWith: updatedShared,
       collaboratorPermissions: updatedPerms,
+      updatedAt: Date.now(),
     };
 
     const nextWallets = wallets.map((w) => (w.id === walletId ? updatedWallet : w));
@@ -434,6 +439,7 @@ export function useWalletHandlers({
     const updatedWallet: Wallet = {
       ...target,
       collaboratorPermissions: updatedPerms,
+      updatedAt: Date.now(),
     };
 
     setWallets((prev) =>
@@ -461,7 +467,7 @@ export function useWalletHandlers({
         const next = prev.map((w) => {
           if (w.id === walletId) {
             const newInitial = (w.initialBalance ?? 0) + difference;
-            return { ...w, initialBalance: newInitial, balance: actualBalance };
+            return { ...w, initialBalance: newInitial, balance: actualBalance, updatedAt: Date.now() };
           }
           return w;
         });

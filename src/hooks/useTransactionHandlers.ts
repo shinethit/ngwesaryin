@@ -178,7 +178,7 @@ export function useTransactionHandlers({
         return;
       }
 
-      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt } as Transaction;
+      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt, updatedAt: Date.now() } as Transaction;
       setTransactions((prev) => {
         const next = prev.map((t) => (t.id === editingTransaction.id ? updatedTx : t));
         safeSetItem('ngwe_transactions', JSON.stringify(next));
@@ -193,6 +193,7 @@ export function useTransactionHandlers({
             amount: cleanAmount,
             date: sanitizedTx.date,
             note: sanitizedTx.note || pairTx.note,
+            updatedAt: Date.now(),
           };
           setTransactions((prev) => {
             const next = prev.map((t) => (t.id === pairTx.id ? updatedPair : t));
@@ -312,6 +313,7 @@ export function useTransactionHandlers({
         transferToWalletId: toWalletId,
         transferPairId: inId,
         createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
 
       const inTx: Transaction = {
@@ -328,6 +330,7 @@ export function useTransactionHandlers({
         transferToWalletId: fromWalletId,
         transferPairId: outId,
         createdAt: Date.now() + 1,
+        updatedAt: Date.now() + 1,
       };
 
       setTransactions((prev) => {
@@ -365,6 +368,7 @@ export function useTransactionHandlers({
       ...sanitizedTx,
       id,
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
 
     setTransactions((prev) => {
@@ -441,6 +445,7 @@ export function useTransactionHandlers({
           costPerDistance,
           userId: user?.uid || 'guest',
           createdAt: Date.now(),
+          updatedAt: Date.now(),
         };
 
         setFuelLogs((prev) => {
@@ -479,6 +484,7 @@ export function useTransactionHandlers({
           note: sanitizedTx.note,
           userId: user?.uid || 'guest',
           createdAt: Date.now(),
+          updatedAt: Date.now(),
         };
 
         setVehicleMaintenance((prev) => {
@@ -513,6 +519,7 @@ export function useTransactionHandlers({
           note: sanitizedTx.note,
           userId: user?.uid || 'guest',
           createdAt: Date.now(),
+          updatedAt: Date.now(),
         };
 
         setTirePressureLogs((prev) => {

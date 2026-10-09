@@ -58,6 +58,7 @@ export function useDataHandlers({
       id,
       userId: user?.uid || 'guest',
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     setShops((prev) => [newShop, ...prev]);
 
@@ -73,6 +74,7 @@ export function useDataHandlers({
   };
 
   const handleUpdateShop = (updatedShop: ShopContact) => {
+    updatedShop = { ...updatedShop, updatedAt: Date.now() };
     setShops((prev) =>
       prev.map((s) => (s.id === updatedShop.id ? updatedShop : s))
     );
@@ -142,6 +144,7 @@ export function useDataHandlers({
     const cat: Category = {
       ...newCat,
       id: `cat_custom_${Date.now()}`,
+      updatedAt: Date.now(),
     };
     const nextCategories = [...categories, cat];
     setCategories(nextCategories);
@@ -161,6 +164,7 @@ export function useDataHandlers({
   };
 
   const handleUpdateCategory = (updatedCat: Category) => {
+    updatedCat = { ...updatedCat, updatedAt: Date.now() };
     if (plan !== 'premium') {
       setIsPremiumModalOpen(true);
       return;
@@ -241,6 +245,7 @@ export function useDataHandlers({
           updatedParent = {
             ...c,
             subCategories: [...existing, subCat],
+            updatedAt: Date.now(),
           };
           return updatedParent;
         }
@@ -275,6 +280,7 @@ export function useDataHandlers({
           updatedParent = {
             ...c,
             subCategories: (c.subCategories || []).filter((s) => s.id !== subCategoryId),
+            updatedAt: Date.now(),
           };
           return updatedParent;
         }
@@ -310,6 +316,7 @@ export function useDataHandlers({
             subCategories: (c.subCategories || []).map((s) =>
               s.id === updatedSub.id ? updatedSub : s
             ),
+            updatedAt: Date.now(),
           };
           return updatedParent;
         }

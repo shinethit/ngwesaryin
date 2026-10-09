@@ -35,6 +35,7 @@ export interface Transaction {
   transferPairId?: string;
   transferToWalletId?: string;
   createdAt: number;
+  updatedAt?: number;
   userId?: string;
   _userId?: string;
   _docPath?: string;
@@ -65,6 +66,7 @@ export interface Debt {
   repayments: Repayment[];
   status: 'active' | 'settled';
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface WalletPermissions {
@@ -97,6 +99,7 @@ export interface Wallet {
   isSharedFromOther?: boolean; // True if this wallet is shared to the current user by someone else
   originalId?: string; // Original wallet id if local id was namespaced
   sharedDocId?: string; // Document id in sharedWallets collection
+  updatedAt?: number;
 }
 
 export interface InvitedWorkspace {
@@ -123,6 +126,7 @@ export interface Category {
   color: string;
   subCategories?: SubCategory[];
   isCustom?: boolean;
+  updatedAt?: number;
 }
 
 export type BudgetCalcType = 'fixed' | 'percentage';
@@ -135,6 +139,7 @@ export interface BudgetConfig {
   calcType: BudgetCalcType; // 'fixed' | 'percentage'
   value: number; // if 'fixed': MMK amount; if 'percentage': percentage of monthly income (0-100)
   walletId: string; // 'all' or specific wallet id (e.g. 'cash', 'kpay')
+  updatedAt?: number;
 }
 
 export type Budget = BudgetConfig;
@@ -307,6 +312,7 @@ export interface ShopContact {
   kpayNumber?: string; // KPay Number / Details
   generalNotes?: string; // အထွေထွေမှတ်စုများ
   items?: { name: string; price: number; updatedAt: number; addedBy?: string }[]; // ပစ္စည်းစာရင်းနှင့် ဈေးနှုန်း
+  updatedAt?: number;
 }
 
 export interface PublicShop {
@@ -369,6 +375,7 @@ export interface FuelLog {
   costPerDistance?: number; // cost per km/mi
   userId: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export type VehicleServiceType =
@@ -407,6 +414,7 @@ export interface VehicleMaintenance {
   note?: string;
   userId: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface TirePressureLog {
@@ -431,6 +439,7 @@ export interface TirePressureLog {
   nextCheckDate?: string;
   userId: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface VehicleLinkData {

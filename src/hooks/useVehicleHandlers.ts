@@ -64,6 +64,7 @@ export function useVehicleHandlers({
       ...vehicle,
       id: vehId,
       createdAt: vehicle.createdAt || Date.now(),
+      updatedAt: Date.now(),
     };
 
     setVehicles((prev) => {
@@ -104,7 +105,7 @@ export function useVehicleHandlers({
     const targetVehicle = vehicles.find((v) => v.id === logData.vehicleId);
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
     const txId = logData.transactionId || `tx_fuel_${logId}`;
-    const log: FuelLog = { ...logData, id: logId, transactionId: txId, createdAt: logData.createdAt || Date.now() };
+    const log: FuelLog = { ...logData, id: logId, transactionId: txId, createdAt: logData.createdAt || Date.now(), updatedAt: Date.now() };
 
     // [FIX v6.1.3] Resolve wallet — if log.walletId no longer exists, fall back to first wallet.
     const resolvedWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))
@@ -130,6 +131,7 @@ export function useVehicleHandlers({
         date: log.date,
         note: `[ဆီထည့်စရိတ်] ${vehicleName} - ${log.liters.toLocaleString()} L @ ${log.pricePerLiter.toLocaleString()} Ks ${log.gasStation ? `(${log.gasStation})` : ''} ${log.odometer ? `[${log.odometer.toLocaleString()} km]` : ''}`,
         createdAt: log.createdAt || Date.now(),
+        updatedAt: Date.now(),
       };
 
       setTransactions((prev) => {
@@ -207,7 +209,7 @@ export function useVehicleHandlers({
     const targetVehicle = vehicles.find((v) => v.id === maintData.vehicleId);
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
     const txId = maintData.transactionId || `tx_maint_${maintId}`;
-    const maint: VehicleMaintenance = { ...maintData, id: maintId, transactionId: txId, createdAt: maintData.createdAt || Date.now() };
+    const maint: VehicleMaintenance = { ...maintData, id: maintId, transactionId: txId, createdAt: maintData.createdAt || Date.now(), updatedAt: Date.now() };
 
     // [FIX v6.1.3] Resolve wallet — if maint.walletId no longer exists, fall back to first wallet.
     const resolvedMaintWalletId = (maint.walletId && computedWallets.some((w) => w.id === maint.walletId))
@@ -233,6 +235,7 @@ export function useVehicleHandlers({
         date: maint.date,
         note: `[ယာဉ်ပြုပြင်ထိန်းသိမ်းစရိတ်] ${vehicleName} - ${maint.serviceType}: ${maint.title} ${maint.workshopName ? `(${maint.workshopName})` : ''}`,
         createdAt: maint.createdAt || Date.now(),
+        updatedAt: Date.now(),
       };
 
       setTransactions((prev) => {
@@ -310,7 +313,7 @@ export function useVehicleHandlers({
     const targetVehicle = vehicles.find((v) => v.id === logData.vehicleId);
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
     const txId = logData.transactionId || `tx_tire_${tireId}`;
-    const log: TirePressureLog = { ...logData, id: tireId, transactionId: txId, createdAt: logData.createdAt || Date.now() };
+    const log: TirePressureLog = { ...logData, id: tireId, transactionId: txId, createdAt: logData.createdAt || Date.now(), updatedAt: Date.now() };
 
     // [FIX v6.1.3] Resolve wallet — if log.walletId no longer exists, fall back to first wallet.
     const resolvedTireWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))
@@ -336,6 +339,7 @@ export function useVehicleHandlers({
         date: log.date,
         note: `[တာယာလေထိုး/စစ်ဆေးခ] ${vehicleName} - ${log.note || 'လေချိန်စစ်ဆေးခြင်း'}`,
         createdAt: log.createdAt || Date.now(),
+        updatedAt: Date.now(),
       };
 
       setTransactions((prev) => {

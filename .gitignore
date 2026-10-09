@@ -52,3 +52,6 @@ test-shared*
 *.bak-*
 *.backup-*
 v6.*.cjs
+
+i18n-scan.cjs
+i18n-scan-report.txt

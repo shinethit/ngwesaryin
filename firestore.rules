@@ -201,7 +201,7 @@ service cloud.firestore {
         && request.resource.data.browser is string
         && request.resource.data.browser.size() <= 100
         && request.resource.data.visitCount is number
-        && request.resource.data.visitCount >= 1
+        && request.resource.data.visitCount >= 0
         && request.resource.data.visitCount <= 10000000
         && request.resource.data.firstSeenAt is number
         && request.resource.data.lastActiveAt is number;
@@ -211,7 +211,7 @@ service cloud.firestore {
         && request.resource.data.device == resource.data.device
         && request.resource.data.browser == resource.data.browser
         && request.resource.data.visitCount is number
-        && request.resource.data.visitCount >= 1
+        && request.resource.data.visitCount >= 0
         && request.resource.data.visitCount <= 10000000
         && request.resource.data.lastActiveAt is number;
 

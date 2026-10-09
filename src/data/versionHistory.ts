@@ -14,10 +14,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.10';
-export const CURRENT_BUILD_NUMBER = 171;
+export const CURRENT_APP_VERSION = 'v6.11';
+export const CURRENT_BUILD_NUMBER = 172;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.11.0',
+    buildNumber: 172,
+    releaseDate: '2026-10-09',
+    releaseTime: '5:00 PM (MMT)',
+    titleMy: 'Storage Reliability Batch — LocalStorage User Scope (S4)',
+    titleEn: 'Storage Reliability Batch — LocalStorage User Scope (S4)',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး မြှင့်တင်ခြင်း',
+    tagLabelEn: 'Storage Isolation',
+    descriptionMy: 'LocalStorage ကို user တစ်ဦးချင်းစီအလိုက် သီးသန့် ခွဲခြားသိမ်းဆည်းစေသည့် စနစ် (S4) ကို ထည့်သွင်းလိုက်ပါသည်။ Account တစ်ခုမှ အခြားတစ်ခုသို့ ပြောင်းလဲချိန်၌ မူလ user ၏ ဒေတာများ ရောနှောခြင်း လုံးဝ မရှိတော့ဘဲ Guest Mode မှ Login သို့ ကူးပြောင်းချိန်တွင်လည်း ဒေတာ သန့်ရှင်းမှုကို ၁၀၀% အာမခံပေးပါသည်။',
+    descriptionEn: 'Namespaced every user-data localStorage key with a per-account scope (uid or guest). Account switches no longer leak data between users, and Guest → Login transitions preserve clean isolation.',
+    changesMy: [
+      'S4 — LocalStorage key များကို user scope (_u_<uid>_) ဖြင့် သီးသန့် ခွဲခြားသိမ်းဆည်းခြင်း',
+      'Account A → B ပြောင်းလဲချိန် A ၏ ဒေတာများ B ဆီသို့ ရောက်ရှိခြင်း လုံးဝ ရပ်တန့်',
+      'Guest Mode → Login ကူးပြောင်းချိန် guest ဒေတာ account ထဲ မရောက်စေရန် ကာကွယ်ခြင်း',
+      'Boot အချိန်တွင် last-known scope ကို အလိုအလျောက် restore ပြုလုပ်ပေးခြင်း',
+      'Legacy data တစ်ကြိမ်သာ migrate (first-login-claims) စနစ်ဖြင့် လုံခြုံစွာ ရွှေ့ပြောင်းခြင်း',
+      'Storage scope ပြောင်းလဲချိန်တွင် auto reload (120ms) ဖြင့် React state အားလုံး ပြန်လည် initialize ပြုလုပ်ခြင်း',
+      'ngwe_guest_mode / ngwe_pin / ngwe_lang / ngwe_theme တို့ကို device-global အဖြစ် ထိန်းသိမ်းထားခြင်း',
+    ],
+    changesEn: [
+      'S4 — Namespaced all user-data localStorage keys with per-uid scope',
+      'Account A → B switches no longer leak data across users',
+      'Guest Mode → Login preserves clean data isolation',
+      'Auto-restore last-known scope on cold boot before auth resolves',
+      'One-time legacy migration via first-login-claims strategy',
+      'Auto reload (120ms) on scope change to reinitialize React state cleanly',
+      'Kept ngwe_guest_mode / ngwe_pin / ngwe_lang / ngwe_theme as device-global',
+    ],
+  },
   {
     version: 'v6.10.0',
     buildNumber: 171,

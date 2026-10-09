@@ -26,7 +26,7 @@ import {
 import { auth, db, defaultDb, googleProvider, handleFirestoreError, OperationType, cleanForFirestore, isQuotaExhausted, pauseNetworkDueToQuota, resumeNetworkFromQuota, safeSetDoc, safeDeleteDoc, withTimeout } from '../lib/firebase';
 import { syncQueue } from '../lib/syncQueue';
 import { Transaction, Debt, Wallet, Category, Budget, PlanType, InvitedWorkspace, ShopContact, Vehicle, FuelLog, VehicleMaintenance, TirePressureLog } from '../types';
-import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/storage';
+import { safeGetItem, safeSetItem, safeRemoveItem, setStorageScope } from '../utils/storage';
 import { getSharedWalletDocId } from '../lib/sharedWalletService';
 import { computeSyncSignature, computeContentFingerprint } from '../utils/syncGuards';
 import { isWalletMatch } from '../utils/walletBalance';
@@ -389,6 +389,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Logic settled inside this callback
       try {
         setUser(currentUser);
+        // [v6.11.0 S4] Scope localStorage to the current user (or guest).
+        // Must run before any safe*Item() read/write in this callback.
+        setStorageScope(currentUser ? currentUser.uid : 'guest');
         if (currentUser) {
           console.log('AuthContext: User authenticated');
           setIsGuestSession(false);

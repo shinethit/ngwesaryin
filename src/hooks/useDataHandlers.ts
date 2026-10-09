@@ -104,7 +104,7 @@ export function useDataHandlers({
   const handleAddBudget = (config: BudgetConfig) => {
     setBudgets((prev) => {
       const filtered = prev.filter((b) => b.categoryId !== config.categoryId);
-      return [...filtered, config];
+      return [...filtered, { ...config, updatedAt: Date.now() }];
     });
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -117,7 +117,7 @@ export function useDataHandlers({
 
   const handleUpdateBudget = (config: BudgetConfig) => {
     setBudgets((prev) =>
-      prev.map((b) => (b.categoryId === config.categoryId ? config : b))
+      prev.map((b) => (b.categoryId === config.categoryId ? { ...config, updatedAt: Date.now() } : b))
     );
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;

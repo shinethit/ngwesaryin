@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.13';
-export const CURRENT_BUILD_NUMBER = 174;
+export const CURRENT_APP_VERSION = 'v6.13.1';
+export const CURRENT_BUILD_NUMBER = 175;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.13.1',
+    buildNumber: 175,
+    releaseDate: '2026-10-09',
+    releaseTime: '8:00 PM (MMT)',
+    titleMy: 'Entity updatedAt — Debt နှင့် Budget လွတ်နေမှု ဖြည့်စွက်ခြင်း',
+    titleEn: 'Entity updatedAt — Debt & Budget Coverage Completion',
+    tag: 'fix',
+    tagLabelMy: 'အခြေခံ အချက်အလက် ပြည့်စုံစေခြင်း',
+    tagLabelEn: 'Data Foundation Fix',
+    descriptionMy: 'v6.13.0 တွင် ထည့်သွင်းခဲ့သော updatedAt field များ၏ လွတ်ကျန်နေမှုများကို ဖြည့်စွက်လိုက်ပါသည်။ Debt လုပ်ဆောင်ချက် (၄) ခု (add / toggle status / record repayment / edit & delete repayment) နှင့် Budget လုပ်ဆောင်ချက် (၂) ခု (add / update) တို့တွင် updatedAt: Date.now() ထည့်သွင်းပြီး ပြည့်စုံစွာ ဖော်ပြပါသည်။',
+    descriptionEn: 'Completed the updatedAt coverage that was missed in v6.13.0. Added updatedAt: Date.now() to 4 debt lifecycle handlers (add, toggle status, record repayment, edit & delete repayment) and 2 budget handlers (add, update).',
+    changesMy: [
+      'v6.13.1 — useDebtHandlers.ts တွင် updatedAt ၄ နေရာ ဖြည့်စွက်ခြင်း (handleAddDebt, handleToggleDebtStatus, handleRecordRepaymentSubmit, handleEditRepayment + handleDeleteRepayment)',
+      'v6.13.1 — useDataHandlers.ts တွင် Budget.updatedAt ၂ နေရာ ဖြည့်စွက်ခြင်း (handleAddBudget, handleUpdateBudget)',
+      'v6.13.0 gap ကို လုံးဝ ပိတ်ခြင်း — entity အမျိုးအစားအားလုံး ယခုအခါ updatedAt ပြည့်စုံစွာ ရရှိနိုင်ပြီ',
+      'S3 content-hash signature နှင့် ဆက်လက် ကိုက်ညီခြင်း',
+      'Test 40 ခု ဆက်လက် pass ဖြစ်နေခြင်း',
+    ],
+    changesEn: [
+      'v6.13.1 — Filled 4 updatedAt spots in useDebtHandlers.ts (handleAddDebt, handleToggleDebtStatus, handleRecordRepaymentSubmit, handleEditRepayment + handleDeleteRepayment)',
+      'v6.13.1 — Filled 2 Budget.updatedAt spots in useDataHandlers.ts (handleAddBudget, handleUpdateBudget)',
+      'v6.13.0 gap now fully closed — all entity types reliably get updatedAt',
+      'S3 content-hash signature remains compatible',
+      '40 tests continue to pass',
+    ],
+  },
   {
     version: 'v6.13.0',
     buildNumber: 174,

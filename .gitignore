@@ -55,3 +55,6 @@ v6.*.cjs
 
 i18n-scan.cjs
 i18n-scan-report.txt
+
+# One-shot scripts (any .cjs at root)
+*.cjs

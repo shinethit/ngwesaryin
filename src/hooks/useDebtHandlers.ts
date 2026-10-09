@@ -227,9 +227,11 @@ export function useDebtHandlers({
     }
 
     const newPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    // [v6.9-phase2a-v2] Derive status from paidAmount vs totalAmount.
+    const derivedStatus: Debt['status'] = newPaid >= targetDebt.totalAmount ? 'settled' : 'active';
     const updatedDebt: Debt = {
       ...targetDebt,
-      status: newStatus,
+      status: derivedStatus,
       repayments: updatedRepayments,
       paidAmount: newPaid,
     };
@@ -297,8 +299,8 @@ export function useDebtHandlers({
 
     showToast(
       lang === 'my'
-        ? (newStatus === 'settled' ? 'အကြွေးကြေပြီ — ငွေစာရင်းထဲ ထည့်ပြီးပါပြီ ✓' : 'အကြွေးပြန်ဖွင့်ပြီ — ငွေစာရင်းမှ ဖျက်ပြီးပါပြီ ✓')
-        : (newStatus === 'settled' ? 'Debt settled — transaction recorded ✓' : 'Debt reopened — settlement removed ✓')
+        ? (derivedStatus === 'settled' ? 'အကြွေးကြေပြီ — ငွေစာရင်းထဲ ထည့်ပြီးပါပြီ ✓' : 'အကြွေးပြန်ဖွင့်ပြီ — ငွေစာရင်းမှ ဖျက်ပြီးပါပြီ ✓')
+        : (derivedStatus === 'settled' ? 'Debt settled — transaction recorded ✓' : 'Debt reopened — settlement removed ✓')
     );
   };
 
@@ -310,20 +312,31 @@ export function useDebtHandlers({
     note?: string
   ) => {
     let repTxId = '';  // [FIX v6.3.1] scope fix — declared before if block
+    let finalAmount = 0;  // [v6.9-phase2a-v2] function scope for cap
     const targetDebt = debts.find((d) => d.id === debtId);
     if (targetDebt) {
       const currentPaid = (targetDebt.repayments && targetDebt.repayments.length > 0)
         ? targetDebt.repayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
         : (targetDebt.paidAmount || 0);
       const remaining = Math.max(0, targetDebt.totalAmount - currentPaid);
+      finalAmount = amount; // [v6.9-phase2a-v2] default (capped below if needed)
+      if (remaining <= 0) {
+        showToast(
+          lang === 'my'
+            ? 'ဤအကြွေးကို အပြည့်အဝ ဆပ်ပြီးဖြစ်ပါသည်။ ထပ်မံ ဆပ်ရန် မလိုအပ်ပါ။'
+            : 'This debt is already fully paid. No repayment needed.'
+        );
+        return;
+      }
       if (amount > remaining) {
         const overAmount = amount - remaining;
         const confirmMsg = lang === 'my'
-          ? `ထည့်သွင်းမည့် ငွေပမာဏ (${amount.toLocaleString()} Ks) သည် ပေးရန်ကျန်ငွေ (${remaining.toLocaleString()} Ks) ထက် ${overAmount.toLocaleString()} Ks ပိုလွန်နေပါသည်။ ဤမှတ်တမ်းအတိုင်း ဆက်လက် သိမ်းဆည်းမည်လား?`
-          : `This is ${overAmount.toLocaleString()} more than the remaining balance of ${remaining.toLocaleString()} — record it anyway?`;
+          ? `ထည့်သွင်းမည့် ငွေပမာဏ (${amount.toLocaleString()} Ks) သည် ပေးရန်ကျန်ငွေ (${remaining.toLocaleString()} Ks) ထက် ${overAmount.toLocaleString()} Ks ပိုလွန်နေပါသည်။\n\nကျန်ငွေ ${remaining.toLocaleString()} Ks သာ သိမ်းဆည်းမည်လား?`
+          : `Amount (${amount.toLocaleString()}) exceeds remaining (${remaining.toLocaleString()}).\n\nCap to ${remaining.toLocaleString()} and record?`;
         if (!window.confirm(confirmMsg)) {
           return;
         }
+        finalAmount = remaining; // [v6.9-phase2a-v2] cap to remaining
       }
 
       const isReceivable = targetDebt.type === 'receivable';
@@ -331,7 +344,7 @@ export function useDebtHandlers({
       const repTx: Transaction = {
         id: repTxId,
         type: isReceivable ? 'income' : 'expense',
-        amount,
+        amount: finalAmount, // [v6.9-phase2a-v2] cap-aware
         category: isReceivable ? 'cat_debt_repayment' : 'cat_debt_payment',
         walletId,
         date,
@@ -362,7 +375,7 @@ export function useDebtHandlers({
         if (d.id === debtId) {
           const newRepayment = {
             id: `rep_${Date.now()}`,
-            amount,
+            amount: finalAmount, // [v6.9-phase2a-v2] cap-aware
             date,
             walletId,
             note,

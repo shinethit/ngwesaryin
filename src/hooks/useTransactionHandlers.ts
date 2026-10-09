@@ -178,7 +178,7 @@ export function useTransactionHandlers({
         return;
       }
 
-      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt, updatedAt: Date.now() } as Transaction;
+      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt, updatedAt: Date.now(), version: (editingTransaction.version || 0) + 1, lastEditedBy: user?.uid || 'guest' } as Transaction;
       setTransactions((prev) => {
         const next = prev.map((t) => (t.id === editingTransaction.id ? updatedTx : t));
         safeSetItem('ngwe_transactions', JSON.stringify(next));
@@ -194,6 +194,8 @@ export function useTransactionHandlers({
             date: sanitizedTx.date,
             note: sanitizedTx.note || pairTx.note,
             updatedAt: Date.now(),
+            version: (pairTx.version || 0) + 1,
+            lastEditedBy: user?.uid || 'guest',
           };
           setTransactions((prev) => {
             const next = prev.map((t) => (t.id === pairTx.id ? updatedPair : t));
@@ -314,6 +316,8 @@ export function useTransactionHandlers({
         transferPairId: inId,
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        version: 1,
+        lastEditedBy: user?.uid || 'guest',
       };
 
       const inTx: Transaction = {
@@ -331,6 +335,8 @@ export function useTransactionHandlers({
         transferPairId: outId,
         createdAt: Date.now() + 1,
         updatedAt: Date.now() + 1,
+        version: 1,
+        lastEditedBy: user?.uid || 'guest',
       };
 
       setTransactions((prev) => {
@@ -369,6 +375,8 @@ export function useTransactionHandlers({
       id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      version: 1,
+      lastEditedBy: user?.uid || 'guest',
     };
 
     setTransactions((prev) => {

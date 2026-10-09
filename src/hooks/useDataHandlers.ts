@@ -59,6 +59,8 @@ export function useDataHandlers({
       userId: user?.uid || 'guest',
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      version: 1,
+      lastEditedBy: user?.uid || 'guest',
     };
     setShops((prev) => [newShop, ...prev]);
 
@@ -74,7 +76,7 @@ export function useDataHandlers({
   };
 
   const handleUpdateShop = (updatedShop: ShopContact) => {
-    updatedShop = { ...updatedShop, updatedAt: Date.now() };
+    updatedShop = { ...updatedShop, updatedAt: Date.now(), version: (updatedShop.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
     setShops((prev) =>
       prev.map((s) => (s.id === updatedShop.id ? updatedShop : s))
     );
@@ -104,7 +106,7 @@ export function useDataHandlers({
   const handleAddBudget = (config: BudgetConfig) => {
     setBudgets((prev) => {
       const filtered = prev.filter((b) => b.categoryId !== config.categoryId);
-      return [...filtered, { ...config, updatedAt: Date.now() }];
+      return [...filtered, { ...config, updatedAt: Date.now(), version: 1, lastEditedBy: user?.uid || 'guest' }];
     });
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -117,7 +119,7 @@ export function useDataHandlers({
 
   const handleUpdateBudget = (config: BudgetConfig) => {
     setBudgets((prev) =>
-      prev.map((b) => (b.categoryId === config.categoryId ? { ...config, updatedAt: Date.now() } : b))
+      prev.map((b) => (b.categoryId === config.categoryId ? { ...config, updatedAt: Date.now(), version: (b.version || 0) + 1, lastEditedBy: user?.uid || 'guest' } : b))
     );
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -145,6 +147,8 @@ export function useDataHandlers({
       ...newCat,
       id: `cat_custom_${Date.now()}`,
       updatedAt: Date.now(),
+      version: 1,
+      lastEditedBy: user?.uid || 'guest',
     };
     const nextCategories = [...categories, cat];
     setCategories(nextCategories);
@@ -164,7 +168,7 @@ export function useDataHandlers({
   };
 
   const handleUpdateCategory = (updatedCat: Category) => {
-    updatedCat = { ...updatedCat, updatedAt: Date.now() };
+    updatedCat = { ...updatedCat, updatedAt: Date.now(), version: (updatedCat.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
     if (plan !== 'premium') {
       setIsPremiumModalOpen(true);
       return;
@@ -246,6 +250,8 @@ export function useDataHandlers({
             ...c,
             subCategories: [...existing, subCat],
             updatedAt: Date.now(),
+            version: (c.version || 0) + 1,
+            lastEditedBy: user?.uid || 'guest',
           };
           return updatedParent;
         }
@@ -281,6 +287,8 @@ export function useDataHandlers({
             ...c,
             subCategories: (c.subCategories || []).filter((s) => s.id !== subCategoryId),
             updatedAt: Date.now(),
+            version: (c.version || 0) + 1,
+            lastEditedBy: user?.uid || 'guest',
           };
           return updatedParent;
         }
@@ -317,6 +325,8 @@ export function useDataHandlers({
               s.id === updatedSub.id ? updatedSub : s
             ),
             updatedAt: Date.now(),
+            version: (c.version || 0) + 1,
+            lastEditedBy: user?.uid || 'guest',
           };
           return updatedParent;
         }

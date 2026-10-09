@@ -36,6 +36,8 @@ export interface Transaction {
   transferToWalletId?: string;
   createdAt: number;
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
   userId?: string;
   _userId?: string;
   _docPath?: string;
@@ -67,6 +69,8 @@ export interface Debt {
   status: 'active' | 'settled';
   createdAt: number;
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export interface WalletPermissions {
@@ -100,6 +104,8 @@ export interface Wallet {
   originalId?: string; // Original wallet id if local id was namespaced
   sharedDocId?: string; // Document id in sharedWallets collection
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export interface InvitedWorkspace {
@@ -127,6 +133,8 @@ export interface Category {
   subCategories?: SubCategory[];
   isCustom?: boolean;
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export type BudgetCalcType = 'fixed' | 'percentage';
@@ -140,6 +148,8 @@ export interface BudgetConfig {
   value: number; // if 'fixed': MMK amount; if 'percentage': percentage of monthly income (0-100)
   walletId: string; // 'all' or specific wallet id (e.g. 'cash', 'kpay')
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export type Budget = BudgetConfig;
@@ -313,6 +323,8 @@ export interface ShopContact {
   generalNotes?: string; // အထွေထွေမှတ်စုများ
   items?: { name: string; price: number; updatedAt: number; addedBy?: string }[]; // ပစ္စည်းစာရင်းနှင့် ဈေးနှုန်း
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export interface PublicShop {
@@ -352,6 +364,8 @@ export interface Vehicle {
   userId: string;
   createdAt: number;
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export interface FuelLog {
@@ -376,6 +390,8 @@ export interface FuelLog {
   userId: string;
   createdAt: number;
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export type VehicleServiceType =
@@ -415,6 +431,8 @@ export interface VehicleMaintenance {
   userId: string;
   createdAt: number;
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export interface TirePressureLog {
@@ -440,6 +458,8 @@ export interface TirePressureLog {
   userId: string;
   createdAt: number;
   updatedAt?: number;
+  version?: number;
+  lastEditedBy?: string;
 }
 
 export interface VehicleLinkData {

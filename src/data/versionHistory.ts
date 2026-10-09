@@ -14,10 +14,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.13.1';
-export const CURRENT_BUILD_NUMBER = 175;
+export const CURRENT_APP_VERSION = 'v6.14';
+export const CURRENT_BUILD_NUMBER = 176;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.14.0',
+    buildNumber: 176,
+    releaseDate: '2026-10-09',
+    releaseTime: '9:00 PM (MMT)',
+    titleMy: 'Multi-Device Conflict Resolution — အခြေခံအဆင့် (Phase 1)',
+    titleEn: 'Multi-Device Conflict Resolution — Phase 1 Foundation',
+    tag: 'feature',
+    tagLabelMy: 'ဒေတာ လုံခြုံရေး အုတ်မြစ်',
+    tagLabelEn: 'Data Safety Foundation',
+    descriptionMy: 'v7.0 multi-device conflict resolution ရဲ့ ပထမဆင့်အနေနှင့် entity အမျိုးအစားအားလုံးတွင် version (numeric) နှင့် lastEditedBy (uid) field များ ထည့်သွင်းလိုက်ပါသည်။ Device နှစ်လုံးတစ်ချိန်တည်း ပြင်ဆင်မိသည့်အခါ version ကွာခြားမှုကို ဖော်ထုတ်နိုင်မည်ဖြစ်ပြီး နောက်ဆင့်များတွင် conflict UI ပြသနိုင်မည် ဖြစ်ပါသည်။',
+    descriptionEn: 'Phase 1 of v7.0 multi-device conflict resolution. Added version (numeric) and lastEditedBy (uid) fields to all entity types. Enables conflict detection when two devices edit the same record — foundation for the upcoming conflict resolution UI.',
+    changesMy: [
+      'v6.14.0 — Entity ၉ မျိုးတွင် version?: number နှင့် lastEditedBy?: string ထည့်သွင်းခြင်း (Transaction, Debt, Wallet, Category, BudgetConfig, ShopContact, Vehicle, FuelLog, VehicleMaintenance, TirePressureLog)',
+      'Handler ၆ ဖိုင်တွင် create နှင့် edit အားလုံးတွင် version increment + lastEditedBy populate',
+      'Create လုပ်ချိန် version: 1 မှ စတင်ခြင်း',
+      'Edit လုပ်ချိန် (existing.version || 0) + 1 အဖြစ် တိုးမြှင့်ခြင်း',
+      'S3 content-hash signature နှင့် အလိုအလျောက် ကိုက်ညီခြင်း',
+      'Firestore rules မထိသေးပါ (S2 အတွက် အဆင်သင့်)',
+      'Test 40 ဆက်လက် pass',
+    ],
+    changesEn: [
+      'v6.14.0 — Added version?: number and lastEditedBy?: string to all entity types (Transaction, Debt, Wallet, Category, BudgetConfig, ShopContact, Vehicle, FuelLog, VehicleMaintenance, TirePressureLog)',
+      'Populated on every create/edit across 6 handler files',
+      'Create: version starts at 1',
+      'Edit: version incremented as (existing.version || 0) + 1',
+      'Auto-compatible with S3 content-hash signature',
+      'Firestore rules untouched (reserved for Phase 2)',
+      '40 tests continue to pass',
+    ],
+  },
   {
     version: 'v6.13.1',
     buildNumber: 175,

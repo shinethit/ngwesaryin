@@ -61,6 +61,8 @@ export function useDebtHandlers({
       status: 'active',
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      version: 1,
+      lastEditedBy: user?.uid || 'guest',
     };
 
     setDebts((prev) => [debt, ...prev]);
@@ -236,6 +238,8 @@ export function useDebtHandlers({
       repayments: updatedRepayments,
       paidAmount: newPaid,
       updatedAt: Date.now(),
+      version: (targetDebt.version || 0) + 1,
+      lastEditedBy: user?.uid || 'guest',
     };
 
     markDebtLocalWrite(id); // [v6.3.3] protect from cloud override
@@ -394,6 +398,8 @@ export function useDebtHandlers({
             repayments: nextRepayments,
             status: isFullySettled ? 'settled' : d.status,
             updatedAt: Date.now(),
+            version: (d.version || 0) + 1,
+            lastEditedBy: user?.uid || 'guest',
           };
 
           if (user?.uid) {
@@ -475,6 +481,8 @@ export function useDebtHandlers({
             repayments: updatedRepayments,
             status: isFullySettled ? 'settled' : 'active',
             updatedAt: Date.now(),
+            version: (d.version || 0) + 1,
+            lastEditedBy: user?.uid || 'guest',
           };
 
           if (user?.uid) {

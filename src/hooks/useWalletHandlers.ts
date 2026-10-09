@@ -79,7 +79,7 @@ export function useWalletHandlers({
       return;
     }
     const id = `wallet_${Date.now()}`;
-    const newWallet = { ...walletData, id, updatedAt: Date.now() };
+    const newWallet = { ...walletData, id, updatedAt: Date.now(), version: 1, lastEditedBy: user?.uid || 'guest' };
     unmarkWalletDeleted(id);
     setWallets((prev) => [...prev, newWallet]);
     if (user?.uid) {
@@ -93,7 +93,7 @@ export function useWalletHandlers({
   };
 
   const handleUpdateWallet = (updatedWallet: Wallet) => {
-    updatedWallet = { ...updatedWallet, updatedAt: Date.now() };
+    updatedWallet = { ...updatedWallet, updatedAt: Date.now(), version: (updatedWallet.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
     setWallets((prev) => {
       const next = prev.map((w) => (w.id === updatedWallet.id ? updatedWallet : w));
       safeSetItem('ngwe_wallets', JSON.stringify(next));
@@ -230,7 +230,7 @@ export function useWalletHandlers({
       const next = prev.map((w) => {
         if (w.id === id) {
           const oldInitial = w.initialBalance ?? 0;
-          return { ...w, initialBalance: oldInitial + diff, balance: newBalance, updatedAt: Date.now() };
+          return { ...w, initialBalance: oldInitial + diff, balance: newBalance, updatedAt: Date.now(), version: (w.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
         }
         return w;
       });
@@ -285,6 +285,8 @@ export function useWalletHandlers({
       transferPairId: inId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      version: 1,
+      lastEditedBy: user?.uid || 'guest',
     };
 
     const inTx: Transaction = {
@@ -301,6 +303,8 @@ export function useWalletHandlers({
       transferPairId: outId,
       createdAt: Date.now() + 1,
       updatedAt: Date.now() + 1,
+      version: 1,
+      lastEditedBy: user?.uid || 'guest',
     };
 
     setTransactions((prev) => {
@@ -368,6 +372,8 @@ export function useWalletHandlers({
       ownerEmail: target.ownerEmail || user?.email || '',
       ownerName: target.ownerName || user?.displayName || user?.email?.split('@')[0] || 'Owner',
       updatedAt: Date.now(),
+      version: (target.version || 0) + 1,
+      lastEditedBy: user?.uid || 'guest',
     };
 
     const nextWallets = wallets.map((w) => (w.id === walletId ? updatedWallet : w));
@@ -400,6 +406,8 @@ export function useWalletHandlers({
       sharedWith: updatedShared,
       collaboratorPermissions: updatedPerms,
       updatedAt: Date.now(),
+      version: (target.version || 0) + 1,
+      lastEditedBy: user?.uid || 'guest',
     };
 
     const nextWallets = wallets.map((w) => (w.id === walletId ? updatedWallet : w));
@@ -467,7 +475,7 @@ export function useWalletHandlers({
         const next = prev.map((w) => {
           if (w.id === walletId) {
             const newInitial = (w.initialBalance ?? 0) + difference;
-            return { ...w, initialBalance: newInitial, balance: actualBalance, updatedAt: Date.now() };
+            return { ...w, initialBalance: newInitial, balance: actualBalance, updatedAt: Date.now(), version: (w.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
           }
           return w;
         });

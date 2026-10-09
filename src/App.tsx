@@ -888,6 +888,26 @@ export default function App() {
 
   const limits = DEFAULT_PLAN_LIMITS[plan];
 
+  // [v6.19.0] One-shot ref backfill: writes a sharedWalletRefs pointer
+  // for every existing share so recipients can discover shared wallets
+  // without a collection-wide list() query. Idempotent.
+  const refBackfillDoneRef = useRef(false);
+  useEffect(() => {
+    if (refBackfillDoneRef.current) return;
+    if (!user?.uid || !user?.email) return;
+    if (wallets.length === 0) return;
+    refBackfillDoneRef.current = true;
+    import('./lib/sharedWalletService')
+      .then((m) => m.backfillMyRefs(wallets, user.uid, user.email || ''))
+      .then((count) => {
+        if (count > 0) console.log('[v6.19.0] backfilled ' + count + ' shared wallet refs');
+      })
+      .catch((err) => {
+        console.warn('[v6.19.0] ref backfill notice:', err);
+        refBackfillDoneRef.current = false; // allow retry on next render
+      });
+  }, [user?.uid, user?.email, wallets.length]);
+
   // Handlers
   const handleClearAllData = async (force = false) => {
     // [v6.7f] Require typing confirmation + auto-backup
@@ -999,7 +1019,7 @@ export default function App() {
       }, delay);
     };
 
-    // [v6.18] Only schedule if permission ALREADY granted.
+    // [v6.19] Only schedule if permission ALREADY granted.
     // We no longer auto-request at app start — that pops a dialog
     // before the user has seen the app and makes recovery hard
     // if they accidentally deny. Permission is requested manually
@@ -1008,7 +1028,7 @@ export default function App() {
       scheduleReminder();
     }
 
-    // [v6.18] Manual permission request handler.
+    // [v6.19] Manual permission request handler.
     // Settings UI fires: window.dispatchEvent(new Event('ngwe:request-notification'))
     const handleRequestNotification = () => {
       if (!('Notification' in window)) {

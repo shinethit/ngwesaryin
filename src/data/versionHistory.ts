@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.18';
-export const CURRENT_BUILD_NUMBER = 180;
+export const CURRENT_APP_VERSION = 'v6.19';
+export const CURRENT_BUILD_NUMBER = 181;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.19.0',
+    buildNumber: 181,
+    releaseDate: '2026-10-09',
+    releaseTime: '11:59 PM (MMT)',
+    titleMy: 'လုံခြုံရေး — sharedWalletRefs Backfill (Phase 3b-prep)',
+    titleEn: 'Security — sharedWalletRefs Backfill (Phase 3b-prep)',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး အဆင့်မြှင့်',
+    tagLabelEn: 'Security Upgrade',
+    descriptionMy: 'ရှိပြီးသား shared wallet များအားလုံးအတွက် per-recipient ref များကို App စတင်ဖွင့်ချိန်တွင် အလိုအလျောက် ဖန်တီးပေးမည့် စနစ်ကို ထည့်သွင်းလိုက်ပါသည်။ ဤအဆင့်သည် refs များ populate ဖြစ်စေရန် ပြင်ဆင်ခြင်းဖြစ်ပြီး၊ နောက်ဆင့် (v6.20.0) တွင် sharedWallets list rule ကို ပိတ်နိုင်မည် ဖြစ်ပါသည်။',
+    descriptionEn: 'Added boot-time ref backfill so every existing share gets a sharedWalletRefs pointer. Prepares the collection for safe closure of the sharedWallets list rule in v6.20.0.',
+    changesMy: [
+      'v6.19.0 — backfillMyRefs() function ကို sharedWalletService.ts တွင် ထည့်သွင်းခြင်း',
+      'v6.19.0 — App.tsx တွင် one-shot backfill effect ထည့်သွင်းခြင်း (user login ပြီးတိုင်း တစ်ကြိမ်)',
+      'v6.19.0 — ရှိပြီးသား shared wallet တိုင်းအတွက် recipient တစ်ဦးချင်းစီသို့ ref များ အလိုအလျောက် ရေးသွင်းခြင်း',
+      'v6.19.0 — Idempotent ဖြစ်သဖြင့် အကြိမ်ကြိမ် run လည်း ဘေးကင်းခြင်း',
+      'v6.19.0 — sharedWallets list rule မပြောင်းလဲသေးပါ (v6.20.0 အတွက် ရည်ရွယ်)',
+    ],
+    changesEn: [
+      'v6.19.0 — Added backfillMyRefs() to sharedWalletService.ts',
+      'v6.19.0 — One-shot backfill effect in App.tsx (runs once per login)',
+      'v6.19.0 — Auto-writes refs for every recipient on every existing share',
+      'v6.19.0 — Idempotent — safe to run repeatedly',
+      'v6.19.0 — sharedWallets list rule unchanged (reserved for v6.20.0)',
+    ],
+  },
   {
     version: 'v6.18.0',
     buildNumber: 180,

@@ -731,3 +731,42 @@ export async function leaveSharedWallet(
     return false;
   }
 }
+
+/**
+ * [v6.19.0] Backfill refs for every existing share.
+ * Idempotent — safe to call repeatedly. Returns number of refs written.
+ * Called once per session from App.tsx after wallets load.
+ */
+export async function backfillMyRefs(
+  wallets: Wallet[],
+  currentUid: string,
+  currentEmail: string
+): Promise<number> {
+  if (!currentUid || !currentEmail) return 0;
+  const emailLower = currentEmail.trim().toLowerCase();
+  let count = 0;
+  for (const w of wallets) {
+    if (!w || w.isSharedFromOther) continue;
+    if (!w.sharedWith || w.sharedWith.length === 0) continue;
+    const recipients = w.sharedWith
+      .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+      .filter((t) => t.includes('@') && t !== emailLower);
+    if (recipients.length === 0) continue;
+    const docId = getSharedWalletDocId(w, currentUid);
+    for (const r of recipients) {
+      try {
+        const okWrite = await writeSharedWalletRef(r, {
+          docId,
+          ownerUid: currentUid,
+          ownerEmail: emailLower,
+          walletName: w.name || '',
+          addedAt: Date.now(),
+        });
+        if (okWrite) count++;
+      } catch (e) {
+        console.warn('[v6.19.0] backfill notice for', r, docId, e);
+      }
+    }
+  }
+  return count;
+}

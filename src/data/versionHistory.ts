@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.6';
-export const CURRENT_BUILD_NUMBER = 161;
+export const CURRENT_APP_VERSION = 'v6.10';
+export const CURRENT_BUILD_NUMBER = 171;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.10.0',
+    buildNumber: 171,
+    releaseDate: '2026-10-09',
+    releaseTime: '4:00 PM (MMT)',
+    titleMy: 'Sync Reliability Batch — Canonical Content-Hash Sync Signature (S3)',
+    titleEn: 'Sync Reliability Batch — Canonical Content-Hash Sync Signature (S3)',
+    tag: 'feature',
+    tagLabelMy: 'Sync တိကျမှု မြှင့်တင်ခြင်း',
+    tagLabelEn: 'Sync Reliability',
+    descriptionMy: 'Sync signature ကို count+sum+firstId heuristic မှ per-entity content hash သို့ ပြောင်းလဲလိုက်သဖြင့် စာရင်း note / category / date / walletId ပြင်ဆင်ခြင်းနှင့် amount တွဲဖက်ပြောင်းလဲခြင်းများကို တိကျစွာ ဖမ်းယူနိုင်ပြီဖြစ်ပါသည်။ Device အချင်းချင်း sync လွတ်သွားခြင်း လုံးဝ မရှိတော့ပါ။',
+    descriptionEn: 'Replaced the count+sum+firstId sync signature with a per-entity content hash. Edits to note / category / date / walletId, and offsetting amount changes, are now reliably detected and synced across devices.',
+    changesMy: [
+      'S3 — Sync signature ကို content-hash (FNV-1a 32-bit) ဖြင့် အစားထိုးခြင်း',
+      'စာရင်း note / category / date / walletId ပြင်ဆင်ခြင်းကို ယခုအခါ တိကျစွာ ဖမ်းယူနိုင်ပြီ',
+      'Amount +100 / -100 တွဲဖက်ပြောင်းလဲမှုများ လွတ်သွားခြင်း မရှိတော့ပါ',
+      'userId / _userId / _docPath / _docSource များကို fingerprint မှ ဖယ်ထုတ်ထားသဖြင့် false positive မရှိ',
+      'Order-independent — entity key အလိုက် stable sort ပြုလုပ်ထားပါသည်',
+      'Migration မလိုအပ်ဘဲ ရှိပြီးသား record များအားလုံးနှင့် တိုက်ရိုက် အလုပ်လုပ်ပါသည်',
+    ],
+    changesEn: [
+      'S3 — Replaced count+sum+firstId signature with content-hash (FNV-1a 32-bit)',
+      'Note / category / date / walletId edits now reliably trigger cloud sync',
+      'Offsetting amount changes (e.g. +100 / -100) no longer slip through',
+      'Stripped userId / _userId / _docPath / _docSource from fingerprint to avoid false positives',
+      'Order-independent via stable sort by entity key',
+      'No migration required — works on all existing records',
+    ],
+  },
   {
     version: 'v6.6',
     buildNumber: 161,

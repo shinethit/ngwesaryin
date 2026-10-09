@@ -47,3 +47,8 @@ insert-*.cjs
 debug-*.cjs
 test_fetch*
 test-shared*
+
+# v6.10.0 — local artifact cleanup
+*.bak-*
+*.backup-*
+v6.*.cjs

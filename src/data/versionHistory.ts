@@ -14,10 +14,43 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.17';
-export const CURRENT_BUILD_NUMBER = 179;
+export const CURRENT_APP_VERSION = 'v6.18';
+export const CURRENT_BUILD_NUMBER = 180;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.18.0',
+    buildNumber: 180,
+    releaseDate: '2026-10-09',
+    releaseTime: '11:59 PM (MMT)',
+    titleMy: 'လုံခြုံရေး — sharedWalletRefs အခြေခံ စနစ် (Additive)',
+    titleEn: 'Security — sharedWalletRefs Infrastructure (Additive)',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး အခြေခံ',
+    tagLabelEn: 'Security Foundation',
+    descriptionMy: 'sharedWallets collection-wide query ကို ဖြေရှင်းရန် per-recipient pointer collection (sharedWalletRefs) ကို အခြေခံစနစ်အဖြစ် ထည့်သွင်းလိုက်ပါသည်။ ဤ version သည် additive ဖြစ်သဖြင့် ရှိပြီးသား shared wallets များ ဆက်လက်ပေါ်နေမည်ဖြစ်ပြီး နောက်ဆင့် (v6.19.0) တွင် legacy query ကို ဖျက်ပြီး list rule ကို ပိတ်နိုင်မည် ဖြစ်ပါသည်။',
+    descriptionEn: 'Added sharedWalletRefs per-recipient pointer collection as the foundation for a scoped shared-wallet read path. This version is additive — existing shared wallets continue to work. The next version (v6.19.0) will disable the legacy collection query and its list rule.',
+    changesMy: [
+      'v6.18.0 — src/lib/sharedWalletRefs.ts အသစ် ထည့်သွင်းခြင်း (writeSharedWalletRef, deleteSharedWalletRef, fetchMyRefs, subscribeMyRefs)',
+      'v6.18.0 — syncSharedWalletToCloud သည် recipient တစ်ဦးချင်းစီအတွက် ref များကို အလိုအလျောက် ရေးသွင်းခြင်း',
+      'v6.18.0 — subscribeIncomingSharedWallets သည် refs နှင့် legacy query ကို ပေါင်းစပ်၍ ပြသပေးခြင်း',
+      'v6.18.0 — leaveSharedWallet သည် မိမိ၏ ref ကို အလိုအလျောက် ဖျက်ပေးခြင်း',
+      'v6.18.0 — unshare-all လုပ်ချိန်တွင် recipient တိုင်း၏ ref များ ရှင်းလင်းခြင်း',
+      'v6.18.0 — Firestore Rules တွင် sharedWalletRefs/{email}/wallets/{docId} အတွက် rule အသစ် ထည့်ခြင်း',
+      'v6.18.0 — Rules ကို Firebase သို့ deploy ပြီးစီး',
+      'v6.18.0 — sharedWallets list rule ကို မပြောင်းလဲသေးပါ (v6.19.0 အတွက် ရည်ရွယ်)',
+    ],
+    changesEn: [
+      'v6.18.0 — New src/lib/sharedWalletRefs.ts (writeSharedWalletRef, deleteSharedWalletRef, fetchMyRefs, subscribeMyRefs)',
+      'v6.18.0 — syncSharedWalletToCloud auto-writes refs for each recipient',
+      'v6.18.0 — subscribeIncomingSharedWallets merges refs + legacy query',
+      'v6.18.0 — leaveSharedWallet auto-deletes own ref',
+      'v6.18.0 — unshare-all purges refs for all recipients',
+      'v6.18.0 — New Firestore Rules block for sharedWalletRefs/{email}/wallets/{docId}',
+      'v6.18.0 — Rules deployed to Firebase',
+      'v6.18.0 — sharedWallets list rule unchanged (reserved for v6.19.0)',
+    ],
+  },
   {
     version: 'v6.17.0',
     buildNumber: 179,

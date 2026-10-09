@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, cleanForFirestore, safeSetDoc, safeDeleteDoc, isQuotaExhausted } from './firebase';
 import { Wallet, Transaction } from '../types';
+import { writeSharedWalletRef, deleteRefsForWallet, fetchMyRefs } from './sharedWalletRefs';
 
 export interface SharedWalletPayload {
   id: string;
@@ -79,6 +80,16 @@ export async function syncSharedWalletToCloud(
     const normalizedSharedWith = Array.from(normalizedSet);
 
     if (normalizedSharedWith.length === 0) {
+      // [v6.18.0] Before removing, purge refs we previously wrote.
+      try {
+        const prevRecipients = Array.isArray(wallet.sharedWith) ? wallet.sharedWith : [];
+        await deleteRefsForWallet(scopedDocId, prevRecipients);
+        if (wallet.id !== scopedDocId) {
+          await deleteRefsForWallet(wallet.id, prevRecipients);
+        }
+      } catch (e) {
+        console.warn('[v6.18.0] unshare ref cleanup notice:', e);
+      }
       await safeDeleteDoc(doc(db, 'sharedWallets', scopedDocId)).catch(() => null);
       if (wallet.id !== scopedDocId) {
         await safeDeleteDoc(doc(db, 'sharedWallets', wallet.id)).catch(() => null);
@@ -114,6 +125,23 @@ export async function syncSharedWalletToCloud(
 
     const walletRef = doc(db, 'sharedWallets', scopedDocId);
     await safeSetDoc(walletRef, cleanForFirestore(payload), { merge: true });
+
+    // [v6.18.0] Mirror this share into per-recipient ref docs so each
+    // recipient can discover the wallet without a collection query.
+    try {
+      const refPayload = {
+        docId: scopedDocId,
+        ownerUid: currentUser.uid,
+        ownerEmail: (currentUser.email || '').trim().toLowerCase(),
+        walletName: wallet.name || '',
+        addedAt: Date.now(),
+      };
+      for (const recipient of normalizedSharedWith) {
+        await writeSharedWalletRef(recipient, refPayload);
+      }
+    } catch (refErr) {
+      console.warn('[v6.18.0] shared wallet ref fan-out partial failure:', refErr);
+    }
 
     if (transactionsForThisWallet !== undefined) {
       try {
@@ -297,6 +325,81 @@ export function subscribeIncomingSharedWallets(
     where('sharedWith', 'array-contains', cleanEmail)
   );
 
+  // [v6.18.0] Buffers merged from both sources (refs + legacy query).
+  // Each side calls emit() when it changes. Refs are authoritative for
+  // new shares; legacy query keeps pre-v6.18.0 shares visible until
+  // refs are populated everywhere.
+  let refWallets: Wallet[] = [];
+  let legacyWallets: Wallet[] = [];
+  const emit = () => {
+    const map = new Map<string, Wallet>();
+    for (const w of legacyWallets) {
+      const k = w.sharedDocId || w.id;
+      if (!map.has(k)) map.set(k, w);
+    }
+    for (const w of refWallets) {
+      const k = w.sharedDocId || w.id;
+      if (!map.has(k)) map.set(k, w);
+    }
+    onUpdate(Array.from(map.values()));
+  };
+
+  let refsHydrated = false;
+  // Hydrate refs one-shot first (works even if empty), then live-subscribe.
+  (async () => {
+    try {
+      const myRefs = await fetchMyRefs(cleanEmail);
+      const { getDoc } = await import('firebase/firestore');
+      const { db: _db } = await import('./firebase');
+      const fetched: Wallet[] = [];
+      for (const r of myRefs) {
+        try {
+          const snap = await getDoc(doc(_db, 'sharedWallets', r.docId));
+          if (!snap.exists()) continue;
+          const data = snap.data() as SharedWalletPayload;
+          if (!data) continue;
+          const sharedList: string[] = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+          const isMine = (data.ownerUid && data.ownerUid === currentUid)
+            || (data.ownerEmail && data.ownerEmail.trim().toLowerCase() === cleanEmail);
+          if (isMine) continue;
+          const isSharedToMe = sharedList.some((e) => typeof e === 'string' && e.trim().toLowerCase() === cleanEmail);
+          if (!isSharedToMe) continue;
+          const cleanDocId = snap.id.replace(/^shared_/, '');
+          const uniqueLocalId = `shared_${cleanDocId}`;
+          const rawOriginalId = (data as any).originalId || (data as any).id || cleanDocId;
+          const cleanOriginalId = String(rawOriginalId).replace(/^shared_([^_]+_)?/, '');
+          fetched.push({
+            id: uniqueLocalId,
+            originalId: cleanOriginalId,
+            sharedDocId: snap.id,
+            name: data.name || 'Shared Wallet',
+            nameEn: data.nameEn || data.name || 'Shared Wallet',
+            balance: Number(data.balance) || 0,
+            initialBalance: data.initialBalance !== undefined ? Number(data.initialBalance) : undefined,
+            includeInTotals: data.includeInTotals !== false,
+            color: data.color || '#6366F1',
+            icon: data.icon || 'Wallet',
+            currency: data.currency || 'MMK',
+            exchangeRate: data.exchangeRate || 1,
+            sharedWith: sharedList,
+            collaboratorPermissions: data.collaboratorPermissions || {},
+            ownerUid: data.ownerUid || '',
+            ownerEmail: data.ownerEmail || 'Partner',
+            ownerName: data.ownerName || data.ownerEmail?.split('@')[0] || 'Partner',
+            isSharedFromOther: true,
+          });
+        } catch (err) {
+          console.warn('[v6.18.0] ref fetch notice for', r.docId, err);
+        }
+      }
+      refWallets = fetched;
+      refsHydrated = true;
+      emit();
+    } catch (e) {
+      console.warn('[v6.18.0] initial ref hydration failed:', e);
+    }
+  })();
+
   const unsubscribe = onSnapshot(
     q,
     (snap) => {
@@ -354,7 +457,9 @@ export function subscribeIncomingSharedWallets(
         }
       });
 
-      onUpdate(Array.from(dedupedMap.values()));
+      // [v6.18.0] Hand to merge layer instead of calling onUpdate directly.
+      legacyWallets = Array.from(dedupedMap.values());
+      emit();
     },
     (error) => {
       handleFirestoreError(error, OperationType.LIST, 'sharedWallets');
@@ -606,6 +711,14 @@ export async function leaveSharedWallet(
             }),
             { merge: true }
           );
+          // [v6.18.0] Remove my own ref pointer for this wallet.
+          try {
+            await import('./sharedWalletRefs').then((m) =>
+              m.deleteSharedWalletRef(cleanEmail, docId)
+            );
+          } catch (e) {
+            console.warn('[v6.18.0] leave ref cleanup notice:', e);
+          }
           found = true;
         }
       } catch (err) {

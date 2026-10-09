@@ -244,7 +244,40 @@ service cloud.firestore {
     }
 
     // =========================================================
-    // 9. /sharedWallets/{walletId} — FIXED (was: any signed-in user)
+    // 8b. /sharedWalletRefs/{email}/wallets/{docId}
+    //     [v6.18.0] Per-recipient pointers so members can discover
+    //     shared wallets without a collection-wide list() query.
+    //     Refs contain no financial data — reader verifies the
+    //     actual sharedWallets/{docId} doc via its own get rule.
+    // =========================================================
+    match /sharedWalletRefs/{email}/wallets/{docId} {
+      // Only the owner of the email may read their refs.
+      allow get, list: if isSignedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == email;
+
+      // Anyone signed in may create a ref pointing to a doc they own.
+      // The ref does not grant access to any wallet data on its own.
+      allow create, update: if isSignedIn()
+        && request.resource.data.docId == docId
+        && request.resource.data.ownerUid is string
+        && request.resource.data.ownerUid.size() > 0
+        && request.resource.data.ownerUid.size() <= 128
+        && request.resource.data.walletName is string
+        && request.resource.data.walletName.size() <= 200
+        && request.resource.data.addedAt is number;
+
+      // Deletion: allow the recipient to remove their own ref, or the
+      // owner to clean up refs they created.
+      allow delete: if isSignedIn()
+        && (
+          (request.auth.token.email != null && request.auth.token.email.lower() == email)
+          || resource.data.ownerUid == request.auth.uid
+        );
+    }
+
+    // =========================================================
+    // 9. /sharedWallets/{walletId}
     // =========================================================
     match /sharedWallets/{walletId} {
       // ⚠️ KNOWN LIMITATION (as of v6.17.0):

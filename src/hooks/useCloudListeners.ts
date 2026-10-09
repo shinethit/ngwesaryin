@@ -12,6 +12,7 @@ import {
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { areArraysEqual } from '../utils/syncGuards';
+import { detectConflicts } from '../utils/conflictResolver';
 import { mergeById, mergeByKey } from '../utils/mergeById';
 import {
   markTxDeleted,
@@ -184,6 +185,7 @@ export function useCloudListeners({
           safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(confirmedServerTxIds)));
 
           setTransactions((prevLocal) => {
+            detectConflicts('transactions', prevLocal, confirmedServerTxs, user?.uid);
             const map = new Map<string, Transaction>();
             confirmedServerTxs.forEach((cloudTx) => {
               if (cloudTx && cloudTx.id && !deletedIds.includes(cloudTx.id)) {
@@ -274,6 +276,7 @@ export function useCloudListeners({
           }
 
           setWallets((prevLocal) => {
+            detectConflicts('wallets', prevLocal, cloudWallets, user?.uid);
             const merged = mergeById(prevLocal, cloudWallets);
             const sharedFromOther = prevLocal.filter((w) => (w.isSharedFromOther || w.id.startsWith('shared_')) && !deletedWalletIds.includes(w.id));
             const finalWallets = [...merged, ...sharedFromOther];
@@ -301,6 +304,7 @@ export function useCloudListeners({
             Array.from(debtLocalWriteRef.current.entries()).forEach(([id, ts]) => {
               if (now - ts > 20000) debtLocalWriteRef.current.delete(id);
             });
+            detectConflicts('debts', prevLocal, filtered, user?.uid);
             const merged = mergeById(prevLocal, filtered);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_debts', JSON.stringify(merged));
@@ -315,6 +319,7 @@ export function useCloudListeners({
           isRemoteUpdateRef.current = true;
           const cloudCats = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Category));
           setCategories((prevLocal) => {
+            detectConflicts('categories', prevLocal, cloudCats, user?.uid);
             const merged = mergeById(prevLocal, cloudCats);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_categories', JSON.stringify(merged));
@@ -329,6 +334,7 @@ export function useCloudListeners({
           isRemoteUpdateRef.current = true;
           const cloudBudgets = snap.docs.map((d) => ({ id: d.id, ...d.data() } as unknown as BudgetConfig));
           setBudgets((prevLocal) => {
+            detectConflicts('budgets', prevLocal, cloudBudgets, user?.uid);
             const merged = mergeByKey(prevLocal, cloudBudgets);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_budgets', JSON.stringify(merged));
@@ -343,6 +349,7 @@ export function useCloudListeners({
           isRemoteUpdateRef.current = true;
           const cloudShops = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShopContact));
           setShops((prevLocal) => {
+            detectConflicts('shops', prevLocal, cloudShops, user?.uid);
             const map = new Map<string, ShopContact>();
             prevLocal.forEach((s) => { if (s && s.id) map.set(s.id, s); });
             cloudShops.forEach((s) => { if (s && s.id) map.set(s.id, { ...map.get(s.id), ...s }); });
@@ -374,6 +381,7 @@ export function useCloudListeners({
           isRemoteUpdateRef.current = true;
           const cloudVehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Vehicle));
           setVehicles((prevLocal) => {
+            detectConflicts('vehicles', prevLocal, cloudVehicles, user?.uid);
             const map = new Map<string, Vehicle>();
             prevLocal.forEach((v) => { if (v && v.id) map.set(v.id, v); });
             cloudVehicles.forEach((v) => { if (v && v.id) map.set(v.id, { ...map.get(v.id), ...v }); });
@@ -391,6 +399,7 @@ export function useCloudListeners({
           isRemoteUpdateRef.current = true;
           const cloudLogs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FuelLog));
           setFuelLogs((prevLocal) => {
+            detectConflicts('fuelLogs', prevLocal, cloudLogs, user?.uid);
             const map = new Map<string, FuelLog>();
             prevLocal.forEach((f) => { if (f && f.id) map.set(f.id, f); });
             cloudLogs.forEach((f) => { if (f && f.id) map.set(f.id, { ...map.get(f.id), ...f }); });
@@ -408,6 +417,7 @@ export function useCloudListeners({
           isRemoteUpdateRef.current = true;
           const cloudMaint = snap.docs.map((d) => ({ id: d.id, ...d.data() } as VehicleMaintenance));
           setVehicleMaintenance((prevLocal) => {
+            detectConflicts('vehicleMaintenance', prevLocal, cloudMaint, user?.uid);
             const map = new Map<string, VehicleMaintenance>();
             prevLocal.forEach((m) => { if (m && m.id) map.set(m.id, m); });
             cloudMaint.forEach((m) => { if (m && m.id) map.set(m.id, { ...map.get(m.id), ...m }); });
@@ -425,6 +435,7 @@ export function useCloudListeners({
           isRemoteUpdateRef.current = true;
           const cloudTires = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TirePressureLog));
           setTirePressureLogs((prevLocal) => {
+            detectConflicts('tirePressureLogs', prevLocal, cloudTires, user?.uid);
             const map = new Map<string, TirePressureLog>();
             prevLocal.forEach((t) => { if (t && t.id) map.set(t.id, t); });
             cloudTires.forEach((t) => { if (t && t.id) map.set(t.id, { ...map.get(t.id), ...t }); });

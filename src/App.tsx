@@ -58,6 +58,7 @@ import { Toast } from './components/Toast';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { QuotaExceededNotificationBanner } from './components/QuotaExceededNotificationBanner';
+import { ConflictBanner } from './components/ConflictBanner';
 import { ReconcileBalanceModal } from './components/ReconcileBalanceModal';
 import { PinSetupModal } from './components/PinSetupModal';
 import { VersionHistoryModal } from './components/VersionHistoryModal';
@@ -998,7 +999,7 @@ export default function App() {
       }, delay);
     };
 
-    // [v6.14] Only schedule if permission ALREADY granted.
+    // [v6.15] Only schedule if permission ALREADY granted.
     // We no longer auto-request at app start — that pops a dialog
     // before the user has seen the app and makes recovery hard
     // if they accidentally deny. Permission is requested manually
@@ -1007,7 +1008,7 @@ export default function App() {
       scheduleReminder();
     }
 
-    // [v6.14] Manual permission request handler.
+    // [v6.15] Manual permission request handler.
     // Settings UI fires: window.dispatchEvent(new Event('ngwe:request-notification'))
     const handleRequestNotification = () => {
       if (!('Notification' in window)) {
@@ -1370,6 +1371,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-emerald-500 selection:text-white pb-24 relative">
       <QuotaExceededNotificationBanner lang={lang} onOpenSyncStatus={() => setIsSyncStatusDrawerOpen(true)} />
+      <ConflictBanner lang={lang} />
       <PWAInstallPrompt lang={lang} />
 
       <Navbar

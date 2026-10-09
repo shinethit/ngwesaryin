@@ -14,10 +14,43 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.14';
-export const CURRENT_BUILD_NUMBER = 176;
+export const CURRENT_APP_VERSION = 'v6.15';
+export const CURRENT_BUILD_NUMBER = 177;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.15.0',
+    buildNumber: 177,
+    releaseDate: '2026-10-09',
+    releaseTime: '10:30 PM (MMT)',
+    titleMy: 'Multi-Device Conflict Resolution — အပြည့်အစုံ (Phase 2)',
+    titleEn: 'Multi-Device Conflict Resolution — Complete',
+    tag: 'feature',
+    tagLabelMy: 'ဒေတာ လုံခြုံရေး အပြည့်အစုံ',
+    tagLabelEn: 'Data Safety Complete',
+    descriptionMy: 'v7.0 ရဲ့ ကျန်ရှိသော အဆင့်များ (S2 detection / S3 auto-resolution / S4 UI) ကို အပြည့်အစုံ ပြီးစီးလိုက်ပါသည်။ Device နှစ်လုံး တစ်ချိန်တည်း ပြင်ဆင်မိသည့်အခါ Cloud မှ ရှိပြီးသား (အသစ်ဆုံး) version ကို အလိုအလျောက် apply လုပ်ပြီး သင့်မူရင်း edit ကို Conflict Banner တွင် စစ်ဆေးနိုင်ပါပြီ။',
+    descriptionEn: 'v7.0 completed: S2 detection, S3 auto-resolution, S4 UI. When two devices edit the same record, the newer cloud version is auto-applied and the discarded local change is preserved for review in the ConflictBanner.',
+    changesMy: [
+      'v6.15.0 — Conflict detection engine (conflictResolver.ts) အသစ်ထည့်သွင်းခြင်း',
+      'Cloud listener ၉ ခုလုံးတွင် detectConflicts() ထည့်သွင်းခြင်း (transactions, wallets, debts, categories, budgets, shops, vehicles, fuelLogs, vehicleMaintenance, tirePressureLogs)',
+      'Detection rule: cloud.version > local.version AND cloud.lastEditedBy !== myUid AND local.updatedAt > cloud.updatedAt',
+      'Conflict records ကို localStorage (ngwe_conflicts) တွင် နောက်ဆုံး 100 ခုအထိ သိမ်းဆည်းခြင်း',
+      'ConflictBanner component အသစ် (top-right floating banner)',
+      'Conflict Modal တွင် local (discarded) နှင့် cloud (applied) snapshots side-by-side ပြသခြင်း',
+      'Per-record Acknowledge / Delete + Clear All လုပ်ဆောင်ချက်များ',
+      'Cloud version ကို apply လုပ်ခြင်းသည် ရှိပြီးသား merge logic အတိုင်း — ပြောင်းလဲမှု မရှိပါ',
+    ],
+    changesEn: [
+      'v6.15.0 — New conflict detection engine (conflictResolver.ts)',
+      'Injected detectConflicts() into all 9 cloud listeners',
+      'Detection rule: cloud.version > local.version AND cloud.lastEditedBy !== myUid AND local.updatedAt > cloud.updatedAt',
+      'Conflict records stored in localStorage (ngwe_conflicts), bounded to 100',
+      'New ConflictBanner component (top-right floating banner)',
+      'Conflict modal shows local (discarded) vs cloud (applied) snapshots side-by-side',
+      'Per-record Acknowledge / Delete + Clear All actions',
+      'Cloud-wins merge logic unchanged (already correct)',
+    ],
+  },
   {
     version: 'v6.14.0',
     buildNumber: 176,

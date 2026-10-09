@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.23.1';
-export const CURRENT_BUILD_NUMBER = 187;
+export const CURRENT_APP_VERSION = 'v6.23.3';
+export const CURRENT_BUILD_NUMBER = 189;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.23.3',
+    buildNumber: 189,
+    releaseDate: '2026-10-10',
+    releaseTime: '4:30 AM (MMT)',
+    titleMy: 'Permission Parity — Frontend Default ကို Rules နှင့် ကိုက်ညီစေခြင်း',
+    titleEn: 'Permission Parity — Align Frontend Default with Rules',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး ကိုက်ညီမှု',
+    tagLabelEn: 'Security Parity',
+    descriptionMy: 'v6.23.1 ပြန်လည်စစ်ဆေးချက်တွင် တွေ့ရှိသော P1-B ချို့ယွင်းချက်ကို ဖြေရှင်းလိုက်ပါသည်။ Frontend ၏ DEFAULT_WALLET_PERMISSIONS သည် all-true ဖြစ်ခဲ့ပြီး Firestore Rules ၏ default သည် all-false ဖြစ်ခဲ့သည်။ ယခုအခါ Frontend ကို deny-by-default သို့ ပြောင်းလဲပြီး owner-only cases မှသာ full permissions ရရှိစေပါသည်။',
+    descriptionEn: 'Fixed the P1-B mismatch from the v6.23.1 review. Frontend DEFAULT_WALLET_PERMISSIONS was all-true while Firestore Rules defaulted to all-false. Frontend is now deny-by-default; only owners receive full permissions.',
+    changesMy: [
+      'v6.23.3 — DEFAULT_WALLET_PERMISSIONS ကို all-false သို့ ပြောင်းခြင်း',
+      'v6.23.3 — OWNER_PERMISSIONS သီးသန့် constant အသစ် (owner အတွက်သာ)',
+      'v6.23.3 — Null wallet / null email / unmatched collaborator တို့တွင် deny-by-default ပြုလုပ်ခြင်း',
+      'v6.23.3 — Per-field fallback ကို ?? true မှ === true သို့ ပြောင်းခြင်း',
+      'v6.23.3 — Unknown action fallback ကို true မှ false သို့ ပြောင်းခြင်း',
+      'v6.23.3 — Frontend နှင့် Rules default တို့ ကိုက်ညီသွားခြင်း',
+    ],
+    changesEn: [
+      'v6.23.3 — Changed DEFAULT_WALLET_PERMISSIONS to all-false',
+      'v6.23.3 — Added OWNER_PERMISSIONS constant for owner-only use',
+      'v6.23.3 — Deny-by-default for null wallet / no email / unmatched collaborator',
+      'v6.23.3 — Changed per-field fallback from ?? true to === true',
+      'v6.23.3 — Changed unknown action fallback from true to false',
+      'v6.23.3 — Frontend and Rules default now aligned',
+    ],
+  },
   {
     version: 'v6.23.1',
     buildNumber: 187,

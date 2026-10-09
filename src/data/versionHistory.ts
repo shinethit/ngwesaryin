@@ -14,10 +14,70 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.20';
-export const CURRENT_BUILD_NUMBER = 182;
+export const CURRENT_APP_VERSION = 'v6.21.1';
+export const CURRENT_BUILD_NUMBER = 184;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.21.1',
+    buildNumber: 184,
+    releaseDate: '2026-10-09',
+    releaseTime: '11:59 PM (MMT)',
+    titleMy: 'လုံခြုံရေး — Shared Tx Permission Helper Fix',
+    titleEn: 'Security — Shared Tx Permission Helper Fix',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး ပြင်ဆင်မှု',
+    tagLabelEn: 'Security Fix',
+    descriptionMy: 'v6.21.0 မှ ထည့်သွင်းခဲ့သော sharedTxPerm helper သည် Firestore Rules ၏ syntax ကန့်သတ်ချက်ကြောင့် compile မဖြစ်ခဲ့ပါ။ ၄င်းကို flat per-action helpers ၆ ခုဖြင့် အစားထိုးပြီး shared transaction CRUD အားလုံးတွင် collaboratorPermissions map ကို Rules ထဲမှ စစ်ဆေးနိုင်စေပြီ ဖြစ်ပါသည်။',
+    descriptionEn: 'Replaced the broken sharedTxPerm helper (Firestore rules syntax limitation) with 6 flat per-action helpers and enabled server-side collaboratorPermissions enforcement on all shared transaction CRUD.',
+    changesMy: [
+      'v6.21.1 — Broken sharedTxPerm helper ကို ဖယ်ရှားခြင်း',
+      'v6.21.1 — Flat per-action helpers ၆ ခု ထည့်သွင်းခြင်း (isSWOwnerOrAddIncome/AddExpense/EditIncome/EditExpense/DeleteIncome/DeleteExpense)',
+      'v6.21.1 — Shared tx CRUD (create/update/delete) တွင် per-type rules ခွဲခြားခြင်း',
+      'v6.21.1 — Income vs Expense အတွက် သီးခြား permission checks ပြုလုပ်ခြင်း',
+      'v6.21.1 — Transfer ကို Expense အဖြစ် သတ်မှတ်ခြင်း (client model နှင့် တူညီ)',
+      'v6.21.1 — Rules ကို Firebase သို့ deploy ပြီးစီး (warning ကင်း)',
+    ],
+    changesEn: [
+      'v6.21.1 — Removed broken sharedTxPerm helper',
+      'v6.21.1 — Added 6 flat per-action helpers (isSWOwnerOrAddIncome/AddExpense/EditIncome/EditExpense/DeleteIncome/DeleteExpense)',
+      'v6.21.1 — Split shared tx CRUD rules by type (income vs expense/transfer)',
+      'v6.21.1 — Per-type permission checks for income vs expense',
+      'v6.21.1 — Transfers treated as expense (matches client model)',
+      'v6.21.1 — Rules deployed to Firebase (no warnings)',
+    ],
+  },
+  {
+    version: 'v6.21.0',
+    buildNumber: 183,
+    releaseDate: '2026-10-09',
+    releaseTime: '11:59 PM (MMT)',
+    titleMy: 'လုံခြုံရေး — Shared Wallet Permission Rule ပြင်ဆင်မှု (Phase 4)',
+    titleEn: 'Security — Shared Wallet Permission Rules (Phase 4)',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး ပြင်ဆင်မှု အရေးကြီး',
+    tagLabelEn: 'Critical Security Fix',
+    descriptionMy: 'v6.20 လုံခြုံရေး ပြန်လည်စစ်ဆေးချက်တွင် တွေ့ရှိသော အရေးကြီးဆုံး ချို့ယွင်းချက်ကို ပြင်ဆင်လိုက်ပါသည်။ Shared wallet ထဲ ဝင်ခွင့်ရထားသော member တစ်ဦးသည် sharedWith နှင့် collaboratorPermissions များကို ပြင်ဆင်နိုင်ခဲ့သည်။ ယခုအခါ owner သာလျှင် မျှဝေမှုနှင့် ခွင့်ပြုချက်များကို ပြောင်းလဲနိုင်ပြီး member များသည် balance နှင့် updatedAt ကိုသာ ပြင်နိုင်ပါသည်။',
+    descriptionEn: 'Fixed the critical finding from the v6.20 review: shared wallet members could edit sharedWith and collaboratorPermissions. Owner-only changes are now enforced. Members may only update balance and updatedAt.',
+    changesMy: [
+      'v6.21.0 — Shared wallet update rule ကို owner-only နှင့် member-only ၂ ပိုင်း ခွဲခြင်းခြင်း',
+      'v6.21.0 — Member များသည် sharedWith / collaboratorPermissions ကို လုံးဝ မပြင်နိုင်တော့ပါ',
+      'v6.21.0 — Shared transaction CRUD တွင် collaboratorPermissions map ကို Rules ထဲမှ စစ်ဆေးခြင်း (sharedTxPerm)',
+      'v6.21.0 — Shared transaction တွင် parent walletId နှင့် doc ရဲ့ walletId ကို ကိုက်ညီစေခြင်း',
+      'v6.21.0 — sharedWalletRefs create/update တွင် ownerUid == auth.uid ကို မဖြစ်မနေ စစ်ဆေးခြင်း',
+      'v6.21.0 — Rules ကို Firebase သို့ deploy ပြီးစီး',
+      'v6.21.0 — ကျန် High issues: collaborator workspace scope, Cloud Function premium, Emulator tests (နောက်ဆင့်)',
+    ],
+    changesEn: [
+      'v6.21.0 — Split shared wallet update rule into owner-only and member-only paths',
+      'v6.21.0 — Members can no longer edit sharedWith / collaboratorPermissions',
+      'v6.21.0 — Enforced collaboratorPermissions map for shared tx CRUD (sharedTxPerm helper)',
+      'v6.21.0 — Shared transaction must match parent walletId',
+      'v6.21.0 — sharedWalletRefs create/update requires ownerUid == auth.uid',
+      'v6.21.0 — Rules deployed to Firebase',
+      'v6.21.0 — Remaining High issues deferred: workspace roles, Cloud Function, Emulator tests',
+    ],
+  },
   {
     version: 'v6.20.0',
     buildNumber: 182,

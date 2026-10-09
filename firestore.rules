@@ -119,6 +119,34 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid;
     }
 
+    // [v6.21.2] Flat per-action permission helpers.
+    // Firestore rules don't support let bindings + chained get() inside
+    // a single function body; use one expression per permission.
+    function isSWOwnerOrAddIncome(walletId) {
+      return get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid
+        || get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('collaboratorPermissions', {}).get(userEmailLower(), {}).get('canAddIncome', false) == true;
+    }
+    function isSWOwnerOrAddExpense(walletId) {
+      return get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid
+        || get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('collaboratorPermissions', {}).get(userEmailLower(), {}).get('canAddExpense', false) == true;
+    }
+    function isSWOwnerOrEditIncome(walletId) {
+      return get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid
+        || get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('collaboratorPermissions', {}).get(userEmailLower(), {}).get('canEditIncome', false) == true;
+    }
+    function isSWOwnerOrEditExpense(walletId) {
+      return get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid
+        || get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('collaboratorPermissions', {}).get(userEmailLower(), {}).get('canEditExpense', false) == true;
+    }
+    function isSWOwnerOrDeleteIncome(walletId) {
+      return get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid
+        || get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('collaboratorPermissions', {}).get(userEmailLower(), {}).get('canDeleteIncome', false) == true;
+    }
+    function isSWOwnerOrDeleteExpense(walletId) {
+      return get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.ownerUid == request.auth.uid
+        || get(/databases/$(database)/documents/sharedWallets/$(walletId)).data.get('collaboratorPermissions', {}).get(userEmailLower(), {}).get('canDeleteExpense', false) == true;
+    }
+
     // =========================================================
     // 2. COLLECTION GROUP MATCHES (Admin Analytics Only)
     // =========================================================
@@ -256,11 +284,12 @@ service cloud.firestore {
         && request.auth.token.email != null
         && request.auth.token.email.lower() == email;
 
-      // Anyone signed in may create a ref pointing to a doc they own.
-      // The ref does not grant access to any wallet data on its own.
+      // [v6.21.0] Only the owner (auth.uid == ownerUid) may create/update
+      // a ref. Prevents fake refs pointed at arbitrary wallets or owners.
       allow create, update: if isSignedIn()
         && request.resource.data.docId == docId
         && request.resource.data.ownerUid is string
+        && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid.size() > 0
         && request.resource.data.ownerUid.size() <= 128
         && request.resource.data.walletName is string
@@ -291,30 +320,64 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid;
 
+      // [v6.21.0] Split owner vs member updates.
+      // Owner can update anything (sharing, permissions, metadata).
       allow update: if isSharedWalletOwner(walletId);
 
+      // Member can ONLY update balance + updatedAt.
+      // Explicitly forbid sharedWith / collaboratorPermissions changes.
       allow update: if isSharedWalletMember(walletId)
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['balance', 'updatedAt', 'sharedWith', 'collaboratorPermissions']);
+            .hasOnly(['balance', 'updatedAt'])
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.sharedWith == resource.data.sharedWith
+        && request.resource.data.collaboratorPermissions == resource.data.collaboratorPermissions;
 
       allow delete: if isSharedWalletOwner(walletId) || isAdmin();
 
-      // [v6.16.0] Split CRUD + payload validation for shared transactions.
+      // [v6.21.2] Per-type shared tx rules use flat permission helpers.
+      // Transfers are treated as expense (matches client model).
       match /transactions/{transactionId} {
         allow list, get: if isSharedWalletMember(walletId);
+
         allow create: if isSharedWalletMember(walletId)
           && request.resource.data.id == transactionId
+          && request.resource.data.walletId == walletId
           && request.resource.data.amount is number
           && request.resource.data.amount >= 0
           && request.resource.data.amount <= 999999999999
-          && request.resource.data.type in ['income', 'expense', 'transfer'];
-        allow update: if isSharedWalletMember(walletId)
+          && request.resource.data.type == 'income'
+          && isSWOwnerOrAddIncome(walletId);
+        allow create: if isSharedWalletMember(walletId)
           && request.resource.data.id == transactionId
+          && request.resource.data.walletId == walletId
           && request.resource.data.amount is number
           && request.resource.data.amount >= 0
           && request.resource.data.amount <= 999999999999
-          && request.resource.data.type in ['income', 'expense', 'transfer'];
-        allow delete: if isSharedWalletMember(walletId);
+          && request.resource.data.type in ['expense', 'transfer']
+          && isSWOwnerOrAddExpense(walletId);
+
+        allow update: if isSharedWalletMember(walletId)
+          && request.resource.data.walletId == walletId
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 0
+          && request.resource.data.amount <= 999999999999
+          && request.resource.data.type == 'income'
+          && isSWOwnerOrEditIncome(walletId);
+        allow update: if isSharedWalletMember(walletId)
+          && request.resource.data.walletId == walletId
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 0
+          && request.resource.data.amount <= 999999999999
+          && request.resource.data.type in ['expense', 'transfer']
+          && isSWOwnerOrEditExpense(walletId);
+
+        allow delete: if isSharedWalletMember(walletId)
+          && resource.data.type == 'income'
+          && isSWOwnerOrDeleteIncome(walletId);
+        allow delete: if isSharedWalletMember(walletId)
+          && resource.data.type in ['expense', 'transfer']
+          && isSWOwnerOrDeleteExpense(walletId);
       }
     }
 

@@ -244,7 +244,7 @@ service cloud.firestore {
     }
 
     // =========================================================
-    // 8b. /sharedWalletRefs/{email}/wallets/{docId}
+    // 8b. /sharedWalletRefs/{email}/wallets/{docId} — [v6.20.0] sharedWallets list disabled
     //     [v6.18.0] Per-recipient pointers so members can discover
     //     shared wallets without a collection-wide list() query.
     //     Refs contain no financial data — reader verifies the
@@ -280,14 +280,10 @@ service cloud.firestore {
     // 9. /sharedWallets/{walletId}
     // =========================================================
     match /sharedWallets/{walletId} {
-      // ⚠️ KNOWN LIMITATION (as of v6.17.0):
-      // Firestore rules cannot enforce WHERE-clause filtering on list
-      // queries. The client queries with where('sharedWith',
-      // 'array-contains', email) but this is NOT a server-side
-      // restriction — a signed-in user could query the collection
-      // directly. Full fix requires moving to a per-user ref
-      // collection (architecture change). See handover v6.17.
-      allow list: if isSignedIn();
+      // [v6.20.0] List DISABLED. Recipients discover shared wallets via
+      // the per-user sharedWalletRefs collection instead of a
+      // collection-wide query. get() is still allowed for members.
+      allow list: if false;
 
       // GET (single doc): strict membership check (walletId IS bound here).
       allow get: if isSharedWalletMember(walletId);

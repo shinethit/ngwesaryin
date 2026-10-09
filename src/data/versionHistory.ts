@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.19';
-export const CURRENT_BUILD_NUMBER = 181;
+export const CURRENT_APP_VERSION = 'v6.20';
+export const CURRENT_BUILD_NUMBER = 182;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.20.0',
+    buildNumber: 182,
+    releaseDate: '2026-10-09',
+    releaseTime: '11:59 PM (MMT)',
+    titleMy: 'လုံခြုံရေး — sharedWallets list ပိတ်ခြင်း (Phase 3b)',
+    titleEn: 'Security — sharedWallets list closure (Phase 3b)',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး အဆင့်ပြီးမြောက်',
+    tagLabelEn: 'Security Complete',
+    descriptionMy: 'v6.18.0 မှ ထည့်သွင်းခဲ့သော sharedWalletRefs စနစ်ကို အခြေခံပြီး sharedWallets collection ၏ list rule ကို လုံးဝ ပိတ်လိုက်ပါသည်။ ယခုအခါ signed-in user တစ်ဦးသည်လည်း အခြားသူများ၏ shared wallet docs များကို query ဖြင့် ရယူနိုင်ခြင်း လုံးဝ မရှိတော့ပါ။ Ref subscription ကို live listener အဖြစ် ပြောင်းလဲပြီး new shares များ ချက်ချင်းပေါ်လာစေရန် ပြင်ဆင်ထားပါသည်။',
+    descriptionEn: 'Closed the sharedWallets collection-wide list access using the sharedWalletRefs infrastructure from v6.18.0. Signed-in users can no longer query the collection. Switched ref hydration to a live listener so new shares appear without an app reopen.',
+    changesMy: [
+      'v6.20.0 — firestore.rules တွင် sharedWallets list: if false ဖြစ်စေခြင်း (leak လုံးဝ ပိတ်)',
+      'v6.20.0 — sharedWalletService.ts တွင် fetchMyRefs (one-shot) မှ subscribeMyRefs (live) သို့ ပြောင်းခြင်း',
+      'v6.20.0 — Shared wallet ref တွေကို live subscription ဖြင့် ချက်ချင်းတုံ့ပြန်စေခြင်း',
+      'v6.20.0 — Ref unsubscribe ကို cleanup အလိုအလျောက် ပြုလုပ်စေခြင်း',
+      'v6.20.0 — Rules ကို Firebase သို့ deploy ပြီးစီး',
+      'v6.20.0 — Rollback လိုအပ်ပါက Console မှ rules backup ပြန် paste ရုံ',
+    ],
+    changesEn: [
+      'v6.20.0 — sharedWallets list: if false (leak fully closed)',
+      'v6.20.0 — Replaced one-shot fetchMyRefs with live subscribeMyRefs',
+      'v6.20.0 — Shared wallet refs now update instantly without app reopen',
+      'v6.20.0 — Cleaned up ref unsubscribe lifecycle',
+      'v6.20.0 — Rules deployed to Firebase',
+      'v6.20.0 — Rollback: paste rules backup in Console',
+    ],
+  },
   {
     version: 'v6.19.0',
     buildNumber: 181,

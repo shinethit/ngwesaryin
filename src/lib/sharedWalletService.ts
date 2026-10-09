@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, cleanForFirestore, safeSetDoc, safeDeleteDoc, isQuotaExhausted } from './firebase';
 import { Wallet, Transaction } from '../types';
-import { writeSharedWalletRef, deleteRefsForWallet, fetchMyRefs } from './sharedWalletRefs';
+import { writeSharedWalletRef, deleteRefsForWallet, fetchMyRefs, subscribeMyRefs } from './sharedWalletRefs';
 
 export interface SharedWalletPayload {
   id: string;
@@ -344,18 +344,29 @@ export function subscribeIncomingSharedWallets(
     onUpdate(Array.from(map.values()));
   };
 
-  let refsHydrated = false;
-  // Hydrate refs one-shot first (works even if empty), then live-subscribe.
-  (async () => {
-    try {
-      const myRefs = await fetchMyRefs(cleanEmail);
+  // [v6.20.0] Live ref subscription — replaces the v6.18 one-shot fetch.
+  // New shares now appear without requiring an app reopen.
+  const __refDocCache = new Map<string, Wallet>();
+  const unsubRefs = subscribeMyRefs(
+    cleanEmail,
+    async (myRefs) => {
       const { getDoc } = await import('firebase/firestore');
       const { db: _db } = await import('./firebase');
-      const fetched: Wallet[] = [];
+      const activeDocIds = new Set(myRefs.map((r) => r.docId));
+      const next: Wallet[] = [];
+
+      // Keep wallets that were just added to a ref but haven't fetched yet
+      for (const [id, w] of __refDocCache.entries()) {
+        if (!activeDocIds.has(id)) __refDocCache.delete(id);
+      }
+
       for (const r of myRefs) {
         try {
           const snap = await getDoc(doc(_db, 'sharedWallets', r.docId));
-          if (!snap.exists()) continue;
+          if (!snap.exists()) {
+            __refDocCache.delete(r.docId);
+            continue;
+          }
           const data = snap.data() as SharedWalletPayload;
           if (!data) continue;
           const sharedList: string[] = Array.isArray(data.sharedWith) ? data.sharedWith : [];
@@ -364,11 +375,13 @@ export function subscribeIncomingSharedWallets(
           if (isMine) continue;
           const isSharedToMe = sharedList.some((e) => typeof e === 'string' && e.trim().toLowerCase() === cleanEmail);
           if (!isSharedToMe) continue;
+
           const cleanDocId = snap.id.replace(/^shared_/, '');
           const uniqueLocalId = `shared_${cleanDocId}`;
           const rawOriginalId = (data as any).originalId || (data as any).id || cleanDocId;
           const cleanOriginalId = String(rawOriginalId).replace(/^shared_([^_]+_)?/, '');
-          fetched.push({
+
+          const wallet: Wallet = {
             id: uniqueLocalId,
             originalId: cleanOriginalId,
             sharedDocId: snap.id,
@@ -387,18 +400,22 @@ export function subscribeIncomingSharedWallets(
             ownerEmail: data.ownerEmail || 'Partner',
             ownerName: data.ownerName || data.ownerEmail?.split('@')[0] || 'Partner',
             isSharedFromOther: true,
-          });
+          };
+          __refDocCache.set(snap.id, wallet);
         } catch (err) {
-          console.warn('[v6.18.0] ref fetch notice for', r.docId, err);
+          console.warn('[v6.20.0] ref fetch notice for', r.docId, err);
         }
       }
-      refWallets = fetched;
-      refsHydrated = true;
+
+      refWallets = Array.from(__refDocCache.values());
       emit();
-    } catch (e) {
-      console.warn('[v6.18.0] initial ref hydration failed:', e);
+    },
+    (err) => {
+      console.warn('[v6.20.0] ref subscription error:', err);
     }
-  })();
+  );
+
+
 
   const unsubscribe = onSnapshot(
     q,
@@ -467,7 +484,10 @@ export function subscribeIncomingSharedWallets(
     }
   );
 
-  return unsubscribe;
+  return () => {
+    try { unsubscribe(); } catch {}
+    try { (unsubRefs as any)(); } catch {}
+  };
 }
 
 export function resolveDocId(

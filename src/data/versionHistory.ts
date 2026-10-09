@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.22';
-export const CURRENT_BUILD_NUMBER = 185;
+export const CURRENT_APP_VERSION = 'v6.23';
+export const CURRENT_BUILD_NUMBER = 186;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v6.23.0',
+    buildNumber: 186,
+    releaseDate: '2026-10-10',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'လုံခြုံရေး — Firestore Rules Emulator Tests (High E)',
+    titleEn: 'Security — Firestore Rules Emulator Tests (High E)',
+    tag: 'security',
+    tagLabelMy: 'လုံခြုံရေး စမ်းသပ်မှု',
+    tagLabelEn: 'Security Verification',
+    descriptionMy: 'v6.21.1 ပြန်လည်စစ်ဆေးချက်တွင် အကြံပြုထားသော Firestore Rules Emulator tests များကို ရေးသားပြီး ၁၁ ခုလုံး အောင်မြင်စွာ စစ်ဆေးပြီးပါသည်။ Shared wallet လုံခြုံရေး၊ permission ခွဲခြားမှုနှင့် premium trial validation များကို automated tests ဖြင့် စစ်ဆေးပြီးဖြစ်ပါသည်။',
+    descriptionEn: 'Added Firestore Rules Emulator tests (11 scenarios) as recommended in the v6.21.1 review. All tests pass. Verifies shared wallet security, permission boundaries, and premium trial validation.',
+    changesMy: [
+      'v6.23.0 — firestore.rules.test.ts အသစ် (scenarios ၁၁ ခု)',
+      'v6.23.0 — @firebase/rules-unit-testing dev dependency ထည့်သွင်းခြင်း',
+      'v6.23.0 — vitest.rules.config.ts အသစ်',
+      'v6.23.0 — firebase.json တွင် emulators.firestore (port 8181) ထည့်သွင်းခြင်း',
+      'v6.23.0 — package.json တွင် test:rules script ထည့်သွင်းခြင်း',
+      'v6.23.0 — Tests ၁၁ ခုလုံး PASS ဖြစ်ခြင်း',
+    ],
+    changesEn: [
+      'v6.23.0 — New firestore.rules.test.ts with 11 scenarios',
+      'v6.23.0 — Added @firebase/rules-unit-testing dev dependency',
+      'v6.23.0 — New vitest.rules.config.ts',
+      'v6.23.0 — Added emulators.firestore (port 8181) to firebase.json',
+      'v6.23.0 — Added test:rules npm script',
+      'v6.23.0 — All 11 rules tests PASS',
+    ],
+  },
   {
     version: 'v6.22.0',
     buildNumber: 185,

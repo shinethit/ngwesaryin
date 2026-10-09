@@ -922,7 +922,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </p>
         </div>
 
-        {/* [v6.22] Reminder Notifications Section */}
+        {/* [v6.23] Reminder Notifications Section */}
         {typeof window !== 'undefined' && 'Notification' in window && (
           <div className="mt-6 pt-5 border-t border-slate-100">
             <div className="flex items-center gap-1.5 mb-3">

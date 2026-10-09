@@ -1,7 +1,7 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "6.22.0",
+  "version": "6.23.0",
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -12,7 +12,8 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
@@ -28,6 +29,7 @@
     "tailwindcss": "^4.1.14"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",

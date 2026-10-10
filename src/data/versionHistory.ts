@@ -14,10 +14,53 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v6.23.6';
-export const CURRENT_BUILD_NUMBER = 192;
+export const CURRENT_APP_VERSION = 'v7.0.0';
+export const CURRENT_BUILD_NUMBER = 193;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.0.0',
+    buildNumber: 193,
+    releaseDate: '2026-10-10',
+    releaseTime: '4:30 PM (MMT)',
+    titleMy: 'UI အလုံးစုံ ပြန်လည်ဆန်းသစ်ခြင်း — Money Lover Category Picker + Lean Dashboard + Analytics Sub-tabs',
+    titleEn: 'Comprehensive UI Refresh — Money Lover Category Picker + Lean Dashboard + Analytics Sub-tabs',
+    tag: 'major',
+    tagLabelMy: 'အဓိက အဆင့်မြှင့်တင်မှု',
+    tagLabelEn: 'Major Release',
+    descriptionMy: 'ဤ v7.0.0 ဗားရှင်းသည် အသုံးပြုသူ အတွေ့အကြုံအား အလုံးစုံ ပြန်လည် ဆန်းသစ်ပေးလိုက်ပါသည်။ Money Lover Style Category Picker အသစ်ဖြင့် ကဏ္ဍရွေးချယ်မှုကို ပိုမိုရှင်းလင်းစေပြီး၊ TransactionModal ကို Nav Bar + More Options + BIG Amount + Row-based Form ဖြင့် ပြန်လည်ဒီဇိုင်းထုတ်ကာ၊ Dashboard ကို Home (Hero + Quick + Recent + Calendar + Debt) နှင့် Analytics (Reports/Budget) ဟူ၍ ၂ ပိုင်း ခွဲထုတ်လိုက်ပါသည်။ Bundle အရွယ်အစား 11% လျော့ကျသွားပြီး Android စက်များတွင် ပိုမိုချောမွေ့စွာ လည်ပတ်နိုင်ပါပြီ။',
+    descriptionEn: 'This v7.0.0 release delivers a comprehensive UI refresh. Introduced a Money Lover style Category Picker with card-based hierarchy, redesigned TransactionModal with Nav bar + More Options dropdown + BIG centered amount + row-based form, and split Dashboard into Home (Hero + Quick + Recent + Calendar + Debt) and Analytics (Reports/Budget sub-tabs). Bundle size reduced by 11% and Android performance significantly improved.',
+    changesMy: [
+      '🎨 Money Lover Style Category Picker — Card-based, tree-line indentation, sticky search, tap-to-expand',
+      '📱 TransactionModal Lean Layout — Nav bar (Cancel | Title | Save ✓) + More Options dropdown + BIG centered amount',
+      '🔄 Auto-derive Transaction Type from Category (Expense/Income toggle ဖျောက်ပြီး category ရွေးရင် auto ပြောင်း)',
+      '💰 More Options (ခ) ၆ မျိုး — Fuel / Service / Tire + Unit Price / Shopping List / Item Name',
+      '🔀 Transfer sub-category filter — Expense = ငွေလွှဲထွက်၊ Income = ငွေလွှဲဝင်',
+      '🏠 Dashboard Option D — Home (Hero + Quick 3 + Recent 5 + Smart Calendar + Debt)',
+      '📊 AnalyticsView အသစ် — Sub-tabs [📊 Reports] [💰 Budget] တိုက်ရိုက် ကူးပြောင်း',
+      '📉 Bundle 1,508 kB → 1,339 kB (−11%) — Lean Home + lazy AnalyticsView chunk',
+      '🐛 Fix: effectiveCategoryId fallback — category ရွေးပြီးရင် ဖျောက်မပစ်တော့',
+      '🐛 Fix: sub.color / sub.icon TypeScript error (SubCategory type မှာ မရှိ)',
+      '✏️ Fix: ကဏ္ဍ (DDA) — စာလုံးပေါင်း မှန်ကန်စွာ ပြင်ဆင် (ကဏ္ဌ → ကဏ္ဍ)',
+      '⚡ Android Perf — Backdrop-blur ပိတ်၊ scroll-smooth ဖျောက်၊ GPU layer promote',
+      '📱 iOS/Android scroll — Modal touch-momentum scrolling ချောမွေ့စေရန် ပြင်ဆင်',
+    ],
+    changesEn: [
+      '🎨 Money Lover style Category Picker — Card-based hierarchy, tree-line indentation, sticky search, tap-to-expand',
+      '📱 TransactionModal lean layout — Nav bar (Cancel | Title | Save ✓) + More Options dropdown + BIG centered amount',
+      '🔄 Auto-derive transaction type from category selection (removed Expense/Income toggle)',
+      '💰 More Options 6 items — Fuel / Service / Tire + Unit Price / Shopping List / Item Name',
+      '🔀 Transfer sub-category filter — Expense = Transfer Out, Income = Transfer In',
+      '🏠 Dashboard Option D — Home (Hero + Quick 3 + Recent 5 + Smart Calendar + Debt)',
+      '📊 New AnalyticsView — Sub-tabs [📊 Reports] [💰 Budget] with instant switching',
+      '📉 Bundle 1,508 kB → 1,339 kB (−11%) — Lean Home + lazy AnalyticsView chunk',
+      '🐛 Fix: effectiveCategoryId fallback — no longer hides user category pick',
+      '🐛 Fix: sub.color / sub.icon TypeScript error (not in SubCategory type)',
+      '✏️ Fix: ကဏ္ဍ (DDA) spelling corrected from ကဏ္ဌ (TTHA)',
+      '⚡ Android perf — disabled backdrop-blur, removed scroll-smooth, GPU layer promote',
+      '📱 iOS/Android scroll — improved modal touch-momentum scrolling',
+    ],
+  },
   {
     version: 'v6.23.6',
     buildNumber: 192,

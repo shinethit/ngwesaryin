@@ -843,8 +843,8 @@ export default function App() {
           return next;
         });
       },
-      (err) => {
-        console.warn('Failed to listen to incoming shared wallets:', err);
+      () => {
+        // [v7.0.8] Legacy sharedWallets list query removed; no error callback needed.
       }
     );
 

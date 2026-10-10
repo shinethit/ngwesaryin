@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.0.7';
-export const CURRENT_BUILD_NUMBER = 195;
+export const CURRENT_APP_VERSION = 'v7.0.8';
+export const CURRENT_BUILD_NUMBER = 196;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.0.8',
+    buildNumber: 196,
+    releaseDate: '2026-10-10',
+    releaseTime: '10:15 PM (MMT)',
+    titleMy: 'sharedWallets Console Error ရှင်းလင်းခြင်း',
+    titleEn: 'sharedWallets Console Noise Cleanup',
+    tag: 'fix',
+    tagLabelMy: 'Console ရှင်းလင်းရေး',
+    tagLabelEn: 'Console Cleanup',
+    descriptionMy: 'v6.20.0 တွင် လုံခြုံရေးအရ sharedWallets.list rule ကို ပိတ်လိုက်ပြီးဖြစ်သော်လည်း sharedWalletService.ts တွင် ယခင် collection-wide query ကျန်ခဲ့သဖြင့် App စတင်ဖွင့်တိုင်း "Missing or insufficient permissions" error ထွက်နေခဲ့သည်။ refs path (v6.18.0+) သည် အပြည့်အဝ အလုပ်လုပ်နေပြီး ဖြစ်သဖြင့် dead legacy query ကို ဖယ်ရှားလိုက်သည်။ Data loss လုံးဝမရှိပါ။',
+    descriptionEn: 'v6.20.0 closed sharedWallets.list rule for privacy, but the legacy collection-wide query remained in sharedWalletService.ts, causing a permission-denied error at every app boot. The refs path (v6.18.0+) already handles all shares, so the dead legacy query has been removed. No data loss.',
+    changesMy: [
+      '🧹 sharedWalletService.ts မှ legacy collection-wide list query ကို ဖယ်ရှားခြင်း',
+      '🧹 App.tsx မှ sharedWallets error callback console.warn ကို ဖယ်ရှားခြင်း',
+      '✓ refs path (subscribeMyRefs) ဆက်လက် အပြည့်အဝ အလုပ်လုပ်ခြင်း',
+      '✓ Console မှ permission-denied spam လုံးဝ ရပ်တန့်ခြင်း',
+    ],
+    changesEn: [
+      '🧹 Removed legacy collection-wide list query from sharedWalletService.ts',
+      '🧹 Removed sharedWallets error console.warn from App.tsx',
+      '✓ refs path (subscribeMyRefs) continues to work fully',
+      '✓ Console permission-denied spam fully stopped',
+    ],
+  },
   {
     version: 'v7.0.7',
     buildNumber: 195,

@@ -418,72 +418,14 @@ export function subscribeIncomingSharedWallets(
 
 
 
-  const unsubscribe = onSnapshot(
-    q,
-    (snap) => {
-      const incomingWallets: Wallet[] = [];
-
-      snap.docs.forEach((d) => {
-        const data = d.data() as SharedWalletPayload;
-        if (!data) return;
-
-        const isMine =
-          (data.ownerUid && data.ownerUid === currentUid) ||
-          (data.ownerEmail && data.ownerEmail.trim().toLowerCase() === cleanEmail);
-
-        if (isMine) return;
-
-        const sharedList: string[] = Array.isArray(data.sharedWith) ? data.sharedWith : [];
-        const isSharedToMe = sharedList.some(
-          (e) => typeof e === 'string' && e.trim().toLowerCase() === cleanEmail
-        );
-
-        if (isSharedToMe) {
-          const cleanDocId = d.id.replace(/^shared_/, '');
-          const uniqueLocalId = `shared_${cleanDocId}`;
-          const rawOriginalId = data.originalId || data.id || cleanDocId;
-          const cleanOriginalId = String(rawOriginalId).replace(/^shared_([^_]+_)?/, '');
-
-          incomingWallets.push({
-            id: uniqueLocalId,
-            originalId: cleanOriginalId,
-            sharedDocId: d.id,
-            name: data.name || 'Shared Wallet',
-            nameEn: data.nameEn || data.name || 'Shared Wallet',
-            balance: Number(data.balance) || 0,
-            initialBalance: data.initialBalance !== undefined ? Number(data.initialBalance) : undefined,
-            includeInTotals: data.includeInTotals !== false,
-            color: data.color || '#6366F1',
-            icon: data.icon || 'Wallet',
-            currency: data.currency || 'MMK',
-            exchangeRate: data.exchangeRate || 1,
-            sharedWith: sharedList,
-            collaboratorPermissions: data.collaboratorPermissions || {},
-            ownerUid: data.ownerUid || '',
-            ownerEmail: data.ownerEmail || 'Partner',
-            ownerName: data.ownerName || data.ownerEmail?.split('@')[0] || 'Partner',
-            isSharedFromOther: true,
-          });
-        }
-      });
-
-      const dedupedMap = new Map<string, Wallet>();
-      incomingWallets.forEach((w) => {
-        const key = w.sharedDocId || w.id;
-        if (!dedupedMap.has(key)) {
-          dedupedMap.set(key, w);
-        }
-      });
-
-      // [v6.18.0] Hand to merge layer instead of calling onUpdate directly.
-      legacyWallets = Array.from(dedupedMap.values());
-      emit();
-    },
-    (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'sharedWallets');
-      if (onError) onError(error);
-    }
-  );
+  // [v7.0.8] Removed legacy collection-wide query.
+  // v6.20.0 disabled sharedWallets.list rule for privacy; refs path
+  // (subscribeMyRefs above) is authoritative and already covers all
+  // shares (backfilled on boot since v6.19.0). The old onSnapshot was
+  // hitting permission-denied on every app start, producing console
+  // noise with no functional benefit.
+  void legacyWallets;
+  const unsubscribe = () => {};
 
   return () => {
     try { unsubscribe(); } catch {}

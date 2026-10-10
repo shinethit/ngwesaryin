@@ -142,3 +142,45 @@
     backdrop-filter: none !important;
   }
 }
+
+/* ═══════════════════════════════════════════
+   Android Smoothness — Touch Optimization
+   (v7.0.1) — instant tap, no delay, native scroll
+   ═══════════════════════════════════════════ */
+
+/* 1. Kill 300ms tap delay + tap flash (universal) */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea,
+label,
+[onclick] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 2. Let Android native momentum handle scrolling (mobile only) */
+@media (hover: none) and (pointer: coarse) {
+  html,
+  body,
+  * {
+    scroll-behavior: auto !important;
+  }
+
+  /* 3. Faster transitions on mobile (reduce jank from long animations) */
+  [class*="transition-"],
+  [class*="duration-"] {
+    transition-duration: 120ms !important;
+  }
+
+  /* 4. GPU-promote the main scroll containers only (avoids memory bloat) */
+  .main-content,
+  [class*="overflow-y-auto"][class*="flex-1"] {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}

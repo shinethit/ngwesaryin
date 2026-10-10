@@ -637,43 +637,37 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
         )}
 
-        {/* Row 3: Secondary Filters (Time & Category) */}
-        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 flex-wrap">
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="text-[10px] text-slate-400">{lang === 'my' ? 'ကာလ' : 'Time'}</span>
-            <select
-              id="tx-time-filter"
-              value={timeFilter}
-              onChange={(e: any) => setTimeFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-            >
-              <option value="all">🌟 {lang === 'my' ? 'ရက်စွဲအားလုံး' : 'All Time'}</option>
-              <option value="this_month">📅 {lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
-              <option value="last_month">🗓️ {lang === 'my' ? 'ပြီးခဲ့သောလ' : 'Last Month'}</option>
-              <option value="this_week">📊 {lang === 'my' ? 'ဒီအပတ်' : 'This Week'}</option>
-              <option value="today">☀️ {lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
-              <option value="yesterday">🌙 {lang === 'my' ? 'မနေ့က' : 'Yesterday'}</option>
-              <option value="specific_date">🎯 {lang === 'my' ? 'သတ်မှတ်ရက်' : 'Specific Date'}</option>
-              <option value="custom_range">📆 {lang === 'my' ? 'ရက်အပိုင်းအခြား' : 'Custom Range'}</option>
-            </select>
-          </div>
+        {/* Row 3: Secondary Filters (Time & Category) — single line compact */}
+        <div className="flex items-center gap-1 pt-1 border-t border-slate-100">
+          <select
+            id="tx-time-filter"
+            value={timeFilter}
+            onChange={(e: any) => setTimeFilter(e.target.value)}
+            className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 focus:outline-none cursor-pointer"
+          >
+            <option value="all">🌟 {lang === 'my' ? 'ရက်စွဲအားလုံး' : 'All Time'}</option>
+            <option value="this_month">📅 {lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
+            <option value="last_month">🗓️ {lang === 'my' ? 'ပြီးခဲ့သောလ' : 'Last Month'}</option>
+            <option value="this_week">📊 {lang === 'my' ? 'ဒီအပတ်' : 'This Week'}</option>
+            <option value="today">☀️ {lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
+            <option value="yesterday">🌙 {lang === 'my' ? 'မနေ့က' : 'Yesterday'}</option>
+            <option value="specific_date">🎯 {lang === 'my' ? 'သတ်မှတ်ရက်' : 'Specific Date'}</option>
+            <option value="custom_range">📆 {lang === 'my' ? 'ရက်အပိုင်းအခြား' : 'Custom Range'}</option>
+          </select>
 
-          <div className="flex items-center gap-1 min-w-0 shrink-0">
-            <span className="text-[10px] text-slate-400">{lang === 'my' ? 'ကဏ္ဍ' : 'Cat'}</span>
-            <select
-              id="tx-cat-filter"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer max-w-[140px] truncate"
-            >
-              <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး' : 'All Categories'}</option>
-              {sortedCategoriesForFilter.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.type === 'income' ? '🟢' : '🔴'} {lang === 'my' ? c.name : c.nameEn}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            id="tx-cat-filter"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-700 focus:outline-none cursor-pointer truncate"
+          >
+            <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး' : 'All Categories'}</option>
+            {sortedCategoriesForFilter.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.type === 'income' ? '🟢' : '🔴'} {lang === 'my' ? c.name : c.nameEn}
+              </option>
+            ))}
+          </select>
 
           {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || dataScope !== 'all') && (
             <button
@@ -687,9 +681,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 setSelectedWallet('all');
                 onSetDataScope?.('all');
               }}
-              className="text-[10px] text-rose-600 hover:underline font-semibold ml-auto cursor-pointer"
+              className="text-[10px] text-rose-600 hover:underline font-bold shrink-0 cursor-pointer px-1"
+              title={lang === 'my' ? 'ပြန်လည်သတ်မှတ်' : 'Reset'}
             >
-              {lang === 'my' ? 'ပြန်လည်သတ်မှတ်' : 'Reset'}
+              ↺
             </button>
           )}
         </div>

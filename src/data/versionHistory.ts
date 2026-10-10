@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.0.9';
-export const CURRENT_BUILD_NUMBER = 197;
+export const CURRENT_APP_VERSION = 'v7.1.0';
+export const CURRENT_BUILD_NUMBER = 198;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.1.0',
+    buildNumber: 198,
+    releaseDate: '2026-10-10',
+    releaseTime: '11:15 PM (MMT)',
+    titleMy: 'Financial Summary ကတ် ၃ ခု ကျဉ်းမြောင်းစေခြင်း',
+    titleEn: 'Compact 3-Column Financial Summary Cards',
+    tag: 'fix',
+    tagLabelMy: 'UI ကျဉ်းမြောင်းရေး',
+    tagLabelEn: 'UI Compaction',
+    descriptionMy: 'Summary ကတ် ၃ ခုအား Icon / Badge / Gradient များ ဖယ်ရှားပြီး ကျဉ်းမြောင်းသော တစ်တန်းထဲတွင် ကွက်တိ ပြသစေခဲ့သည်။ ကာလနှင့် ကဏ္ဍ filter များကိုလည်း တစ်တန်းထဲ ကျဉ်းမြောင်းစွာ စုစည်းထားသည်။',
+    descriptionEn: 'Compacted the 3 Financial Summary cards by removing icons, badges, and gradients. Amounts no longer overflow. Time + Category filters merged into a single-line row.',
+    changesMy: [
+      '📊 Summary ၃ ကတ် — Icon/Badge/Gradient ဖျက်',
+      '📏 Label ၁ လိုင်း (Opening / Movement / Closing)',
+      '📏 Amount text-[11px] + truncate + tooltip',
+      '🎨 filter row → တစ်တန်း [10px]',
+    ],
+    changesEn: [
+      '📊 3 summary cards — icons/badges/gradients removed',
+      '📏 Single-line labels (Opening / Movement / Closing)',
+      '📏 Amount text-[11px] + truncate + tooltip',
+      '🎨 filter row → single line, 10px font',
+    ],
+  },
   {
     version: 'v7.0.9',
     buildNumber: 197,

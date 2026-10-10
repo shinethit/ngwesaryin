@@ -1333,7 +1333,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               >
                 <span className="flex items-center gap-2">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>{lang === 'my' ? 'နောက်ထပ် ရွေးချယ်စရာများ' : 'More Options'}</span>
+                  <span>
+                    {entryModel === 'fuel'
+                      ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel')
+                      : entryModel === 'vehicle_service' && maintServiceType === 'tires'
+                      ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire')
+                      : entryModel === 'vehicle_service'
+                      ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service')
+                      : entryMode === 'unit_qty'
+                      ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty')
+                      : entryMode === 'shopping_list'
+                      ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List')
+                      : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
+                  </span>
                 </span>
                 {moreOpen
                   ? <ChevronUp className="w-4 h-4 text-slate-400" />

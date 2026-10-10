@@ -1976,7 +1976,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
             {/* Hidden datalist */}
             <datalist id="db-item-suggestions">
-              {unifiedItemSuggestions.map((item) => (
+              {unifiedItemSuggestions.slice(0, 50).map((item) => (
                 <option
                   key={item.normalizedName}
                   value={item.name}

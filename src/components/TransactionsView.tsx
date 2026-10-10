@@ -129,6 +129,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const { user } = useAuth();
   const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [visibleDays, setVisibleDays] = useState(30);
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [timeFilter, setTimeFilterState] = useState<TimeFilterType>('all');
 
@@ -176,6 +177,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     if (dataScope === 'shared') return wallets.filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
     return wallets;
   }, [wallets, dataScope]);
+
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setVisibleDays(30);
+  }, [typeFilter, timeFilter, searchTerm, selectedCategory, selectedWallet, selectedWalletIds, dataScope]);
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
@@ -962,7 +968,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
         ) : (
           <div className="divide-y divide-slate-200/90">
-            {groupedByDate.map((group) => {
+            {groupedByDate.slice(0, visibleDays).map((group) => {
               const formattedDate = formatLocalizedDate(group.date, lang);
               return (
                 <div key={group.date} className="bg-white">
@@ -1182,6 +1188,22 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Load More Button (when more days exist) */}
+      {groupedByDate.length > visibleDays && (
+        <div className="py-5 text-center bg-white/95 backdrop-blur-xl rounded-3xl border border-white/90 shadow-[0_10px_28px_rgba(139,92,246,0.08)]">
+          <button
+            type="button"
+            onClick={() => setVisibleDays((d) => d + 30)}
+            className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer active:scale-95"
+          >
+            {lang === 'my' ? '📄 နောက်ထပ် ကြည့်မည် (+30 ရက်)' : '📄 Load More (+30 days)'}
+          </button>
+          <div className="text-[10px] text-slate-400 mt-2">
+            {groupedByDate.length - visibleDays} {lang === 'my' ? 'ရက် ကျန်ရှိပါသည်' : 'more days'}
+          </div>
+        </div>
+      )}
 
       {/* Item Price History and Comparison Modal */}
       <ItemPriceHistoryModal

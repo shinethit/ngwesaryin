@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Scale, X, ArrowUpRight, ArrowDownRight, Check, AlertCircle, Sparkles, Wallet as WalletIcon, Calculator } from 'lucide-react';
+import { Scale, X, ArrowUpRight, ArrowDownRight, Check, Wallet as WalletIcon, Calculator } from 'lucide-react';
 import { Wallet, Transaction } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { isWalletMatch } from '../utils/walletBalance';

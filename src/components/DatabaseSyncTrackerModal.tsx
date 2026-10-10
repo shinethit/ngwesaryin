@@ -1,41 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Database,
-  CloudCheck,
-  CloudOff,
-  RefreshCw,
-  Zap,
-  CheckCircle2,
-  AlertTriangle,
-  X,
-  Smartphone,
-  Laptop,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Search,
-  ShieldCheck,
-  Wifi,
-  WifiOff,
-  Server,
-  Layers,
-  HelpCircle,
-  ExternalLink,
-  ListRestart,
-  Activity,
-  RotateCcw,
-  History,
-  Trash2,
-  Clock,
-  ArrowUp,
-  ArrowDown,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+import { Database, RefreshCw, Zap, CheckCircle2, AlertTriangle, X, Smartphone, Laptop, ArrowUpRight, ArrowDownLeft, Search, ShieldCheck, Wifi, WifiOff, Server, Layers, HelpCircle, ListRestart, Activity, RotateCcw, History, Trash2, Clock, ArrowUp, ArrowDown, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Transaction, Wallet, Debt } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { formatMMK } from '../utils/formatters';
-import { testFirestoreQuotaPing, isQuotaExhausted, clearQuotaExhaustedFlag } from '../lib/firebase';
+import { testFirestoreQuotaPing, isQuotaExhausted } from '../lib/firebase';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
 import {
   subscribeSyncOperationLogs,

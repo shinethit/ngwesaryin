@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { usePWAInstall } from '../hooks/usePWAInstall';
-import {
-  Download,
-  Share2,
-  PlusSquare,
-  Smartphone,
-  Monitor,
-  Apple,
-  X,
-  Sparkles,
-  CheckCircle,
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-} from 'lucide-react';
+import { Download, Smartphone, Apple, X, ShieldCheck, Zap } from 'lucide-react';
 
 interface PWAInstallPromptProps {
   lang: 'my' | 'en';

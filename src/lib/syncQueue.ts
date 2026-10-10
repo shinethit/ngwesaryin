@@ -7,7 +7,7 @@
 
 import { doc, setDoc, deleteDoc, waitForPendingWrites, writeBatch } from 'firebase/firestore';
 import { db, cleanForFirestore, handleFirestoreError, OperationType, withTimeout, auth, isQuotaExhausted } from './firebase';
-import { Transaction } from '../types';
+
 
 export type SyncEntityType =
   | 'transactions'

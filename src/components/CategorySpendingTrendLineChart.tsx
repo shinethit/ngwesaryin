@@ -9,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, BarChart3, Calendar, Layers, Tag } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { Transaction, Category } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { isTransferTransaction } from '../utils/walletBalance';

@@ -1,30 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Car,
-  Fuel,
-  Wrench,
-  Disc,
-  Plus,
-  Gauge,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Calendar,
-  DollarSign,
-  ChevronRight,
-  ShieldAlert,
-  ShieldCheck,
-  Edit,
-  Trash2,
-  Filter,
-  ArrowUpRight,
-  Clock,
-  Sparkles,
-  Zap,
-  Crown,
-  Lock,
-  HelpCircle,
-} from 'lucide-react';
+import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle } from 'lucide-react';
 import { Vehicle, FuelLog, VehicleMaintenance, TirePressureLog, Wallet, PlanType } from '../../types';
 import {
   enrichFuelLogs,

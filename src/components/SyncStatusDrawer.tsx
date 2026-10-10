@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Cloud,
-  AlertTriangle,
-  Clock,
-  RefreshCw,
-  Trash2,
-  X,
-  ShieldAlert,
-  CheckCircle2,
-  WifiOff,
-  Layers,
-} from 'lucide-react';
+import { Cloud, RefreshCw, Trash2, X, ShieldAlert, CheckCircle2, Layers } from 'lucide-react';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
 import { formatMMK, getCategoryDisplayName } from '../utils/formatters';
 import { Transaction, Category } from '../types';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, AlertTriangle, Sparkles, Activity } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { FinancialHealthResult } from '../utils/financialHealth';
 
 interface FinancialHealthCardProps {

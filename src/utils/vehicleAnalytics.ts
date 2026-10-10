@@ -304,23 +304,6 @@ export function calculateCostPerKm(
 /**
  * Fuel price chart points generator for Recharts
  */
-export function getFuelPriceTrendData(logs: FuelLog[]): Array<{
-  date: string;
-  pricePerLiter: number;
-  fuelType: string;
-  liters: number;
-  totalCost: number;
-}> {
-  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
-  return sorted.map((l) => ({
-    date: l.date,
-    pricePerLiter: l.pricePerLiter,
-    fuelType: l.fuelType || 'Octane',
-    liters: l.liters,
-    totalCost: l.totalCost,
-  }));
-}
-
 /**
  * Calculate Spare Part Lifespan by comparing consecutive maintenance of each service type
  */

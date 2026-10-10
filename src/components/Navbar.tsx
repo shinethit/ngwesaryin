@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Crown, Sparkles, Plus, ShieldCheck, Search, Cloud, User as UserIcon, LogIn, ChevronDown, Wifi, WifiOff, RefreshCw, Database, Download, Menu, Lock, Bell } from 'lucide-react';
+import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Menu, Lock, Bell } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';

@@ -25,10 +25,6 @@ export const getCurrencyInfo = (currencyCode: string = 'MMK'): CurrencyInfo => {
   return SUPPORTED_CURRENCIES.find((c) => c.code === code) || SUPPORTED_CURRENCIES[0];
 };
 
-export const getCurrencySymbol = (currencyCode: string = 'MMK'): string => {
-  return getCurrencyInfo(currencyCode).symbol;
-};
-
 export const formatCurrency = (amount: number, currencyCode: string = 'MMK'): string => {
   const code = (currencyCode || 'MMK').toUpperCase();
   const info = getCurrencyInfo(code);

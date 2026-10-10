@@ -23,15 +23,7 @@
  * sharedWallets list disabled (planned v6.19.0).
  */
 
-import {
-  doc,
-  setDoc,
-  deleteDoc,
-  collection,
-  onSnapshot,
-  Unsubscribe,
-  getDocs,
-} from 'firebase/firestore';
+import { doc, setDoc, collection, onSnapshot, Unsubscribe, getDocs } from 'firebase/firestore';
 import { db, cleanForFirestore, safeSetDoc, safeDeleteDoc } from './firebase';
 
 export interface SharedWalletRef {

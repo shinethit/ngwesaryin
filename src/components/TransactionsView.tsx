@@ -1,38 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Search,
-  Filter,
-  ArrowDownLeft,
-  ArrowUpRight,
-  ArrowLeftRight,
-  Download,
-  Trash2,
-  Edit2,
-  Calendar,
-  Lock,
-  Sparkles,
-  Tag,
-  History,
-  Wallet as WalletIcon,
-  ShoppingCart,
-  Boxes,
-  ChevronDown,
-  ChevronUp,
-  ChevronLeft,
-  ChevronRight,
-  Layers,
-  User,
-  Users,
-  Cloud,
-  WifiOff,
-  AlertTriangle,
-  Clock,
-  RefreshCw,
-} from 'lucide-react';
+import { Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock } from 'lucide-react';
 import { Category, PlanType, Transaction, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
-import { safeGetItem, safeSetItem } from '../utils/storage';
+import { safeSetItem } from '../utils/storage';
 import { CategoryIcon } from './CategoryIcon';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { MultiWalletSelector } from './MultiWalletSelector';

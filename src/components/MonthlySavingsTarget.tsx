@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
 import { safeGetItem, safeSetItem } from '../utils/storage';
-import {
-  Target,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-  Edit3,
-  Calendar,
-  X,
-  EyeOff,
-  Power,
-  Lock,
-} from 'lucide-react';
+import { Target, TrendingUp, AlertTriangle, CheckCircle2, Edit3, Calendar, X, Power, Lock } from 'lucide-react';
 import { formatMMK } from '../utils/formatters';
 import { PlanType } from '../types';
 

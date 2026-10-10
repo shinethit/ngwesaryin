@@ -1,25 +1,5 @@
 import React, { useState } from 'react';
-import {
-  ShieldCheck,
-  AlertCircle,
-  Loader2,
-  X,
-  ArrowRight,
-  ExternalLink,
-  Mail,
-  Lock,
-  User as UserIcon,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  Sparkles,
-  Copy,
-  Check,
-  Globe,
-  ShieldAlert,
-  AlertTriangle,
-  HelpCircle,
-} from 'lucide-react';
+import { ShieldCheck, AlertCircle, Loader2, X, ArrowRight, ExternalLink, Mail, Lock, User as UserIcon, Eye, EyeOff, CheckCircle2, Copy, Check, Globe, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
 

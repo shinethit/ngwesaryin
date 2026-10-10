@@ -3,7 +3,7 @@
  * Consolidation of snapshot subscription management and syncQueue processing.
  */
 
-import { auth } from './firebase';
+
 import { syncQueue } from './syncQueue';
 
 export class SyncEngine {

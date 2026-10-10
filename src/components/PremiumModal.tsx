@@ -1,25 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { safeGetItem, safeSetItem } from '../utils/storage';
-import {
-  Crown,
-  Check,
-  X,
-  Sparkles,
-  ShieldCheck,
-  Copy,
-  ExternalLink,
-  LogIn,
-  KeyRound,
-  CreditCard,
-  ListCheck,
-  Calendar,
-  Clock,
-  Phone,
-  Gift,
-  Timer,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { Crown, Check, X, Sparkles, ShieldCheck, ExternalLink, LogIn, KeyRound, CreditCard, ListCheck, Calendar, Clock, Phone, Gift, Timer, AlertCircle, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { PlanType, ContactInfo } from '../types';
 import { fetchContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';

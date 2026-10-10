@@ -1,36 +1,6 @@
 import React, { useState } from 'react';
-import {
-  Sparkles,
-  Lock,
-  PieChart,
-  TrendingDown,
-  AlertTriangle,
-  CheckCircle,
-  Plus,
-  ArrowRight,
-  ShieldAlert,
-  Edit2,
-  Trash2,
-  Percent,
-  Banknote,
-  Wallet as WalletIcon,
-  Layers,
-  ChevronDown,
-  ChevronUp,
-  Info,
-  Calendar,
-  ArrowUpDown,
-  ShoppingBag,
-} from 'lucide-react';
-import {
-  BudgetCalcType,
-  BudgetConfig,
-  Category,
-  PlanType,
-  Transaction,
-  UNBUDGETED_CATEGORY_ID,
-  Wallet,
-} from '../types';
+import { Sparkles, Lock, PieChart, TrendingDown, AlertTriangle, CheckCircle, Plus, ArrowRight, ShieldAlert, Edit2, Trash2, Percent, Banknote, Wallet as WalletIcon, Layers, ChevronDown, ChevronUp, Calendar, ArrowUpDown, ShoppingBag } from 'lucide-react';
+import { BudgetConfig, Category, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';

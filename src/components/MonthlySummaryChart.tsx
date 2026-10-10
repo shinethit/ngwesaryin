@@ -11,24 +11,11 @@ import {
   LineChart,
   Line,
 } from 'recharts';
-import {
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Layers,
-  ArrowUpRight,
-  ArrowDownLeft,
-  DollarSign,
-  Tag,
-  Sparkles,
-  Info,
-  Filter,
-} from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Sparkles, Filter } from 'lucide-react';
 import { Category, Transaction } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { isTransferTransaction } from '../utils/walletBalance';
-import { CategoryIcon } from './CategoryIcon';
+
 
 interface MonthlySummaryChartProps {
   transactions: Transaction[];

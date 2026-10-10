@@ -1,32 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Store,
-  Phone,
-  MapPin,
-  Search,
-  Plus,
-  Trash2,
-  Edit2,
-  Copy,
-  ExternalLink,
-  X,
-  Sparkles,
-  Info,
-  Check,
-  Globe,
-  Lock,
-  ThumbsUp,
-  Map,
-  User,
-  AlertTriangle,
-  LayoutGrid,
-  List,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  RotateCcw,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { Store, MapPin, Search, Plus, X, Info, Globe, Lock, LayoutGrid, List, ChevronDown, ChevronUp, Filter, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { ShopContact, PublicShop } from '../types';
 import { db, auth, handleFirestoreError, OperationType, safeSetDoc, safeDeleteDoc, safeUpdateDoc } from '../lib/firebase';
 import {
@@ -35,7 +8,7 @@ import {
   doc,
   query,
 } from 'firebase/firestore';
-import { MYANMAR_REGIONS, PRESET_TAGS, PresetTag } from './shops/shopConstants';
+import { MYANMAR_REGIONS, PRESET_TAGS } from './shops/shopConstants';
 import { ShopCard } from './shops/ShopCard';
 import { ShopModal } from './shops/ShopModal';
 

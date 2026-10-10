@@ -1,15 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
-import {
-  User,
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  signOut as firebaseSignOut,
-} from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut } from 'firebase/auth';
 import {
   doc,
   getDoc,
@@ -23,7 +13,7 @@ import {
   where,
   onSnapshot,
 } from 'firebase/firestore';
-import { auth, db, defaultDb, googleProvider, handleFirestoreError, OperationType, cleanForFirestore, isQuotaExhausted, pauseNetworkDueToQuota, resumeNetworkFromQuota, safeSetDoc, safeDeleteDoc, withTimeout } from '../lib/firebase';
+import { auth, db, defaultDb, googleProvider, handleFirestoreError, OperationType, cleanForFirestore, isQuotaExhausted, resumeNetworkFromQuota, safeSetDoc, safeDeleteDoc, withTimeout } from '../lib/firebase';
 import { syncQueue } from '../lib/syncQueue';
 import { Transaction, Debt, Wallet, Category, Budget, PlanType, InvitedWorkspace, ShopContact, Vehicle, FuelLog, VehicleMaintenance, TirePressureLog } from '../types';
 import { safeGetItem, safeSetItem, safeRemoveItem, setStorageScope } from '../utils/storage';

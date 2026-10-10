@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Flame, CheckCircle2, AlertTriangle, Settings, DollarSign, X } from 'lucide-react';
+import { Flame, CheckCircle2, AlertTriangle, Settings, X } from 'lucide-react';
 import { Transaction } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { safeGetItem, safeSetItem } from '../utils/storage';

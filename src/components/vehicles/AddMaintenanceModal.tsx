@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Wrench, Gauge, DollarSign, Shield, Calendar, Building, Sparkles, Save, Trash2 } from 'lucide-react';
+import { X, Wrench, Gauge, Shield, Save, Trash2 } from 'lucide-react';
 import { VehicleMaintenance, Vehicle, Wallet, VehicleServiceType } from '../../types';
 import { SERVICE_TYPE_CONFIG } from '../../utils/vehicleAnalytics';
 

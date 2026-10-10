@@ -1,21 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import {
-  Search,
-  X,
-  ArrowDownLeft,
-  ArrowUpRight,
-  HandCoins,
-  Wallet,
-  Tag,
-  Calendar,
-  Layers,
-  ChevronRight,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
+import { Search, X, ArrowDownLeft, HandCoins, Wallet, Tag, Layers, ChevronRight } from 'lucide-react';
 import { Category, Debt, Transaction, Wallet as WalletType } from '../types';
-import { formatMMK, formatDateDisplay, getCategoryDisplayName } from '../utils/formatters';
+import { formatMMK } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
 

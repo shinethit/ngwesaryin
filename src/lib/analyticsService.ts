@@ -1,16 +1,5 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  setDoc,
-  deleteDoc,
-} from 'firebase/firestore';
-import { db, isQuotaExhausted, handleFirestoreError, OperationType, safeSetDoc, safeDeleteDoc } from './firebase';
+import { collection, doc, getDoc, query, orderBy, limit, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
+import { db, isQuotaExhausted, safeDeleteDoc } from './firebase';
 import { VisitorDoc } from '../types';
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/storage';
 

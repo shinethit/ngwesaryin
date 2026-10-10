@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Disc, Gauge, Calendar, ShieldCheck, Save, Trash2 } from 'lucide-react';
+import { X, Disc, Gauge, Save, Trash2 } from 'lucide-react';
 import { TirePressureLog, Vehicle, Wallet } from '../../types';
 
 interface AddTirePressureModalProps {

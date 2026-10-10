@@ -1,18 +1,5 @@
 import React from 'react';
-import {
-  X,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  ShieldCheck,
-  PiggyBank,
-  HandCoins,
-  Sparkles,
-  Info,
-  CheckCircle2,
-  ChevronRight,
-  Flame,
-} from 'lucide-react';
+import { X, Sparkles, Info, CheckCircle2, ChevronRight, Flame } from 'lucide-react';
 import {
   FinancialHealthResult,
   FINANCIAL_HEALTH_TIERS,

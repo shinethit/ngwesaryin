@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Delete, KeyRound, LogOut } from 'lucide-react';
+import { Lock, Delete } from 'lucide-react';
 import { FortuneLogo } from './FortuneLogo';
 import { verifyPin, isHashedPinFormat } from '../utils/pinHash';
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tag, X, ArrowDownLeft, ArrowUpRight, Wallet as WalletIcon, Check, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tag, Wallet as WalletIcon, Check, Filter } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, getCategoryDisplayName } from '../utils/formatters';
 import { isTransferTransaction, isWalletMatch } from '../utils/walletBalance';

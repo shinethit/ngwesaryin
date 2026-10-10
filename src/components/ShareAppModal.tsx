@@ -1,20 +1,6 @@
 import React, { useState } from 'react';
-import {
-  X,
-  Copy,
-  Check,
-  Share2,
-  Globe,
-  AlertTriangle,
-  ShieldAlert,
-  Smartphone,
-  Laptop,
-  Lock,
-  Mail,
-  ExternalLink,
-  Zap,
-} from 'lucide-react';
-import { FortuneLogo, LogoStyle } from './FortuneLogo';
+import { X, Copy, Check, Share2, Globe, AlertTriangle, ShieldAlert, Smartphone } from 'lucide-react';
+import { LogoStyle } from './FortuneLogo';
 
 interface ShareAppModalProps {
   isOpen: boolean;

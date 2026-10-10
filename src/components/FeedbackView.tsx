@@ -1,22 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Star,
-  MessageSquareHeart,
-  Plus,
-  Filter,
-  Lightbulb,
-  Bug,
-  Smile,
-  Crown,
-  UserCheck,
-  Trash2,
-  Reply,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-  Search,
-  ThumbsUp,
-} from 'lucide-react';
+import { Star, MessageSquareHeart, Plus, Filter, Lightbulb, Bug, Smile, Crown, Trash2, Reply, Sparkles, Search } from 'lucide-react';
 import { Feedback, FeedbackCategory, PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { subscribeFeedbacks, replyToFeedback, deleteFeedback } from '../lib/feedbackService';

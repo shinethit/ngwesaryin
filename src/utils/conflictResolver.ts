@@ -153,10 +153,6 @@ export function getConflicts(): ConflictRecord[] {
   return readQueue();
 }
 
-export function getUnresolvedCount(): number {
-  return readQueue().filter((c) => !c.resolved).length;
-}
-
 export function markResolved(id: string): void {
   const next = readQueue().map((c) => (c.id === id ? { ...c, resolved: true } : c));
   writeQueue(next);

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { PieChart, TrendingDown, Tag, ArrowUpRight } from 'lucide-react';
+import { PieChart, Tag } from 'lucide-react';
 import { Transaction, Category } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { isTransferTransaction } from '../utils/walletBalance';

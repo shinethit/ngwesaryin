@@ -1,29 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Activity,
-  CheckCircle2,
-  AlertTriangle,
-  RefreshCw,
-  Zap,
-  Cloud,
-  Smartphone,
-  Layers,
-  ArrowRight,
-  ShieldCheck,
-  RotateCcw,
-  Wifi,
-  WifiOff,
-  Server,
-  HelpCircle,
-  Clock,
-  Sparkles,
-  Info,
-  AlertOctagon,
-  Trash2,
-  Copy,
-  Check,
-} from 'lucide-react';
+import { X, Activity, CheckCircle2, AlertTriangle, Zap, Cloud, Smartphone, Layers, ShieldCheck, RotateCcw, Wifi, WifiOff, Server, HelpCircle, Clock, AlertOctagon, Trash2, Copy, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
 import { testFirestoreQuotaPing } from '../lib/firebase';

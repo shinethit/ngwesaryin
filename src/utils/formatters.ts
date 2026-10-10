@@ -12,17 +12,6 @@ export const formatMMK = (amount: number, useBurmeseNumerals = false): string =>
   return `${amount < 0 ? '-' : ''}${formattedNumber} MMK`;
 };
 
-export const formatShortMMK = (amount: number): string => {
-  const abs = Math.abs(amount);
-  if (abs >= 1000000) {
-    return `${(amount / 1000000).toFixed(1)}M Ks`;
-  }
-  if (abs >= 1000) {
-    return `${(amount / 1000).toFixed(0)}K Ks`;
-  }
-  return `${amount.toLocaleString()} Ks`;
-};
-
 /**
  * Special compact Lakhs (သိန်း) formatting specifically for Table Views to save space.
  * Examples:
@@ -31,35 +20,6 @@ export const formatShortMMK = (amount: number): string => {
  * - 7,500,000 -> "75" (or "၇၅")
  * - 750,000 -> "7.5" (or "၇.၅")
  */
-export const formatTableLakhs = (
-  amount: number,
-  currency: string = 'MMK',
-  lang: 'my' | 'en' = 'my'
-): string => {
-  const isMMK = !currency || currency.toUpperCase() === 'MMK';
-  const absAmt = Math.abs(amount);
-  const sign = amount < 0 ? '-' : '';
-
-  if (isMMK) {
-    if (absAmt === 0) {
-      const zeroNum = lang === 'my' ? '၀' : '0';
-      const unit = lang === 'my' ? ' သိန်း' : ' L';
-      return `${zeroNum}${unit}`;
-    }
-    const lakhs = absAmt / 100000;
-    // Format up to 5 decimal places max for exact representation down to 1 MMK (1 / 100000 = 0.00001)
-    const lakhsStr = Number(lakhs.toFixed(5)).toString();
-    const localizedNum =
-      lang === 'my'
-        ? lakhsStr.replace(/\d/g, (d) => '၀၁၂၃၄၅၆၇၈၉'[parseInt(d, 10)])
-        : lakhsStr;
-    const unit = lang === 'my' ? ' သိန်း' : ' L';
-    return `${sign}${localizedNum}${unit}`;
-  }
-
-  return `${sign}${formatCurrency(absAmt, currency)}`;
-};
-
 /**
  * [v7.0.7] Compact Lakhs formatter — English numerals + " သိန်း" suffix.
  * Uses up to 5 decimals (drops trailing zeros). Precision: 1 MMK.

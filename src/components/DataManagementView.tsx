@@ -1,19 +1,5 @@
 import React from 'react';
-import {
-  Database,
-  Trash2,
-  Download,
-  Upload,
-  ShieldCheck,
-  KeyRound,
-  RotateCcw,
-  CheckCircle2,
-  AlertTriangle,
-  User as UserIcon,
-  Lock,
-  Crown,
-  Cloud,
-} from 'lucide-react';
+import { Database, Trash2, Download, Upload, KeyRound, AlertTriangle, Crown } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet } from '../types';
 import { useAuth } from '../context/AuthContext';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Car, Bike, Truck, Bus, Plus, Save, Trash2 } from 'lucide-react';
+import { X, Car, Bike, Truck, Bus, Save, Trash2 } from 'lucide-react';
 import { Vehicle, Wallet } from '../../types';
 
 interface AddVehicleModalProps {

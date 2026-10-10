@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { Debt, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { getLocalDateString } from '../utils/dateUtils';

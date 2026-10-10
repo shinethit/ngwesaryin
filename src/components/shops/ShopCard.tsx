@@ -1,31 +1,7 @@
 import React, { useState } from 'react';
-import {
-  Store,
-  Phone,
-  MapPin,
-  Edit2,
-  Trash2,
-  Copy,
-  ExternalLink,
-  Sparkles,
-  Check,
-  ThumbsUp,
-  User,
-  AlertTriangle,
-  Plus,
-  X,
-  CreditCard,
-  ChevronDown,
-  ChevronUp,
-  ShoppingBag,
-  Pill,
-  Utensils,
-  Wrench,
-  Package,
-  Layers
-} from 'lucide-react';
+import { Store, Phone, MapPin, Edit2, Trash2, Copy, ExternalLink, Sparkles, Check, ThumbsUp, User, AlertTriangle, Plus, X, CreditCard, ChevronDown, ChevronUp, ShoppingBag, Pill, Utensils, Wrench, Package } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
-import { PRESET_TAGS, PresetTag } from './shopConstants';
+import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
 
 interface ShopCardProps {

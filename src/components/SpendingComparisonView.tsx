@@ -1,29 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  Calendar,
-  ArrowRight,
-  ArrowUpDown,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Search,
-  Wallet as WalletIcon,
-  Download,
-  Filter,
-  BarChart3,
-  Layers,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  RotateCcw,
-  Check,
-  HelpCircle,
-  Copy,
-  Info,
-  Lock,
-  Shuffle,
-  Tag,
-} from 'lucide-react';
+import { ArrowUpDown, TrendingUp, TrendingDown, Minus, Search, Wallet as WalletIcon, Download, Filter, BarChart3, Sparkles, Check, Copy, Info, Lock, Shuffle, Tag } from 'lucide-react';
 import { Category, PlanType, Transaction, Wallet } from '../types';
 import { formatMMK, formatDateDisplay } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';

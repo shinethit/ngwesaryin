@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { doc } from 'firebase/firestore';
-import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
+import { db, safeSetDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import {
   syncSharedWalletToCloud,

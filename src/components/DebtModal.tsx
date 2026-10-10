@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  HandCoins,
-  ArrowDownLeft,
-  ArrowUpRight,
-  User,
-  Phone,
-  Calendar,
-  Wallet,
-  FileText,
-} from 'lucide-react';
+import { HandCoins, ArrowDownLeft, ArrowUpRight, Phone, Wallet } from 'lucide-react';
 import { Debt, DebtType, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { getLocalDateString } from '../utils/dateUtils';

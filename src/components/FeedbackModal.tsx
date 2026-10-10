@@ -1,16 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Star,
-  MessageSquareHeart,
-  Sparkles,
-  Send,
-  X,
-  Lightbulb,
-  Bug,
-  Smile,
-  HelpCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { Star, MessageSquareHeart, Send, X, Lightbulb, Bug, Smile, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FeedbackCategory, PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';

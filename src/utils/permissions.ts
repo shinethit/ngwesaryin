@@ -105,24 +105,3 @@ export function getCollaboratorPermissions(
  * Check if an action on an income or expense transaction is permitted
  * for the current user. Matches Firestore rules exactly.
  */
-export function canPerformTransactionAction(
-  action: 'add' | 'edit' | 'delete',
-  txType: 'income' | 'expense',
-  wallet: Wallet | null | undefined,
-  userEmail: string | null | undefined,
-  currentUid?: string | null
-): boolean {
-  const perms = getCollaboratorPermissions(wallet, userEmail, currentUid);
-
-  if (action === 'add') {
-    return txType === 'income' ? perms.canAddIncome : perms.canAddExpense;
-  }
-  if (action === 'edit') {
-    return txType === 'income' ? perms.canEditIncome : perms.canEditExpense;
-  }
-  if (action === 'delete') {
-    return txType === 'income' ? perms.canDeleteIncome : perms.canDeleteExpense;
-  }
-
-  return false;  // [v6.23.3] was: true (unknown action → deny)
-}

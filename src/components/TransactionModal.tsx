@@ -1,32 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Calendar,
-  Wallet,
-  Tag,
-  FileText,
-  Lock,
-  Sparkles,
-  Plus,
-  Check,
-  History,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  ShoppingCart,
-  Trash2,
-  X,
-  Hash,
-  Boxes,
-  Car,
-  Fuel,
-  Wrench,
-  Gauge,
-  ChevronDown,
-  ChevronUp,
-  HelpCircle,
-} from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Boxes, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 import {
   Category,
   PlanType,
@@ -40,7 +13,7 @@ import {
   VehicleServiceType,
 } from '../types';
 import { formatMMK } from '../utils/formatters';
-import { formatCurrency, convertToMMK } from '../utils/currency';
+import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { CategoryIcon } from './CategoryIcon';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
@@ -48,11 +21,7 @@ import { CategoryPickerModal } from './CategoryPickerModal';
 import { FuelExpenseGuideModal } from './vehicles/FuelExpenseGuideModal';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
-import {
-  getAllItemSuggestions,
-  findMatchingItemInfo,
-  UnifiedItemInfo,
-} from '../utils/itemIntelligence';
+import { getAllItemSuggestions, findMatchingItemInfo } from '../utils/itemIntelligence';
 
 const GAS_STATIONS = [
   'Denko',

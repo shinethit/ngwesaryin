@@ -1,19 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  History,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Search,
-  Calendar,
-  Wallet,
-  Tag,
-  ArrowRight,
-  Sparkles,
-  Info,
-  X,
-  Plus,
-} from 'lucide-react';
+import { History, TrendingUp, TrendingDown, Minus, Search, Calendar, Tag, Info, X } from 'lucide-react';
 import { Category, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';

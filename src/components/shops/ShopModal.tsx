@@ -1,22 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Store,
-  Phone,
-  MapPin,
-  Plus,
-  Globe,
-  Lock,
-  CreditCard,
-  AlertTriangle,
-  Sparkles,
-  ShoppingBag,
-  Pill,
-  Utensils,
-  Wrench,
-  Package,
-  Check
-} from 'lucide-react';
+import { X, Store, Phone, MapPin, Plus, Globe, Lock, AlertTriangle, Check } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
 import { MYANMAR_REGIONS, PRESET_TAGS } from './shopConstants';
 

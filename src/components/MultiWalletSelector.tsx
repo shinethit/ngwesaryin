@@ -1,20 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Wallet as WalletIcon,
-  ChevronDown,
-  Check,
-  CheckSquare,
-  Square,
-  Users,
-  User,
-  Layers,
-  X,
-  Search,
-  Filter,
-} from 'lucide-react';
+import { Wallet as WalletIcon, ChevronDown, Check, X, Search, Filter } from 'lucide-react';
 import { Wallet } from '../types';
 import { formatCurrency } from '../utils/currency';
-import { isWalletMatch } from '../utils/walletBalance';
+
 
 interface MultiWalletSelectorProps {
   wallets: Wallet[];

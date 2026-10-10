@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, ShieldCheck, X, Check } from 'lucide-react';
+import { Lock, X } from 'lucide-react';
 import { hashPin, generateSalt } from '../utils/pinHash';
 
 interface PinSetupModalProps {

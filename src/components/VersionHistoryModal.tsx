@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, History, Calendar, Clock, CheckCircle2, ShieldCheck, RefreshCw, Layers, ArrowUpRight, Zap, Award } from 'lucide-react';
+import { X, Sparkles, History, Calendar, Clock, CheckCircle2, ShieldCheck, RefreshCw, Zap, Award } from 'lucide-react';
 import { VERSION_HISTORY, CURRENT_APP_VERSION, CURRENT_BUILD_NUMBER, VersionItem } from '../data/versionHistory';
 
 interface VersionHistoryModalProps {

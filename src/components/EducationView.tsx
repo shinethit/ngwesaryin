@@ -1,31 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  BookOpen,
-  Search,
-  Bookmark,
-  BookmarkCheck,
-  Clock,
-  ArrowRight,
-  ChevronRight,
-  X,
-  Share2,
-  TrendingUp,
-  PieChart,
-  ShieldAlert,
-  Coins,
-  Scale,
-  Zap,
-  Crown,
-  Award,
-  Flame,
-  Compass,
-  Layers,
-  Sparkles,
-  Lightbulb,
-  CheckCircle2,
-  Calculator,
-  RotateCcw
-} from 'lucide-react';
+import { BookOpen, Search, Bookmark, BookmarkCheck, Clock, ArrowRight, ChevronRight, X, TrendingUp, PieChart, ShieldAlert, Coins, Scale, Zap, Crown, Award, Flame, Compass, Layers, Sparkles, CheckCircle2, Calculator, RotateCcw } from 'lucide-react';
 import { ARTICLES, EDUCATION_CATEGORIES, Article } from '../data/educationData';
 
 interface EducationViewProps {

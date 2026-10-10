@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  PieChart,
-  Percent,
-  Banknote,
-  Wallet as WalletIcon,
-  HelpCircle,
-  Sparkles,
-  CheckCircle2,
-  Tag,
-  Layers,
-} from 'lucide-react';
+import { PieChart, Percent, Banknote, Tag, Layers } from 'lucide-react';
 import {
   BudgetCalcType,
   BudgetConfig,

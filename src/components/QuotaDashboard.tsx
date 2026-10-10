@@ -1,38 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Database,
-  Flame,
-  HardDrive,
-  HelpCircle,
-  Layers,
-  RefreshCw,
-  RotateCcw,
-  Server,
-  ShieldAlert,
-  ShieldCheck,
-  TrendingDown,
-  TrendingUp,
-  Zap,
-} from 'lucide-react';
-import {
-  FIRESTORE_LIMITS,
-  getQuotaOverviewStats,
-  subscribeQuotaUpdates,
-  clearTodayQuotaStats,
-  estimateFirestoreStorage,
-  QuotaOverviewStats,
-  getTimeUntilUTCMidnight,
-} from '../lib/quotaTracker';
+import { Activity, AlertTriangle, CheckCircle2, Clock, Flame, HardDrive, Layers, RefreshCw, RotateCcw, ShieldAlert, Zap } from 'lucide-react';
+import { getQuotaOverviewStats, subscribeQuotaUpdates, clearTodayQuotaStats, estimateFirestoreStorage, QuotaOverviewStats, getTimeUntilUTCMidnight } from '../lib/quotaTracker';
 import {
   testFirestoreQuotaPing,
   resumeNetworkFromQuota,
   isQuotaExhausted,
 } from '../lib/firebase';
-import { Transaction, Wallet, Category } from '../types';
+
 
 interface QuotaDashboardProps {
   lang: 'my' | 'en';

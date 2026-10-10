@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Fuel, Gauge, DollarSign, CheckCircle2, AlertCircle, Save, Trash2, Sparkles, Building2 } from 'lucide-react';
+import { X, Fuel, Gauge, CheckCircle2, Save, Trash2, Building2 } from 'lucide-react';
 import { FuelLog, Vehicle, Wallet } from '../../types';
 import { usePersistedState } from '../../hooks/usePersistedState';
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Vehicle, TirePressureLog } from '../../types';
-import { Disc, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
-import { formatDurationDays } from '../../utils/vehicleAnalytics';
+import { Disc, AlertTriangle, Clock } from 'lucide-react';
+
 
 interface TireVisualizerProps {
   vehicle: Vehicle;

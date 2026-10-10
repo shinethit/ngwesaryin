@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  TrendingUp,
-  PiggyBank,
-  HandCoins,
-  ReceiptText,
-  Plus,
-  ArrowDownLeft,
-  ArrowUpRight,
-  ShieldCheck,
-} from 'lucide-react';
+import { TrendingUp, PiggyBank, HandCoins, ReceiptText, Plus, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 /**
  * Serene, eye-friendly Financial Overview Banner
@@ -114,8 +105,6 @@ export const FinancialOverviewBanner: React.FC<{
 };
 
 // Backward-compatibility alias
-export const ClayRocketIllustration = FinancialOverviewBanner;
-
 /**
  * Clean, eye-friendly financial insight cards
  * Soft, comfortable background with crisp Lucide icons and clean metrics.

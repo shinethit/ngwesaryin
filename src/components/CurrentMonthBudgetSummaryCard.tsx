@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChart, TrendingUp, AlertTriangle, CheckCircle2, Wallet, Layers } from 'lucide-react';
+import { PieChart } from 'lucide-react';
 import { Budget, Category, Transaction } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';

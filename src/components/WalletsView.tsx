@@ -1,34 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  WalletCards,
-  Plus,
-  ArrowRightLeft,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Lock,
-  Sparkles,
-  Check,
-  Edit2,
-  Trash2,
-  TrendingUp,
-  Scale,
-  UserPlus,
-  Users,
-  LogOut,
-  Building2,
-  CreditCard,
-  Smartphone,
-  Coins,
-  PiggyBank,
-  DollarSign,
-  Globe,
-  Landmark,
-  ShieldCheck,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Calculator,
-} from 'lucide-react';
+import { WalletCards, Plus, ArrowRightLeft, Lock, Edit2, Trash2, TrendingUp, Scale, UserPlus, Users, LogOut, Building2, CreditCard, Smartphone, Coins, PiggyBank, DollarSign, Globe, Landmark, ShieldCheck, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
 import { PlanType, Wallet, WalletPermissions, Transaction } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import {
@@ -38,7 +9,7 @@ import {
   convertToMMK,
 } from '../utils/currency';
 import { getCollaboratorPermissions } from '../utils/permissions';
-import { isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { isWalletMatch } from '../utils/walletBalance';
 import { ShareWalletModal } from './ShareWalletModal';
 import { WalletModal } from './WalletModal';
 import { useAuth } from '../context/AuthContext';

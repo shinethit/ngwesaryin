@@ -10,19 +10,7 @@ import {
   Legend,
   Cell,
 } from 'recharts';
-import {
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Layers,
-  ArrowRight,
-  ArrowUpDown,
-  Sparkles,
-  Info,
-  CheckCircle2,
-  AlertTriangle,
-} from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Calendar, ArrowRight, Sparkles } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';

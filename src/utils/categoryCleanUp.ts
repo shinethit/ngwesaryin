@@ -1,4 +1,4 @@
-import { Category, Transaction, BudgetConfig, RecurringTransaction, SubCategory } from '../types';
+import { Category, Transaction, BudgetConfig, RecurringTransaction } from '../types';
 
 export interface MergeResult {
   cleanedCategories: Category[];

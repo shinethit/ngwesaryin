@@ -115,18 +115,6 @@ export async function verifyPin(
 /**
  * Detect legacy plaintext PIN format (4 digits, no salt).
  */
-export function isLegacyPinFormat(settings: {
-  pin?: string;
-  pinSalt?: string;
-} | null | undefined): boolean {
-  if (!settings || !settings.pin) return false;
-  return (
-    settings.pin.length === 4 &&
-    /^\d{4}$/.test(settings.pin) &&
-    (!settings.pinSalt || settings.pinSalt.length === 0)
-  );
-}
-
 /**
  * Check if the stored PIN looks like a hashed value.
  */
@@ -144,12 +132,4 @@ export function isHashedPinFormat(settings: {
 
 /**
  * Test helper — check if WebCrypto SubtleCrypto is available.
- */
-export function isWebCryptoAvailable(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof crypto !== 'undefined' &&
-    typeof crypto.subtle !== 'undefined' &&
-    typeof crypto.getRandomValues === 'function'
-  );
-}
+ */

@@ -1,22 +1,6 @@
 import React, { useState } from 'react';
 import { Wallet, PlanType, WalletPermissions } from '../types';
-import {
-  Users,
-  UserPlus,
-  Trash2,
-  X,
-  ShieldCheck,
-  Mail,
-  AlertCircle,
-  Sparkles,
-  Sliders,
-  ChevronDown,
-  ChevronUp,
-  Lock,
-  CheckCircle2,
-  TrendingUp,
-  TrendingDown,
-} from 'lucide-react';
+import { Users, UserPlus, Trash2, X, Mail, AlertCircle, Sparkles, Sliders, ChevronDown, ChevronUp, Lock, CheckCircle2, TrendingUp, TrendingDown } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 import {
   DEFAULT_WALLET_PERMISSIONS,

@@ -1,20 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Bell,
-  X,
-  CheckCheck,
-  AlertTriangle,
-  HandCoins,
-  Car,
-  Clock,
-  Volume2,
-  Calendar,
-  CheckCircle2,
-  Megaphone,
-  ChevronRight,
-  ShieldAlert,
-  Sparkles,
-} from 'lucide-react';
+import { Bell, X, CheckCheck, AlertTriangle, HandCoins, Car, Clock, Volume2, CheckCircle2, Megaphone, ChevronRight, Sparkles } from 'lucide-react';
 import {
   Debt,
   BudgetConfig,

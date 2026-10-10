@@ -1,34 +1,6 @@
 import React, { useState } from 'react';
-import { safeGetItem, safeSetItem } from '../utils/storage';
-import {
-  X,
-  Cloud,
-  CheckCircle2,
-  LogOut,
-  Sparkles,
-  Smartphone,
-  Laptop,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  LogIn,
-  FileJson,
-  Download,
-  Upload,
-  Lock,
-  Trash2,
-  Crown,
-  Clock,
-  Calendar,
-  Users,
-  Mail,
-  ShieldCheck,
-  BookOpen,
-  RefreshCw,
-  ExternalLink,
-  AlertCircle,
-  ShieldAlert,
-  History,
-} from 'lucide-react';
+import { safeGetItem } from '../utils/storage';
+import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCircle, ArrowDownCircle, FileJson, Download, Upload, Lock, Trash2, Crown, Clock, Calendar, Users, Mail, ShieldCheck, BookOpen, RefreshCw, AlertCircle, History } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resetFirestoreConnection } from '../lib/firebase';
 import { PinLockSettings, PlanType } from '../types';

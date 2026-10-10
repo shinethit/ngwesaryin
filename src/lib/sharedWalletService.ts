@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, cleanForFirestore, safeSetDoc, safeDeleteDoc, isQuotaExhausted } from './firebase';
 import { Wallet, Transaction } from '../types';
-import { writeSharedWalletRef, deleteRefsForWallet, fetchMyRefs, subscribeMyRefs } from './sharedWalletRefs';
+import { writeSharedWalletRef, deleteRefsForWallet, subscribeMyRefs } from './sharedWalletRefs';
 
 export interface SharedWalletPayload {
   id: string;

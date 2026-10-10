@@ -54,12 +54,6 @@ export const DEFAULT_PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   },
 };
 
-export const DEFAULT_EXCHANGE_RATES = {
-  USD: 4600,
-  THB: 138,
-  SGD: 3500,
-};
-
 export const INITIAL_WALLETS: Wallet[] = [
   {
     id: 'cash',

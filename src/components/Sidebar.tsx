@@ -1,36 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  LayoutDashboard,
-  Wallet,
-  Tags,
-  ArrowLeftRight,
-  PieChart,
-  HandCoins,
-  Database,
-  Crown,
-  Sparkles,
-  X,
-  Search,
-  Cloud,
-  RefreshCw,
-  Wifi,
-  WifiOff,
-  User as UserIcon,
-  Download,
-  ShieldCheck,
-  ChevronRight,
-  Sliders,
-  LogOut,
-  LogIn,
-  Lock,
-  MessageSquareHeart,
-  BookOpen,
-  GraduationCap,
-  Share2,
-  Store,
-  Car,
-  History,
-} from 'lucide-react';
+import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, PieChart, HandCoins, Database, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, MessageSquareHeart, BookOpen, GraduationCap, Share2, Store, Car, History } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';

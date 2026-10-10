@@ -2,17 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { AdminSystemMessage, AdminMessageType } from '../types';
-import {
-  Megaphone,
-  AlertTriangle,
-  FileText,
-  X,
-  ExternalLink,
-  ChevronRight,
-  Info,
-  Clock,
-  Sparkles,
-} from 'lucide-react';
+import { Megaphone, AlertTriangle, FileText, X, ChevronRight, Info, Clock, Sparkles } from 'lucide-react';
 
 interface AdminBroadcastBannerProps {
   lang: 'my' | 'en';

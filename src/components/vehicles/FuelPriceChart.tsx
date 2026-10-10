@@ -1,17 +1,7 @@
 import React from 'react';
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Area,
-  AreaChart,
-} from 'recharts';
+import { ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Area, AreaChart } from 'recharts';
 import { FuelLog } from '../../types';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface FuelPriceChartProps {
   logs: FuelLog[];

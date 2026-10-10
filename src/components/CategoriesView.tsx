@@ -1,20 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Crown,
-  Lock,
-  Plus,
-  Sparkles,
-  Edit2,
-  Trash2,
-  Tag,
-  Layers,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Search,
-  Check,
-  X,
-  AlertCircle,
-} from 'lucide-react';
+import { Crown, Lock, Plus, Sparkles, Edit2, Trash2, Tag, Layers, ArrowUpRight, ArrowDownLeft, Search, Check, X } from 'lucide-react';
 import { Category, PlanType, SubCategory, TransactionType } from '../types';
 import { CategoryIcon, AVAILABLE_CATEGORY_ICONS } from './CategoryIcon';
 

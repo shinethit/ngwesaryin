@@ -1,7 +1,7 @@
 import React from 'react';
 import { Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
+
 import { isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 
 interface FinancialSummaryTableProps {

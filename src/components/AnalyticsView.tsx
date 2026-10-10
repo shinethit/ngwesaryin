@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, Wallet, ArrowDownLeft, ArrowUpRight, HandCoins } from 'lucide-react';
+import { BarChart3, Wallet } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
-import { CategoryIcon } from './CategoryIcon';
+
 import { BudgetAnalyticsView } from './BudgetAnalyticsView';
 import { MonthlySavingsTarget } from './MonthlySavingsTarget';
 import { DailySpendingLimitCard } from './DailySpendingLimitCard';

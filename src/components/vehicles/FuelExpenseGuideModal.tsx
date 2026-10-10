@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Fuel, Wallet, CheckCircle2, ArrowRight, Sparkles, HelpCircle, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { X, Fuel, Sparkles, Layers, ShieldCheck, Zap } from 'lucide-react';
 
 interface FuelExpenseGuideModalProps {
   isOpen: boolean;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Search, Plus, Lock, Check, Settings, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Search, Plus, Lock, Check, ChevronRight } from 'lucide-react';
 import { Category, PlanType, SubCategory, Transaction, TransactionType } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 

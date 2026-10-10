@@ -1,25 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  History,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Search,
-  Calendar,
-  Wallet as WalletIcon,
-  Tag,
-  Filter,
-  Check,
-  BarChart3,
-  LineChart as LineChartIcon,
-  Layers,
-  Sparkles,
-  Info,
-  ArrowRight,
-  Package,
-  ShoppingBag,
-  RotateCcw,
-} from 'lucide-react';
+import { History, TrendingUp, TrendingDown, Search, Calendar, Filter, Check, BarChart3, LineChart as LineChartIcon, Package, ShoppingBag, RotateCcw } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -34,7 +14,7 @@ import {
 } from 'recharts';
 import { Category, PlanType, Transaction, Wallet } from '../types';
 import { formatMMK, formatDateDisplay } from '../utils/formatters';
-import { CategoryIcon } from './CategoryIcon';
+
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 
 interface ItemPriceAnalyticsViewProps {

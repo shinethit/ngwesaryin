@@ -1,23 +1,5 @@
 import React, { useState } from 'react';
-import {
-  HandCoins,
-  Plus,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Calendar,
-  Phone,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  CreditCard,
-  Trash2,
-  Lock,
-  ChevronDown,
-  ChevronUp,
-  RotateCcw,
-  Sparkles,
-  Pencil,
-} from 'lucide-react';
+import { HandCoins, Plus, ArrowUpRight, ArrowDownLeft, Phone, Clock, AlertTriangle, CreditCard, Trash2, Lock, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { Debt, PlanType, Wallet } from '../types';
 import { formatMMK, isOverdue } from '../utils/formatters';
 import { buildWalletMap } from '../utils/walletBalance';

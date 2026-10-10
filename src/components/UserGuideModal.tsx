@@ -1,35 +1,5 @@
 import React, { useState } from 'react';
-import {
-  X,
-  BookOpen,
-  Search,
-  Sparkles,
-  ArrowRight,
-  CheckCircle2,
-  Wallet,
-  ArrowLeftRight,
-  HandCoins,
-  PieChart,
-  Cloud,
-  ShieldCheck,
-  Lock,
-  Smartphone,
-  HelpCircle,
-  Plus,
-  RefreshCw,
-  TrendingUp,
-  FileSpreadsheet,
-  Zap,
-  Users,
-  Share2,
-  KeyRound,
-  ShieldAlert,
-  LogOut,
-  UserPlus,
-  Layers,
-  Activity,
-  Database,
-} from 'lucide-react';
+import { X, BookOpen, Search, Sparkles, CheckCircle2, Wallet, ArrowLeftRight, HandCoins, PieChart, Cloud, ShieldCheck, Lock, Smartphone, HelpCircle, Plus, RefreshCw, TrendingUp, FileSpreadsheet, Zap, Users, KeyRound, ShieldAlert, LogOut, UserPlus, Layers, Activity, Database } from 'lucide-react';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
 
 interface UserGuideModalProps {

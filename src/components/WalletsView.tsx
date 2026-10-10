@@ -30,7 +30,7 @@ import {
   Calculator,
 } from 'lucide-react';
 import { PlanType, Wallet, WalletPermissions, Transaction } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyInfo,
@@ -192,112 +192,25 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     return wallets.some((w) => w.currency && w.currency !== 'MMK');
   }, [wallets]);
 
-  // Per-wallet Inflow, Outflow, Opening Balance, and Closing Balance
-  const walletStatsMap = useMemo(() => {
-    const map: Record<
-      string,
-      {
-        inflow: number;
-        outflow: number;
-        opening: number;
-        closing: number;
-        txCount: number;
-      }
-    > = {};
+  // [v7.1.1] Simplified: this-month inflow/outflow per wallet.
+  // Removed car-wallet auto-routing (dead feature).
+  // Removed per-wallet Opening/Closing (moved to Analytics).
+  const thisMonthStatsMap = useMemo(() => {
+    const now = new Date();
+    const prefix = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    const map: Record<string, { inflow: number; outflow: number }> = {};
+    wallets.forEach((w) => { map[w.id] = { inflow: 0, outflow: 0 }; });
 
-    const hasCarWallet = wallets.some(
-      (other) =>
-        other.id !== 'cash' &&
-        ((other.name && (other.name.includes('ကား') || other.name.includes('ယာဉ်'))) ||
-         (other.nameEn && (other.nameEn.toLowerCase().includes('car') || other.nameEn.toLowerCase().includes('vehicle'))))
-    );
-
-    wallets.forEach((w) => {
-      const isCarWallet =
-        (w.name && (w.name.includes('ကား') || w.name.includes('ယာဉ်'))) ||
-        (w.nameEn && (w.nameEn.toLowerCase().includes('car') || w.nameEn.toLowerCase().includes('vehicle')));
-
-      const txs = transactions
-        ? transactions.filter((t) => {
-            const isVehicleTx =
-              t.category === 'cat_vehicle' ||
-              t.category === 'cat_vehicle_management' ||
-              t.subCategoryId === 'sub_veh_fuel' ||
-              t.subCategoryId === 'sub_veh_maintenance' ||
-              t.subCategoryId === 'sub_veh_tire' ||
-              t.subCategoryId === 'sub_veh_parts' ||
-              (typeof t.note === 'string' && (t.note.includes('ကား') || t.note.includes('ဆီဖိုး')));
-
-            if (isCarWallet && (isWalletMatch(w, t.walletId) || (isVehicleTx && (t.walletId === 'cash' || !t.walletId)))) {
-              return true;
-            }
-            if (w.id === 'cash' && isVehicleTx && hasCarWallet) {
-              return false;
-            }
-            return isWalletMatch(w, t.walletId);
-          })
-        : [];
-
-      const inflow = txs
-        .filter(
-          (t) =>
-            t.type === 'income' ||
-            (isTransferTransaction(t) && t.transferType === 'transfer_in')
-        )
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      const outflow = txs
-        .filter(
-          (t) =>
-            t.type === 'expense' ||
-            (isTransferTransaction(t) && t.transferType === 'transfer_out')
-        )
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      const wNet = inflow - outflow;
-      const opening = typeof w.initialBalance === 'number' && !isNaN(w.initialBalance)
-        ? w.initialBalance
-        : w.id === 'cash'
-        ? 0
-        : Math.max(0, w.balance - wNet);
-      const closing = opening + wNet;
-
-      map[w.id] = {
-        inflow,
-        outflow,
-        opening,
-        closing,
-        txCount: txs.length,
-      };
+    transactions.forEach((t) => {
+      if (!t.date || !t.date.startsWith(prefix)) return;
+      const w = wallets.find((wal) => isWalletMatch(wal, t.walletId));
+      if (!w) return;
+      if (t.type === 'income') map[w.id].inflow += t.amount;
+      else if (t.type === 'expense') map[w.id].outflow += t.amount;
     });
 
     return map;
   }, [wallets, transactions]);
-
-  // Overall totals across included wallets in MMK
-  const overallWalletStatsMMK = useMemo(() => {
-    let totalInflow = 0;
-    let totalOutflow = 0;
-    let totalOpening = 0;
-    let totalClosing = 0;
-
-    includedWallets.forEach((w) => {
-      const stats = walletStatsMap[w.id];
-      if (stats) {
-        totalInflow += convertToMMK(stats.inflow, w.currency, w.exchangeRate);
-        totalOutflow += convertToMMK(stats.outflow, w.currency, w.exchangeRate);
-        totalOpening += convertToMMK(stats.opening, w.currency, w.exchangeRate);
-        totalClosing += convertToMMK(stats.closing, w.currency, w.exchangeRate);
-      }
-    });
-
-    return {
-      totalInflow,
-      totalOutflow,
-      totalOpening,
-      totalClosing,
-    };
-  }, [includedWallets, walletStatsMap]);
 
   const isAtLimit =
     plan === 'free' && wallets.filter((w) => !w.isSharedFromOther).length >= maxFreeWallets;
@@ -520,45 +433,6 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
               <span>{lang === 'my' ? 'ငွေလွှဲမည်' : 'Transfer'}</span>
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Overall Inflow / Outflow / Opening / Closing Summary Banner */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
-          <span className="text-[11px] font-medium text-slate-500 block">
-            {lang === 'my' ? 'စတင် လက်ကျန်ပေါင်း (Opening)' : 'Total Opening'}
-          </span>
-          <span className="text-sm sm:text-base font-bold text-slate-900 font-mono">
-            {formatMMK(overallWalletStatsMMK.totalOpening)}
-          </span>
-        </div>
-
-        <div className="bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200/80 shadow-2xs space-y-1">
-          <span className="text-[11px] font-semibold text-emerald-800 block">
-            {lang === 'my' ? 'ဝင်ငွေ စုစုပေါင်း (Inflow)' : 'Total Inflow'}
-          </span>
-          <span className="text-sm sm:text-base font-bold text-emerald-700 font-mono">
-            +{formatMMK(overallWalletStatsMMK.totalInflow)}
-          </span>
-        </div>
-
-        <div className="bg-rose-50/80 p-3.5 rounded-2xl border border-rose-200/80 shadow-2xs space-y-1">
-          <span className="text-[11px] font-semibold text-rose-800 block">
-            {lang === 'my' ? 'ထွက်ငွေ စုစုပေါင်း (Outflow)' : 'Total Outflow'}
-          </span>
-          <span className="text-sm sm:text-base font-bold text-rose-700 font-mono">
-            -{formatMMK(overallWalletStatsMMK.totalOutflow)}
-          </span>
-        </div>
-
-        <div className="bg-indigo-50/80 p-3.5 rounded-2xl border border-indigo-200/80 shadow-2xs space-y-1">
-          <span className="text-[11px] font-semibold text-indigo-900 block">
-            {lang === 'my' ? 'အပိတ် လက်ကျန်ပေါင်း (Closing)' : 'Total Closing'}
-          </span>
-          <span className="text-sm sm:text-base font-bold text-indigo-950 font-mono">
-            {formatMMK(overallWalletStatsMMK.totalClosing)}
-          </span>
         </div>
       </div>
 
@@ -929,69 +803,6 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                       </div>
                     );
                   })()}
-                  {/* Individual Wallet Financial Summary (Opening, Inflow, Outflow, Closing) */}
-                  {(() => {
-                    const stats = walletStatsMap[wallet.id] || {
-                      inflow: 0,
-                      outflow: 0,
-                      opening: wallet.balance,
-                      closing: wallet.balance,
-                      txCount: 0,
-                    };
-
-                    return (
-                      <div className="mt-3.5 p-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 space-y-2 text-xs">
-                        <div className="text-[11px] font-bold text-slate-700 flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                          <span>📊 {lang === 'my' ? 'ငွေစာရင်း အနှစ်ချုပ် (Inflow / Outflow)' : 'Wallet Summary'}</span>
-                          <span className="text-[10px] text-slate-500 font-mono">
-                            ({stats.txCount} {lang === 'my' ? 'မှတ်တမ်း' : 'records'})
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          {/* Opening Balance */}
-                          <div className="bg-white p-2 rounded-xl border border-slate-100 shadow-2xs">
-                            <span className="text-[10px] text-slate-400 font-medium block truncate">
-                              {lang === 'my' ? 'စတင် လက်ကျန်' : 'Opening'}
-                            </span>
-                            <span className="font-bold text-slate-800 font-mono truncate block text-xs">
-                              {formatCurrency(stats.opening, wallet.currency)}
-                            </span>
-                          </div>
-
-                          {/* Inflow */}
-                          <div className="bg-emerald-50/80 p-2 rounded-xl border border-emerald-100 shadow-2xs">
-                            <span className="text-[10px] text-emerald-800 font-medium block truncate">
-                              {lang === 'my' ? 'ဝင်ငွေ (Inflow)' : 'Inflow'}
-                            </span>
-                            <span className="font-bold text-emerald-700 font-mono truncate block text-xs">
-                              +{formatCurrency(stats.inflow, wallet.currency)}
-                            </span>
-                          </div>
-
-                          {/* Outflow */}
-                          <div className="bg-rose-50/80 p-2 rounded-xl border border-rose-100 shadow-2xs">
-                            <span className="text-[10px] text-rose-800 font-medium block truncate">
-                              {lang === 'my' ? 'ထွက်ငွေ (Outflow)' : 'Outflow'}
-                            </span>
-                            <span className="font-bold text-rose-700 font-mono truncate block text-xs">
-                              -{formatCurrency(stats.outflow, wallet.currency)}
-                            </span>
-                          </div>
-
-                          {/* Closing / Current Balance */}
-                          <div className="bg-indigo-50/80 p-2 rounded-xl border border-indigo-100 shadow-2xs">
-                            <span className="text-[10px] text-indigo-900 font-medium block truncate">
-                              {lang === 'my' ? 'အပိတ် လက်ကျန်' : 'Closing'}
-                            </span>
-                            <span className="font-bold text-indigo-900 font-mono truncate block text-xs">
-                              {formatCurrency(stats.closing, wallet.currency)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
                 </div>
 
               {/* Balance & Rate Section */}
@@ -1015,6 +826,29 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                 <div className="text-2xl font-black text-slate-900 tracking-tight">
                   {formatCurrency(wallet.balance, wallet.currency)}
                 </div>
+
+                {/* [v7.1.1] This-month flow (compact single line) */}
+                {(() => {
+                  const stats = thisMonthStatsMap[wallet.id];
+                  if (!stats || (stats.inflow === 0 && stats.outflow === 0)) return null;
+                  const net = stats.inflow - stats.outflow;
+                  return (
+                    <div className="flex items-center gap-2 text-[11px] font-mono flex-wrap">
+                      <span className="text-slate-400 font-sans text-[10px]">
+                        {lang === 'my' ? 'ဒီလ' : 'This month'}
+                      </span>
+                      {stats.inflow > 0 && (
+                        <span className="text-emerald-600 font-bold">↗ +{formatLakhs(stats.inflow, lang)}</span>
+                      )}
+                      {stats.outflow > 0 && (
+                        <span className="text-rose-600 font-bold">↘ -{formatLakhs(stats.outflow, lang)}</span>
+                      )}
+                      <span className={'font-bold ' + (net >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
+                        = {net >= 0 ? '+' : ''}{formatLakhs(net, lang)}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Converted MMK & Exchange Rate Pill if Currency !== 'MMK' */}
                 {isForeign && (

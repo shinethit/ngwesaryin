@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.1.0';
-export const CURRENT_BUILD_NUMBER = 198;
+export const CURRENT_APP_VERSION = 'v7.1.1';
+export const CURRENT_BUILD_NUMBER = 199;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.1.1',
+    buildNumber: 199,
+    releaseDate: '2026-10-10',
+    releaseTime: '11:45 PM (MMT)',
+    titleMy: 'Wallet View ရှင်းလင်းစေခြင်း',
+    titleEn: 'Wallet View Simplification',
+    tag: 'fix',
+    tagLabelMy: 'UI ရှင်းလင်းရေး',
+    tagLabelEn: 'UI Simplification',
+    descriptionMy: 'Wallet View ရှိ ရှုပ်ထွေးနေသော Opening / Inflow / Outflow / Closing ဇယားကွက်များကို ဖယ်ရှားပြီး Balance ကို ကြီးကြီးနှင့် ယခုလ ဝင်ငွေ/ထွက်ငွေကို တစ်တန်းတည်း ဖော်ပြစေခဲ့သည်။ Car Wallet auto-routing Logic ကိုလည်း လုံးဝ ဖယ်ရှားခဲ့သည်။',
+    descriptionEn: 'Simplified Wallet View: removed the confusing Opening / Inflow / Outflow / Closing grid from each wallet card. Now shows Balance prominently with a compact this-month In/Out line. Removed dead Car Wallet auto-routing logic.',
+    changesMy: [
+      '🗑️ Car Wallet auto-routing logic လုံးဝ ဖယ်ရှားခြင်း',
+      '📊 Wallet ကတ်မှ 4-card breakdown ဖယ်ရှားခြင်း',
+      '📊 Overall 4-card banner ဖယ်ရှားခြင်း',
+      '📏 Balance (ကြီး) + ယခုလ In/Out (တစ်တန်း သေး)',
+      '📐 formatLakhs ဖြင့် ကိန်းဂဏန်းများ ပြသခြင်း',
+    ],
+    changesEn: [
+      '🗑️ Removed dead Car Wallet auto-routing logic',
+      '📊 Removed 4-card breakdown from each wallet card',
+      '📊 Removed overall 4-card banner',
+      '📏 Balance (big) + this-month In/Out (compact line)',
+      '📐 Uses formatLakhs for amounts',
+    ],
+  },
   {
     version: 'v7.1.0',
     buildNumber: 198,

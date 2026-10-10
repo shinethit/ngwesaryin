@@ -487,7 +487,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
 
         {/* Multi-Vehicle Quick Switcher Strip */}
-        <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
             <Car className="w-3.5 h-3.5 text-slate-400" />
             <span>{lang === 'my' ? 'ယာဉ်စာရင်း:' : 'Fleet:'}</span>

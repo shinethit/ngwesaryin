@@ -876,7 +876,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             )}
 
             {/* CATEGORY TAG PILLS CAROUSEL */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex flex-wrap items-center gap-1.5">
               {PRESET_TAGS.map((tag) => {
                 const isSelected = selectedTagFilter === tag.value;
                 return (

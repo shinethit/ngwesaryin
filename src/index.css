@@ -130,3 +130,15 @@
 .animate-marquee-scroll:hover {
   animation-play-state: paused;
 }
+
+/* ═══════════════════════════════════════════
+   Android Performance — Minimal Safe Fix
+   (v7.0.1) — Only disable backdrop-filter on touch devices
+   ═══════════════════════════════════════════ */
+
+@media (hover: none) and (pointer: coarse) {
+  [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}

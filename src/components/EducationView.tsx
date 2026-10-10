@@ -237,7 +237,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
       </div>
 
       {/* Category Tabs Scrollbar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
+      <div className="flex flex-wrap items-center gap-2">
         {EDUCATION_CATEGORIES.map((cat) => {
           const isActive = selectedCategory === cat.id && !onlyBookmarks;
           return (

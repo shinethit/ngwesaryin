@@ -130,3 +130,37 @@
 .animate-marquee-scroll:hover {
   animation-play-state: paused;
 }
+
+/* ═══════════════════════════════════════════
+   Android Performance Fixes (appended by fix-picker-and-css.cjs)
+   ═══════════════════════════════════════════ */
+
+/* 1. Disable backdrop-filter on touch devices (Android GPU killer) */
+@media (hover: none) and (pointer: coarse) {
+  [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* 2. Safe overflow-x for old Android WebView */
+body { overflow-x: hidden; }
+@supports (overflow-x: clip) {
+  body { overflow-x: clip; }
+}
+
+/* 3. Faster text rendering on mobile */
+body { text-rendering: optimizeSpeed; }
+
+/* 4. GPU-promote animated panels (kill jank on open/close) */
+[class*="animate-"],
+.modal-panel,
+.mobile-nav,
+.top-header {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 5. Kill scroll-behavior:smooth when opening modals */
+.no-scroll-smooth { scroll-behavior: auto !important; }

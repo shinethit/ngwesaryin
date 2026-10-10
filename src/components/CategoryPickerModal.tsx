@@ -1,18 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import {
-  X,
-  Search,
-  Tag,
-  Plus,
-  Lock,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  Settings,
-  Layers,
-  ArrowRight,
-} from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { X, Search, Plus, Lock, Check, Settings, ChevronDown } from 'lucide-react';
 import { Category, PlanType, SubCategory, TransactionType } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -47,74 +34,73 @@ export const CategoryPickerModal: React.FC<CategoryPickerModalProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTypeTab, setActiveTypeTab] = useState<TransactionType>(currentType);
-  const [expandedCatId, setExpandedCatId] = useState<string | null>(selectedCategoryId || null);
+  const [expandedCatId, setExpandedCatId] = useState<string | null>(null);
   const [addingSubForCatId, setAddingSubForCatId] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState('');
 
-  // Sync active type tab when currentType prop changes upon opening
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       setActiveTypeTab(currentType);
-      setExpandedCatId(selectedCategoryId || null);
       setSearchQuery('');
+      setExpandedCatId(null);
       setAddingSubForCatId(null);
       setNewSubName('');
     }
-  }, [isOpen, currentType, selectedCategoryId]);
+  }, [isOpen, currentType]);
 
-  // Filter categories by type & search query
+  const isSearching = searchQuery.trim().length > 0;
+
   const filteredCategories = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     return categories.filter((cat) => {
-      // Type match (transfer category is accessible under both Income and Expense)
       const isTransferCat =
         cat.id === 'cat_transfer' ||
         (cat.name && cat.name.includes('ငွေလွှဲ')) ||
         (cat.nameEn && cat.nameEn.toLowerCase().includes('transfer'));
       const typeMatches = cat.type === activeTypeTab || isTransferCat;
-      if (!typeMatches && query.length === 0) return false;
-
-      if (!query) return typeMatches;
-
-      const nameMatch = (cat.name && cat.name.toLowerCase().includes(query)) ||
-        (cat.nameEn && cat.nameEn.toLowerCase().includes(query));
-
+      if (!q) return typeMatches;
+      const nameMatch =
+        (cat.name && cat.name.toLowerCase().includes(q)) ||
+        (cat.nameEn && cat.nameEn.toLowerCase().includes(q));
       const subMatch = cat.subCategories?.some(
         (sub) =>
-          (sub.name && sub.name.toLowerCase().includes(query)) ||
-          (sub.nameEn && sub.nameEn.toLowerCase().includes(query))
+          (sub.name && sub.name.toLowerCase().includes(q)) ||
+          (sub.nameEn && sub.nameEn.toLowerCase().includes(q))
       );
-
-      return (typeMatches || query.length > 0) && (nameMatch || subMatch);
+      return typeMatches && (nameMatch || subMatch);
     });
   }, [categories, activeTypeTab, searchQuery]);
 
   if (!isOpen) return null;
 
-  const handleSelectCategoryOnly = (cat: Category) => {
-    if (cat.isCustom && plan !== 'premium') {
-      onOpenUpgrade();
-      return;
+  const isLocked = (cat: Category) => cat.isCustom && plan !== 'premium';
+
+  const handleRowTap = (cat: Category) => {
+    if (isLocked(cat)) { onOpenUpgrade(); return; }
+    const hasSubs = (cat.subCategories?.length || 0) > 0;
+    if (hasSubs && !isSearching) {
+      setExpandedCatId((prev) => (prev === cat.id ? null : cat.id));
+    } else {
+      onSelect(cat.id, '');
+      onClose();
     }
+  };
+
+  const handleSelectMainOnly = (cat: Category) => {
+    if (isLocked(cat)) { onOpenUpgrade(); return; }
     onSelect(cat.id, '');
     onClose();
   };
 
-  const handleSelectSubCategory = (cat: Category, sub: SubCategory) => {
-    if (cat.isCustom && plan !== 'premium') {
-      onOpenUpgrade();
-      return;
-    }
+  const handleSelectSub = (cat: Category, sub: SubCategory) => {
+    if (isLocked(cat)) { onOpenUpgrade(); return; }
     onSelect(cat.id, sub.id);
     onClose();
   };
 
   const handleCreateSub = (categoryId: string) => {
     if (!newSubName.trim()) return;
-    if (plan !== 'premium') {
-      onOpenUpgrade();
-      return;
-    }
+    if (plan !== 'premium') { onOpenUpgrade(); return; }
     if (onAddSubCategory) {
       onAddSubCategory(categoryId, {
         name: newSubName.trim(),
@@ -128,364 +114,224 @@ export const CategoryPickerModal: React.FC<CategoryPickerModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 touch-none overscroll-none animate-fadeIn"
+      className="fixed inset-0 z-50 bg-slate-900/65 flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[88vh] flex flex-col animate-scaleUp pointer-events-auto"
+        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white flex items-center justify-between shrink-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 border border-white/25 flex items-center justify-center text-white shadow-inner">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-black text-base sm:text-lg tracking-tight">
-                {lang === 'my' ? 'ကဏ္ဍ ရွေးချယ်ရန်' : 'Select Category'}
-              </h3>
-              <p className="text-xs text-emerald-100 font-medium">
-                {lang === 'my'
-                  ? 'အဓိကကဏ္ဍ သို့မဟုတ် ကဏ္ဍခွဲကို တစ်ချက်နှိပ်၍ ရွေးပါ'
-                  : 'Click on a category or sub-category to choose'}
-              </p>
-            </div>
-          </div>
-
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <h3 className="font-bold text-slate-900 text-base">
+            {lang === 'my' ? 'ကဏ္ဍ ရွေးချယ်ရန်' : 'Select Category'}
+          </h3>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Close"
+            className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Type Switcher & Search Bar */}
-        <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 space-y-2.5 shrink-0">
-          {/* Income vs Expense Tabs */}
-          <div className="flex p-1 bg-slate-200/80 rounded-2xl text-xs font-bold gap-1">
-            <button
-              type="button"
-              onClick={() => setActiveTypeTab('expense')}
-              className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTypeTab === 'expense'
-                  ? 'bg-rose-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <span>{lang === 'my' ? '💸 အသုံးစရိတ် (Expense)' : '💸 Expense'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTypeTab('income')}
-              className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTypeTab === 'income'
-                  ? 'bg-emerald-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <span>{lang === 'my' ? '💰 ဝင်ငွေ (Income)' : '💰 Income'}</span>
-            </button>
+        <div className="px-3 py-2.5 border-b border-slate-100 shrink-0 space-y-2">
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            {(['expense', 'income'] as const).map((t) => {
+              const isActive = activeTypeTab === t;
+              const btnCls =
+                'flex-1 py-2 rounded-lg text-xs font-bold transition-colors ' +
+                (isActive
+                  ? t === 'expense'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900');
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => { setActiveTypeTab(t); setExpandedCatId(null); }}
+                  className={btnCls}
+                >
+                  {t === 'expense'
+                    ? lang === 'my' ? '💸 ထွက်ငွေ' : '💸 Expense'
+                    : lang === 'my' ? '💰 ဝင်ငွေ' : '💰 Income'}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Search Input */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder={
-                lang === 'my'
-                  ? 'ကဏ္ဍ / ကဏ္ဍခွဲ အမည် ရှာဖွေပါ...'
-                  : 'Search category or sub-category...'
-              }
+              placeholder={lang === 'my' ? 'ရှာဖွေရန်...' : 'Search categories...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-300 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-2xs"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3 text-slate-500" />
               </button>
             )}
           </div>
         </div>
 
-        {/* Categories List Body */}
-        <div className="p-3 sm:p-4 overflow-y-auto flex-1 space-y-2.5 min-h-0 overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {filteredCategories.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-                <Search className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-700">
-                  {lang === 'my' ? 'ကိုက်ညီသော ကဏ္ဍ ရှာမတွေ့ပါ' : 'No matching categories found'}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {lang === 'my'
-                    ? 'အခြား စာလုံးဖြင့် ရှာကြည့်ပါ သို့မဟုတ် ကဏ္ဍအသစ် ဖန်တီးပါ'
-                    : 'Try another keyword or create a custom category'}
-                </p>
-              </div>
-              {searchQuery && (
+            <div className="py-12 text-center text-slate-400 px-4">
+              <Search className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">
+                {lang === 'my' ? 'ရှာဖွေမှု ရလဒ် မတွေ့ပါ' : 'No matching categories'}
+              </p>
+              {isSearching && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                  className="mt-3 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
                 >
-                  {lang === 'my' ? 'ရှာဖွေမှု အားလုံး ရှင်းမည်' : 'Clear search'}
+                  {lang === 'my' ? 'ရှာဖွေမှု ရှင်းမည်' : 'Clear search'}
                 </button>
               )}
             </div>
           ) : (
-            filteredCategories.map((cat) => {
-              const isSelected = selectedCategoryId === cat.id && !selectedSubCategoryId;
-              const hasSubSelected = selectedCategoryId === cat.id && !!selectedSubCategoryId;
-              const isExpanded = expandedCatId === cat.id || searchQuery.trim().length > 0;
-              const isLocked = cat.isCustom && plan !== 'premium';
-              const subCount = cat.subCategories?.length || 0;
+            <div className="py-1">
+              {filteredCategories.map((cat) => {
+                const hasSubs = (cat.subCategories?.length || 0) > 0;
+                const isExpanded = isSearching || expandedCatId === cat.id;
+                const isSelected = selectedCategoryId === cat.id && !selectedSubCategoryId;
+                const locked = isLocked(cat);
+                const name = lang === 'my' ? cat.name : cat.nameEn;
+                const rowCls =
+                  'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:bg-slate-100 hover:bg-slate-50 ' +
+                  (isSelected ? 'border-l-4 border-emerald-600 pl-3 bg-emerald-50/50' : '');
+                const nameCls =
+                  'text-sm font-bold truncate ' +
+                  (isSelected ? 'text-emerald-800' : 'text-slate-900');
+                const chevronCls =
+                  'w-4 h-4 text-slate-400 transition-transform shrink-0 ' +
+                  (isExpanded ? 'rotate-180' : '');
+                const mainOnlyCls =
+                  'w-full px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors ' +
+                  (isSelected
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:border-emerald-300');
 
-              return (
-                <div
-                  key={cat.id}
-                  className={`rounded-2xl border transition-all overflow-hidden ${
-                    isSelected
-                      ? 'bg-emerald-50/70 border-emerald-400 shadow-sm ring-1 ring-emerald-300'
-                      : hasSubSelected
-                      ? 'bg-teal-50/50 border-teal-300'
-                      : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
-                  }`}
-                >
-                  {/* Category Header Row */}
-                  <div className="p-3 flex items-center justify-between gap-2.5">
-                    {/* Main Category Click area */}
-                    <button
-                      type="button"
-                      onClick={() => handleSelectCategoryOnly(cat)}
-                      className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer group"
-                    >
+                return (
+                  <div key={cat.id} className="border-b border-slate-100 last:border-b-0">
+                    <button type="button" onClick={() => handleRowTap(cat)} className={rowCls}>
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs transition-transform group-hover:scale-105"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
                         style={{ backgroundColor: cat.color || '#10B981' }}
                       >
                         <CategoryIcon name={cat.icon} className="w-5 h-5" />
                       </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-emerald-700 truncate">
-                            {lang === 'my' ? cat.name : cat.nameEn}
-                          </span>
-                          {isLocked && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold">
-                              <Lock className="w-2.5 h-2.5 stroke-[2.5]" />
-                              <span>VIP</span>
-                            </span>
-                          )}
-                          {isSelected && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black">
-                              <Check className="w-3 h-3 stroke-[3]" />
-                              <span>{lang === 'my' ? 'ရွေးထားသည်' : 'Selected'}</span>
-                            </span>
-                          )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className={nameCls}>{name}</span>
+                          {locked && <Lock className="w-3 h-3 text-amber-600 shrink-0" />}
+                          {isSelected && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 font-medium">
-                          <span>{cat.nameEn}</span>
-                          {subCount > 0 && (
-                            <>
-                              <span>•</span>
-                              <span className="text-slate-600 font-semibold">
-                                {subCount} {lang === 'my' ? 'ကဏ္ဍခွဲ' : 'subs'}
-                              </span>
-                            </>
-                          )}
-                        </div>
+                        {hasSubs && (
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {cat.subCategories!.length} {lang === 'my' ? 'ကဏ္ဍခွဲ' : 'sub-categories'}
+                          </div>
+                        )}
                       </div>
+                      {hasSubs && !isSearching && <ChevronDown className={chevronCls} />}
                     </button>
 
-                    {/* Expand/Collapse Toggle & Direct Select Action */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {subCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedCatId(isExpanded ? null : cat.id)}
-                          className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                          title={isExpanded ? 'Collapse' : 'Expand Sub-categories'}
-                        >
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
+                    {isExpanded && hasSubs && (
+                      <div className="px-4 pb-3 pt-1 space-y-1.5 bg-slate-50/60">
+                        <button type="button" onClick={() => handleSelectMainOnly(cat)} className={mainOnlyCls}>
+                          ★ {lang === 'my' ? 'အဓိက ကဏ္ဍသာ (Sub မရွေး)' : 'Main category only'}
                         </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => handleSelectCategoryOnly(cat)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-emerald-600 text-white shadow-2xs'
-                            : 'bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700'
-                        }`}
-                      >
-                        {isSelected ? (
-                          <span className="flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[2.5]" />
-                            <span>{lang === 'my' ? 'ရွေးပြီး' : 'Chosen'}</span>
-                          </span>
-                        ) : (
-                          <span>{lang === 'my' ? 'ရွေးမည်' : 'Select'}</span>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Sub-Categories Drawer (Expanded) */}
-                  {isExpanded && (
-                    <div className="px-3 pb-3 pt-1 border-t border-slate-100 bg-slate-50/70 space-y-2 animate-fadeIn">
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                          <Tag className="w-3 h-3 text-slate-400" />
-                          <span>{lang === 'my' ? 'ကဏ္ဍခွဲများ (Sub-categories):' : 'Sub-categories:'}</span>
-                        </span>
-
-                        {plan === 'premium' ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setAddingSubForCatId(addingSubForCatId === cat.id ? null : cat.id)
-                            }
-                            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3 stroke-[2.5]" />
-                            <span>{lang === 'my' ? '+ ကဏ္ဍခွဲသစ်' : '+ New Sub'}</span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={onOpenUpgrade}
-                            className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-0.5 cursor-pointer"
-                          >
-                            <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-                            <span>{lang === 'my' ? '👑 VIP ကဏ္ဍခွဲ' : '👑 VIP Sub'}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Quick Add Subcategory Form */}
-                      {addingSubForCatId === cat.id && plan === 'premium' && (
-                        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-1.5 animate-fadeIn">
-                          <input
-                            type="text"
-                            placeholder={lang === 'my' ? 'ကဏ္ဍခွဲအမည် ရိုက်ထည့်ပါ...' : 'Sub-category name...'}
-                            value={newSubName}
-                            onChange={(e) => setNewSubName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleCreateSub(cat.id);
-                              }
-                            }}
-                            autoFocus
-                            className="flex-1 px-2.5 py-1 text-xs bg-white border border-emerald-300 rounded-lg focus:outline-none font-medium"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleCreateSub(cat.id)}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shrink-0 cursor-pointer shadow-2xs"
-                          >
-                            {lang === 'my' ? 'ထည့်မည်' : 'Add'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAddingSubForCatId(null);
-                              setNewSubName('');
-                            }}
-                            className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Sub-Category Chips */}
-                      {cat.subCategories && cat.subCategories.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {cat.subCategories.map((sub) => {
+                          {cat.subCategories!.map((sub) => {
                             const isThisSubSelected =
                               selectedCategoryId === cat.id && selectedSubCategoryId === sub.id;
-
+                            const subName = lang === 'my' ? sub.name : sub.nameEn;
+                            const chipCls =
+                              'px-2.5 py-2 rounded-xl text-xs font-semibold text-left transition-colors truncate ' +
+                              (isThisSubSelected
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:border-emerald-300');
                             return (
                               <button
                                 key={sub.id}
                                 type="button"
-                                onClick={() => handleSelectSubCategory(cat, sub)}
-                                className={`p-2 rounded-xl text-left text-xs font-semibold transition-all flex items-center justify-between gap-1.5 cursor-pointer border ${
-                                  isThisSubSelected
-                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs font-bold'
-                                    : 'bg-white hover:bg-emerald-50 text-slate-800 border-slate-200/80 hover:border-emerald-300'
-                                }`}
+                                onClick={() => handleSelectSub(cat, sub)}
+                                className={chipCls}
+                                title={subName}
                               >
-                                <span className="truncate">
-                                  {lang === 'my' ? sub.name : sub.nameEn}
-                                </span>
-                                {isThisSubSelected ? (
-                                  <Check className="w-3.5 h-3.5 stroke-[3] shrink-0" />
-                                ) : (
-                                  <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-emerald-600 shrink-0" />
-                                )}
+                                {isThisSubSelected ? '✓ ' : ''}{subName}
                               </button>
                             );
                           })}
                         </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-400 italic py-1">
-                          {lang === 'my' ? 'ကဏ္ဍခွဲ မရှိသေးပါ' : 'No sub-categories added yet.'}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })
+                        {plan === 'premium' && onAddSubCategory && (
+                          addingSubForCatId === cat.id ? (
+                            <div className="flex gap-1.5 pt-1">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={newSubName}
+                                onChange={(e) => setNewSubName(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreateSub(cat.id); } }}
+                                placeholder={lang === 'my' ? 'ကဏ္ဍခွဲ အမည်...' : 'New sub name...'}
+                                className="flex-1 px-2.5 py-1.5 text-xs bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleCreateSub(cat.id)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+                              >
+                                {lang === 'my' ? 'ထည့်' : 'Add'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setAddingSubForCatId(null); setNewSubName(''); }}
+                                className="px-2 py-1.5 text-slate-500 hover:text-slate-700"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setAddingSubForCatId(cat.id)}
+                              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 py-1 flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" />
+                              {lang === 'my' ? 'ကဏ္ဍခွဲ အသစ်ထည့်ရန်' : 'Add sub-category'}
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
-          {onManageCategories ? (
+        {onManageCategories && (
+          <div className="border-t border-slate-100 px-4 py-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                onManageCategories();
-              }}
-              className="text-xs font-bold text-slate-700 hover:text-emerald-700 flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl hover:bg-slate-200/60 transition-colors cursor-pointer"
+              onClick={() => { onClose(); onManageCategories(); }}
+              className="w-full py-2 text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 hover:bg-slate-50 rounded-xl transition-colors"
             >
-              <Settings className="w-3.5 h-3.5 text-slate-500" />
-              <span>{lang === 'my' ? 'ကဏ္ဍများ အားလုံး စီမံမည် ›' : 'Manage All Categories ›'}</span>
+              <Settings className="w-3.5 h-3.5" />
+              {lang === 'my' ? 'ကဏ္ဍ စီမံခန့်ခွဲရန်' : 'Manage Categories'}
             </button>
-          ) : (
-            <div />
-          )}
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-          >
-            {lang === 'my' ? 'ပြီးပြီ / ပိတ်မည်' : 'Done / Close'}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

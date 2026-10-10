@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.0.8';
-export const CURRENT_BUILD_NUMBER = 196;
+export const CURRENT_APP_VERSION = 'v7.0.9';
+export const CURRENT_BUILD_NUMBER = 197;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.0.9',
+    buildNumber: 197,
+    releaseDate: '2026-10-10',
+    releaseTime: '10:45 PM (MMT)',
+    titleMy: 'Financial Summary ကျဉ်းမြောင်းစေခြင်း',
+    titleEn: 'Financial Summary Compaction',
+    tag: 'fix',
+    tagLabelMy: 'UI ပြုပြင်ချက်',
+    tagLabelEn: 'UI Compact',
+    descriptionMy: 'Financial Summary ကတ် ၃ ခုအား တစ်တန်းထဲ ကျဉ်းမြောင်းစွာ ပြသပြီး Wallet တစ်ခုချင်းစီအလိုက် breakdown ဇယားကို Transactions Page မှ ဖယ်ရှားလိုက်သည် (Wallet View တွင် ရှိပြီးသား)။ ကာလနှင့် ကဏ္ဍ filter များကို တစ်တန်းထဲ Font သေးစွာ စုစည်းထားသည်။',
+    descriptionEn: 'Compacted the 3 Financial Summary cards into a single row, removed the per-wallet breakdown table from Transactions (available in Wallet view), and merged Time + Category filters into a single line with smaller font.',
+    changesMy: [
+      '📊 Summary ကတ် ၃ ခု → တစ်တန်းထဲ (grid-cols-3)',
+      '📏 ကတ် padding + font size လျှော့ချခြင်း',
+      '🗑️ Wallet breakdown table → ဒီ page မှ ဖယ်ရှား',
+      '🎨 ကာလ + ကဏ္ဍ filter → တစ်တန်းထဲ + font [11px]',
+    ],
+    changesEn: [
+      '📊 3 summary cards → single horizontal row (grid-cols-3)',
+      '📏 Reduced card padding + font sizes',
+      '🗑️ Removed wallet breakdown table from Transactions view',
+      '🎨 Time + Category filters → single line, 11px font',
+    ],
+  },
   {
     version: 'v7.0.8',
     buildNumber: 196,

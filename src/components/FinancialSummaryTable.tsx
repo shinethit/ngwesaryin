@@ -101,9 +101,9 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
       {financialSystem === 'inflow_outflow' && (
         <div className="space-y-3.5 animate-in fade-in duration-200">
           {/* Summary Cards for Inflow / Outflow */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-1.5">
             {/* Total Inflow Card */}
-            <div className="bg-white rounded-2xl p-3.5 border border-emerald-200 shadow-2xs space-y-1 bg-gradient-to-br from-emerald-50/40 to-white">
+            <div className="bg-white rounded-xl p-2 border border-emerald-200 shadow-2xs space-y-1 bg-gradient-to-br from-emerald-50/40 to-white">
               <div className="flex items-center justify-between text-emerald-800">
                 <span className="text-xs font-bold flex items-center gap-1.5">
                   <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
@@ -113,13 +113,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {incomeCount} {lang === 'my' ? 'ခု' : 'items'}
                 </span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-emerald-700 truncate" title={formatLakhs(income, lang)}>
+              <div className="text-sm font-black font-mono text-emerald-700 truncate" title={formatLakhs(income, lang)}>
                 {formatLakhs(income, lang)}
               </div>
             </div>
 
             {/* Total Outflow Card */}
-            <div className="bg-white rounded-2xl p-3.5 border border-rose-200 shadow-2xs space-y-1 bg-gradient-to-br from-rose-50/40 to-white">
+            <div className="bg-white rounded-xl p-2 border border-rose-200 shadow-2xs space-y-1 bg-gradient-to-br from-rose-50/40 to-white">
               <div className="flex items-center justify-between text-rose-800">
                 <span className="text-xs font-bold flex items-center gap-1.5">
                   <ArrowUpRight className="w-4 h-4 text-rose-600" />
@@ -129,13 +129,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {expenseCount} {lang === 'my' ? 'ခု' : 'items'} ({expenseRatio}%)
                 </span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-rose-700 truncate" title={formatLakhs(expense, lang)}>
+              <div className="text-sm font-black font-mono text-rose-700 truncate" title={formatLakhs(expense, lang)}>
                 {formatLakhs(expense, lang)}
               </div>
             </div>
 
             {/* Net Inflow / Outflow Card */}
-            <div className={`bg-white rounded-2xl p-3.5 border shadow-2xs space-y-1 ${net >= 0 ? 'border-emerald-300 bg-gradient-to-br from-emerald-50/60 to-white' : 'border-rose-300 bg-gradient-to-br from-rose-50/60 to-white'}`}>
+            <div className={`bg-white rounded-xl p-2 border shadow-2xs space-y-1 ${net >= 0 ? 'border-emerald-300 bg-gradient-to-br from-emerald-50/60 to-white' : 'border-rose-300 bg-gradient-to-br from-rose-50/60 to-white'}`}>
               <div className={`flex items-center justify-between ${net >= 0 ? 'text-emerald-900' : 'text-rose-900'}`}>
                 <span className="text-xs font-bold flex items-center gap-1.5">
                   <Scale className="w-4 h-4" />
@@ -145,88 +145,14 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {net >= 0 ? (lang === 'my' ? 'ပိုငွေ' : 'Surplus') : (lang === 'my' ? 'လိုငွေ' : 'Deficit')}
                 </span>
               </div>
-              <div className={`text-base sm:text-lg font-black font-mono truncate ${net >= 0 ? 'text-emerald-800' : 'text-rose-800'}`} title={formatMMK(net)}>
+              <div className={`text-sm font-black font-mono truncate ${net >= 0 ? 'text-emerald-800' : 'text-rose-800'}`} title={formatMMK(net)}>
                 {net >= 0 ? `+${formatLakhs(net, lang)}` : formatLakhs(net, lang)}
               </div>
             </div>
           </div>
 
           {/* Wallet Breakdown for Inflow / Outflow (Clean Card / Row layout for mobile readability) */}
-          {walletBreakdown.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                  <WalletIcon className="w-3.5 h-3.5 text-indigo-600" />
-                  {lang === 'my' ? 'Wallet တစ်ခုချင်းစီအလိုက် Inflow / Outflow အသေးစိတ်' : 'Per-Wallet Inflow / Outflow Breakdown'}
-                </span>
-                <span className="text-[11px] font-mono text-slate-500 font-semibold">
-                  {walletBreakdown.length} {lang === 'my' ? 'Wallets' : 'Wallets'}
-                </span>
-              </div>
-
-              {/* Mobile-Friendly Streamlined Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
-                      <th className="py-2.5 px-3">{lang === 'my' ? 'Wallet အမည်' : 'Wallet Name'}</th>
-                      <th className="py-2.5 px-3 text-right text-emerald-700">{lang === 'my' ? 'ဝင်ငွေ (Inflow)' : 'Inflow'}</th>
-                      <th className="py-2.5 px-3 text-right text-rose-700">{lang === 'my' ? 'ထွက်ငွေ (Outflow)' : 'Outflow'}</th>
-                      <th className="py-2.5 px-3 text-right text-slate-900">{lang === 'my' ? 'အသားတင် (Net)' : 'Net'}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    {walletBreakdown.map(({ wallet: w, inflow, outflow, net: wNet, count }) => {
-                      const isShared = w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0);
-                      return (
-                        <tr key={w.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-xs">
-                                {isShared ? '🤝' : '💳'}
-                              </span>
-                              <div>
-                                <div className="font-bold text-slate-900">{lang === 'my' ? w.name : w.nameEn}</div>
-                                <div className="text-[10px] text-slate-400 font-mono">{count} {lang === 'my' ? 'မှတ်တမ်း' : 'txs'}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700" title={formatCurrency(inflow, w.currency)}>
-                            {inflow > 0 ? `+${formatLakhs(inflow, lang)}` : formatLakhs(0, lang)}
-                          </td>
-                          <td className="py-3 px-3 text-right font-mono font-bold text-rose-700" title={formatCurrency(outflow, w.currency)}>
-                            {outflow > 0 ? `-${formatLakhs(outflow, lang)}` : formatLakhs(0, lang)}
-                          </td>
-                          <td className={`py-3 px-3 text-right font-mono font-bold ${wNet >= 0 ? 'text-emerald-800' : 'text-rose-800'}`} title={formatCurrency(wNet, w.currency)}>
-                            {wNet >= 0 ? `+${formatLakhs(wNet, lang)}` : formatLakhs(wNet, lang)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  {walletBreakdown.length > 1 && (
-                    <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-bold text-slate-900">
-                      <tr>
-                        <td className="py-3 px-3 font-black">
-                          {lang === 'my' ? 'စုစုပေါင်း (Total)' : 'Total'}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-emerald-800">
-                          {breakdownTotals.inflow > 0 ? `+${formatLakhs(breakdownTotals.inflow, lang)}` : formatLakhs(0, lang)}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-rose-800">
-                          {breakdownTotals.outflow > 0 ? `-${formatLakhs(breakdownTotals.outflow, lang)}` : formatLakhs(0, lang)}
-                        </td>
-                        <td className={`py-3 px-3 text-right font-mono font-black ${breakdownTotals.net >= 0 ? 'text-emerald-950' : 'text-rose-950'}`}>
-                          {breakdownTotals.net >= 0 ? `+${formatLakhs(breakdownTotals.net, lang)}` : formatLakhs(breakdownTotals.net, lang)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
       )}
 
       {/* ========================================== */}
@@ -235,9 +161,9 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
       {financialSystem === 'opening_closing' && (
         <div className="space-y-3.5 animate-in fade-in duration-200">
           {/* Summary Cards for Opening / Closing */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-1.5">
             {/* Total Opening Card */}
-            <div className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-2xs space-y-1 bg-gradient-to-br from-slate-50/60 to-white">
+            <div className="bg-white rounded-xl p-2 border border-slate-200 shadow-2xs space-y-1 bg-gradient-to-br from-slate-50/60 to-white">
               <div className="flex items-center justify-between text-slate-700">
                 <span className="text-xs font-bold flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-slate-600" />
@@ -247,13 +173,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {lang === 'my' ? 'အစ' : 'Initial'}
                 </span>
               </div>
-              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-800'}`} title={formatLakhs(breakdownTotals.opening, lang)}>
+              <div className={`text-sm font-black font-mono truncate ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-800'}`} title={formatLakhs(breakdownTotals.opening, lang)}>
                 {formatLakhs(breakdownTotals.opening, lang)}
               </div>
             </div>
 
             {/* Net Movement Card */}
-            <div className={`bg-white rounded-2xl p-3.5 border shadow-2xs space-y-1 ${breakdownTotals.net >= 0 ? 'border-indigo-200 bg-gradient-to-br from-indigo-50/40 to-white' : 'border-amber-200 bg-gradient-to-br from-amber-50/40 to-white'}`}>
+            <div className={`bg-white rounded-xl p-2 border shadow-2xs space-y-1 ${breakdownTotals.net >= 0 ? 'border-indigo-200 bg-gradient-to-br from-indigo-50/40 to-white' : 'border-amber-200 bg-gradient-to-br from-amber-50/40 to-white'}`}>
               <div className={`flex items-center justify-between ${breakdownTotals.net >= 0 ? 'text-indigo-900' : 'text-amber-900'}`}>
                 <span className="text-xs font-bold flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4 text-indigo-600" />
@@ -263,13 +189,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {breakdownTotals.net >= 0 ? (lang === 'my' ? 'တိုးတက်' : 'Net In') : (lang === 'my' ? 'လျော့နည်း' : 'Net Out')}
                 </span>
               </div>
-              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.net >= 0 ? 'text-indigo-700' : 'text-amber-700'}`} title={formatMMK(breakdownTotals.net)}>
+              <div className={`text-sm font-black font-mono truncate ${breakdownTotals.net >= 0 ? 'text-indigo-700' : 'text-amber-700'}`} title={formatMMK(breakdownTotals.net)}>
                 {breakdownTotals.net >= 0 ? `+${formatLakhs(breakdownTotals.net, lang)}` : formatLakhs(breakdownTotals.net, lang)}
               </div>
             </div>
 
             {/* Total Closing Card */}
-            <div className="bg-white rounded-2xl p-3.5 border border-indigo-300 shadow-2xs space-y-1 bg-gradient-to-br from-indigo-50/60 to-white">
+            <div className="bg-white rounded-xl p-2 border border-indigo-300 shadow-2xs space-y-1 bg-gradient-to-br from-indigo-50/60 to-white">
               <div className="flex items-center justify-between text-indigo-950">
                 <span className="text-xs font-bold flex items-center gap-1.5">
                   <WalletIcon className="w-4 h-4 text-indigo-600" />
@@ -279,88 +205,14 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {lang === 'my' ? 'လက်ရှိ' : 'Final'}
                 </span>
               </div>
-              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-indigo-900'}`} title={formatLakhs(breakdownTotals.closing, lang)}>
+              <div className={`text-sm font-black font-mono truncate ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-indigo-900'}`} title={formatLakhs(breakdownTotals.closing, lang)}>
                 {formatLakhs(breakdownTotals.closing, lang)}
               </div>
             </div>
           </div>
 
           {/* Wallet Breakdown for Opening / Closing */}
-          {walletBreakdown.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  {lang === 'my' ? 'Wallet တစ်ခုချင်းစီအလိုက် Opening & Closing အသေးစိတ်' : 'Per-Wallet Opening & Closing Breakdown'}
-                </span>
-                <span className="text-[11px] font-mono text-slate-500 font-semibold">
-                  {walletBreakdown.length} {lang === 'my' ? 'Wallets' : 'Wallets'}
-                </span>
-              </div>
-
-              {/* Mobile-Friendly Streamlined Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
-                      <th className="py-2.5 px-3">{lang === 'my' ? 'Wallet အမည်' : 'Wallet Name'}</th>
-                      <th className="py-2.5 px-3 text-right text-slate-600">{lang === 'my' ? 'စတင်လက်ကျန် (Opening)' : 'Opening'}</th>
-                      <th className="py-2.5 px-3 text-right text-indigo-700">{lang === 'my' ? 'လှုပ်ရှားမှု (Movement)' : 'Movement'}</th>
-                      <th className="py-2.5 px-3 text-right text-slate-900">{lang === 'my' ? 'ပိတ်လက်ကျန် (Closing)' : 'Closing'}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    {walletBreakdown.map(({ wallet: w, opening, net: wNet, closing, count }) => {
-                      const isShared = w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0);
-                      return (
-                        <tr key={w.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-xs">
-                                {isShared ? '🤝' : '💳'}
-                              </span>
-                              <div>
-                                <div className="font-bold text-slate-900">{lang === 'my' ? w.name : w.nameEn}</div>
-                                <div className="text-[10px] text-slate-400 font-mono">{count} {lang === 'my' ? 'မှတ်တမ်း' : 'txs'}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className={`py-3 px-3 text-right font-mono font-semibold ${opening < 0 ? 'text-rose-600' : 'text-slate-600'}`} title={formatCurrency(opening, w.currency)}>
-                            {formatLakhs(opening, lang)}
-                          </td>
-                          <td className={`py-3 px-3 text-right font-mono font-bold ${wNet >= 0 ? 'text-emerald-700' : 'text-rose-700'}`} title={formatCurrency(wNet, w.currency)}>
-                            {wNet >= 0 ? `+${formatLakhs(wNet, lang)}` : formatLakhs(wNet, lang)}
-                          </td>
-                          <td className={`py-3 px-3 text-right font-mono font-black ${closing < 0 ? 'text-rose-600' : 'text-slate-900'}`} title={formatCurrency(closing, w.currency)}>
-                            {formatLakhs(closing, lang)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  {walletBreakdown.length > 1 && (
-                    <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-bold text-slate-900">
-                      <tr>
-                        <td className="py-3 px-3 font-black">
-                          {lang === 'my' ? 'စုစုပေါင်း (Total)' : 'Total'}
-                        </td>
-                        <td className={`py-3 px-3 text-right font-mono font-bold ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-700'}`}>
-                          {formatLakhs(breakdownTotals.opening, lang)}
-                        </td>
-                        <td className={`py-3 px-3 text-right font-mono font-bold ${breakdownTotals.net >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
-                          {breakdownTotals.net >= 0 ? `+${formatLakhs(breakdownTotals.net, lang)}` : formatLakhs(breakdownTotals.net, lang)}
-                        </td>
-                        <td className={`py-3 px-3 text-right font-mono font-black ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-slate-950'}`}>
-                          {formatLakhs(breakdownTotals.closing, lang)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
       )}
     </div>
   );

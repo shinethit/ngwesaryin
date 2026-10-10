@@ -205,6 +205,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [categorySelectMode, setCategorySelectMode] = useState<'picker' | 'dropdown' | 'grid'>('picker');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [walletExpanded, setWalletExpanded] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
   // ==========================================
   // Vehicle Linkage Progressive Disclosure State
@@ -643,9 +646,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         (currentCat.name && currentCat.name.includes('ငွေလွှဲ')) ||
         (currentCat.nameEn && currentCat.nameEn.toLowerCase().includes('transfer')))
   );
-  const effectiveCategoryId =
-    currentCat && (currentCat.type === type || isCurrentTransferCat) ? categoryId : filteredCats[0]?.id || '';
-  const selectedCatObj = categories.find((c) => c.id === effectiveCategoryId);
+  // [v6.24] If user has explicitly picked a category, honor it — do NOT
+  // silently fall back when its type differs. The auto-type effect will
+  // flip `type` to match. Fallback only when nothing is picked yet.
+  const effectiveCategoryId = categoryId
+    ? categoryId
+    : (filteredCats[0]?.id || '');
+  const selectedCatObj = categories.find((c) => c.id === (categoryId || effectiveCategoryId));
 
   // Check if selected category is Transfer (ငွေလွှဲပြောင်းခြင်း)
   const isTransferCategory = useMemo(() => {
@@ -1047,6 +1054,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
+  // [v6.24] Auto-derive transaction type from category selection
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!selectedCatObj) return;
+    if (isTransferCategory) return;
+    const catType = selectedCatObj.type;
+    if (catType && type !== catType) setType(catType);
+  }, [isOpen, selectedCatObj?.id, isTransferCategory]);
+
   if (!isOpen) return null;
 
   const handleAddAmount = (add: number) => {
@@ -1263,1558 +1279,718 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 touch-none overscroll-none animate-fadeIn">
-      <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[90vh] sm:max-h-[88vh] flex flex-col pointer-events-auto animate-scaleUp">
-        {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white z-10">
-          <h2 className="font-bold text-lg text-slate-900">
-            {isEditing
-              ? (lang === 'my' ? 'စာရင်းမှတ်တမ်း ပြင်ဆင်ခြင်း' : 'Edit Transaction')
-              : (lang === 'my' ? 'စာရင်း အသစ်ထည့်သွင်းခြင်း' : 'New Transaction Entry')}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center font-bold cursor-pointer transition-colors"
-          >
-            ✕
-          </button>
-        </div>
 
-        {/* Content Form - Single Clean Scroll Container */}
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-slate-900/60 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 min-h-0 text-xs sm:text-sm overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]"
+          className="flex flex-col h-full min-h-0"
         >
-          {/* Prominent Wallet Indicator & Quick Switcher at Top */}
-          {(() => {
-            const activeWallet = wallets.find((w) => w.id === walletId) || wallets[0];
-            const activeCurrency = activeWallet?.currency || 'MMK';
-            const activeRate = activeWallet?.exchangeRate;
-            return (
-              <div className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                    <Wallet className="w-4 h-4 text-indigo-600" />
-                    <span>{lang === 'my' ? 'စာရင်းသွင်းမည့် ပိုက်ဆံအိတ် / အကောင့်:' : 'Target Wallet / Account:'}</span>
-                  </label>
-                  <span className="text-[11px] text-indigo-700 font-semibold">
-                    {lang === 'my' ? 'လက်ကျန်ငွေ:' : 'Balance:'}{' '}
-                    <span className="font-bold font-mono">
-                      {formatCurrency(activeWallet?.balance || 0, activeCurrency)}
-                    </span>
-                    {activeCurrency !== 'MMK' && (
-                      <span className="text-[10px] text-indigo-600 font-medium ml-1">
-                        (≈ {convertToMMK(activeWallet?.balance || 0, activeCurrency, activeRate).toLocaleString()} MMK)
-                      </span>
-                    )}
-                  </span>
-                </div>
+          {/* ── NAV BAR ── */}
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 -ml-2"
+            >
+              {lang === 'my' ? 'မလုပ်တော့' : 'Cancel'}
+            </button>
+            <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
+              {isEditing
+                ? (lang === 'my' ? 'စာရင်းပြင်ဆင်ခြင်း' : 'Edit Transaction')
+                : (lang === 'my' ? 'စာရင်းအသစ်' : 'New Transaction')}
+            </h2>
+            <button
+              type="submit"
+              disabled={isSubmitting || !isActionAllowed}
+              className="text-sm font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-1 -mr-2 flex items-center gap-1"
+            >
+              {isSubmitting ? '...' : (
+                <>
+                  <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                  <span>{lang === 'my' ? 'သိမ်း' : 'Save'}</span>
+                </>
+              )}
+            </button>
+          </div>
 
-                {/* Quick Wallet Pills - Responsive Wrap (All wallets visible without scroll) */}
-                <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
-                  {wallets.map((w) => {
-                    const isSelected = walletId === w.id;
-                    const wCurr = w.currency || 'MMK';
-                    const isShared = Boolean(w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
-                    return (
-                      <button
-                        key={w.id}
-                        type="button"
-                        onClick={() => {
-                          setWalletId(w.id);
-                          if (typeof localStorage !== 'undefined') {
-                            localStorage.setItem('fortune_last_used_wallet_id', w.id);
-                          }
-                        }}
-                        className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : isShared
-                            ? 'bg-amber-50 hover:bg-amber-100/70 text-amber-900 border border-amber-300'
-                            : 'bg-white hover:bg-indigo-100/50 text-slate-700 border border-indigo-100'
-                        }`}
-                      >
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: w.color || '#6366F1' }}
-                        />
-                        <span>{lang === 'my' ? w.name : w.nameEn}</span>
-                        {isShared && (
-                          <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
-                            isSelected ? 'bg-white/20 text-white' : 'bg-amber-200/80 text-amber-900'
-                          }`}>
-                            {w.isSharedFromOther ? `🤝 ${w.ownerName || 'Shared'}` : '🤝 Shared'}
-                          </span>
-                        )}
-                        {wCurr !== 'MMK' && (
-                          <span className="text-[10px] opacity-75 font-mono">({wCurr})</span>
-                        )}
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Date Row inside Top Wallet Card */}
-                <div className="pt-2 border-t border-indigo-100/90 flex items-center justify-between gap-2">
-                  <label className="text-[11px] font-bold text-indigo-950 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>{lang === 'my' ? 'ရက်စွဲ (Date):' : 'Date:'}</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="px-2.5 py-1 text-xs bg-white border border-indigo-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs cursor-pointer"
-                  />
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Category & Sub-Category Selection with Clean Interactive Card */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="block text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{lang === 'my' ? 'ကဏ္ဍ (Category):' : 'Category:'}</span>
-              </label>
-
-              {onManageCategories && (
+          {/* ── MORE OPTIONS BAR ── */}
+          <div className="px-3 py-2 border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMoreOpen(!moreOpen)}
+                className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700"
+              >
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>{lang === 'my' ? 'နောက်ထပ် ရွေးချယ်စရာများ' : 'More Options'}</span>
+                </span>
+                {moreOpen
+                  ? <ChevronUp className="w-4 h-4 text-slate-400" />
+                  : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              </button>
+              {isVehicleRelatedCategory && (
                 <button
                   type="button"
-                  onClick={() => {
-                    onClose();
-                    onManageCategories();
-                  }}
-                  className="text-xs font-semibold text-slate-500 hover:text-indigo-600 hover:underline cursor-pointer"
+                  onClick={() => setShowFuelGuideModal(true)}
+                  className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
+                  title={lang === "my" ? "ဆီဖိုး လမ်းညွှန်" : "Fuel Guide"}
                 >
-                  {lang === 'my' ? '⚙️ စီမံရန်' : '⚙️ Manage'}
+                  <HelpCircle className="w-4 h-4" />
                 </button>
               )}
             </div>
 
-            {/* Clean Single-Tap Category Card */}
-            {(() => {
-              const currentCat =
-                filteredCats.find((c) => c.id === effectiveCategoryId) ||
-                categories.find((c) => c.id === effectiveCategoryId);
-              const currentSub = availableSubCats.find((s) => s.id === subCategoryId);
-              const isLocked = currentCat?.isCustom && plan !== 'premium';
-
-              return (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoryPickerOpen(true)}
-                    className="w-full p-3 bg-white hover:bg-emerald-50/50 active:bg-emerald-100/40 border border-slate-200/90 hover:border-emerald-300 rounded-2xl transition-all flex items-center justify-between gap-3 text-left cursor-pointer group shadow-2xs"
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-xs transition-transform group-hover:scale-105"
-                        style={{ backgroundColor: currentCat?.color || '#10B981' }}
-                      >
-                        <CategoryIcon
-                          name={currentCat?.icon || 'Tag'}
-                          className="w-5 h-5"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-emerald-700 truncate">
-                            {currentCat
-                              ? lang === 'my'
-                                ? currentCat.name
-                                : currentCat.nameEn
-                              : lang === 'my'
-                              ? 'ကဏ္ဍ ရွေးချယ်ရန် နှိပ်ပါ'
-                              : 'Tap to Select Category'}
-                          </span>
-                          {currentSub && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                              <span>›</span>
-                              <span className="truncate max-w-[130px]">{lang === 'my' ? currentSub.name : currentSub.nameEn}</span>
-                            </span>
-                          )}
-                          {isLocked && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold">
-                              <Lock className="w-2.5 h-2.5 stroke-[2.5]" />
-                              <span>VIP</span>
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5 truncate">
-                          {currentCat?.nameEn ? `${currentCat.nameEn} • ` : ''}
-                          <span className="text-emerald-700 font-medium">
-                            {lang === 'my' ? 'ကဏ္ဍ/ကဏ္ဍခွဲ ပြောင်းရန် နှိပ်ပါ ›' : 'Tap to change ›'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0">
-                      <span className="px-3 py-1.5 rounded-xl bg-slate-100 group-hover:bg-emerald-600 text-slate-700 group-hover:text-white font-bold text-xs transition-colors flex items-center gap-1 shadow-2xs">
-                        <span>{lang === 'my' ? 'ပြောင်းမည်' : 'Change'}</span>
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Sub-Category Dropdown Selector (Clean Dropdown - No Horizontal Scroll) */}
-                  {availableSubCats.length > 0 && (
-                    <div className="flex items-center gap-2.5 p-2.5 bg-slate-50 border border-slate-200/90 rounded-2xl shadow-2xs">
-                      <label className="text-xs font-bold text-slate-700 shrink-0 flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{lang === 'my' ? 'ကဏ္ဍခွဲ ရွေးရန်:' : 'Sub-Category:'}</span>
-                      </label>
-                      <div className="relative flex-1">
-                        <select
-                          value={subCategoryId}
-                          onChange={(e) => setSubCategoryId(e.target.value)}
-                          className="w-full appearance-none bg-white hover:bg-slate-100/80 text-slate-900 font-bold text-xs pl-3 pr-8 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs transition-all"
-                        >
-                          <option value="">
-                            🌟 {lang === 'my' ? 'အဓိက ကဏ္ဍသာ (Main Category Only)' : 'Main Category Only'}
-                          </option>
-                          {availableSubCats.map((sub) => (
-                            <option key={sub.id} value={sub.id}>
-                              📂 {lang === 'my' ? sub.name : sub.nameEn}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {moreOpen && (
+              <div className="mt-1.5 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                {(isVehicleRelatedCategory || showModelSelector) && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { handleSwitchModel("fuel"); setMoreOpen(false); }}
+                      className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "fuel" ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50")}
+                    >
+                      <Fuel className="w-4 h-4" />
+                      <span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>
+                      {entryModel === "fuel" && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" strokeWidth={3} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { handleSwitchModel("vehicle_service"); setMoreOpen(false); }}
+                      className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50")}
+                    >
+                      <Wrench className="w-4 h-4" />
+                      <span>{lang === 'my' ? 'ဝန်ဆောင်မှု / ပြုပြင်' : 'Service / Repair'}</span>
+                      {entryModel === "vehicle_service" && maintServiceType !== "tires" && <Check className="w-3.5 h-3.5 ml-auto text-blue-600" strokeWidth={3} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); setMoreOpen(false); }}
+                      className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType === "tires" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}
+                    >
+                      <Car className="w-4 h-4" />
+                      <span>{lang === 'my' ? 'တာယာ လဲလှယ်' : 'Tire Replacement'}</span>
+                      {entryModel === "vehicle_service" && maintServiceType === "tires" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
+                    </button>
+                    <div className="h-px bg-slate-100 my-0.5" />
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }}
+                  className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "unit_qty" && entryModel === "general" ? "bg-indigo-50 text-indigo-800" : "text-slate-700 hover:bg-slate-50")}
+                >
+                  <Boxes className="w-4 h-4" />
+                  <span>{lang === 'my' ? 'ဈေး × အရေအတွက်' : 'Unit Price × Qty'}</span>
+                  {entryMode === "unit_qty" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-indigo-600" strokeWidth={3} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }}
+                  className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "shopping_list" && entryModel === "general" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>
+                  {entryMode === "shopping_list" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowQuickAddSub(true); setEntryMode("direct"); setEntryModel("general"); setMoreOpen(false); }}
+                  className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (showQuickAddSub ? "bg-slate-100 text-slate-800" : "text-slate-700 hover:bg-slate-50")}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</span>
+                  {showQuickAddSub && <Check className="w-3.5 h-3.5 ml-auto text-slate-700" strokeWidth={3} />}
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Dedicated Transfer Wallet Selector Card when Transfer Category is selected */}
-          {isTransferCategory && (
-            <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200/90 rounded-2xl space-y-2.5 shadow-2xs animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                  <span>{lang === 'my' ? 'ငွေလွှဲပြောင်းမည့် အကောင့်များ (Transfer Wallets):' : 'Transfer Wallets (From & To):'}</span>
-                </label>
-                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full text-white shadow-2xs ${type === 'expense' ? 'bg-rose-600' : 'bg-emerald-600'}`}>
-                  {type === 'expense' ? (lang === 'my' ? '💸 ငွေလွှဲထွက် (Transfer Out)' : 'Transfer Out') : (lang === 'my' ? '💰 ငွေလွှဲဝင် (Transfer In)' : 'Transfer In')}
-                </span>
-              </div>
+          {/* ── SCROLLABLE CONTENT ── */}
+          <div className="flex-1 overflow-y-auto overscroll-contain">
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                {/* From Wallet */}
-                <div className="bg-white p-2.5 rounded-xl border border-indigo-150 shadow-2xs space-y-1">
-                  <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wide flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-                    {lang === 'my' ? 'ငွေထွက်မည့် အကောင့် (From Wallet):' : 'From Wallet:'}
+            {/* Vehicle mode badge */}
+            {entryModel !== "general" && (
+              <div className="px-3 pt-3">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
+                  <span className="text-xs font-bold text-emerald-800">
+                    {entryModel === 'fuel' && (lang === 'my' ? '⛽ ဆီဖိုး Mode' : '⛽ Fuel Mode')}
+                    {entryModel === 'vehicle_service' && maintServiceType === 'tires' && (lang === 'my' ? '🛞 တာယာ Mode' : '🛞 Tire Mode')}
+                    {entryModel === 'vehicle_service' && maintServiceType !== 'tires' && (lang === 'my' ? '🔧 ဝန်ဆောင်မှု Mode' : '🔧 Service Mode')}
                   </span>
-                  <select
-                    value={walletId}
-                    onChange={(e) => {
-                      const newFrom = e.target.value;
-                      setWalletId(newFrom);
-                      if (newFrom === transferToWalletId) {
-                        const alt = wallets.find((w) => w.id !== newFrom);
-                        if (alt) setTransferToWalletId(alt.id);
-                      }
-                    }}
-                    className="w-full bg-slate-50 border border-slate-300 font-bold text-slate-900 rounded-lg p-1.5 focus:ring-2 focus:ring-indigo-500 text-xs cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => { setEntryModel("general"); setIsVehicleLinkEnabled(false); }}
+                    className="text-[10px] font-bold text-slate-500 hover:text-slate-800"
                   >
-                    {wallets.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {lang === 'my' ? w.name : w.nameEn} ({formatCurrency(w.balance, w.currency || 'MMK')})
+                    ✕ {lang === 'my' ? 'ပိတ်' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Type indicator */}
+            <div className="px-4 pt-3 pb-1 text-center">
+              {type === "income"
+                ? <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
+                    <ArrowDownLeft className="w-3 h-3" />
+                    {lang === 'my' ? 'ဝင်ငွေ' : 'Income'}
+                  </span>
+                : <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600">
+                    <ArrowUpRight className="w-3 h-3" />
+                    {lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}
+                  </span>}
+            </div>
+
+            {/* BIG AMOUNT */}
+            <div className="px-4 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <span className="text-xl font-black text-slate-400 shrink-0">
+                  {selectedWallet?.currency || 'MMK'}
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={amount}
+                  onChange={(e) => handleAmountChangeWithFuelSync(e.target.value)}
+                  placeholder="0"
+                  autoFocus={!isEditing}
+                  className="flex-1 min-w-0 text-4xl font-black text-slate-900 bg-transparent border-0 focus:outline-none text-center"
+                />
+              </div>
+              {!(entryModel === "fuel" && vehicleId) && (
+                <div className="flex justify-center gap-1.5 mt-2 flex-wrap">
+                  <button type="button" onClick={() => handleAddAmount(1000)} className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-600">+1K</button>
+                  <button type="button" onClick={() => handleAddAmount(10000)} className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-600">+10K</button>
+                  <button type="button" onClick={() => handleAddAmount(100000)} className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 rounded text-[11px] font-bold text-indigo-700">+100K</button>
+                </div>
+              )}
+            </div>
+
+            {/* CATEGORY ROW */}
+            <button
+              type="button"
+              onClick={() => setIsCategoryPickerOpen(true)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
+                style={{ backgroundColor: selectedCatObj?.color || "#94A3B8" }}
+              >
+                <CategoryIcon name={selectedCatObj?.icon || "Tag"} className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                {categoryId ? (
+                  <>
+                    <div className="text-sm font-bold text-slate-900 truncate">
+                      {selectedCatObj ? (lang === 'my' ? selectedCatObj.name : selectedCatObj.nameEn) : ''}
+                    </div>
+                    {(() => {
+                      const sub = availableSubCats.find((s) => s.id === subCategoryId);
+                      if (!sub) return null;
+                      return (
+                        <div className="text-xs text-emerald-700 truncate mt-0.5">
+                          ↳ {lang === 'my' ? sub.name : sub.nameEn}
+                        </div>
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <div className="text-sm font-bold text-slate-400">
+                    {lang === 'my' ? 'ကဏ္ဍ ရွေးရန်' : 'Select category'}
+                  </div>
+                )}
+              </div>
+              <span className="text-slate-300 text-xl shrink-0">›</span>
+            </button>
+
+            {/* TRANSFER WALLETS */}
+            {isTransferCategory && (
+              <div className="px-4 py-3 border-b border-slate-100 space-y-2">
+                <div className="text-xs font-bold text-indigo-900">
+                  {lang === 'my' ? 'ငွေလွှဲပြောင်းမှု' : 'Transfer'}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[10px] font-bold text-rose-700 mb-0.5">
+                      {lang === 'my' ? 'မှ' : 'From'}
+                    </div>
+                    <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                      {wallets.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {lang === 'my' ? w.name : w.nameEn}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-emerald-700 mb-0.5">
+                      {lang === 'my' ? 'သို့' : 'To'}
+                    </div>
+                    <select value={transferToWalletId} onChange={(e) => setTransferToWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                      {wallets.filter((w) => w.id !== walletId).map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {lang === 'my' ? w.name : w.nameEn}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* FUEL ROWS */}
+            {entryModel === "fuel" && (
+              <>
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <div className="text-xs font-bold text-slate-500 mb-1">
+                    {lang === 'my' ? 'ယာဉ်' : 'Vehicle'}
+                  </div>
+                  <select
+                    value={vehicleId}
+                    onChange={(e) => {
+                      setVehicleId(e.target.value);
+                      const v = vehicles.find((x) => x.id === e.target.value);
+                      if (v?.currentOdometer) setVehicleOdometer(String(v.currentOdometer));
+                      if (v?.fuelType) setFuelType(v.fuelType);
+                      if (v?.walletId && wallets.some((w) => w.id === v.walletId)) setWalletId(v.walletId);
+                    }}
+                    className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  >
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}
                       </option>
                     ))}
                   </select>
                 </div>
-
-                {/* To Wallet */}
-                <div className="bg-white p-2.5 rounded-xl border border-indigo-150 shadow-2xs space-y-1">
-                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    {lang === 'my' ? 'ငွေဝင်မည့် အကောင့် (To Wallet):' : 'To Wallet:'}
-                  </span>
-                  <select
-                    value={transferToWalletId}
-                    onChange={(e) => setTransferToWalletId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 font-bold text-slate-900 rounded-lg p-1.5 focus:ring-2 focus:ring-indigo-500 text-xs cursor-pointer"
-                  >
-                    {wallets
-                      .filter((w) => w.id !== walletId)
-                      .map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {lang === 'my' ? w.name : w.nameEn} ({formatCurrency(w.balance, w.currency || 'MMK')})
-                        </option>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                    <Fuel className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? 'ဆီပမာဏ (L)' : 'Liters (L)'}
+                    </div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={fuelLiters}
+                      onChange={(e) => handleFuelLitersChange(e.target.value)}
+                      placeholder="0"
+                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
+                    />
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                    <span className="text-amber-600 font-black text-lg">K</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? '၁ လီတာ ဈေး (Ks)' : 'Price per Liter (Ks)'}
+                    </div>
+                    <input
+                      type="number"
+                      value={fuelPricePerLiter}
+                      onChange={(e) => handleFuelPriceChange(e.target.value)}
+                      placeholder="0"
+                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
+                    />
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? 'ဆီအမျိုးအစား' : 'Fuel Type'}
+                    </div>
+                    <select value={fuelType} onChange={(e) => setFuelType(e.target.value)} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5">
+                      <option value="Octane 92">Octane 92</option>
+                      <option value="Octane 95">Octane 95</option>
+                      <option value="Premium Diesel">Premium Diesel</option>
+                      <option value="Diesel">Diesel</option>
+                      <option value="EV Charging">EV Charging</option>
+                      <option value="CNG">CNG</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                    <History className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? 'ဆီဆိုင်' : 'Gas Station'}
+                    </div>
+                    <select value={fuelGasStation} onChange={(e) => setFuelGasStation(e.target.value)} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5">
+                      <option value="">{lang === 'my' ? '-- ရွေးပါ --' : '-- Select --'}</option>
+                      {GAS_STATIONS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
                       ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                    <Gauge className="w-5 h-5 text-slate-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}
+                    </div>
+                    <input
+                      type="number"
+                      value={vehicleOdometer}
+                      onChange={(e) => setVehicleOdometer(e.target.value)}
+                      placeholder="0"
+                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
+                    />
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                    {fuelIsFullTank ? <Check className="w-5 h-5 text-emerald-600" /> : <X className="w-5 h-5 text-slate-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? 'တိုင်ကီအပြည့်' : 'Full Tank'}
+                    </div>
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">
+                      {fuelIsFullTank ? (lang === 'my' ? 'အပြည့်' : 'Yes') : (lang === 'my' ? 'တစ်စိတ်တပိုင်း' : 'Partial')}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFuelIsFullTank(!fuelIsFullTank)}
+                    className={"w-10 h-6 rounded-full transition-colors relative shrink-0 " + (fuelIsFullTank ? "bg-emerald-600" : "bg-slate-300")}
+                  >
+                    <span className={"absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all " + (fuelIsFullTank ? "left-[18px]" : "left-0.5")} />
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* VEHICLE SERVICE ROWS */}
+            {entryModel === "vehicle_service" && (
+              <>
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <div className="text-xs font-bold text-slate-500 mb-1">
+                    {lang === 'my' ? 'ယာဉ်' : 'Vehicle'}
+                  </div>
+                  <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
                   </select>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* 3 Main Models Selector Toggle (ယာဉ်စီမံခန့်ခွဲမှု Category ရွေးချယ်မှသာ ပြသမည်) */}
-          {showModelSelector && (
-            <div className="space-y-1 pt-1 animate-fadeIn">
-              <label className="block text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                <span>{lang === 'my' ? 'ယာဉ်စီမံခန့်ခွဲမှု စာရင်း ပုံစံ (Vehicle Model Selector):' : 'Select Vehicle Entry Style:'}</span>
-              </label>
-              <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/90 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => handleSwitchModel('general')}
-                  className={`py-2 px-2 rounded-xl font-bold text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
-                    entryModel === 'general'
-                      ? 'bg-white text-indigo-950 shadow-xs border border-slate-200 scale-[1.01]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
-                >
-                  <Sparkles className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${entryModel === 'general' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                  <span className="truncate">{lang === 'my' ? '၁။ General' : '1. General'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSwitchModel('fuel')}
-                  className={`py-2 px-2 rounded-xl font-bold text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
-                    entryModel === 'fuel'
-                      ? 'bg-emerald-600 text-white shadow-xs scale-[1.01]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
-                >
-                  <Fuel className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${entryModel === 'fuel' ? 'text-white' : 'text-emerald-600'}`} />
-                  <span className="truncate">{lang === 'my' ? '၂။ ဆီဖိုး' : '2. Fuel'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSwitchModel('vehicle_service')}
-                  className={`py-2 px-2 rounded-xl font-bold text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
-                    entryModel === 'vehicle_service'
-                      ? 'bg-blue-600 text-white shadow-xs scale-[1.01]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
-                >
-                  <Wrench className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${entryModel === 'vehicle_service' ? 'text-white' : 'text-blue-600'}`} />
-                  <span className="truncate">{lang === 'my' ? '၃။ Other Vehicle' : '3. Vehicle Svc'}</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ============================================================== */}
-          {/* MODEL 1: GENERAL EXPENSE / INCOME                              */}
-          {/* ============================================================== */}
-          {entryModel === 'general' && (
-            <div className="space-y-4">
-              {/* Type Toggle: ဝင်ငွေ / ထွက်ငွေ */}
-              <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  disabled={isEditing ? type !== 'expense' : !canAddExpense}
-                  onClick={() => {
-                    if (!isEditing && canAddExpense) setType('expense');
-                  }}
-                  className={`py-2 px-3 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
-                    type === 'expense'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : !canAddExpense && !isEditing
-                      ? 'text-slate-300 cursor-not-allowed'
-                      : 'text-slate-600 hover:text-slate-900 cursor-pointer'
-                  }`}
-                  title={
-                    !canAddExpense && !isEditing
-                      ? (lang === 'my' ? 'ပိုင်ရှင်မှ ထွက်ငွေ ထည့်သွင်းခွင့် ပိတ်ထားပါသည်' : 'Adding expense disabled by owner')
-                      : undefined
-                  }
-                >
-                  <ArrowUpRight className="w-4 h-4" />
-                  <span>{lang === 'my' ? 'ထွက်ငွေ (Expense)' : 'Expense'}</span>
-                  {!canAddExpense && !isEditing && <Lock className="w-3.5 h-3.5 ml-1 text-slate-400" />}
-                </button>
-                <button
-                  type="button"
-                  disabled={isEditing ? type !== 'income' : !canAddIncome}
-                  onClick={() => {
-                    if (!isEditing && canAddIncome) setType('income');
-                  }}
-                  className={`py-2 px-3 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
-                    type === 'income'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : !canAddIncome && !isEditing
-                      ? 'text-slate-300 cursor-not-allowed'
-                      : 'text-slate-600 hover:text-slate-900 cursor-pointer'
-                  }`}
-                  title={
-                    !canAddIncome && !isEditing
-                      ? (lang === 'my' ? 'ပိုင်ရှင်မှ ဝင်ငွေ ထည့်သွင်းခွင့် ပိတ်ထားပါသည်' : 'Adding income disabled by owner')
-                      : undefined
-                  }
-                >
-                  <ArrowDownLeft className="w-4 h-4" />
-                  <span>{lang === 'my' ? 'ဝင်ငွေ (Income)' : 'Income'}</span>
-                  {!canAddIncome && !isEditing && <Lock className="w-3.5 h-3.5 ml-1 text-slate-400" />}
-                </button>
-              </div>
-
-          {/* Item / Product Name — hidden in Shopping List mode to avoid double entry */}
-          {entryMode !== 'shopping_list' && (
-          <div className="space-y-1.5 p-3 bg-slate-50/80 rounded-2xl border border-slate-200">
-            <div className="flex items-center justify-between">
-              <label className="block text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5">
-                <Tag className={`w-3.5 h-3.5 ${type === 'income' ? 'text-emerald-600' : 'text-indigo-600'}`} />
-                <span>
-                  {type === 'income'
-                    ? (lang === 'my' ? 'ဝင်ငွေ ခေါင်းစဉ် / အကြောင်းအရာ (Income Title):' : 'Income Title / Source:')
-                    : (lang === 'my' ? 'ကုန်ပစ္စည်း / ဝယ်ယူသည့် အရာ (Item Name):' : 'Item / Product Name:')}
-                </span>
-              </label>
-              {type === 'expense' && unifiedItemSuggestions.length > 0 && (
-                <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  <span>{lang === 'my' ? 'ယခင်ပစ္စည်း အကြံပြုချက်များ' : 'Suggested Items'}</span>
-                </span>
-              )}
-            </div>
-            <input
-              type="text"
-              list="db-item-suggestions"
-              placeholder={
-                type === 'income'
-                  ? (lang === 'my' ? 'ဥပမာ - လစာ ၊ အပိုဝင်ငွေ ၊ အရောင်းရငွေ' : 'e.g. Salary, Sales, Bonus')
-                  : (lang === 'my' ? 'ဥပမာ - ကြာကွေး ၊ ရေသန့် ၊ ဆန် ၊ ကြက်သား' : 'e.g. Rice, Water, Chicken')
-              }
-              value={itemName}
-              onChange={(e) => {
-                const val = e.target.value;
-                setItemName(val);
-                if (val.trim().length >= 1 && type === 'expense') {
-                  const match = findMatchingItemInfo(val, unifiedItemSuggestions);
-                  if (match && match.categoryId && (!categoryId || categoryId === 'cat_food' || categoryId === 'cat_expense_other')) {
-                    setCategoryId(match.categoryId);
-                    if (match.subCategoryId) setSubCategoryId(match.subCategoryId);
-                  }
-                }
-              }}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-900 text-sm"
-            />
-
-            {/* Quick Select Suggestion Pills - ONLY fills Item Name & Category, NEVER touches or overwrites entered price! */}
-            {type === 'expense' && unifiedItemSuggestions.length > 0 && (
-              <div className="pt-1">
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                  {unifiedItemSuggestions
-                    .filter((item) => {
-                      if (!itemName.trim()) return true;
-                      return item.normalizedName.includes(itemName.trim().toLowerCase());
-                    })
-                    .slice(0, 8)
-                    .map((item) => (
-                      <button
-                        key={item.normalizedName}
-                        type="button"
-                        onClick={() => {
-                          setItemName(item.name);
-                          if (item.categoryId) {
-                            setCategoryId(item.categoryId);
-                            if (item.subCategoryId) setSubCategoryId(item.subCategoryId);
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-emerald-50 hover:text-emerald-900 hover:border-emerald-300 border border-slate-200/90 rounded-lg text-xs font-semibold text-slate-700 whitespace-nowrap shrink-0 transition-all cursor-pointer shadow-2xs active:scale-95"
-                      >
-                        <span>{item.name}</span>
-                      </button>
-                    ))}
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <div className="text-xs font-bold text-slate-500 mb-1">
+                    {lang === 'my' ? 'ဝန်ဆောင်မှု အမျိုးအစား' : 'Service Type'}
+                  </div>
+                  <select
+                    value={maintServiceType}
+                    onChange={(e) => setMaintServiceType(e.target.value as VehicleServiceType)}
+                    className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  >
+                    <option value="engine_oil">{lang === "my" ? "🛢️ အင်ဂျင်ဝိုင်" : "🛢️ Engine Oil"}</option>
+                    <option value="oil_filter">{lang === "my" ? "🔧 ဝိုင်စစ်" : "🔧 Oil Filter"}</option>
+                    <option value="air_filter">{lang === "my" ? "💨 လေစစ်" : "💨 Air Filter"}</option>
+                    <option value="brake_pads">{lang === "my" ? "🛑 ဘရိတ်ရှူး" : "🛑 Brake Pads"}</option>
+                    <option value="tires">{lang === "my" ? "🛞 တာယာ လဲလှယ်" : "🛞 Tire Replacement"}</option>
+                    <option value="battery">{lang === "my" ? "🔋 ဘက်ထရီ" : "🔋 Battery"}</option>
+                    <option value="spark_plugs">{lang === "my" ? "⚡ ပလပ်" : "⚡ Spark Plugs"}</option>
+                    <option value="transmission_fluid">{lang === "my" ? "⚙️ ဂီယာဝိုင်" : "⚙️ Transmission Fluid"}</option>
+                    <option value="coolant">{lang === "my" ? "💧 ရေတိုင်ကီ" : "💧 Coolant"}</option>
+                    <option value="wheel_alignment">{lang === "my" ? "🎯 ဘီးချိန်" : "🎯 Wheel Alignment"}</option>
+                    <option value="suspension">{lang === "my" ? "🪑 ရှော့ဘား" : "🪑 Suspension"}</option>
+                    <option value="general_repair">{lang === "my" ? "🔨 အထွေထွေ ပြုပြင်" : "🔨 General Repair"}</option>
+                    <option value="other">{lang === "my" ? "📦 အခြား" : "📦 Other"}</option>
+                  </select>
                 </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* Amount Entry Mode Selector Tabs */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-slate-700 font-semibold">
-                {lang === 'my' ? 'ငွေပမာဏ တွက်ချက်ထည့်သွင်းနည်း:' : 'Amount Calculation Mode:'}
-              </label>
-
-              {/* Total Summary Badge */}
-              <div className="text-right">
-                <span className="text-[11px] text-slate-500 font-semibold mr-1">
-                  {lang === 'my' ? 'စုစုပေါင်း:' : 'Total:'}
-                </span>
-                <span className="text-base font-bold font-mono text-indigo-700">
-                  {formatMMK(parseFloat(amount) || 0)}
-                </span>
-              </div>
-            </div>
-
-            {/* Mode Pills */}
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/90 rounded-xl text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setEntryMode('direct')}
-                className={`py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  entryMode === 'direct'
-                    ? 'bg-white text-indigo-950 shadow-xs border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Hash className="w-3.5 h-3.5 text-indigo-600" />
-                <span>{lang === 'my' ? 'ရိုးရိုး ပမာဏ' : 'Direct'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEntryMode('unit_qty')}
-                className={`py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  entryMode === 'unit_qty'
-                    ? 'bg-white text-indigo-950 shadow-xs border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Boxes className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{lang === 'my' ? 'ဈေး x အရေအတွက်' : 'Price x Qty'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEntryMode('shopping_list')}
-                className={`py-1.5 px-2 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  entryMode === 'shopping_list'
-                    ? 'bg-white text-indigo-950 shadow-xs border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <ShoppingCart className="w-3.5 h-3.5 text-amber-600" />
-                <span>{lang === 'my' ? 'Shopping List' : 'Items List'}</span>
-              </button>
-            </div>
-
-            {/* PANEL 1: DIRECT AMOUNT */}
-            {entryMode === 'direct' && (() => {
-              const currentWallet = wallets.find((w) => w.id === walletId) || wallets[0];
-              const wCurr = currentWallet?.currency || 'MMK';
-              const wRate = currentWallet?.exchangeRate;
-              const numericAmount = parseFloat(amount) || 0;
-              const isForeign = wCurr !== 'MMK';
-
-              return (
-                <div className="space-y-2 pt-1 animate-fadeIn">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="any"
-                      required
-                      placeholder="0"
-                      value={amount}
-                      onChange={(e) => handleAmountChangeWithFuelSync(e.target.value)}
-                      className="w-full text-xl sm:text-2xl font-bold py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-16"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
-                      {wCurr}
-                    </span>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={maintTitle}
+                    onChange={(e) => setMaintTitle(e.target.value)}
+                    placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'}
+                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
+                  />
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={maintWorkshopName}
+                    onChange={(e) => setMaintWorkshopName(e.target.value)}
+                    placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'}
+                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
+                  />
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                    <Gauge className="w-5 h-5 text-slate-600" />
                   </div>
-
-                  {/* Quick Lakhs & Amount Helpers */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                    <span className="text-[11px] font-semibold text-slate-500">{lang === 'my' ? 'မြန်ဆန် သက်သာ:' : 'Quick:'}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = parseFloat(amount) || 0;
-                        if (val > 0) handleAmountChangeWithFuelSync(String(Math.round(val * 100000)));
-                      }}
-                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-2xs"
-                      title={lang === 'my' ? 'ရိုက်ထည့်ထားသော ဂဏန်းအား ၁ သိန်း (x 100,000) ဖြင့် မြှောက်မည်' : 'Multiply by 1 Lakh (x100,000)'}
-                    >
-                      ✨ သိန်း (x100,000)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddAmount(1000)}
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer active:scale-95"
-                    >
-                      +1,000
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddAmount(10000)}
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer active:scale-95"
-                    >
-                      +10,000
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddAmount(100000)}
-                      className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold cursor-pointer active:scale-95"
-                    >
-                      +1 သိန်း
-                    </button>
-                  </div>
-
-                  {/* Equivalent MMK display for foreign currencies */}
-                  {isForeign && numericAmount > 0 && (
-                    <div className="p-2 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between text-xs font-semibold text-indigo-900">
-                      <span>{lang === 'my' ? 'မြန်မာကျပ်ဖြင့် ခန့်မှန်းခြေ:' : 'Equivalent in MMK:'}</span>
-                      <span className="font-bold text-emerald-700">
-                        ≈ {convertToMMK(numericAmount, wCurr, wRate).toLocaleString()} MMK (@ {wRate || 1} Ks)
-                      </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}
                     </div>
-                  )}
-
-                  {/* Quick Presets */}
-                  {!isForeign && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] text-slate-400">{lang === 'my' ? 'ဖြည့်စွက်:' : 'Quick add:'}</span>
-                      {[1000, 5000, 10000, 50000, 100000].map((val) => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => handleAddAmount(val)}
-                          className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
-                        >
-                          +{val >= 1000 ? `${val / 1000}k` : val}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* PANEL 2: UNIT PRICE x QUANTITY */}
-            {entryMode === 'unit_qty' && (
-              <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-3 animate-fadeIn">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      {lang === 'my' ? '၁ ခု / ၁ တင်း ဈေးနှုန်း (MMK)' : 'Unit Price (MMK)'}
-                    </label>
                     <input
                       type="number"
-                      placeholder="e.g. 700"
-                      value={unitPrice}
-                      onChange={(e) => handleUnitQtyChange('price', e.target.value)}
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      {lang === 'my' ? 'အရေအတွက် (Quantity)' : 'Quantity'}
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="1"
-                      value={quantity}
-                      onChange={(e) => handleUnitQtyChange('qty', e.target.value)}
-                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Total editable — any 2 of 3 auto */}
-                <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-emerald-100">
-                  <span className="text-xs text-slate-600 font-semibold shrink-0">
-                    {lang === 'my' ? 'တွက်ချက်ရလဒ်:' : 'Total:'}
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
-                    <span className="text-xs text-slate-500 font-mono shrink-0">
-                      {formatMMK(parseFloat(unitPrice) || 0)} × {quantity || 0} =
-                    </span>
-                    <input
-                      type="number"
-                      step="any"
-                      value={amount}
-                      onChange={(e) => handleUnitQtyAmountChange(e.target.value)}
+                      value={vehicleOdometer}
+                      onChange={(e) => setVehicleOdometer(e.target.value)}
                       placeholder="0"
-                      className="w-28 px-2 py-1 text-sm font-bold text-emerald-800 font-mono text-right bg-emerald-50 border border-emerald-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
                     />
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
-            {/* PANEL 3: SHOPPING LIST (BULK ITEMS) */}
-            {entryMode === 'shopping_list' && (
-              <div className="p-3 bg-amber-50/60 border border-amber-200/90 rounded-2xl space-y-3 animate-fadeIn">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                    <ShoppingCart className="w-4 h-4 text-amber-600" />
-                    <span>{lang === 'my' ? 'ဝယ်ယူသည့် ပစ္စည်း စာရင်းများ:' : 'Shopping Items Breakdown:'}</span>
+            {/* UNIT QTY ROWS */}
+            {entryMode === "unit_qty" && entryModel === "general" && (
+              <>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "ဈေးနှုန်း" : "Unit Price"}</span>
+                  <input
+                    type="number"
+                    value={unitPrice}
+                    onChange={(e) => handleUnitQtyChange("price", e.target.value)}
+                    placeholder="0"
+                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right"
+                  />
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "အရေအတွက်" : "Quantity"}</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={quantity}
+                    onChange={(e) => handleUnitQtyChange("qty", e.target.value)}
+                    placeholder="1"
+                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* SHOPPING LIST */}
+            {entryMode === "shopping_list" && entryModel === "general" && (
+              <div className="px-3 py-3 border-b border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                    {lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}
                   </span>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsShoppingPriceHistoryOpen(true)}
-                      className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 bg-white/80 hover:bg-white px-2.5 py-1 rounded-lg border border-indigo-200 cursor-pointer shadow-2xs transition-colors"
-                      title={lang === 'my' ? 'ယခင်ဝယ်ဈေးများနှင့် ဈေးနှုန်းနှိုင်းယှဉ်ချက်များ ကြည့်ရန်' : 'Compare past item prices'}
-                    >
-                      <History className="w-3 h-3 text-indigo-600" />
-                      <span>{lang === 'my' ? 'ဈေးနှုန်း နှိုင်းယှဉ်ချက်' : 'Price Comparison'}</span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setIsShoppingPriceHistoryOpen(true)} className="text-[10px] font-bold text-indigo-700 hover:underline">
+                      {lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'History'}
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={autoGenerateShoppingNote}
-                      className="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline decoration-amber-300 cursor-pointer"
-                      title="Generate Note from items"
-                    >
-                      {lang === 'my' ? '✨ မှတ်ချက် စာသား ရေးမည်' : '✨ Generate Note'}
+                    <button type="button" onClick={autoGenerateShoppingNote} className="text-[10px] font-bold text-amber-800 hover:underline">
+                      ✨ {lang === 'my' ? 'မှတ်ချက်ရေး' : 'Note'}
                     </button>
                   </div>
                 </div>
-
-                {/* Items Cards List - Clean 2-Row Layout per Item with Auto-Scroll */}
-                <div ref={shoppingListContainerRef} className="space-y-2.5 max-h-72 sm:max-h-80 overflow-y-auto pr-1">
+                <div ref={shoppingListContainerRef} className="space-y-2 max-h-72 overflow-y-auto pr-1">
                   {shoppingItems.map((item, idx) => {
                     const pastPurchase = getPastPriceForItem(item.name);
-                    const diff = pastPurchase && item.price > 0 ? item.price - pastPurchase.price : 0;
-                    const percent = pastPurchase && pastPurchase.price > 0 && item.price > 0 ? (diff / pastPurchase.price) * 100 : 0;
-
                     return (
-                      <div
-                        key={item.id || idx}
-                        id={`item-card-${item.id || idx}`}
-                        className="bg-white p-3 rounded-2xl border border-amber-200/80 shadow-2xs space-y-2"
-                      >
-                        {/* Row 1: Item Name (Full Width) with Database Autocomplete + Delete */}
+                      <div key={item.id || idx} className="bg-slate-50 rounded-xl p-2.5 space-y-1.5">
                         <div className="flex items-center gap-2">
                           <input
-                            id={`input-name-${item.id}`}
                             type="text"
                             list="db-item-suggestions"
-                            placeholder={
-                              lang === 'my'
-                                ? 'ပစ္စည်းအမည် (ဥပမာ - ဆန် ၊ ဆီ ၊ ခေါက်ဆွဲ)'
-                                : 'Item name (e.g. Rice, Oil)'
-                            }
                             value={item.name}
-                            onChange={(e) => updateShoppingItem(item.id || '', 'name', e.target.value)}
-                            className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-amber-400 focus:outline-none"
+                            onChange={(e) => updateShoppingItem(item.id || "", "name", e.target.value)}
+                            placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'}
+                            className="flex-1 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none"
                           />
-
-                          <button
-                            type="button"
-                            onClick={() => removeShoppingItemRow(item.id || '')}
-                            className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0 cursor-pointer"
-                            title={lang === 'my' ? 'ဖျက်မည်' : 'Remove'}
-                          >
-                            <Trash2 className="w-4 h-4" />
+                          <button type="button" onClick={() => removeShoppingItemRow(item.id || "")} className="p-1 text-slate-400 hover:text-rose-600 shrink-0">
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-
-                        {/* Row 2: Price, Quantity, and Calculated Total Amount Badge */}
-                        <div className="grid grid-cols-12 gap-2 items-center text-xs">
-                          {/* Price input */}
-                          <div className="col-span-5">
-                            <label className="block text-[10px] text-slate-500 font-bold mb-0.5">
-                              {lang === 'my' ? 'ဈေးနှုန်း (MMK)' : 'Price'}
-                            </label>
-                            <input
-                              type="number"
-                              placeholder="0"
-                              value={item.price || ''}
-                              onChange={(e) => updateShoppingItem(item.id || '', 'price', e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold font-mono text-slate-900 focus:bg-white focus:outline-none"
-                            />
-                          </div>
-
-                          {/* Qty input */}
-                          <div className="col-span-3">
-                            <label className="block text-[10px] text-slate-500 font-bold mb-0.5">
-                              {lang === 'my' ? 'အရေအတွက်' : 'Qty'}
-                            </label>
-                            <input
-                              type="number"
-                              step="any"
-                              placeholder="1"
-                              value={item.quantity || ''}
-                              onChange={(e) => updateShoppingItem(item.id || '', 'quantity', e.target.value)}
-                              className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold font-mono text-center text-slate-900 focus:bg-white focus:outline-none"
-                            />
-                          </div>
-
-                          {/* Total Amount Badge */}
-                          <div className="col-span-4 text-right">
-                            <label className="block text-[10px] text-amber-900 font-bold mb-0.5">
-                              {lang === 'my' ? 'တန်ဖိုး' : 'Total'}
-                            </label>
-                            <input
-                              type="number"
-                              step="any"
-                              value={item.amount || ''}
-                              onChange={(e) => updateShoppingItem(item.id || '', 'amount', e.target.value)}
-                              placeholder="0"
-                              className="w-full px-2 py-1.5 bg-amber-50 border border-amber-200/90 rounded-xl font-bold font-mono text-amber-950 text-xs text-right focus:outline-none focus:ring-1 focus:ring-amber-400"
-                            />
-                          </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <input type="number" value={item.price || ""} onChange={(e) => updateShoppingItem(item.id || "", "price", e.target.value)} placeholder="ဈေး" className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
+                          <input type="number" step="any" value={item.quantity || ""} onChange={(e) => updateShoppingItem(item.id || "", "quantity", e.target.value)} placeholder="Qty" className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
+                          <input type="number" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
                         </div>
-
-                        {/* Row 3: In-Line Price Comparison with Previous Purchases for this item */}
-                        {pastPurchase && (
-                          <div className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs flex-wrap">
-                            <div className="flex items-center gap-1.5 text-slate-600 flex-wrap">
-                              <History className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                              <span className="font-semibold text-[11px] text-indigo-950">
-                                {lang === 'my' ? 'ယခင်ဝယ်ဈေး:' : 'Prev Price:'}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => updateShoppingItem(item.id || '', 'price', String(pastPurchase.price))}
-                                className="font-mono font-bold text-indigo-700 underline decoration-indigo-300 hover:text-indigo-950 cursor-pointer"
-                                title={lang === 'my' ? 'ယခင်ဈေးနှုန်းအတိုင်း ထည့်ရန် နှိပ်ပါ' : 'Click to use this price'}
-                              >
-                                {formatMMK(pastPurchase.price)}
-                              </button>
-                              <span className="text-[10px] text-slate-400">({pastPurchase.date})</span>
-                            </div>
-
-                            {item.price > 0 && (
-                              <div className="shrink-0">
-                                {diff > 0 && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-bold">
-                                    <TrendingUp className="w-2.5 h-2.5" />
-                                    <span>+{formatMMK(diff)} (+{Math.round(percent)}%) {lang === 'my' ? 'ဈေးတက်' : 'Up'}</span>
-                                  </span>
-                                )}
-                                {diff < 0 && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold">
-                                    <TrendingDown className="w-2.5 h-2.5" />
-                                    <span>-{formatMMK(Math.abs(diff))} (-{Math.abs(Math.round(percent))}%) {lang === 'my' ? 'ဈေးကျ' : 'Down'}</span>
-                                  </span>
-                                )}
-                                {diff === 0 && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">
-                                    <Minus className="w-2.5 h-2.5" />
-                                    <span>{lang === 'my' ? 'ဈေးတူ' : 'Same Price'}</span>
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                        {pastPurchase && item.price > 0 && (
+                          <div className="text-[10px] text-slate-500">
+                            {lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})
                           </div>
                         )}
                       </div>
                     );
                   })}
                 </div>
-
-                {/* Add Row Button */}
-                <button
-                  type="button"
-                  onClick={addShoppingItemRow}
-                  className="w-full py-2 bg-white hover:bg-amber-100/50 text-amber-900 border border-amber-300 border-dashed rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>{lang === 'my' ? 'ပစ္စည်းသစ် ထပ်ထည့်မည်' : 'Add Item Row'}</span>
+                <button type="button" onClick={addShoppingItemRow} className="w-full mt-2 py-1.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50">
+                  + {lang === 'my' ? 'ပစ္စည်းထပ်ထည့်' : 'Add item'}
                 </button>
               </div>
             )}
-          </div>
 
-          {/* Smart Past Purchase Price Comparison (တူညီတဲ့ ပစ္စည်း ယခင်ဝယ်ဈေး & ဈေးတက်/ကျ စိစစ်ချက်) */}
-          {type === 'expense' && latestPreviousPurchase && (
-            <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 text-xs space-y-2">
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <div className="flex items-center gap-1.5 text-indigo-900 font-semibold flex-wrap">
-                  <History className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                  <span className="flex items-center gap-1">
-                    {latestPreviousPurchase.matchedName && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-950 font-bold text-[11px] border border-indigo-200">
-                        {latestPreviousPurchase.matchedName}
-                      </span>
-                    )}
-                    <span>
-                      {lang === 'my' ? 'အရင်တစ်ကြိမ် ဝယ်ခဲ့သည့်ဈေး:' : 'Previous Purchase Price:'}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleApplyPreviousPrice}
-                    className="font-bold font-mono text-indigo-700 underline decoration-indigo-300 hover:text-indigo-900 ml-1 cursor-pointer"
-                    title={lang === 'my' ? 'ယခင်ဈေးနှုန်းအတိုင်း ထည့်သွင်းရန် နှိပ်ပါ' : 'Click to use this price'}
-                  >
+            {/* ITEM NAME (from More Options) */}
+            {showQuickAddSub && entryModel === "general" && entryMode === "direct" && (
+              <div className="px-4 py-3 border-b border-slate-100">
+                <div className="text-xs font-bold text-slate-500 mb-1">
+                  {lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}
+                </div>
+                <input
+                  type="text"
+                  list="db-item-suggestions"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  placeholder={lang === 'my' ? 'ဥပမာ - ဆန် / ဆီ' : 'e.g. Rice'}
+                  className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none"
+                />
+              </div>
+            )}
+
+            {/* PRICE COMPARISON */}
+            {entryModel === "general" && latestPreviousPurchase && currentEffectivePrice > 0 && priceComparison && (
+              <div className="px-4 py-3 border-b border-slate-100">
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  <History className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <span className="text-slate-500">{lang === 'my' ? 'ယခင်ဈေး' : 'Prev'}:</span>
+                  <button type="button" onClick={handleApplyPreviousPrice} className="font-bold text-indigo-700 underline font-mono">
                     {formatMMK(latestPreviousPurchase.amount)}
                   </button>
-                </div>
-
-                <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-slate-400" />
-                  {latestPreviousPurchase.date}
-                </span>
-              </div>
-
-              {/* Real-time Price Comparison Badge when amount is entered */}
-              {priceComparison && (
-                <div className="flex items-center gap-2 pt-1 border-t border-indigo-100/80">
-                  <span className="text-[11px] text-slate-600 font-medium">
-                    {lang === 'my' ? 'ဈေးနှုန်း နှိုင်းယှဉ်ချက်:' : 'Price Comparison:'}
-                  </span>
-
                   {priceComparison.isHigher && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs font-bold">
-                      <TrendingUp className="w-3 h-3 text-rose-600" />
-                      <span>
-                        {lang === 'my' ? 'ဈေးတက်သွားသည် +' : 'Price Higher +'}
-                        {formatMMK(Math.abs(priceComparison.diff))} (
-                        {Math.round(priceComparison.percent)}%)
-                      </span>
+                    <span className="text-rose-600 font-bold flex items-center gap-0.5 ml-auto">
+                      <TrendingUp className="w-3 h-3" /> +{Math.round(priceComparison.percent)}%
                     </span>
                   )}
-
                   {priceComparison.isLower && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs font-bold">
-                      <TrendingDown className="w-3 h-3 text-emerald-600" />
-                      <span>
-                        {lang === 'my' ? 'ဈေးကျသွားသည် -' : 'Price Lower -'}
-                        {formatMMK(Math.abs(priceComparison.diff))} (
-                        {Math.abs(Math.round(priceComparison.percent))}%)
-                      </span>
+                    <span className="text-emerald-600 font-bold flex items-center gap-0.5 ml-auto">
+                      <TrendingDown className="w-3 h-3" /> {Math.round(priceComparison.percent)}%
                     </span>
                   )}
-
                   {priceComparison.isEqual && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 text-xs font-bold">
-                      <Minus className="w-3 h-3 text-slate-600" />
-                      <span>
-                        {lang === 'my' ? 'ဈေးနှုန်း တူညီပါသည်' : 'Same as last price'}
-                      </span>
+                    <span className="text-slate-500 font-bold ml-auto flex items-center gap-0.5">
+                      <Minus className="w-3 h-3" /> {lang === 'my' ? 'တူညီ' : 'Same'}
                     </span>
                   )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-          {/* ============================================================== */}
-          {/* MODEL 2: DEDICATED FUEL LOG MODEL (၂။ ဆီဖိုး)                   */}
-          {/* (၁၀၀% သီးသန့် ဆီဖိုး Model - ကုန်ပစ္စည်း/Shopping အချက်အလက်များ လုံးဝ မပါ) */}
-          {/* ============================================================== */}
-          {entryModel === 'fuel' && (
-            <div className="space-y-3.5 animate-fadeIn">
-              {/* If no vehicle registered yet */}
-              {(!vehicles || vehicles.length === 0) ? (
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-white border-2 border-emerald-200/90 shadow-2xs space-y-3">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                        <Fuel className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900">
-                          {lang === 'my' ? '⛽ စက်သုံးဆီ / ဆီဖိုး မှတ်တမ်း' : 'Vehicle Fuel Expense'}
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          {lang === 'my'
-                            ? 'ဆီဖိုး ကျသင့်ငွေကို ဤနေရာတွင် တိုက်ရိုက်ထည့်သွင်း သိမ်းဆည်းနိုင်ပါသည်'
-                            : 'Enter total fuel expense directly right here.'}
-                        </p>
-                      </div>
-                    </div>
-                    {onOpenAddVehicle && (
-                      <button
-                        type="button"
-                        onClick={onOpenAddVehicle}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold shrink-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1.5"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>{lang === 'my' ? '+ ယာဉ်ထည့်ရန်' : '+ Add Vehicle'}</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Single Amount Input for No-Vehicle Case */}
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-bold text-emerald-950">
-                        {lang === 'my' ? 'ဆီဖိုး ကျသင့်ငွေ ပမာဏ (MMK):' : 'Total Fuel Cost (MMK):'}
-                      </label>
-                      <span className="text-base font-bold font-mono text-emerald-700">
-                        {formatMMK(parseFloat(amount) || 0)}
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="any"
-                        required
-                        autoFocus
-                        placeholder="0"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full text-2xl font-bold py-2.5 px-4 bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-16"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-emerald-800 text-sm">
-                        MMK
-                      </span>
-                    </div>
-                    {/* Quick Presets */}
-                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                      <span className="text-[11px] text-slate-500 font-medium">{lang === 'my' ? 'ဖြည့်စွက်:' : 'Quick add:'}</span>
-                      {[10000, 20000, 30000, 50000, 100000].map((val) => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => handleAddAmount(val)}
-                          className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-100/70 border border-emerald-200 text-emerald-900 text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer"
-                        >
-                          +{val >= 1000 ? `${val / 1000}k` : val}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="text-[11px] text-slate-500 bg-white/80 p-2.5 rounded-xl border border-slate-200">
-                    💡 {lang === 'my' ? 'ကား/ဆိုင်ကယ် ထည့်သွင်းထားပါက ဆီစားနှုန်း (km/L) နှင့် ကားတစ်စီးချင်း ကုန်ကျစရိတ်များကို အလိုအလျောက် တွက်ချက်ပေးနိုင်ပါသည်။' : 'Adding a vehicle enables automatic km/L mileage analytics.'}
-                  </div>
-                </div>
-              ) : (
-                /* When vehicles exist */
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white border-2 border-emerald-200/90 shadow-2xs space-y-3.5">
-                  {/* Header with Title and Help Guide Button */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                        <Fuel className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <span>{lang === 'my' ? 'စက်သုံးဆီ / ဆီဖိုး မှတ်တမ်း' : 'Vehicle Fuel Expense'}</span>
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                            {lang === 'my' ? 'ဆီစားနှုန်း ချိတ်ဆက်ပြီး' : 'Mileage Synced'}
-                          </span>
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          {lang === 'my'
-                            ? 'ကျသင့်ငွေကို ဤနေရာတွင်သာ တိုက်ရိုက်ထည့်ပါ (ဆီဖိုး သီးသန့် Model)'
-                            : 'Enter fuel cost directly here (Dedicated Fuel Model).'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowFuelGuideModal(true)}
-                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-100/70 text-emerald-800 border border-emerald-300 font-bold text-[11px] shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                      title={lang === 'my' ? 'ဆီဖိုး ဘယ်လို ထည့်ရမလဲ လမ်းညွှန်' : 'Fuel logging guide'}
-                    >
-                      <HelpCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{lang === 'my' ? '❓ ဘယ်လို ထည့်ရမလဲ?' : '❓ How to Log?'}</span>
-                    </button>
-                  </div>
-
-                  {/* Reassurance Banner */}
-                  <div className="bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2 shadow-2xs">
-                    <span className="text-emerald-600 font-bold shrink-0 mt-0.5">✓</span>
-                    <span className="text-[11px] leading-relaxed">
-                      {lang === 'my'
-                        ? '💡 ဤနေရာတွင် ထည့်သွင်းသမျှ ဆီဖိုးသည် ပိုက်ဆံအိတ်နှင့် ယာဉ်စီမံခန့်ခွဲမှု (Fuel & Mileage Log) နှစ်ခုလုံးသို့ အလိုအလျောက် ရောက်ရှိပါမည်။'
-                        : 'Logging fuel here automatically syncs both your wallet expense and vehicle mileage records.'}
-                    </span>
-                  </div>
-
-                  {/* Vehicle Selector Row */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-white/95 rounded-xl border border-emerald-100 shadow-2xs">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-700 font-bold">
-                      <Car className="w-4 h-4 text-emerald-600" />
-                      <span>{lang === 'my' ? 'သက်ဆိုင်ရာ ယာဉ် / ကား:' : 'Target Vehicle:'}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-1 sm:max-w-xs justify-end">
-                      <select
-                        value={vehicleId}
-                        onChange={(e) => {
-                          const vId = e.target.value;
-                          setVehicleId(vId);
-                          setIsVehicleLinkEnabled(Boolean(vId));
-                          const targetV = vehicles.find((v) => v.id === vId);
-                          if (targetV?.currentOdometer) {
-                            setVehicleOdometer(String(targetV.currentOdometer));
-                          }
-                          if (targetV?.fuelType) {
-                            setFuelType(targetV.fuelType);
-                          }
-                          if (targetV?.walletId && wallets.some((w) => w.id === targetV.walletId)) {
-                            setWalletId(targetV.walletId);
-                          }
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-                      >
-                        <option value="">{lang === 'my' ? '-- ယာဉ် ရွေးချယ်ပါ --' : '-- Select Vehicle --'}</option>
-                        {vehicles.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name} {v.plateNumber ? `(${v.plateNumber})` : ''} - {v.currentOdometer?.toLocaleString()} {v.odometerUnit || 'km'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Unified Fuel Form Layout (စက်သုံးဆီ သီးသန့် ပုံစံ) */}
-                  <div className="p-3 bg-white rounded-xl border border-emerald-200 text-xs space-y-3 shadow-2xs">
-                    {/* Price per Liter & Liters Row */}
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          {lang === 'my' ? '၁ လီတာ ဈေးနှုန်း (ကျပ်):' : 'Price / Liter (Ks):'}
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="3100"
-                          value={fuelPricePerLiter}
-                          onChange={(e) => handleFuelPriceChange(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          {lang === 'my' ? 'ဆီပမာဏ (လီတာ):' : 'Liters (L):'}
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          placeholder="30"
-                          value={fuelLiters}
-                          onChange={(e) => handleFuelLitersChange(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-emerald-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Total Fuel Amount MMK Input */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-emerald-950">
-                          {lang === 'my' ? 'စုစုပေါင်း ဆီဖိုး ကျသင့်ငွေ (MMK):' : 'Total Fuel Cost (MMK):'}
-                        </label>
-                        <span className="text-base font-bold font-mono text-emerald-700">
-                          {formatMMK(parseFloat(amount) || 0)}
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          step="any"
-                          required
-                          placeholder="0"
-                          value={amount}
-                          onChange={(e) => handleAmountChangeWithFuelSync(e.target.value)}
-                          className="w-full text-2xl font-bold py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-16"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
-                          MMK
-                        </span>
-                      </div>
-
-                      {/* Quick Presets */}
-                      <div className="flex items-center gap-1.5 flex-wrap pt-2">
-                        <span className="text-[11px] text-slate-500 font-medium">{lang === 'my' ? 'ဖြည့်စွက်:' : 'Quick add:'}</span>
-                        {[10000, 20000, 30000, 50000, 100000].map((val) => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => handleAddAmount(val)}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer"
-                          >
-                            +{val >= 1000 ? `${val / 1000}k` : val}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Fuel Type & Gas Station Row */}
-                    <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-100">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          {lang === 'my' ? 'ဆီအမျိုးအစား:' : 'Fuel Grade:'}
-                        </label>
-                        <select
-                          value={fuelType}
-                          onChange={(e) => setFuelType(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-800 cursor-pointer focus:bg-white"
-                        >
-                          <option value="Octane 92">Octane 92</option>
-                          <option value="Octane 95">Octane 95</option>
-                          <option value="Premium Diesel">Premium Diesel</option>
-                          <option value="Diesel">Diesel</option>
-                          <option value="EV Charging">EV Charging</option>
-                          <option value="CNG">CNG</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          {lang === 'my' ? 'ဆီဆိုင် အမည်:' : 'Gas Station:'}
-                        </label>
-                        <select
-                          value={fuelGasStation}
-                          onChange={(e) => setFuelGasStation(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-800 cursor-pointer focus:bg-white"
-                        >
-                          <option value="">{lang === 'my' ? '-- ဆီဆိုင် ရွေးပါ --' : '-- Station --'}</option>
-                          {GAS_STATIONS.map((st) => (
-                            <option key={st} value={st}>
-                              {st}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Odometer & Full Tank Checkbox Row */}
-                    <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-100">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          {lang === 'my' ? 'ဒိုင်ခွက် မိုင်/km:' : 'Current Odometer:'}
-                        </label>
-                        <input
-                          type="number"
-                          placeholder={lang === 'my' ? 'ဥပမာ - 12450' : 'e.g. 12450'}
-                          value={vehicleOdometer}
-                          onChange={(e) => setVehicleOdometer(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-slate-800 focus:bg-white"
-                        />
-                      </div>
-
-                      <div className="flex items-end pb-1">
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
-                          <input
-                            type="checkbox"
-                            checked={fuelIsFullTank}
-                            onChange={(e) => setFuelIsFullTank(e.target.checked)}
-                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                          />
-                          <span>{lang === 'my' ? 'ဆီတိုင်ကီ အပြည့် (Full Tank)' : 'Full Tank'}</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ============================================================== */}
-          {/* MODEL 3: OTHER VEHICLE SERVICES (၃။ Other Vehicle Services)     */}
-          {/* (ပြုပြင်စရိတ်၊ ရေဆေး၊ တာယာ၊ အပိုပစ္စည်း၊ လိုင်စင်/အာမခံ)            */}
-          {/* ============================================================== */}
-          {entryModel === 'vehicle_service' && (
-            <div className="space-y-3.5 animate-fadeIn">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/90 via-sky-50/40 to-white border-2 border-blue-200/90 shadow-2xs space-y-3.5">
-                {/* Header */}
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                      <Wrench className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>{lang === 'my' ? '🚗 ယာဉ် ဝန်ဆောင်မှုနှင့် ပြုပြင်စရိတ်' : 'Vehicle Service & Maintenance'}</span>
-                        <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
-                          {lang === 'my' ? 'ထိန်းသိမ်းမှုမှတ်တမ်း' : 'Maintenance Log'}
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-slate-500">
-                        {lang === 'my'
-                          ? 'ရေဆေး၊ အင်ဂျင်ဝိုင်၊ တာယာ၊ လိုင်စင် နှင့် ပြုပြင်စရိတ်များ သီးသန့် ထည့်သွင်းရန်'
-                          : 'Service fees, car wash, fluids, tires, licensing & repairs.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Reassurance Banner */}
-                <div className="bg-blue-50/90 p-2.5 rounded-xl border border-blue-200 text-xs text-blue-900 flex items-start gap-2 shadow-2xs">
-                  <span className="text-blue-600 font-bold shrink-0 mt-0.5">✓</span>
-                  <span className="text-[11px] leading-relaxed">
-                    {lang === 'my'
-                      ? '💡 ဤနေရာတွင် ထည့်သွင်းသမျှ ကုန်ကျစရိတ်သည် ပိုက်ဆံအိတ်နှင့် ယာဉ်ထိန်းသိမ်းမှုမှတ်တမ်း (Maintenance History) နှစ်ခုလုံးသို့ အလိုအလျောက် ရောက်ရှိပါမည်။'
-                      : 'Expenses logged here automatically sync to wallet and vehicle maintenance history.'}
-                  </span>
-                </div>
-
-                {/* Target Vehicle Selector */}
-                {vehicles && vehicles.length > 0 && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-white/95 rounded-xl border border-blue-100 shadow-2xs">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-700 font-bold">
-                      <Car className="w-4 h-4 text-blue-600" />
-                      <span>{lang === 'my' ? 'သက်ဆိုင်ရာ ယာဉ် / ကား:' : 'Target Vehicle:'}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-1 sm:max-w-xs justify-end">
-                      <select
-                        value={vehicleId}
-                        onChange={(e) => {
-                          const vId = e.target.value;
-                          setVehicleId(vId);
-                          setIsVehicleLinkEnabled(Boolean(vId));
-                          const targetV = vehicles.find((v) => v.id === vId);
-                          if (targetV?.currentOdometer) {
-                            setVehicleOdometer(String(targetV.currentOdometer));
-                          }
-                          if (targetV?.walletId && wallets.some((w) => w.id === targetV.walletId)) {
-                            setWalletId(targetV.walletId);
-                          }
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                      >
-                        <option value="">{lang === 'my' ? '-- ယာဉ် ရွေးချယ်ပါ --' : '-- Select Vehicle --'}</option>
-                        {vehicles.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name} {v.plateNumber ? `(${v.plateNumber})` : ''} - {v.currentOdometer?.toLocaleString()} {v.odometerUnit || 'km'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Service Category Selector Grid */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-700">
-                    {lang === 'my' ? 'ဝန်ဆောင်မှု အမျိုးအစား ရွေးချယ်ပါ:' : 'Service Category:'}
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                    {[
-                      { type: 'general_repair' as VehicleServiceType, labelMy: '🛠️ အထွေထွေ ပြုပြင်မှု', labelEn: '🛠️ General Repair' },
-                      { type: 'other' as VehicleServiceType, labelMy: '🚿 ကား/ဆိုင်ကယ် ရေဆေး', labelEn: '🚿 Car Wash', titlePreset: 'ကားရေဆေး သန့်စင်ခြင်း' },
-                      { type: 'engine_oil' as VehicleServiceType, labelMy: '🛢️ အင်ဂျင်ဝိုင် / အရည်', labelEn: '🛢️ Engine Oil', titlePreset: 'အင်ဂျင်ဝိုင် လဲလှယ်ခြင်း' },
-                      { type: 'tires' as VehicleServiceType, labelMy: '🛞 တာယာ / ဘီး လေထိုး', labelEn: '🛞 Tire & Pressure', titlePreset: 'တာယာ လဲလှယ် / စစ်ဆေးခြင်း' },
-                      { type: 'brake_pads' as VehicleServiceType, labelMy: '🛑 ဘရိတ် စနစ်', labelEn: '🛑 Brakes', titlePreset: 'ဘရိတ်ရှူး စစ်ဆေးလဲလှယ်ခြင်း' },
-                      { type: 'battery' as VehicleServiceType, labelMy: '🔋 ဘက်ထရီ / လျှပ်စစ်', labelEn: '🔋 Battery', titlePreset: 'ဘက်ထရီ လဲလှယ်ခြင်း' },
-                    ].map((item) => {
-                      const isSelected = maintServiceType === item.type && (item.titlePreset ? maintTitle.includes(item.titlePreset) || maintServiceType === item.type : true);
-                      return (
-                        <button
-                          key={item.labelEn}
-                          type="button"
-                          onClick={() => {
-                            setMaintServiceType(item.type);
-                            if (item.titlePreset && (!maintTitle || maintTitle === '')) {
-                              setMaintTitle(item.titlePreset);
-                            }
-                          }}
-                          className={`p-2 rounded-xl text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer border ${
-                            maintServiceType === item.type
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs scale-[1.01]'
-                              : 'bg-white text-slate-700 hover:bg-blue-50/50 border-slate-200'
-                          }`}
-                        >
-                          <span className="truncate">{lang === 'my' ? item.labelMy : item.labelEn}</span>
-                          {maintServiceType === item.type && <Check className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Service Details Card */}
-                <div className="p-3 bg-white rounded-xl border border-blue-200 space-y-3 shadow-2xs">
-                  {/* Service Title / Description */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      {lang === 'my' ? 'လုပ်ဆောင်ချက် / ပြင်ဆင်သည့် အကြောင်းအရာ:' : 'Service Title / Details:'}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={lang === 'my' ? 'ဥပမာ - အင်ဂျင်ဝိုင် 5W-30 လဲခြင်း ၊ ကားရေဆေးခြင်း' : 'e.g. Engine Oil 5W-30 Change, Car Wash'}
-                      value={maintTitle}
-                      onChange={(e) => setMaintTitle(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Workshop / Garage Name */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      {lang === 'my' ? 'ဝပ်ရှော့ / ဆိုင်အမည် (Workshop Name):' : 'Workshop / Service Center Name:'}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={lang === 'my' ? 'ဥပမာ - ဝင်း ကားဝပ်ရှော့ ၊ Denko Car Care' : 'e.g. Win Car Care, Denko Car Wash'}
-                      value={maintWorkshopName}
-                      onChange={(e) => setMaintWorkshopName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                    />
-                  </div>
-
-                  {/* Cost / Amount Input */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-blue-950">
-                        {lang === 'my' ? 'ကျသင့်ငွေ ပမာဏ (MMK):' : 'Service Cost (MMK):'}
-                      </label>
-                      <span className="text-base font-bold font-mono text-blue-700">
-                        {formatMMK(parseFloat(amount) || 0)}
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="any"
-                        required
-                        placeholder="0"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full text-2xl font-bold py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 pr-16"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
-                        MMK
-                      </span>
-                    </div>
-
-                    {/* Quick Presets */}
-                    <div className="flex items-center gap-1.5 flex-wrap pt-2">
-                      <span className="text-[11px] text-slate-500 font-medium">{lang === 'my' ? 'ဖြည့်စွက်:' : 'Quick add:'}</span>
-                      {[5000, 10000, 20000, 50000, 100000, 200000].map((val) => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => handleAddAmount(val)}
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer"
-                        >
-                          +{val >= 1000 ? `${val / 1000}k` : val}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Current Odometer */}
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                    <label className="text-[11px] font-semibold text-slate-600">
-                      {lang === 'my' ? 'လက်ရှိ ဒိုင်ခွက် မိုင်/km:' : 'Current Odometer:'}
-                    </label>
-                    <input
-                      type="number"
-                      placeholder={lang === 'my' ? 'ဥပမာ - 12450' : 'e.g. 12450'}
-                      value={vehicleOdometer}
-                      onChange={(e) => setVehicleOdometer(e.target.value)}
-                      className="w-36 px-2.5 py-1 text-xs bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-slate-800 text-right"
-                    />
-                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Distinct Separate Note / Remarks Field (သီးသန့် မှတ်ချက် - စျေးနှုန်းများကို လုံးဝ မထိခိုက်စေပါ) */}
-          <div className="space-y-1.5 p-3 bg-slate-50/80 rounded-2xl border border-slate-200">
-            <label className="block text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-slate-500" />
-              <span>{lang === 'my' ? 'မှတ်ချက် / အပိုဆောင်း အချက်အလက် (Note):' : 'Additional Remarks / Note:'}</span>
-            </label>
-            <input
-              type="text"
-              placeholder={
-                lang === 'my'
-                  ? 'ဥပမာ - မနက်ဖြန်မှ ပေးရန်ကျန်သည် ၊ ဆိုင်ခွဲမှ ဝယ်ယူခဲ့သည်'
-                  : 'Optional note or remarks...'
-              }
-              value={extraNote}
-              onChange={(e) => setExtraNote(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900 text-xs sm:text-sm"
-            />
-          </div>
-
-          {/* Datalist for Native Browser Autocomplete across All Inputs */}
-          <datalist id="db-item-suggestions">
-            {unifiedItemSuggestions.map((item) => (
-              <option
-                key={item.normalizedName}
-                value={item.name}
-                label={item.latestPrice > 0 ? `${formatMMK(item.latestPrice)} (${item.latestDate})` : undefined}
-              />
-            ))}
-          </datalist>
-
-          {/* Permission Denied Warning Notice */}
-          {!isActionAllowed && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-800 text-xs font-semibold">
-              <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>
-                {lang === 'my'
-                  ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} ${isEditing ? 'ပြင်ဆင်ခွင့်' : 'အသစ်ထည့်သွင်းခွင့်'} ပိတ်ထားပါသည်`
-                  : `Permission denied: wallet owner has disabled ${isEditing ? 'editing' : 'adding'} ${type} for your account.`}
-              </span>
-            </div>
-          )}
-
-          {/* Sticky Footer Submit */}
-          <div className="sticky bottom-0 z-10 bg-white/95 backdrop-blur-xs pt-3 pb-1 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0 -mx-4 -mb-4 px-4 sm:-mx-6 sm:-mb-6 sm:px-6 shadow-top">
+            {/* WALLET ROW */}
             <button
               type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium cursor-pointer"
+              onClick={() => setWalletExpanded(!walletExpanded)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
             >
-              {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: selectedWallet?.color || "#6366F1" }}>
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-slate-900 truncate">
+                  {selectedWallet ? (lang === 'my' ? selectedWallet.name : selectedWallet.nameEn) : (lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'Wallet')}
+                </div>
+                <div className="text-xs text-slate-500 truncate mt-0.5 font-mono">
+                  {formatCurrency(selectedWallet?.balance || 0, selectedWallet?.currency || 'MMK')}
+                </div>
+              </div>
+              <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
-            <button
-              id="tx-submit-btn"
-              type="submit"
-              disabled={!isActionAllowed || isSubmitting}
-              className={`px-6 py-2.5 rounded-xl font-bold shadow-xs transition-all flex items-center justify-center gap-2 ${
-                isActionAllowed && !isSubmitting
-                  ? entryModel === 'fuel'
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 cursor-pointer shadow-emerald-500/20 shadow-md'
-                    : entryModel === 'vehicle_service'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95 cursor-pointer shadow-blue-500/20 shadow-md'
-                    : type === 'income'
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 cursor-pointer'
-                    : 'bg-rose-600 hover:bg-rose-700 text-white active:scale-95 cursor-pointer'
-                  : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>{lang === 'my' ? 'သိမ်းဆည်းနေပါသည်...' : 'Saving...'}</span>
-                </>
-              ) : entryModel === 'fuel' ? (
-                <span className="flex items-center gap-1.5">
-                  <Fuel className="w-4 h-4" />
-                  <span>
-                    {isEditing
-                      ? (lang === 'my' ? 'ဆီဖိုးမှတ်တမ်း ပြင်ဆင်မည်' : 'Update Fuel Log')
-                      : (lang === 'my' ? '⛽ ဆီဖိုး စာရင်းသိမ်းဆည်းမည်' : 'Save Fuel Log')}
-                  </span>
-                </span>
-              ) : entryModel === 'vehicle_service' ? (
-                <span className="flex items-center gap-1.5">
-                  <Wrench className="w-4 h-4" />
-                  <span>
-                    {isEditing
-                      ? (lang === 'my' ? 'ယာဉ်ဝန်ဆောင်မှု ပြင်ဆင်မည်' : 'Update Service')
-                      : (lang === 'my' ? '🚗 ယာဉ်ဝန်ဆောင်မှု သိမ်းဆည်းမည်' : 'Save Vehicle Service')}
-                  </span>
-                </span>
-              ) : (
-                <span>
-                  {isEditing
-                    ? (lang === 'my' ? 'ပြင်ဆင်ချက် သိမ်းမည်' : 'Update Record')
-                    : (lang === 'my'
-                      ? (type === 'income' ? 'ဝင်ငွေ စာရင်းသွင်းမည်' : 'ထွက်ငွေ စာရင်းသွင်းမည်')
-                      : (type === 'income' ? 'Save Income' : 'Save Expense'))}
-                </span>
+            {walletExpanded && (
+              <div className="px-3 py-2 border-b border-slate-100 flex flex-wrap gap-1.5">
+                {wallets.map((w) => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => { setWalletId(w.id); setWalletExpanded(false); }}
+                    className={"px-3 py-1.5 rounded-lg text-xs font-bold transition-colors " + (walletId === w.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")}
+                  >
+                    <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: w.color }} />
+                    {lang === 'my' ? w.name : w.nameEn}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* DATE ROW */}
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold text-slate-500">
+                  {lang === 'my' ? 'နေ့ရက်' : 'Date'}
+                </div>
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5" />
+              </div>
+            </div>
+
+            {/* NOTE ROW */}
+            <div className="px-4 py-3 border-b border-slate-100">
+              <button type="button" onClick={() => setNoteExpanded(!noteExpanded)} className="w-full flex items-center gap-3 text-left">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5 text-slate-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-slate-500">
+                    {lang === 'my' ? 'မှတ်ချက်' : 'Note'}
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 truncate mt-0.5">
+                    {extraNote || (lang === 'my' ? 'ထည့်ရန် နှိပ်ပါ' : 'Tap to add')}
+                  </div>
+                </div>
+              </button>
+              {noteExpanded && (
+                <input
+                  type="text"
+                  value={extraNote}
+                  onChange={(e) => setExtraNote(e.target.value)}
+                  autoFocus
+                  placeholder={lang === 'my' ? 'မှတ်ချက် ထည့်ပါ...' : 'Note...'}
+                  className="w-full mt-2 text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none"
+                />
               )}
-            </button>
+            </div>
+
+            {/* PERMISSION WARNING */}
+            {!isActionAllowed && (
+              <div className="mx-3 my-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-800 text-xs font-bold">
+                <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  {lang === 'my'
+                    ? 'ဤ Wallet ပိုင်ရှင်မှ ခွင့်မပြုထားပါ'
+                    : 'Permission denied by wallet owner'}
+                </span>
+              </div>
+            )}
+
+            {/* Hidden datalist */}
+            <datalist id="db-item-suggestions">
+              {unifiedItemSuggestions.map((item) => (
+                <option
+                  key={item.normalizedName}
+                  value={item.name}
+                  label={item.latestPrice > 0 ? formatMMK(item.latestPrice) + " (" + item.latestDate + ")" : undefined}
+                />
+              ))}
+            </datalist>
+
+            <div className="h-4" />
           </div>
         </form>
       </div>
 
-      {/* Embedded Item Price History and Comparison Modal */}
+      {/* MODALS OUTSIDE FORM */}
       {isShoppingPriceHistoryOpen && (
         <ItemPriceHistoryModal
           isOpen={isShoppingPriceHistoryOpen}
@@ -2826,19 +2002,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         />
       )}
 
-      {/* Dedicated Category Selection Window / Modal */}
       <CategoryPickerModal
         isOpen={isCategoryPickerOpen}
         onClose={() => setIsCategoryPickerOpen(false)}
         categories={categories}
-        selectedCategoryId={effectiveCategoryId}
+        selectedCategoryId={categoryId}
         selectedSubCategoryId={subCategoryId}
         currentType={type}
         lang={lang}
         plan={plan}
         onSelect={(catId, subId) => {
           setCategoryId(catId);
-          setSubCategoryId(subId || '');
+          setSubCategoryId(subId || "");
           setIsCategoryPickerOpen(false);
         }}
         onOpenUpgrade={onOpenUpgrade}
@@ -2846,7 +2021,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         onManageCategories={onManageCategories}
       />
 
-      {/* Fuel Expense & Vehicle Management Guide Modal */}
       <FuelExpenseGuideModal
         isOpen={showFuelGuideModal}
         onClose={() => setShowFuelGuideModal(false)}

@@ -106,7 +106,7 @@ import {
 
 // Lazy loaded heavy/secondary components
 const AdminPanel = lazyWithRetry(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
-const BudgetAnalyticsView = lazyWithRetry(() => import('./components/BudgetAnalyticsView').then(m => ({ default: m.BudgetAnalyticsView })));
+const AnalyticsView = lazyWithRetry(() => import('./components/AnalyticsView').then(m => ({ default: m.AnalyticsView })));
 const DataManagementView = lazyWithRetry(() => import('./components/DataManagementView').then(m => ({ default: m.DataManagementView })));
 const FeedbackView = lazyWithRetry(() => import('./components/FeedbackView').then(m => ({ default: m.FeedbackView })));
 const PrivacyModal = lazyWithRetry(() => import('./components/PrivacyModal').then(m => ({ default: m.PrivacyModal })));
@@ -1666,10 +1666,11 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <BudgetAnalyticsView
+              <AnalyticsView
                 transactions={transactions}
                 categories={categories}
                 wallets={computedWallets}
+                debts={debts}
                 budgets={budgets}
                 plan={plan}
                 lang={lang}
@@ -1678,6 +1679,7 @@ export default function App() {
                 onUpdateBudget={handleUpdateBudget}
                 onDeleteBudget={handleDeleteBudget}
                 onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
+                onSelectTab={setActiveTab}
               />
             )}
             <AdBanner

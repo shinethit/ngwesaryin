@@ -19,6 +19,12 @@ interface Props {
   allTransactions?: Transaction[];
 }
 
+// [v7.0.4] Canonical transfer sub-categories — self-healing fallback.
+const FALLBACK_TRANSFER_SUBS: { id: string; name: string; nameEn: string }[] = [
+  { id: 'sub_tf_out', name: 'ငွေလွှဲထွက်', nameEn: 'Transfer Out' },
+  { id: 'sub_tf_in',  name: 'ငွေလွှဲဝင်',  nameEn: 'Transfer In' },
+];
+
 export const CategoryPickerModal: React.FC<Props> = ({
   isOpen, onClose, categories, selectedCategoryId, selectedSubCategoryId,
   onSelect, currentType = 'expense', lang, plan, onOpenUpgrade,
@@ -207,12 +213,14 @@ export const CategoryPickerModal: React.FC<Props> = ({
                   <div className="relative pl-4 pr-3 pb-3 space-y-1">
                     <div className="absolute left-[26px] top-0 bottom-4 w-px bg-slate-200" />
 
-                    {cat.subCategories!.filter((sub) => {
+                    {((cat.id === 'cat_transfer'
+                      ? FALLBACK_TRANSFER_SUBS.map((s) => ({ ...s, isCustom: false } as any))
+                      : (cat.subCategories || [])
+                    ) as typeof cat.subCategories || []).filter((sub) => {
                       if (cat.id !== 'cat_transfer') return true;
-                      if (activeTypeTab === 'expense') {
-                        return sub.id === 'sub_tf_out' || sub.name.includes('ထွက်');
-                      }
-                      return sub.id === 'sub_tf_in' || sub.name.includes('ဝင်');
+                      // [v7.0.2] ID-only — Burmese Unicode combining marks make name.includes unreliable
+                      if (activeTypeTab === 'expense') return sub.id === 'sub_tf_out';
+                      return sub.id === 'sub_tf_in';
                     }).map((sub) => {
                       const isSubSelected = selectedCategoryId === cat.id && selectedSubCategoryId === sub.id;
                       const subName = lang === 'my' ? sub.name : sub.nameEn;

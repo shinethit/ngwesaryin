@@ -4,7 +4,7 @@ import {
   Calendar, ChevronRight, ChevronDown, Search, RefreshCw,
 } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, DataScope } from '../types';
-import { formatMMK, isOverdue } from '../utils/formatters';
+import { formatMMK, formatLakhs, isOverdue } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { MultiWalletSelector } from './MultiWalletSelector';
@@ -312,18 +312,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">
           {lang === 'my' ? 'စုစုပေါင်း လက်ကျန်' : 'Total Balance'}
         </div>
-        <div className="text-3xl sm:text-4xl font-black mt-1.5 tracking-tight">
-          {formatMMK(totalWalletBalance)}
+        <div className="text-3xl sm:text-4xl font-black mt-1.5 tracking-tight" title={formatMMK(totalWalletBalance)}>
+          {formatLakhs(totalWalletBalance, lang)}
         </div>
         <div className="flex items-center gap-4 mt-3 text-xs flex-wrap">
           <span className="flex items-center gap-1 text-emerald-400 font-bold">
-            <ArrowDownLeft className="w-3.5 h-3.5" />+{formatMMK(totalIncome)}
+            <ArrowDownLeft className="w-3.5 h-3.5" /><span title={formatMMK(totalIncome)}>+{formatLakhs(totalIncome, lang)}</span>
           </span>
           <span className="flex items-center gap-1 text-rose-400 font-bold">
-            <ArrowUpRight className="w-3.5 h-3.5" />-{formatMMK(totalExpense)}
+            <ArrowUpRight className="w-3.5 h-3.5" /><span title={formatMMK(totalExpense)}>-{formatLakhs(totalExpense, lang)}</span>
           </span>
           <span className={'font-bold ' + (netSavings >= 0 ? 'text-emerald-300' : 'text-rose-300')}>
-            {lang === 'my' ? 'အသားတင်' : 'Net'}: {netSavings >= 0 ? '+' : ''}{formatMMK(netSavings)}
+            {lang === 'my' ? 'အသားတင်' : 'Net'}: <span title={formatMMK(netSavings)}>{netSavings >= 0 ? '+' : ''}{formatLakhs(netSavings, lang)}</span>
           </span>
         </div>
       </div>

@@ -58,3 +58,13 @@ i18n-scan-report.txt
 
 # One-shot scripts (any .cjs at root)
 *.cjs
+
+# AI Handover (personal — do not commit)
+NgweSarYin-Handover-*.md
+
+# Temp fix scripts
+/*.cjs
+/scripts/archive/
+
+# Backups
+*.bak-*

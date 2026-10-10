@@ -60,6 +60,21 @@ export const formatTableLakhs = (
   return `${sign}${formatCurrency(absAmt, currency)}`;
 };
 
+/**
+ * [v7.0.7] Compact Lakhs formatter — English numerals + " သိန်း" suffix.
+ * Uses up to 5 decimals (drops trailing zeros). Precision: 1 MMK.
+ * Examples: 1110500 → "11.105 သိန်း" | 650000 → "6.5 သိန်း" | 7500000 → "75 သိန်း"
+ */
+export const formatLakhs = (amount: number, lang: 'my' | 'en' = 'my'): string => {
+  if (!Number.isFinite(amount)) return '—';
+  if (amount === 0) return '0' + (lang === 'my' ? ' သိန်း' : ' L');
+  const sign = amount < 0 ? '-' : '';
+  const lakhs = Math.abs(amount) / 100000;
+  const str = Number(lakhs.toFixed(5)).toString();
+  const unit = lang === 'my' ? ' သိန်း' : ' L';
+  return sign + str + unit;
+};
+
 export const formatDateDisplay = (dateString: string, lang: 'my' | 'en' = 'my'): string => {
   if (!dateString) return '';
   const parts = dateString.split('-');

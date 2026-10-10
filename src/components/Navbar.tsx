@@ -300,82 +300,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </kbd>
             </button>
 
-            {/* 3. Language toggle (Hidden on mobile, accessible in Sidebar menu) */}
-            <button
-              id="lang-toggle-btn"
-              onClick={onToggleLang}
-              className="hidden sm:flex px-2 py-1.5 text-xs font-bold rounded-xl text-slate-700 hover:bg-slate-100 bg-white border border-slate-200 transition-colors cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap shrink-0 items-center justify-center"
-              title="Toggle Language"
-            >
-              {lang === 'my' ? 'ENG' : 'မြန်မာ'}
-            </button>
-
-            {/* 4. Manual Sync Button (Visible on mobile & desktop with responsive labels) */}
-            {onManualSync && (
-              <button
-                id="navbar-manual-sync-btn"
-                type="button"
-                onClick={onManualSync}
-                disabled={isSyncing}
-                className={`flex p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer active:scale-95 items-center justify-center gap-1.5 shadow-2xs shrink-0 ${
-                  isSyncing
-                    ? 'bg-sky-50 border-sky-300 text-sky-700 cursor-wait'
-                    : 'bg-emerald-50 hover:bg-emerald-100/90 border-emerald-300 text-emerald-800'
-                }`}
-                title={
-                  lang === 'my'
-                    ? 'Cloud နှင့် ချက်ချင်း Sync ပြုလုပ်မည် (နှိပ်ပါ)'
-                    : 'Force Sync with Cloud now'
-                }
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-emerald-700 ${isSyncing ? 'animate-spin text-sky-600' : ''} shrink-0`} />
-                <span className="inline font-bold">
-                  {isSyncing
-                    ? (lang === 'my' ? 'Sync...' : 'Sync...')
-                    : (lang === 'my' ? 'Sync' : 'Sync')}
-                </span>
-              </button>
-            )}
-
-            {/* 4.5. Live Database Sync Tracker Trigger Button */}
-            {onOpenDatabaseTracker && (
-              <button
-                id="navbar-db-tracker-btn"
-                type="button"
-                onClick={onOpenDatabaseTracker}
-                className={`flex p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer active:scale-95 items-center justify-center gap-1.5 shadow-2xs shrink-0 ${
-                  pendingCloudCount > 0
-                    ? 'bg-amber-50 hover:bg-amber-100/90 text-amber-950 border-amber-300'
-                    : isAutoSyncing
-                    ? 'bg-sky-50 hover:bg-sky-100/90 text-sky-950 border-sky-300'
-                    : 'bg-indigo-50 hover:bg-indigo-100/90 text-indigo-900 border-indigo-200'
-                }`}
-                title={
-                  lang === 'my'
-                    ? 'Database ရောက်/မရောက် စောင့်ကြည့်စစ်ဆေးသည့် Tracker ဖွင့်မည်'
-                    : 'Open Live Database Delivery Tracker'
-                }
-              >
-                <Database className={`w-3.5 h-3.5 ${pendingCloudCount > 0 ? 'text-amber-600 animate-bounce' : isAutoSyncing ? 'text-sky-600 animate-pulse' : 'text-indigo-600'} shrink-0`} />
-                <span className="hidden sm:inline font-bold">
-                  {lang === 'my' ? 'DB Tracker' : 'DB Tracker'}
-                </span>
-                {pendingCloudCount > 0 ? (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-2xs">
-                    {pendingCloudCount}
-                  </span>
-                ) : isAutoSyncing ? (
-                  <span className="hidden md:inline px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-sky-100 text-sky-800 border border-sky-300 animate-pulse">
-                    Syncing
-                  </span>
-                ) : (
-                  <span className="hidden md:inline px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    Live
-                  </span>
-                )}
-              </button>
-            )}
-
             {/* 5. Cloud Sync & Account / Avatar Button (Always visible) */}
             <button
               id="navbar-account-btn"
@@ -491,15 +415,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </button>
 
-            {/* Quick Add Button (Desktop/Tablet) */}
-            <button
-              id="navbar-quick-add-btn"
-              onClick={onOpenAddModal}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4 text-white stroke-[2.5]" />
-              <span>{lang === 'my' ? 'စာရင်းသစ်' : 'Add'}</span>
-            </button>
+
           </div>
         </div>
       </div>

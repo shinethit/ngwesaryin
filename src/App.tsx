@@ -721,6 +721,43 @@ export default function App() {
     }
   }, [wallets, transactions]);
 
+  // [v7.0.6 SAFE] Strip deprecated custom category from local React state (read-only, no Firestore writes)
+  const customCatCleanupRef = useRef(false);
+  useEffect(() => {
+    if (customCatCleanupRef.current) return;
+    if (!user?.uid) return;
+    customCatCleanupRef.current = true;
+    const CUSTOM_ID = 'cat_custom_1789797767607';
+    const TARGET_ID = 'cat_vehicle';
+
+    setCategories((prev) => {
+      if (!prev.some((c) => c.id === CUSTOM_ID)) return prev;
+      const next = prev.filter((c) => c.id !== CUSTOM_ID);
+      safeSetItem('ngwe_categories', JSON.stringify(next));
+      return next;
+    });
+    setTransactions((prev) => {
+      let changed = false;
+      const next = prev.map((t) => {
+        if (t.category === CUSTOM_ID) { changed = true; return { ...t, category: TARGET_ID }; }
+        return t;
+      });
+      if (!changed) return prev;
+      safeSetItem('ngwe_transactions', JSON.stringify(next));
+      return next;
+    });
+    setBudgets((prev) => {
+      let changed = false;
+      const next = prev.map((b) => {
+        if (b.categoryId === CUSTOM_ID) { changed = true; return { ...b, id: TARGET_ID, categoryId: TARGET_ID }; }
+        return b;
+      });
+      if (!changed) return prev;
+      safeSetItem('ngwe_budgets', JSON.stringify(next));
+      return next;
+    });
+  }, [user?.uid]);
+
   // [v6.1.11] One-shot auto-migration: link legacy debt repayments → transactionId
   useEffect(() => {
     if (migratedRepaymentsRef.current) return;
@@ -887,6 +924,30 @@ export default function App() {
   }, [wallets.map((w) => `${w.id}:${w.sharedWith?.length || 0}:${w.isSharedFromOther}:${w.sharedDocId || ''}`).join(','), user?.uid]);
 
   const limits = DEFAULT_PLAN_LIMITS[plan];
+
+  // [v7.0.5] Force-pull vehicles when local empty. Retries on failure (no ref lock).
+  useEffect(() => {
+    if (!user?.uid) return;
+    if (vehicles.length > 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { collection, getDocsFromServer } = await import('firebase/firestore');
+        const targetUid = activeWorkspaceId || user.uid;
+        const snap = await getDocsFromServer(collection(db, 'users', targetUid, 'vehicles'));
+        if (cancelled) return;
+        if (snap.size > 0) {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Vehicle));
+          setVehicles(list);
+          safeSetItem('ngwe_vehicles', JSON.stringify(list));
+          console.log('[v7.0.5] Force-pulled', list.length, 'vehicles from Firestore');
+        }
+      } catch (e) {
+        console.warn('[v7.0.5] Vehicle pull failed (will retry on next render):', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.uid, activeWorkspaceId, vehicles.length]);
 
   // [v6.23.6] One-shot ref backfill: writes a sharedWalletRefs pointer
   // for every existing share so recipients can discover shared wallets

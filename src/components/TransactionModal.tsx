@@ -682,6 +682,26 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [subCategoryId, isTransferCategory]);
 
+  // [v7.0.1] Auto-switch vehicle entry model when vehicle sub-category is picked
+  useEffect(() => {
+    if (!isOpen) return;
+    if (entryModel !== 'general') return;
+    if (!subCategoryId) return;
+    if (subCategoryId === 'sub_veh_fuel') {
+      handleSwitchModel('fuel');
+    } else if (subCategoryId === 'sub_veh_tire') {
+      handleSwitchModel('vehicle_service');
+      setMaintServiceType('tires');
+    } else if (
+      subCategoryId === 'sub_veh_maintenance' ||
+      subCategoryId === 'sub_veh_parts' ||
+      subCategoryId === 'sub_veh_wash' ||
+      subCategoryId === 'sub_veh_license'
+    ) {
+      handleSwitchModel('vehicle_service');
+    }
+  }, [isOpen, subCategoryId, entryModel]);
+
   // Sort sub-categories by highest historical usage frequency inside this category
   const availableSubCats = useMemo(() => {
     const subs = selectedCatObj?.subCategories || [];
@@ -710,6 +730,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const id = (selectedCatObj.id || '').toLowerCase();
     const name = (selectedCatObj.name || '').toLowerCase();
     const nameEn = (selectedCatObj.nameEn || '').toLowerCase();
+    // [v7-fix] Custom category whose sub-cats look vehicle-related
+    const subIds = (selectedCatObj.subCategories || []).map((s) => (s.id || '').toLowerCase());
+    const subNames = (selectedCatObj.subCategories || []).map((s) => (s.name || '').toLowerCase());
+    const hasVehicleSub = subIds.some((sid) => sid.startsWith('sub_veh_')) ||
+      subNames.some((sn) => sn.includes('ဆီဖိုး') || sn.includes('ဆီ') || sn.includes('မော်တော်') || sn.includes('အင်ဂျင်ဝိုင်'));
+    if (hasVehicleSub) return true;
 
     return (
       id === 'cat_vehicle' ||
@@ -838,6 +864,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
     }
   }, [isFuelMode, vehicles, vehicleId, fuelType, vehicleOdometer]);
+
+  // [v7.0.2] Auto-default vehicleId when vehicles list becomes available
+  useEffect(() => {
+    if (!isOpen) return;
+    if (vehicleId) return;
+    if (!vehicles || vehicles.length === 0) return;
+    setVehicleId(vehicles[0].id);
+  }, [isOpen, vehicleId, vehicles]);
 
   // Interface for smart previous purchase match
   interface MatchedPreviousPurchase {
@@ -1526,6 +1560,42 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
 
+            {/* [v7.0.1] INLINE VEHICLE TYPE SELECTOR (when vehicle cat picked but no model chosen) */}
+            {isVehicleRelatedCategory && entryModel === "general" && (
+              <div className="px-4 py-3 border-b border-slate-100">
+                <div className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
+                  <Car className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{lang === 'my' ? 'ယာဉ် မှတ်တမ်း အမျိုးအစား ရွေးပါ:' : 'Select vehicle entry type:'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchModel("fuel")}
+                    className="py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"
+                  >
+                    <Fuel className="w-4 h-4" />
+                    <span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchModel("vehicle_service")}
+                    className="py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"
+                  >
+                    <Wrench className="w-4 h-4" />
+                    <span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); }}
+                    className="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"
+                  >
+                    <Car className="w-4 h-4" />
+                    <span>{lang === 'my' ? 'တာယာ' : 'Tire'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* TRANSFER WALLETS */}
             {isTransferCategory && (
               <div className="px-4 py-3 border-b border-slate-100 space-y-2">
@@ -1579,11 +1649,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     }}
                     className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
                   >
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}
-                      </option>
-                    ))}
+                    {vehicles.length === 0 ? (
+                      <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး — Vehicles ထဲ သွားထည့်ပါ --' : '-- No vehicles — Add one in Vehicles --'}</option>
+                    ) : (
+                      vehicles.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
@@ -1703,9 +1777,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     {lang === 'my' ? 'ယာဉ်' : 'Vehicle'}
                   </div>
                   <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>{v.name}</option>
-                    ))}
+                    {vehicles.length === 0 ? (
+                      <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option>
+                    ) : (
+                      vehicles.map((v) => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))
+                    )}
                   </select>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100">

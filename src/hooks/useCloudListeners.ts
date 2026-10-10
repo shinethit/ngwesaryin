@@ -115,22 +115,10 @@ export function useCloudListeners({
   const [isCloudLoaded, setIsCloudLoaded] = useState(false);
   const hasInitialSyncedRef = useRef(false);
   const isRemoteUpdateRef = useRef(false);
-  const [vehicleListenersActive, setVehicleListenersActive] = useState(false);
-
-  // [v6.7] Lazy-activate vehicle listeners when user opens Vehicles tab
-  //        or already has persisted vehicle data.
-  useEffect(() => {
-    if (vehicleListenersActive) return;
-    if (
-      activeTab === 'vehicles' ||
-      vehicles.length > 0 ||
-      fuelLogs.length > 0 ||
-      vehicleMaintenance.length > 0 ||
-      tirePressureLogs.length > 0
-    ) {
-      setVehicleListenersActive(true);
-    }
-  }, [activeTab, vehicles.length, fuelLogs.length, vehicleMaintenance.length, tirePressureLogs.length, vehicleListenersActive]);
+  // [v7.0.5] Vehicle listeners are always active — lazy gate removed.
+  // Previously, vehicles only loaded when user visited the Vehicles tab,
+  // which broke fuel/service entry forms that need the vehicle list upfront.
+  void activeTab; // keep API param used
 
   useEffect(() => {
     if (!user) {
@@ -167,6 +155,8 @@ export function useCloudListeners({
 
           snap.forEach((d) => {
             const t = { id: d.id, ...d.data() } as Transaction;
+            // [v7.0.6 SAFE] remap deprecated custom category on read
+            if (t && t.category === 'cat_custom_1789797767607') t.category = 'cat_vehicle';
             if (t && t.id && !deletedIds.includes(t.id) && !isTxDeleted(t.id)) {
               const isPendingInQueue = syncQueue.isEntityPending('transactions', t.id);
               const isConfirmed = (!d.metadata.hasPendingWrites || savedConfirmedIds.has(t.id)) && !isPendingInQueue;
@@ -317,7 +307,10 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'categories'), (snap) => {
           isRemoteUpdateRef.current = true;
-          const cloudCats = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Category));
+          // [v7.0.6 SAFE] filter out deprecated custom category from cloud
+          const cloudCats = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() } as Category))
+            .filter((c) => c.id !== 'cat_custom_1789797767607');
           setCategories((prevLocal) => {
             detectConflicts('categories', prevLocal, cloudCats, user?.uid);
             const merged = mergeById(prevLocal, cloudCats);
@@ -367,9 +360,9 @@ export function useCloudListeners({
     };
   }, [user?.uid, activeWorkspaceId]);
 
-  // [v6.7] Vehicle listeners (lazy) — only when vehicleListenersActive
+  // [v7.0.5] Vehicle listeners — always active.
   useEffect(() => {
-    if (!user || !vehicleListenersActive) return;
+    if (!user) return;
 
     const targetUid = activeWorkspaceId || user.uid;
     const unsubscribers: (() => void)[] = [];
@@ -450,7 +443,7 @@ export function useCloudListeners({
       timers.forEach(clearTimeout);
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [user?.uid, activeWorkspaceId, vehicleListenersActive]);
+  }, [user?.uid, activeWorkspaceId]);
 
 
   return { isCloudLoaded };

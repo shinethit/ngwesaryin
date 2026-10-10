@@ -10,7 +10,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Transaction, Wallet } from '../types';
-import { formatMMK, formatTableLakhs } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 
@@ -22,6 +22,8 @@ interface FinancialSummaryTableProps {
   selectedWallets: Wallet[];
   transactions: Transaction[];
   lang: 'my' | 'en';
+  financialSystem?: 'inflow_outflow' | 'opening_closing';
+  onChangeFinancialSystem?: (s: 'inflow_outflow' | 'opening_closing') => void;
 }
 
 export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
@@ -32,12 +34,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
   selectedWallets,
   transactions,
   lang,
+  financialSystem: financialSystemProp,
 }) => {
   // Two distinct financial systems requested by user:
   // 1. inflow_outflow (ဝင်ငွေ / ထွက်ငွေ စနစ်)
   // 2. opening_closing (စတင်လက်ကျန် / ပိတ်လက်ကျန် စနစ်)
-  // [v6.7c] Opening/Closing is the default view
-  const [financialSystem, setFinancialSystem] = React.useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
+  // [v7.0.7] Controlled by parent if provided; else default
+  const financialSystem = financialSystemProp ?? 'opening_closing';
 
   const net = income - expense;
   const totalCount = incomeCount + expenseCount;
@@ -92,69 +95,6 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
 
   return (
     <div className="space-y-4 w-full bg-slate-50/50 p-1 rounded-3xl">
-      {/* Main Header & System Switcher Cards */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3.5 sm:p-4 space-y-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
-              <Scale className="w-4 h-4 stroke-[2.5]" />
-            </div>
-            <div>
-              <h3 className="font-bold text-xs sm:text-sm text-slate-900">
-                {lang === 'my' ? 'ဘဏ္ဍာရေး ငွေကြေးစီးဆင်းမှု စနစ် နှစ်မျိုး' : 'Dual-System Financial Cash Flow'}
-              </h3>
-              <p className="text-[11px] text-slate-500 font-medium">
-                {lang === 'my'
-                  ? 'ဝင်ငွေ/ထွက်ငွေ နှင့် စတင်/ပိတ်လက်ကျန် အခြေအနေများကို ရှင်းလင်းစွာ လေ့လာပါ'
-                  : 'Clear breakdown of Inflow/Outflow and Opening/Closing systems'}
-              </p>
-            </div>
-          </div>
-
-          {/* System Selection Tabs (Primary Switcher) */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl self-stretch sm:self-auto border border-slate-200/80">
-            <button
-              type="button"
-              onClick={() => setFinancialSystem('opening_closing')}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                financialSystem === 'opening_closing'
-                  ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>{lang === 'my' ? '၁။ Opening / Closing' : '1. Opening / Closing'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFinancialSystem('inflow_outflow')}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                financialSystem === 'inflow_outflow'
-                  ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>{lang === 'my' ? '၂။ Inflow / Outflow' : '2. Inflow / Outflow'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* System Description Banner */}
-        <div className="px-3 py-2 rounded-xl bg-indigo-50/50 border border-indigo-100/80 flex items-center gap-2 text-xs text-indigo-950">
-          <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
-          <span>
-            {financialSystem === 'inflow_outflow'
-              ? (lang === 'my'
-                ? '📌 စနစ် (၁) - Inflow / Outflow: သတ်မှတ်ထားသော ကာလအတွင်း ငွေဝင်လာမှု (Inflow) နှင့် ငွေထွက်သွားမှု (Outflow) တို့ကို အဓိကထား တွက်ချက်ပြသပါသည်။'
-                : '📌 System (1) - Inflow / Outflow: Focuses strictly on money coming in and money going out during the period.')
-              : (lang === 'my'
-                ? '📌 စနစ် (၂) - Opening / Closing: အစလက်ကျန် (Opening Balance) မှစတင်၍ ငွေဝင်/ထွက်လှုပ်ရှားမှု (Net Movement) ပြီးဆုံးချိန် ပိတ်လက်ကျန် (Closing Balance) သို့ တွက်ချက်ပြသပါသည်။'
-                : '📌 System (2) - Opening / Closing: Tracks from the Opening Balance through Net Movement to the Final Closing Balance.')}
-          </span>
-        </div>
-      </div>
-
       {/* ========================================== */}
       {/* SYSTEM 1: INFLOW / OUTFLOW VIEW           */}
       {/* ========================================== */}
@@ -173,8 +113,8 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {incomeCount} {lang === 'my' ? 'ခု' : 'items'}
                 </span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-emerald-700 truncate" title={formatMMK(income)}>
-                {formatMMK(income)}
+              <div className="text-base sm:text-lg font-black font-mono text-emerald-700 truncate" title={formatLakhs(income, lang)}>
+                {formatLakhs(income, lang)}
               </div>
             </div>
 
@@ -189,8 +129,8 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {expenseCount} {lang === 'my' ? 'ခု' : 'items'} ({expenseRatio}%)
                 </span>
               </div>
-              <div className="text-base sm:text-lg font-black font-mono text-rose-700 truncate" title={formatMMK(expense)}>
-                {formatMMK(expense)}
+              <div className="text-base sm:text-lg font-black font-mono text-rose-700 truncate" title={formatLakhs(expense, lang)}>
+                {formatLakhs(expense, lang)}
               </div>
             </div>
 
@@ -206,7 +146,7 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                 </span>
               </div>
               <div className={`text-base sm:text-lg font-black font-mono truncate ${net >= 0 ? 'text-emerald-800' : 'text-rose-800'}`} title={formatMMK(net)}>
-                {net >= 0 ? `+${formatMMK(net)}` : formatMMK(net)}
+                {net >= 0 ? `+${formatLakhs(net, lang)}` : formatLakhs(net, lang)}
               </div>
             </div>
           </div>
@@ -252,13 +192,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                             </div>
                           </td>
                           <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700" title={formatCurrency(inflow, w.currency)}>
-                            {inflow > 0 ? `+${formatTableLakhs(inflow, w.currency, lang)}` : formatTableLakhs(0, w.currency, lang)}
+                            {inflow > 0 ? `+${formatLakhs(inflow, lang)}` : formatLakhs(0, lang)}
                           </td>
                           <td className="py-3 px-3 text-right font-mono font-bold text-rose-700" title={formatCurrency(outflow, w.currency)}>
-                            {outflow > 0 ? `-${formatTableLakhs(outflow, w.currency, lang)}` : formatTableLakhs(0, w.currency, lang)}
+                            {outflow > 0 ? `-${formatLakhs(outflow, lang)}` : formatLakhs(0, lang)}
                           </td>
                           <td className={`py-3 px-3 text-right font-mono font-bold ${wNet >= 0 ? 'text-emerald-800' : 'text-rose-800'}`} title={formatCurrency(wNet, w.currency)}>
-                            {wNet >= 0 ? `+${formatTableLakhs(wNet, w.currency, lang)}` : formatTableLakhs(wNet, w.currency, lang)}
+                            {wNet >= 0 ? `+${formatLakhs(wNet, lang)}` : formatLakhs(wNet, lang)}
                           </td>
                         </tr>
                       );
@@ -271,13 +211,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                           {lang === 'my' ? 'စုစုပေါင်း (Total)' : 'Total'}
                         </td>
                         <td className="py-3 px-3 text-right font-mono font-bold text-emerald-800">
-                          {breakdownTotals.inflow > 0 ? `+${formatTableLakhs(breakdownTotals.inflow, 'MMK', lang)}` : formatTableLakhs(0, 'MMK', lang)}
+                          {breakdownTotals.inflow > 0 ? `+${formatLakhs(breakdownTotals.inflow, lang)}` : formatLakhs(0, lang)}
                         </td>
                         <td className="py-3 px-3 text-right font-mono font-bold text-rose-800">
-                          {breakdownTotals.outflow > 0 ? `-${formatTableLakhs(breakdownTotals.outflow, 'MMK', lang)}` : formatTableLakhs(0, 'MMK', lang)}
+                          {breakdownTotals.outflow > 0 ? `-${formatLakhs(breakdownTotals.outflow, lang)}` : formatLakhs(0, lang)}
                         </td>
                         <td className={`py-3 px-3 text-right font-mono font-black ${breakdownTotals.net >= 0 ? 'text-emerald-950' : 'text-rose-950'}`}>
-                          {breakdownTotals.net >= 0 ? `+${formatTableLakhs(breakdownTotals.net, 'MMK', lang)}` : formatTableLakhs(breakdownTotals.net, 'MMK', lang)}
+                          {breakdownTotals.net >= 0 ? `+${formatLakhs(breakdownTotals.net, lang)}` : formatLakhs(breakdownTotals.net, lang)}
                         </td>
                       </tr>
                     </tfoot>
@@ -307,8 +247,8 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {lang === 'my' ? 'အစ' : 'Initial'}
                 </span>
               </div>
-              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-800'}`} title={formatMMK(breakdownTotals.opening)}>
-                {formatMMK(breakdownTotals.opening)}
+              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-800'}`} title={formatLakhs(breakdownTotals.opening, lang)}>
+                {formatLakhs(breakdownTotals.opening, lang)}
               </div>
             </div>
 
@@ -324,7 +264,7 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                 </span>
               </div>
               <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.net >= 0 ? 'text-indigo-700' : 'text-amber-700'}`} title={formatMMK(breakdownTotals.net)}>
-                {breakdownTotals.net >= 0 ? `+${formatMMK(breakdownTotals.net)}` : formatMMK(breakdownTotals.net)}
+                {breakdownTotals.net >= 0 ? `+${formatLakhs(breakdownTotals.net, lang)}` : formatLakhs(breakdownTotals.net, lang)}
               </div>
             </div>
 
@@ -339,8 +279,8 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                   {lang === 'my' ? 'လက်ရှိ' : 'Final'}
                 </span>
               </div>
-              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-indigo-900'}`} title={formatMMK(breakdownTotals.closing)}>
-                {formatMMK(breakdownTotals.closing)}
+              <div className={`text-base sm:text-lg font-black font-mono truncate ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-indigo-900'}`} title={formatLakhs(breakdownTotals.closing, lang)}>
+                {formatLakhs(breakdownTotals.closing, lang)}
               </div>
             </div>
           </div>
@@ -386,13 +326,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                             </div>
                           </td>
                           <td className={`py-3 px-3 text-right font-mono font-semibold ${opening < 0 ? 'text-rose-600' : 'text-slate-600'}`} title={formatCurrency(opening, w.currency)}>
-                            {formatTableLakhs(opening, w.currency, lang)}
+                            {formatLakhs(opening, lang)}
                           </td>
                           <td className={`py-3 px-3 text-right font-mono font-bold ${wNet >= 0 ? 'text-emerald-700' : 'text-rose-700'}`} title={formatCurrency(wNet, w.currency)}>
-                            {wNet >= 0 ? `+${formatTableLakhs(wNet, w.currency, lang)}` : formatTableLakhs(wNet, w.currency, lang)}
+                            {wNet >= 0 ? `+${formatLakhs(wNet, lang)}` : formatLakhs(wNet, lang)}
                           </td>
                           <td className={`py-3 px-3 text-right font-mono font-black ${closing < 0 ? 'text-rose-600' : 'text-slate-900'}`} title={formatCurrency(closing, w.currency)}>
-                            {formatTableLakhs(closing, w.currency, lang)}
+                            {formatLakhs(closing, lang)}
                           </td>
                         </tr>
                       );
@@ -405,13 +345,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
                           {lang === 'my' ? 'စုစုပေါင်း (Total)' : 'Total'}
                         </td>
                         <td className={`py-3 px-3 text-right font-mono font-bold ${breakdownTotals.opening < 0 ? 'text-rose-700' : 'text-slate-700'}`}>
-                          {formatTableLakhs(breakdownTotals.opening, 'MMK', lang)}
+                          {formatLakhs(breakdownTotals.opening, lang)}
                         </td>
                         <td className={`py-3 px-3 text-right font-mono font-bold ${breakdownTotals.net >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
-                          {breakdownTotals.net >= 0 ? `+${formatTableLakhs(breakdownTotals.net, 'MMK', lang)}` : formatTableLakhs(breakdownTotals.net, 'MMK', lang)}
+                          {breakdownTotals.net >= 0 ? `+${formatLakhs(breakdownTotals.net, lang)}` : formatLakhs(breakdownTotals.net, lang)}
                         </td>
                         <td className={`py-3 px-3 text-right font-mono font-black ${breakdownTotals.closing < 0 ? 'text-rose-700' : 'text-slate-950'}`}>
-                          {formatTableLakhs(breakdownTotals.closing, 'MMK', lang)}
+                          {formatLakhs(breakdownTotals.closing, lang)}
                         </td>
                       </tr>
                     </tfoot>

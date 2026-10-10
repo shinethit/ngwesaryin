@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   Search,
   Filter,
-  Plus,
   ArrowDownLeft,
   ArrowUpRight,
   ArrowLeftRight,
@@ -12,7 +11,6 @@ import {
   Calendar,
   Lock,
   Sparkles,
-  FileSpreadsheet,
   Tag,
   History,
   Wallet as WalletIcon,
@@ -26,14 +24,13 @@ import {
   User,
   Users,
   Cloud,
-  Database,
   WifiOff,
   AlertTriangle,
   Clock,
   RefreshCw,
 } from 'lucide-react';
 import { Category, PlanType, Transaction, Wallet, DataScope } from '../types';
-import { formatMMK, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
+import { formatMMK, formatLakhs, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { CategoryIcon } from './CategoryIcon';
@@ -150,6 +147,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [showSummaryTable, setShowSummaryTable] = useState<boolean>(true);
   const [expandedShoppingTxIds, setExpandedShoppingTxIds] = useState<Record<string, boolean>>({});
   const [selectedTxForSyncModal, setSelectedTxForSyncModal] = useState<Transaction | null>(null);
+  const [financialSystem, setFinancialSystem] = useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
 
   const hasSharedWallets = useMemo(() => {
     return wallets.some((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
@@ -456,64 +454,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Price History & Trends Button */}
-          <button
-            type="button"
-            onClick={() => setIsPriceHistoryOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100/70 transition-all cursor-pointer shadow-xs active:scale-95"
-            title={lang === 'my' ? 'ပစ္စည်းများ၏ ယခင်ဝယ်ဈေးနှင့် ဈေးနှုန်းပြောင်းလဲမှုများ' : 'View past purchase prices & price changes'}
-          >
-            <History className="w-4 h-4 text-indigo-600" />
-            <span>{lang === 'my' ? 'ယခင်ဝယ်ဈေး နှိုင်းယှဉ်ချက်' : 'Price History'}</span>
-          </button>
-
-          {/* Database Sync Tracker Trigger Button */}
-          {onOpenDatabaseTracker && (
-            <button
-              type="button"
-              onClick={onOpenDatabaseTracker}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border border-indigo-300 bg-indigo-50 text-indigo-900 hover:bg-indigo-100 transition-all cursor-pointer shadow-xs active:scale-95"
-              title={lang === 'my' ? 'Database ရောက်/မရောက် စစ်ဆေးသည့် Tracker ဖွင့်မည်' : 'Open Database Delivery Tracker'}
-            >
-              <Database className="w-4 h-4 text-indigo-700" />
-              <span>{lang === 'my' ? 'DB Tracker' : 'DB Tracker'}</span>
-              {cloudTxIds && (
-                <span className="px-1.5 py-0.2 rounded-full bg-indigo-200 text-indigo-950 font-mono text-[10px]">
-                  {transactions.filter((t) => cloudTxIds.has(t.id)).length}/{transactions.length}
-                </span>
-              )}
-            </button>
-          )}
-
-          {/* Export CSV button */}
-          <button
-            id="tx-export-btn"
-            onClick={handleExport}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all cursor-pointer shadow-xs active:scale-95"
-            title={plan === 'free' ? 'Excel Export is a Premium feature' : 'Export to Excel/CSV'}
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>{lang === 'my' ? 'Excel ထုတ်ယူရန်' : 'Export Excel'}</span>
-            {plan === 'free' && <Lock className="w-3 h-3 text-amber-600" />}
-          </button>
-
-          {/* Add Transaction Button */}
-          <button
-            id="tx-add-btn"
-            onClick={() => {
-              if (isAtLimit) {
-                onOpenUpgradeModal();
-              } else {
-                onAddTransaction('expense', selectedWallet !== 'all' ? selectedWallet : undefined);
-              }
-            }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs active:scale-95 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-white stroke-[2.5]" />
-            <span>{lang === 'my' ? '+ မှတ်တမ်းသစ်' : '+ New Transaction'}</span>
-          </button>
-        </div>
       </div>
 
       {/* Free tier limit banner warning if reached or close */}
@@ -602,24 +542,44 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         {/* Row 2: Financial Summary Header with Table View Toggle */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-          <span className="text-xs font-bold text-slate-700">
-            {lang === 'my' ? 'ဝင်ငွေ/ထွက်ငွေ အနှစ်ချုပ် ဇယား' : 'Financial Summary'}
-          </span>
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <span className="text-[11px] font-bold text-slate-600 shrink-0">
+              {lang === 'my' ? 'အနှစ်ချုပ်' : 'Summary'}
+            </span>
+            <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200/70">
+              <button
+                type="button"
+                onClick={() => setFinancialSystem('opening_closing')}
+                className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
+              >
+                {lang === 'my' ? 'Opening / Closing' : 'Opening / Closing'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFinancialSystem('inflow_outflow')}
+                className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
+              >
+                {lang === 'my' ? 'Inflow / Outflow' : 'Inflow / Outflow'}
+              </button>
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setShowSummaryTable(!showSummaryTable)}
-            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition-all cursor-pointer"
+            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0"
           >
             {showSummaryTable
-              ? lang === 'my' ? '➖ စာကြောင်းကျဉ်း ကြည့်မည်' : '➖ Compact View'
-              : lang === 'my' ? '📊 Table View ဇယားကြည့်မည်' : '📊 Table View'}
+              ? lang === 'my' ? '➖ ကျဉ်းကြည့်' : '➖ Compact'
+              : lang === 'my' ? '📊 Table View' : '📊 Table View'}
           </button>
         </div>
 
         {/* Row 2 Sub: Financial Table View or Compact Bar */}
         {showSummaryTable ? (
           <FinancialSummaryTable
+            financialSystem={financialSystem}
+            onChangeFinancialSystem={setFinancialSystem}
             income={filteredIncome}
             expense={filteredExpense}
             incomeCount={
@@ -652,7 +612,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <div className="flex items-center gap-1 text-emerald-700">
                 <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ဝင်ငွေ:' : 'In:'}</span>
-                <span>+{formatMMK(filteredIncome)}</span>
+                <span title={formatMMK(filteredIncome)}>+{formatLakhs(filteredIncome, lang)}</span>
               </div>
 
               <span className="text-slate-300">•</span>
@@ -660,14 +620,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <div className="flex items-center gap-1 text-rose-700">
                 <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ထွက်ငွေ:' : 'Out:'}</span>
-                <span>-{formatMMK(filteredExpense)}</span>
+                <span title={formatMMK(filteredExpense)}>-{formatLakhs(filteredExpense, lang)}</span>
               </div>
 
               <span className="text-slate-300">•</span>
 
               <div className={`flex items-center gap-1 ${filteredIncome - filteredExpense >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
                 <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
-                <span>{filteredIncome - filteredExpense >= 0 ? '+' : ''}{formatMMK(filteredIncome - filteredExpense)}</span>
+                <span title={formatMMK(filteredIncome - filteredExpense)}>{filteredIncome - filteredExpense >= 0 ? '+' : ''}{formatLakhs(filteredIncome - filteredExpense, lang)}</span>
               </div>
             </div>
 
@@ -1067,6 +1027,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   )}
                                 </div>
 
+                                {/* Shopping List Badge */}
+                                {t.items && t.items.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setExpandedShoppingTxIds((p) => ({ ...p, [t.id]: !p[t.id] })); }}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 shrink-0 cursor-pointer"
+                                  >
+                                    🛒 {t.items.length} {lang === 'my' ? 'မျိုး' : 'items'}
+                                    <span className="text-[8px] opacity-60">{expandedShoppingTxIds[t.id] ? '▲' : '▼'}</span>
+                                  </button>
+                                )}
                                 {/* Wallet / Status Badges */}
                                 <div className="flex items-center gap-1 shrink-0">
                                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-semibold border ${

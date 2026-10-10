@@ -14,10 +14,68 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.0.0';
-export const CURRENT_BUILD_NUMBER = 193;
+export const CURRENT_APP_VERSION = 'v7.0.7';
+export const CURRENT_BUILD_NUMBER = 195;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.0.7',
+    buildNumber: 195,
+    releaseDate: '2026-10-10',
+    releaseTime: '9:30 PM (MMT)',
+    titleMy: 'သိန်းဂဏန်း ၅ ဒသမ Format + Navbar ရှင်းလင်းရေး',
+    titleEn: 'Lakhs 5-Decimal Format & Navbar Declutter',
+    tag: 'fix',
+    tagLabelMy: 'UI ပြုပြင်ချက်',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'နေရာတိုင်းတွင် ပမာဏများကို သိန်းဂဏန်း ၅ ဒသမအထိ တိကျစွာ ပြသပေးပြီး (ဥပမာ 1,110,500 MMK → 11.105 သိန်း)၊ Navbar မှ မလိုအပ်သော ခလုတ်များ (ENG / Sync / DB Tracker / Add) ကို ဖျက်ကာ ရှင်းလင်းစေခဲ့သည်။ Financial Summary ကတ်ကြီးကို ဖျက်ပြီး switcher ကို filter ဘေးတွင် ထည့်သွင်းပေးထားသည်။',
+    descriptionEn: 'Applied 5-decimal lakhs precision everywhere (e.g., 1,110,500 MMK → 11.105 သိန်း). Decluttered Navbar by removing ENG / Sync / DB Tracker / Add buttons (accessible via Sidebar / FAB). Compacted Financial Summary — removed oversized header card, moved switcher to filter row.',
+    changesMy: [
+      '🔢 သိန်းဂဏန်း ၅ ဒသမအထိ တိကျစွာ ပြသခြင်း (100,000 MMK = 1.00000 သိန်း)',
+      '📊 Financial Summary ကတ်ကြီး ဖျက် — filter ဘေးတွင် Inflow/Outflow ↔ Opening/Closing switcher ထည့်ခြင်း',
+      '🎨 Navbar မှ ENG၊ Sync၊ DB Tracker၊ Add ခလုတ်များ ဖျက် — icon overflow ဖြေရှင်းခြင်း',
+      '📱 ဖုန်းမျက်နှာပြင်တွင် Navbar ရှင်းလင်းစွာ အသုံးပြုနိုင်ခြင်း',
+      '✨ Wallet breakdown table ကိုပါ 5-decimal format သို့ ပြောင်းခြင်း',
+    ],
+    changesEn: [
+      '🔢 5-decimal lakhs precision everywhere (100,000 MMK = 1.00000 သိန်း)',
+      '📊 Removed oversized Financial Summary card — moved Inflow/Outflow ↔ Opening/Closing switcher next to filter',
+      '🎨 Removed ENG, Sync, DB Tracker, Add buttons from Navbar — fixed icon overflow',
+      '📱 Cleaner mobile navbar experience',
+      '✨ Wallet breakdown table now uses same 5-decimal format',
+    ],
+  },
+  {
+    version: 'v7.0.6',
+    buildNumber: 194,
+    releaseDate: '2026-10-10',
+    releaseTime: '9:00 PM (MMT)',
+    titleMy: 'ယာဉ်စီမံခန့်ခွဲမှု Loading ပြုပြင်ခြင်းနှင့် ကဏ္ဍ သန့်ရှင်းရေး',
+    titleEn: 'Vehicle Loading Fix & Category Cleanup',
+    tag: 'fix',
+    tagLabelMy: 'ပြုပြင်ချက်',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဤဗားရှင်းတွင် ယာဉ်စီမံခန့်ခွဲမှု (Vehicles) များ ဖောင်ပုံစံများတွင် ပေါ်မလာသည့် ပြဿနာကို ပြင်ဆင်ပြီး၊ deprecated ဖြစ်သော Custom ကဏ္ဍများ (ကား ပြင် ထိန်း စရိတ် / cat_groceries / cat_phone) ကို read-side filter ဖြင့် UI မှ ရှင်းလင်းပေးထားပါသည်။ Data ဆုံးရှုံးမှု လုံးဝမရှိဘဲ Firestore doc များ မူလအတိုင်း ကျန်ရှိနေပါသည်။',
+    descriptionEn: 'Fixed vehicle loading regression (Fuel/Service forms now show the full vehicle list on first open). Cleaned up deprecated custom categories (ကား ပြင် ထိန်း စရိတ် / cat_groceries / cat_phone) via read-side filtering — no data loss, Firestore documents untouched.',
+    changesMy: [
+      '🐛 Vehicles Not Loading — Lazy listener gate ကို ဖြုတ်ပြီး ယာဉ်စာရင်း UI ပေါ်တွင် ချက်ချင်းပေါ်လာအောင် ပြင်ဆင်ခြင်း',
+      '🐛 Vehicles Force-Pull — Ref-lock bug ကို ဖြုတ်ပြီး Firestore pull fail ရင် retry လုပ်နိုင်စေခြင်း',
+      '✏️ Transfer Fallback Typo — ငွေလှဲ → ငွေလွှဲ ပြင်ဆင်ခြင်း (CategoryPickerModal)',
+      '🧹 Duplicate Shopping Badge — TransactionsView မှာ 🛒 badge ၂ ခု ပေါ်နေတာ ဖြုတ်ခြင်း',
+      '🧹 Deprecated Custom Category — "ကား ပြင် ထိန်း စရိတ်" (cat_custom_1789797767607) ကို UI မှ filter (data မဖျက်)',
+      '🧹 Legacy Duplicates — cat_groceries → cat_food, cat_phone → cat_utilities (read-side remap)',
+      '📝 Handover Files Cleanup — Temp .cjs scripts + old handovers ရှင်းလင်းခြင်း',
+    ],
+    changesEn: [
+      '🐛 Vehicles Not Loading — Removed lazy listener gate so vehicle list loads immediately on form open',
+      '🐛 Vehicles Force-Pull — Removed ref-lock so failed Firestore pull auto-retries',
+      '✏️ Transfer Fallback Typo — Corrected ငွေလှဲ → ငွေလွှဲ in CategoryPickerModal',
+      '🧹 Duplicate Shopping Badge — Removed duplicate 🛒 badge render in TransactionsView',
+      '🧹 Deprecated Custom Category — Filtered out "ကား ပြင် ထိန်း စရိတ်" from UI (data preserved)',
+      '🧹 Legacy Duplicates — cat_groceries → cat_food, cat_phone → cat_utilities (read-side remap)',
+      '📝 Handover Files Cleanup — Removed temp .cjs scripts and outdated handovers',
+    ],
+  },
   {
     version: 'v7.0.0',
     buildNumber: 193,

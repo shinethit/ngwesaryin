@@ -1264,16 +1264,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
 
       let finalNote: string | undefined = undefined;
-      if (entryModel === 'fuel') {
-        const stationPart = fuelGasStation ? ` (${fuelGasStation})` : '';
-        const fuelDesc = `${fuelType || (lang === 'my' ? 'စက်သုံးဆီ' : 'Fuel')}${stationPart}`;
-        const userNote = extraNote.trim();
-        finalNote = userNote ? `${fuelDesc} - ${userNote}` : fuelDesc;
-      } else if (entryModel === 'vehicle_service') {
-        const svcDesc = maintTitle.trim() || (lang === 'my' ? 'ယာဉ်ဝန်ဆောင်မှု' : 'Vehicle Service');
-        const shopPart = maintWorkshopName.trim() ? ` [${maintWorkshopName.trim()}]` : '';
-        const userNote = extraNote.trim();
-        finalNote = userNote ? `${svcDesc}${shopPart} - ${userNote}` : `${svcDesc}${shopPart}`;
+      // [v7.2.3] Fuel / Service mode: note = user's extraNote only.
+      // Auto-generated fuelType/gasStation string removed — those details
+      // live in the linked FuelLog (visible in AddFuelModal), and the
+      // transaction already carries cat_vehicle + sub_veh_fuel for context.
+      if (entryModel === 'fuel' || entryModel === 'vehicle_service') {
+        finalNote = extraNote.trim() || undefined;
       } else if (type === 'expense') {
         if (entryMode === 'shopping_list') {
           finalNote = extraNote.trim() || (itemName.trim() || undefined);

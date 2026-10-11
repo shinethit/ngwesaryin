@@ -131,7 +131,10 @@ export function useVehicleHandlers({
         subCategoryId: 'sub_veh_fuel',
         walletId: log.walletId,
         date: log.date,
-        note: `[ဆီထည့်စရိတ်] ${vehicleName} - ${log.liters.toLocaleString()} L @ ${log.pricePerLiter.toLocaleString()} Ks ${log.gasStation ? `(${log.gasStation})` : ''} ${log.odometer ? `[${log.odometer.toLocaleString()} km]` : ''}`,
+        // [v7.2.3] Preserve user note as-is; fall back to auto summary.
+        note: log.note
+          ? log.note
+          : `[ဆီထည့်စရိတ်] ${vehicleName} - ${log.liters.toLocaleString()} L @ ${log.pricePerLiter.toLocaleString()} Ks${log.gasStation ? ` (${log.gasStation})` : ''}`,
         createdAt: log.createdAt || Date.now(),
         updatedAt: Date.now(),
         version: 1,
@@ -237,7 +240,10 @@ export function useVehicleHandlers({
         subCategoryId: 'sub_veh_maintenance',
         walletId: maint.walletId,
         date: maint.date,
-        note: `[ယာဉ်ပြုပြင်ထိန်းသိမ်းစရိတ်] ${vehicleName} - ${maint.serviceType}: ${maint.title} ${maint.workshopName ? `(${maint.workshopName})` : ''}`,
+        // [v7.2.3] Preserve user note as-is; fall back to auto summary.
+        note: maint.note
+          ? maint.note
+          : `[ယာဉ်ပြုပြင်ထိန်းသိမ်းစရိတ်] ${vehicleName} - ${maint.serviceType}: ${maint.title}${maint.workshopName ? ` (${maint.workshopName})` : ''}`,
         createdAt: maint.createdAt || Date.now(),
         updatedAt: Date.now(),
         version: 1,

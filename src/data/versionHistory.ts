@@ -14,8 +14,8 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.2.2';
-export const CURRENT_BUILD_NUMBER = 203;
+export const CURRENT_APP_VERSION = 'v7.2.3';
+export const CURRENT_BUILD_NUMBER = 204;
 
 export const VERSION_HISTORY: VersionItem[] = [
   {

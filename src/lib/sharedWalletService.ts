@@ -506,8 +506,12 @@ export async function saveSharedWalletTransaction(
   const path = `sharedWallets/${docIdToUse}/transactions/${tx.id}`;
   try {
     // ── CANONICAL WRITE (must succeed) ──────────────────────
+    // [v7.2.1] Override tx.walletId with docIdToUse so Firestore rules
+    // (which require request.resource.data.walletId == path walletId) pass.
+    // Path uses the shared doc ID (owner-prefixed); local walletId omits prefix.
+    const txForShared: Transaction = { ...tx, walletId: docIdToUse };
     const txRef = doc(db, 'sharedWallets', docIdToUse, 'transactions', tx.id);
-    await safeSetDoc(txRef, cleanForFirestore(tx), { merge: true });
+    await safeSetDoc(txRef, cleanForFirestore(txForShared), { merge: true });
 
     const ownerUidFromDocId = docIdToUse.includes('_') ? docIdToUse.split('_')[0] : undefined;
     const isOwner = !ownerUidFromDocId || ownerUidFromDocId === currentUid;

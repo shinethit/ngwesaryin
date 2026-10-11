@@ -409,6 +409,10 @@ export async function safeSetDoc(
   const targetUid = parts.length === 4 && parts[0] === 'users' ? parts[1] : undefined;
   const entityType = parts.length === 4 && parts[0] === 'users' ? parts[2] : undefined;
   const entityId = parts.length === 4 && parts[0] === 'users' ? parts[3] : undefined;
+  // [v7.2.0] Shared wallet transaction path detection
+  const isSharedTx = parts.length === 4 && parts[0] === 'sharedWallets' && parts[2] === 'transactions';
+  const sharedDocId = isSharedTx ? parts[1] : undefined;
+  const sharedTxId = isSharedTx ? parts[3] : undefined;
 
   // Guard when quota is exhausted; enqueue user entity tasks to syncQueue
   if (isQuotaExhausted()) {
@@ -440,6 +444,25 @@ export async function safeSetDoc(
 
     // Skip REST fallback on quota or permission errors
     if (!isQuotaExhaustedError(error) && !isPermissionError(error)) {
+      // [v7.2.0] Shared wallet transaction REST fallback
+      if (isSharedTx && sharedDocId && sharedTxId && data) {
+        try {
+          const { pushSharedTransactionDirectHttp } = await import('./directFirestoreHttp');
+          const httpRes = await pushSharedTransactionDirectHttp(sharedDocId, data);
+          if (httpRes.success) {
+            console.log(`[safeSetDoc] Recovered shared tx ${sharedTxId} via REST push!`);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('ngwe_cloud_tx_confirmed', { detail: [sharedTxId] })
+              );
+            }
+            return true;
+          }
+          console.warn('[safeSetDoc] Shared tx REST fallback failed:', httpRes.error);
+        } catch (httpErr) {
+          console.warn('[safeSetDoc] Shared tx REST fallback error:', httpErr);
+        }
+      }
       if (entityType === 'transactions' && targetUid && data) {
         try {
           const { pushTransactionsDirectHttp } = await import('./directFirestoreHttp');

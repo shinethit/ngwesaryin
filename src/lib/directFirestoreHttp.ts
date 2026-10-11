@@ -299,6 +299,75 @@ export async function deleteTransactionDirectHttp(
 }
 
 /**
+ * Directly writes a single transaction into a shared wallet's subcollection
+ * via HTTPS REST. Immune to iOS Safari WebKit / LTE timeouts.
+ */
+export async function pushSharedTransactionDirectHttp(
+  sharedDocId: string,
+  tx: Transaction
+): Promise<{ success: boolean; error?: string }> {
+  if (!auth.currentUser || !sharedDocId || !tx || !tx.id) {
+    return { success: false, error: 'Invalid params' };
+  }
+
+  try {
+    let idToken = '';
+    try {
+      idToken = await auth.currentUser.getIdToken(false);
+    } catch {
+      idToken = await auth.currentUser.getIdToken(true);
+    }
+
+    const baseUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/sharedWallets/${encodeURIComponent(sharedDocId)}/transactions`;
+
+    const fields: Record<string, any> = {};
+    const updateMasks: string[] = [];
+    for (const [k, v] of Object.entries(tx)) {
+      if (v !== undefined) {
+        fields[k] = toFirestoreRestValue(v);
+        updateMasks.push(`updateMask.fieldPaths=${encodeFieldPath(k)}`);
+      }
+    }
+
+    const docUrl = `${baseUrl}/${encodeURIComponent(tx.id)}?${updateMasks.join('&')}`;
+
+    const controller = new AbortController();
+    const timeoutTimer = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const response = await fetch(docUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ fields }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutTimer);
+
+      if (response.ok) return { success: true };
+
+      const errText = await response.text().catch(() => '');
+      if (response.status === 429 || errText.includes('Quota') || errText.includes('RESOURCE_EXHAUSTED')) {
+        try {
+          localStorage.setItem('ngwe_quota_write_exhausted', String(Date.now()));
+          const { forceWritesExhausted } = await import('./quotaTracker');
+          forceWritesExhausted();
+        } catch {}
+        return { success: false, error: 'Quota exceeded (HTTP 429)' };
+      }
+      return { success: false, error: `HTTP ${response.status}: ${errText.slice(0, 160)}` };
+    } catch (fetchErr: any) {
+      clearTimeout(timeoutTimer);
+      return { success: false, error: fetchErr?.message || String(fetchErr) };
+    }
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
  * Directly DELETE a transaction from a shared wallet's subcollection via REST.
  * 404 is treated as idempotent success.
  */

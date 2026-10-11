@@ -23,18 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { getAllItemSuggestions, findMatchingItemInfo } from '../utils/itemIntelligence';
 
-const GAS_STATIONS = [
-  'Denko',
-  'PTL',
-  'Max Energy',
-  'Apex',
-  'Moon Sun',
-  'Shwe Taung',
-  'BOC',
-  'Petrostar',
-  'Green Energy',
-  'Other',
-];
+const GAS_STATIONS = ['Denko', 'BOC', 'Other'];
 
 export type EntryModel = 'general' | 'fuel' | 'vehicle_service';
 
@@ -169,7 +158,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const unitQtyAmountTimerRef = useRef<NodeJS.Timeout | null>(null);
   const shoppingAmountTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
-  const [showQuickAddSub, setShowQuickAddSub] = useState(false);
+  // [v7.2.0] Default ON so item name input shows immediately in direct mode
+  const [showQuickAddSub, setShowQuickAddSub] = useState(true);
   const [newSubName, setNewSubName] = useState('');
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [categorySelectMode, setCategorySelectMode] = useState<'picker' | 'dropdown' | 'grid'>('picker');
@@ -192,6 +182,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [fuelLiters, setFuelLiters] = useState<string>('');
   const [fuelPricePerLiter, setFuelPricePerLiter] = useState<string>('3100');
   const [fuelGasStation, setFuelGasStation] = useState<string>('Denko');
+  const [customGasStation, setCustomGasStation] = useState<string>('');
   const [fuelIsFullTank, setFuelIsFullTank] = useState<boolean>(true);
 
   // Maintenance fields
@@ -391,7 +382,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setUnitPrice('');
         setQuantity('1');
         setShoppingItems([{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]);
-        setShowQuickAddSub(false);
+        setShowQuickAddSub(true);
         setNewSubName('');
         setVehicleOdometer('');
         setFuelLiters('');
@@ -1124,13 +1115,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         const odoNum = parseFloat(vehicleOdometer) || undefined;
         const litersNum = parseFloat(fuelLiters) || 0;
         const pplNum = parseFloat(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
+        const resolvedStation = fuelGasStation === 'Other'
+          ? (customGasStation.trim() || undefined)
+          : (fuelGasStation.trim() || undefined);
         vehicleLinkPayload = {
           vehicleId: targetVehicleId,
           logType: 'fuel',
           fuelType: fuelType || 'Octane 92',
           liters: litersNum,
           pricePerLiter: pplNum,
-          gasStation: fuelGasStation.trim() || undefined,
+          gasStation: resolvedStation,
           isFullTank: fuelIsFullTank,
           odometer: odoNum,
         };
@@ -1152,13 +1146,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         if (vehicleLogType === 'fuel') {
           const litersNum = parseFloat(fuelLiters) || 0;
           const pplNum = parseFloat(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
+          const resolvedStation = fuelGasStation === 'Other'
+            ? (customGasStation.trim() || undefined)
+            : (fuelGasStation.trim() || undefined);
           vehicleLinkPayload = {
             vehicleId: targetVehicleId,
             logType: 'fuel',
             fuelType: fuelType || 'Octane 92',
             liters: litersNum,
             pricePerLiter: pplNum,
-            gasStation: fuelGasStation.trim() || undefined,
+            gasStation: resolvedStation,
             isFullTank: fuelIsFullTank,
             odometer: odoNum,
           };
@@ -1696,6 +1693,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
+                    {fuelGasStation === 'Other' && (
+                      <input
+                        type="text"
+                        value={customGasStation}
+                        onChange={(e) => setCustomGasStation(e.target.value)}
+                        placeholder={lang === 'my' ? 'ဆီဆိုင် အမည် ရိုက်ထည့်ပါ' : 'Type station name'}
+                        className="w-full mt-1.5 text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                        autoFocus
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">

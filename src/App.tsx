@@ -1819,6 +1819,7 @@ export default function App() {
             budgets={budgets}
             plan={plan}
             lang={lang}
+            cloudTxIds={cloudTxIds}
             onClearAllData={handleClearAllData}
             onExportJson={handleExportJson}
             onImportJson={handleImportJson}

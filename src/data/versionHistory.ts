@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.2.8';
-export const CURRENT_BUILD_NUMBER = 209;
+export const CURRENT_APP_VERSION = 'v7.2.9';
+export const CURRENT_BUILD_NUMBER = 210;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.2.9',
+    buildNumber: 210,
+    releaseDate: '2026-10-11',
+    releaseTime: '11:00 AM (MMT)',
+    titleMy: 'Data Management တွင် Cloud Sync အခြေအနေ ပြသခြင်း',
+    titleEn: 'Cloud Sync Status in Data Management',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ဒေတာ စီမံခန့်ခွဲမှု Tab တွင် မည်သည့် စာရင်းမှတ်တမ်းများ Cloud ပေါ် ရောက်ပြီး၊ မည်သည့်အပိုင်းများ စက်တွင်းတွင် ကျန်ရှိသည်ကို xx/xx format ဖြင့် တိကျစွာ စစ်ဆေးနိုင်သည့် Cloud Sync Status Card အသစ် ထည့်သွင်းပေးထားသည်။',
+    descriptionEn: 'Added a Cloud Sync Status card in Data Management view showing xx/xx transaction sync progress with visual progress bar and per-collection local counts.',
+    changesMy: [
+      '✨ Cloud Sync Status Card — Data Management Tab တွင်',
+      '✨ Transactions: cloud/total (e.g. 58/59) + % + progress bar',
+      '✨ Debts/Wallets/Categories/Budgets — စက်တွင်း count ပြသ',
+      '✨ Sync မပြည့်သေးလျှင် amber warning color',
+    ],
+    changesEn: [
+      '✨ Cloud Sync Status Card in Data Management',
+      '✨ Transactions: cloud/total (e.g. 58/59) + % + progress bar',
+      '✨ Debts/Wallets/Categories/Budgets — local count display',
+      '✨ Amber warning color when sync incomplete',
+    ],
+  },
   {
     version: 'v7.2.8',
     buildNumber: 209,

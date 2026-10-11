@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Trash2, Download, Upload, KeyRound, AlertTriangle, Crown } from 'lucide-react';
+import { Database, Trash2, Download, Upload, KeyRound, AlertTriangle, Crown, Cloud, CloudOff, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,7 @@ interface DataManagementViewProps {
   budgets?: BudgetConfig[];
   plan: PlanType;
   lang: 'my' | 'en';
+  cloudTxIds?: Set<string>;
   onClearAllData: () => void;
   onExportJson: () => void;
   onImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -26,6 +27,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   budgets = [],
   plan,
   lang,
+  cloudTxIds,
   onClearAllData,
   onExportJson,
   onImportJson,
@@ -121,6 +123,125 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             <span className="text-[10px] text-slate-400">targets</span>
           </div>
         </div>
+      </div>
+
+      {/* [v7.2.9] Cloud Sync Status — Cloud vs Local breakdown */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <Cloud className="w-4 h-4" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">
+            {lang === 'my' ? 'Cloud Sync အခြေအနေ' : 'Cloud Sync Status'}
+          </h2>
+        </div>
+
+        <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed max-w-2xl">
+          {lang === 'my'
+            ? 'သင့်ဒေတာ မည်သည့်အပိုင်းက Cloud Database သို့ ရောက်ရှိပြီးဖြစ်သည်၊ မည်သည့်အပိုင်းက စက်တွင်းတွင်သာ ကျန်ရှိနေသည်ကို စစ်ဆေးပါ။'
+            : 'Check which data has reached the Cloud Database and which remains local-only.'}
+        </p>
+
+        {(() => {
+          const txTotal = transactions.length;
+          const txCloud = cloudTxIds ? cloudTxIds.size : 0;
+          const txPending = Math.max(0, txTotal - txCloud);
+          const txPct = txTotal > 0 ? Math.round((txCloud / txTotal) * 100) : 100;
+          const allSynced = txPending === 0;
+
+          return (
+            <div className="space-y-4">
+              {/* Big banner — Transactions only (has confirmed cloudTxIds set) */}
+              <div className={`p-4 rounded-2xl flex items-center justify-between flex-wrap gap-3 ${allSynced ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {allSynced ? (
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                  ) : (
+                    <CloudOff className="w-6 h-6 text-amber-600 shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <div className={`font-bold text-sm ${allSynced ? 'text-emerald-900' : 'text-amber-900'}`}>
+                      {lang === 'my' ? 'စာရင်းမှတ်တမ်းများ (Transactions)' : 'Transactions'}
+                    </div>
+                    <div className={`text-[11px] mt-0.5 ${allSynced ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {allSynced
+                        ? (lang === 'my' ? '✓ အားလုံး Cloud Database ပေါ် ရောက်ရှိပြီးဖြစ်သည်' : '✓ All records synced to Cloud')
+                        : (lang === 'my'
+                          ? `⚠️ ${txPending} ခု စက်တွင်းတွင် ကျန်ရှိသည် (Cloud ရောက်ရန် စောင့်ဆိုင်းနေသည်)`
+                          : `⚠️ ${txPending} pending (waiting to sync)`)}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className={`font-mono font-black text-2xl leading-none ${allSynced ? 'text-emerald-700' : 'text-amber-800'}`}>
+                    {txCloud}/{txTotal}
+                  </div>
+                  <div className={`text-[10px] font-bold mt-1 ${allSynced ? 'text-emerald-600' : 'text-amber-700'}`}>
+                    {txPct}% synced
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${allSynced ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  style={{ width: `${txPct}%` }}
+                />
+              </div>
+
+              {/* Other collections — local count */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                  <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      {lang === 'my' ? 'အကြွေး' : 'Debts'}
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-base text-slate-800 block">{debts.length}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                  <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      {lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'Wallets'}
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-base text-slate-800 block">{wallets.length}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                  <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      {lang === 'my' ? 'ကဏ္ဍ' : 'Categories'}
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-base text-slate-800 block">{categories.length}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                  <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      {lang === 'my' ? 'ဘတ်ဂျက်' : 'Budgets'}
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-base text-slate-800 block">{budgets.length}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                </div>
+              </div>
+
+              {/* Note */}
+              <div className="flex items-start gap-2 p-3 bg-slate-50/70 border border-slate-200/70 rounded-xl text-[11px] text-slate-500">
+                <RefreshCw className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  {lang === 'my'
+                    ? 'မှတ်ချက် — စာရင်းမှတ်တမ်းများအတွက်သာ Cloud ရောက်ရှိမှုကို တိကျစွာ စစ်ဆေးပြသနိုင်သည်။ အကြွေး၊ ပိုက်ဆံအိတ်၊ ကဏ္ဍနှင့် ဘတ်ဂျက်များသည် သိမ်းဆည်းသည်နှင့် Cloud ပေါ် တိုက်ရိုက် ရောက်ရှိသည်။'
+                    : 'Note — Precise cloud confirmation is available for transactions only. Debts, wallets, categories and budgets sync directly on save.'}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Main Operations Card (Danger Zone / Clear All Data) */}

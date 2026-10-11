@@ -285,178 +285,118 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
       )}
 
-      {/* Top Bar: Vehicle Selector & Quick Actions */}
-      <div className="bg-white p-3 sm:p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Left: Vehicle Selector & Info */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-amber-400 shadow-md shrink-0">
-              <Car className="w-5 h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Vehicle Dropdown */}
-                <select
-                  value={currentVehicle?.id}
-                  onChange={(e) => {
-                    if (e.target.value === '__add_new__') {
-                      handleOpenAddVehicle();
-                    } else {
-                      setSelectedVehicleId(e.target.value);
-                    }
-                  }}
-                  className="font-bold text-slate-900 text-sm sm:text-base bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-slate-900 cursor-pointer transition-colors max-w-[190px] sm:max-w-xs truncate"
-                >
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      🚗 {v.name} {v.plateNumber ? `(${v.plateNumber})` : ''}
-                    </option>
-                  ))}
-                  <option value="__add_new__" className="text-emerald-700 font-bold">
-                    ➕ {lang === 'my' ? '+ ယာဉ်အသစ် ထပ်တိုးရန်...' : '+ Add New Vehicle...'}
-                  </option>
-                </select>
-
-                {/* Edit Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingVehicle(currentVehicle);
-                    setIsVehicleModalOpen(true);
-                  }}
-                  className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200/80"
-                  title={lang === 'my' ? 'ယာဉ်အချက်အလက် ပြင်ဆင်ရန်' : 'Edit Vehicle'}
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-
-                {/* Delete Button (if > 1 vehicle) */}
-                {vehicles.length > 1 && currentVehicle && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (
-                        confirm(
-                          lang === 'my'
-                            ? `ယာဉ် "${currentVehicle.name}" ကို ဖျက်ရန် သေချာပါသလား?`
-                            : `Are you sure you want to delete "${currentVehicle.name}"?`
-                        )
-                      ) {
-                        handleDeleteVehicleAndClean(currentVehicle.id);
-                      }
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80"
-                    title={lang === 'my' ? 'ယာဉ်ကို ဖျက်ရန်' : 'Delete Vehicle'}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-
-                {/* Plan Badge */}
-                {plan === 'premium' ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
-                    <Crown className="w-3.5 h-3.5 text-amber-600" />
-                    <span>{lang === 'my' ? `VIP: ယာဉ် (${vehicles.length}) စီး • Unlimited` : `VIP: ${vehicles.length} Vehicles • Unlimited`}</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                    <span>{lang === 'my' ? `ယာဉ် (${vehicles.length}/1) စီး (Free)` : `${vehicles.length}/1 Vehicle (Free)`}</span>
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
-                <span>{currentVehicle?.fuelType}</span>
-                <span>•</span>
-                <span className="font-mono font-medium text-slate-700">
-                  {currentVehicle?.currentOdometer?.toLocaleString()} {currentVehicle?.odometerUnit || 'km'}
-                </span>
-                {currentVehicle?.plateNumber && (
-                  <>
-                    <span>•</span>
-                    <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-mono text-slate-600">
-                      {currentVehicle.plateNumber}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
+      {/* Top Bar: Vehicle Selector & Quick Actions (compact 2-row) */}
+      <div className="bg-white p-2.5 sm:p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+        {/* Row 1: Vehicle + Edit/Delete + Info + Plan Badge */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-amber-400 shadow-md shrink-0">
+            <Car className="w-4 h-4" />
           </div>
-
-          {/* Right: Quick Action Buttons & Prominent Add Vehicle */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Prominent Add Vehicle Button */}
+          <select
+            value={currentVehicle?.id}
+            onChange={(e) => {
+              if (e.target.value === '__add_new__') {
+                handleOpenAddVehicle();
+              } else {
+                setSelectedVehicleId(e.target.value);
+              }
+            }}
+            className="font-bold text-slate-900 text-sm bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-slate-900 cursor-pointer transition-colors max-w-[170px] truncate"
+          >
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                🚗 {v.name} {v.plateNumber ? `(${v.plateNumber})` : ''}
+              </option>
+            ))}
+            <option value="__add_new__" className="text-emerald-700 font-bold">
+              ➕ {lang === 'my' ? 'ယာဉ်အသစ်...' : 'Add New...'}
+            </option>
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingVehicle(currentVehicle);
+              setIsVehicleModalOpen(true);
+            }}
+            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
+            title={lang === 'my' ? 'ပြင်ဆင်ရန်' : 'Edit'}
+          >
+            <Edit className="w-3.5 h-3.5" />
+          </button>
+          {vehicles.length > 1 && currentVehicle && (
             <button
               type="button"
-              id="btn-add-vehicle-header"
-              onClick={handleOpenAddVehicle}
-              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-              title={lang === 'my' ? 'ယာဉ်အသစ် ထပ်တိုးရန်' : 'Add New Vehicle'}
-            >
-              <Plus className="w-3.5 h-3.5 text-amber-400 stroke-[3]" />
-              <span>{lang === 'my' ? '+ ယာဉ်အသစ်' : '+ Add Vehicle'}</span>
-            </button>
-
-            <button
               onClick={() => {
-                setEditingFuelLog(null);
-                setIsFuelModalOpen(true);
+                if (confirm(lang === 'my' ? `"${currentVehicle.name}" ကို ဖျက်ရန်?` : `Delete "${currentVehicle.name}"?`)) {
+                  handleDeleteVehicleAndClean(currentVehicle.id);
+                }
               }}
-              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
+              title={lang === 'my' ? 'ဖျက်ရန်' : 'Delete'}
             >
-              <Fuel className="w-3.5 h-3.5" />
-              <span>{lang === 'my' ? '+ ဆီထည့်စာရင်း' : '+ Add Fuel'}</span>
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
-
-            <button
-              onClick={() => {
-                setEditingMaintenance(null);
-                setIsMaintenanceModalOpen(true);
-              }}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-            >
-              <Wrench className="w-3.5 h-3.5" />
-              <span>{lang === 'my' ? '+ အပိုပစ္စည်းလဲ/ပြုပြင်' : '+ Service'}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setEditingTireLog(null);
-                setIsTireModalOpen(true);
-              }}
-              className="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold rounded-xl border border-teal-200 transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <Disc className="w-3.5 h-3.5" />
-              <span>{lang === 'my' ? 'လေပေါင်ချိန်' : 'Tire Check'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsFuelGuideOpen(true)}
-              className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
-              title={lang === 'my' ? 'ဆီဖိုး ဘယ်လို ထည့်ရမလဲ လမ်းညွှန်' : 'How to log fuel'}
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-              <span>{lang === 'my' ? '❓ ဆီဖိုး ထည့်နည်း' : '❓ Fuel Guide'}</span>
-            </button>
+          )}
+          <span className="hidden sm:inline text-slate-200 mx-0.5">|</span>
+          <div className="text-[11px] text-slate-500 flex items-center gap-1 flex-wrap">
+            <span>{currentVehicle?.fuelType}</span>
+            <span>·</span>
+            <span className="font-mono text-slate-700">{currentVehicle?.currentOdometer?.toLocaleString()} {currentVehicle?.odometerUnit || 'km'}</span>
+            {currentVehicle?.plateNumber && (
+              <>
+                <span>·</span>
+                <span className="font-mono text-slate-600">{currentVehicle.plateNumber}</span>
+              </>
+            )}
           </div>
+          {plan === 'premium' ? (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 shrink-0">
+              <Crown className="w-3 h-3 text-amber-600" />
+              <span>{vehicles.length} · VIP</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+              {vehicles.length}/1
+            </span>
+          )}
         </div>
 
-        {/* Sync Reassurance Strip */}
-        <div className="px-3 py-1.5 bg-emerald-50/60 border-t border-emerald-100 flex items-center gap-2 text-[10px] text-emerald-900">
-          <span className="text-emerald-600 shrink-0">✓</span>
-          <span className="truncate leading-tight">
-            {lang === 'my'
-              ? '💡 ဆီဖိုးနှင့် ကားစရိတ်များသည် ပင်မထွက်ငွေစာရင်းနှင့် တပြိုင်နက် ချိတ်ဆက်ထား — ၂ ခါ ထပ်ထည့်ရန် မလိုပါ။'
-              : 'Fuel & vehicle costs sync into main expense records — no double entry.'}
-          </span>
-        </div>
+        {/* Row 2: Actions + Fleet pills (combined) */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-100">
+          <button
+            onClick={() => { setEditingFuelLog(null); setIsFuelModalOpen(true); }}
+            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+          >
+            <Fuel className="w-3 h-3" />
+            <span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>
+          </button>
+          <button
+            onClick={() => { setEditingMaintenance(null); setIsMaintenanceModalOpen(true); }}
+            className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+          >
+            <Wrench className="w-3 h-3" />
+            <span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span>
+          </button>
+          <button
+            onClick={() => { setEditingTireLog(null); setIsTireModalOpen(true); }}
+            className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-semibold rounded-lg border border-teal-200 transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <Disc className="w-3 h-3" />
+            <span>{lang === 'my' ? 'တာယာ' : 'Tire'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsFuelGuideOpen(true)}
+            className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all cursor-pointer active:scale-95"
+            title={lang === 'my' ? 'ဆီဖိုး ထည့်နည်း' : 'Fuel Guide'}
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+          </button>
 
-        {/* Multi-Vehicle Quick Switcher Strip */}
-        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
-            <Car className="w-3.5 h-3.5 text-slate-400" />
-            <span>{lang === 'my' ? 'ယာဉ်စာရင်း:' : 'Fleet:'}</span>
+          <span className="text-slate-200 mx-0.5 shrink-0">|</span>
+
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
+            {lang === 'my' ? 'ယာဉ်စာရင်း:' : 'Fleet:'}
           </span>
           {vehicles.map((v) => {
             const isSelected = currentVehicle?.id === v.id;
@@ -465,33 +405,20 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 key={v.id}
                 type="button"
                 onClick={() => setSelectedVehicleId(v.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                  isSelected
-                    ? 'bg-slate-900 text-white shadow-xs ring-2 ring-slate-900/20'
-                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200/80'
-                }`}
+                className={'px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ' + (isSelected ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200/80')}
               >
                 <span>{v.name}</span>
-                {v.plateNumber && (
-                  <span className={`text-[10px] font-mono px-1 py-0.2 rounded ${
-                    isSelected ? 'bg-slate-800 text-slate-300' : 'bg-slate-200/80 text-slate-600'
-                  }`}>
-                    {v.plateNumber}
-                  </span>
-                )}
               </button>
             );
           })}
-
-          {/* Quick Add Pill in Strip */}
           <button
             type="button"
             onClick={handleOpenAddVehicle}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-all flex items-center gap-1 shrink-0 cursor-pointer active:scale-95"
-            title={lang === 'my' ? 'ယာဉ်အသစ် ထပ်တိုးရန်' : 'Add New Vehicle'}
+            className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-all flex items-center gap-0.5 shrink-0 cursor-pointer active:scale-95"
+            title={lang === 'my' ? 'ယာဉ်အသစ်' : 'Add Vehicle'}
           >
-            <Plus className="w-3.5 h-3.5 text-amber-700 stroke-[3]" />
-            <span>{lang === 'my' ? '+ ယာဉ်သစ်' : '+ New Vehicle'}</span>
+            <Plus className="w-3 h-3 text-amber-700 stroke-[3]" />
+            <span>{lang === 'my' ? 'သစ်' : 'New'}</span>
           </button>
         </div>
       </div>

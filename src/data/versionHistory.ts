@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.2.7';
-export const CURRENT_BUILD_NUMBER = 208;
+export const CURRENT_APP_VERSION = 'v7.2.8';
+export const CURRENT_BUILD_NUMBER = 209;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.2.8',
+    buildNumber: 209,
+    releaseDate: '2026-10-11',
+    releaseTime: '10:00 AM (MMT)',
+    titleMy: 'Vehicle View Compact Redesign — 2 Row Header',
+    titleEn: 'Vehicle View Compact Redesign — 2-Row Header',
+    tag: 'fix',
+    tagLabelMy: 'UI Compact',
+    tagLabelEn: 'UI Compact',
+    descriptionMy: 'Vehicle tab ရှိ Top Card ကို ၇ row မှ ၂ row သို့ ကျဉ်းမြောင်းစေသည်။ Add Vehicle button ကို Fleet pills ဘေးသို့ ရွှေ့ပြီး Sync strip ကို ဖျက်လိုက်သည် (Main Navbar တွင် Sync ရှိပြီးသား)။',
+    descriptionEn: 'Compacted Vehicles tab top card from 7 rows to 2 rows. Moved Add Vehicle button next to Fleet pills. Removed sync strip (sync already exists in main Navbar).',
+    changesMy: [
+      '📐 Top bar — ၇ row → ၂ row',
+      '📐 VIP badge + info — inline (separate row မဟုတ်)',
+      '📐 Actions + Fleet pills — တစ်တန်းထဲ',
+      '🗑️ Sync strip ဖျက် — Main Navbar တွင် Sync ရှိပြီး',
+    ],
+    changesEn: [
+      '📐 Top bar — 7 rows → 2 rows',
+      '📐 VIP badge + info — inline (not separate row)',
+      '📐 Actions + Fleet pills — single line',
+      '🗑️ Sync strip removed — sync already in main Navbar',
+    ],
+  },
   {
     version: 'v7.2.7',
     buildNumber: 208,

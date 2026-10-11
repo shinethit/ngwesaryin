@@ -1269,7 +1269,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       // live in the linked FuelLog (visible in AddFuelModal), and the
       // transaction already carries cat_vehicle + sub_veh_fuel for context.
       if (entryModel === 'fuel' || entryModel === 'vehicle_service') {
-        finalNote = extraNote.trim() || undefined;
+        // [v7.2.4] Keep '' (not undefined) so Firestore merge clears old note.
+        finalNote = extraNote.trim();
       } else if (type === 'expense') {
         if (entryMode === 'shopping_list') {
           finalNote = extraNote.trim() || (itemName.trim() || undefined);

@@ -107,7 +107,8 @@ export function useVehicleHandlers({
     const targetVehicle = vehicles.find((v) => v.id === logData.vehicleId);
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
     const txId = logData.transactionId || `tx_fuel_${logId}`;
-    const log: FuelLog = { ...logData, id: logId, transactionId: txId, createdAt: logData.createdAt || Date.now(), updatedAt: Date.now(), version: (logData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
+    // [v7.2.4] note ?? '' so Firestore merge actually clears cleared notes
+    const log: FuelLog = { ...logData, id: logId, transactionId: txId, note: logData.note ?? '', createdAt: logData.createdAt || Date.now(), updatedAt: Date.now(), version: (logData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
 
     // [FIX v6.1.3] Resolve wallet — if log.walletId no longer exists, fall back to first wallet.
     const resolvedWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))
@@ -216,7 +217,8 @@ export function useVehicleHandlers({
     const targetVehicle = vehicles.find((v) => v.id === maintData.vehicleId);
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
     const txId = maintData.transactionId || `tx_maint_${maintId}`;
-    const maint: VehicleMaintenance = { ...maintData, id: maintId, transactionId: txId, createdAt: maintData.createdAt || Date.now(), updatedAt: Date.now(), version: (maintData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
+    // [v7.2.4] note ?? '' so Firestore merge actually clears cleared notes
+    const maint: VehicleMaintenance = { ...maintData, id: maintId, transactionId: txId, note: maintData.note ?? '', createdAt: maintData.createdAt || Date.now(), updatedAt: Date.now(), version: (maintData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
 
     // [FIX v6.1.3] Resolve wallet — if maint.walletId no longer exists, fall back to first wallet.
     const resolvedMaintWalletId = (maint.walletId && computedWallets.some((w) => w.id === maint.walletId))
@@ -325,7 +327,8 @@ export function useVehicleHandlers({
     const targetVehicle = vehicles.find((v) => v.id === logData.vehicleId);
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
     const txId = logData.transactionId || `tx_tire_${tireId}`;
-    const log: TirePressureLog = { ...logData, id: tireId, transactionId: txId, createdAt: logData.createdAt || Date.now(), updatedAt: Date.now(), version: (logData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
+    // [v7.2.4] note ?? '' so Firestore merge actually clears cleared notes
+    const log: TirePressureLog = { ...logData, id: tireId, transactionId: txId, note: logData.note ?? '', createdAt: logData.createdAt || Date.now(), updatedAt: Date.now(), version: (logData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
 
     // [FIX v6.1.3] Resolve wallet — if log.walletId no longer exists, fall back to first wallet.
     const resolvedTireWalletId = (log.walletId && computedWallets.some((w) => w.id === log.walletId))

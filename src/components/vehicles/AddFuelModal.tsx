@@ -187,7 +187,10 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       gasStation: station || undefined,
       walletId: walletId || wallets[0]?.id || 'cash',
       syncToExpense,
-      note: note.trim() || undefined,
+      // [v7.2.4] Keep empty string — do NOT convert to undefined,
+      // otherwise Firestore { merge: true } keeps the old note and it
+      // reappears via cloud snapshot.
+      note: note.trim(),
       createdAt: editingLog?.createdAt || Date.now(),
     });
 
@@ -570,7 +573,7 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
           {/* Note */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              {lang === 'my' ? 'မှတ်စု (ရွေးချယ်ရန်)' : 'Note (Optional)'}
+              {lang === 'my' ? 'မှတ်စု' : 'Note'}
             </label>
             <input
               type="text"

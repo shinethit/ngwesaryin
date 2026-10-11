@@ -977,13 +977,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                               {/* Line 2: Amount & Note / Details */}
                               <div className="flex items-center justify-between gap-2 min-w-0">
-                                <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-500">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1 text-xs text-slate-500">
                                   <span className={`font-mono font-bold text-xs sm:text-sm shrink-0 ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`}>
                                     {isIncome ? `+${formatCurrency(t.amount, wallet?.currency)}` : `-${formatCurrency(t.amount, wallet?.currency)}`}
                                   </span>
                                   {t.note && (
                                     <>
-                                      <span className="text-slate-300">•</span>
+                                      <span className="text-slate-300 shrink-0">•</span>
                                       <span className="truncate text-slate-600 italic text-[11px]">
                                         "{t.note}"
                                       </span>

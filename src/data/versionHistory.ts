@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.2.9';
-export const CURRENT_BUILD_NUMBER = 210;
+export const CURRENT_APP_VERSION = 'v7.3.0';
+export const CURRENT_BUILD_NUMBER = 211;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.3.0',
+    buildNumber: 211,
+    releaseDate: '2026-10-11',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Vehicles Tab — Metric နှင့် Cost Summary ကတ်များ ကျဉ်းမြောင်းစေခြင်း',
+    titleEn: 'Vehicles Tab — Metric & Cost Summary Compaction',
+    tag: 'fix',
+    tagLabelMy: 'UI Compact',
+    tagLabelEn: 'UI Compact',
+    descriptionMy: 'Vehicles Tab ရှိ ၄ ကတ် metric များကို တစ်တန်းထဲ ကျဉ်းမြောင်းစွာ ပြသစေပြီး၊ Cost Summary ကတ်တွင်လည်း ၃ ကတ် (Fuel/Maintenance/Tires) ကို အမြဲ ၃ ကော်လံဖြစ်စေကာ Grand Total နှင့် Cost per Km ကို တစ်တန်းထဲ ပေါင်းစပ်လိုက်သည်။',
+    descriptionEn: 'Compacted the 4 metric cards into a single horizontal row. Also made Cost Summary always 3-column and combined Grand Total + Cost per Km into a single strip.',
+    changesMy: [
+      '📐 Metric ၄ ကတ် → တစ်တန်းထဲ (mobile တွင် 2×2)',
+      '📐 Cost Summary ၃ ကတ် → အမြဲ ၃ ကော်လံ',
+      '📐 Grand Total + Cost per Km → တစ်တန်းတည်း',
+      '📐 Padding နှင့် font လျှော့ချ',
+    ],
+    changesEn: [
+      '📐 4 metric cards → single row (2×2 on mobile)',
+      '📐 Cost Summary 3 cards → always 3-column',
+      '📐 Grand Total + Cost per Km → single strip',
+      '📐 Reduced padding & font sizes',
+    ],
+  },
   {
     version: 'v7.2.9',
     buildNumber: 210,

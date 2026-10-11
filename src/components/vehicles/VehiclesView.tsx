@@ -423,127 +423,77 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
       </div>
 
-      {/* Top 4 Key Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-        {/* Metric 1: Fuel Efficiency */}
-        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              {lang === 'my' ? 'ပျမ်းမျှ ဆီစားနှုန်း' : 'Avg Fuel Efficiency'}
-            </span>
-            <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Fuel className="w-4 h-4" />
+      {/* [v7.3.0] Key metrics — ultra-compact single-row cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {/* Fuel Efficiency */}
+        <div className="bg-white px-2.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Fuel className="w-3.5 h-3.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              {lang === 'my' ? 'ဆီစားနှုန်း' : 'Efficiency'}
             </div>
-          </div>
-          <div className="flex items-baseline gap-1 pt-1">
-            <span className="text-xl font-black font-mono text-slate-900">
-              {fuelStats.avgEfficiency > 0 ? fuelStats.avgEfficiency : '--'}
-            </span>
-            <span className="text-xs font-bold text-amber-600">km/L</span>
-          </div>
-          <p className="text-[11px] text-slate-400">
-            {fuelStats.totalLiters > 0
-              ? `${fuelStats.totalLiters.toFixed(1)} L ထည့်သွင်းခဲ့သည်`
-              : lang === 'my'
-              ? 'ဆီထည့်မှတ်တမ်း မရှိသေးပါ'
-              : 'No fuel logs yet'}
-          </p>
-        </div>
-
-        {/* Metric 2: Fuel Price */}
-        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              {lang === 'my' ? 'လက်ရှိ ၁ လီတာ ဆီဈေး' : 'Latest Fuel Price'}
-            </span>
-            <div className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1 pt-1">
-            <span className="text-xl font-black font-mono text-slate-900">
-              {fuelStats.latestPricePerLiter > 0
-                ? fuelStats.latestPricePerLiter.toLocaleString()
-                : '--'}
-            </span>
-            <span className="text-xs font-bold text-orange-600">Ks/L</span>
-          </div>
-          <p className="text-[11px] text-slate-400">
-            {fuelStats.priceChangeDiff !== 0 ? (
-              <span
-                className={`font-semibold ${
-                  fuelStats.priceChangeDiff > 0 ? 'text-rose-600' : 'text-emerald-600'
-                }`}
-              >
-                {fuelStats.priceChangeDiff > 0 ? '+' : ''}
-                {fuelStats.priceChangeDiff.toLocaleString()} Ks ({fuelStats.priceChangePercent}%)
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-base font-black font-mono text-slate-900 leading-none">
+                {fuelStats.avgEfficiency > 0 ? fuelStats.avgEfficiency : '--'}
               </span>
-            ) : (
-              <span>{lang === 'my' ? 'ယခင်နှင့် အတူတူဖြစ်သည်' : 'Unchanged'}</span>
-            )}
-          </p>
-        </div>
-
-        {/* Metric 3: Total Fuel Spent */}
-        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              {lang === 'my' ? 'ဆီဖိုး စုစုပေါင်း' : 'Total Fuel Cost'}
-            </span>
-            <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Gauge className="w-4 h-4" />
+              <span className="text-[9px] font-bold text-amber-600">km/L</span>
             </div>
           </div>
-          <div className="flex items-baseline gap-1 pt-1">
-            <span className="text-xl sm:text-2xl font-black font-mono text-emerald-800">
-              {fuelStats.totalSpent.toLocaleString()}
-            </span>
-            <span className="text-xs font-bold text-emerald-600">Ks</span>
-          </div>
-          <p className="text-[11px] text-slate-400">
-            {lang === 'my' ? 'မှတ်တမ်းပေါင်း' : 'Logs'}: {vehicleFuelLogs.length} ကြိမ်
-          </p>
         </div>
 
-        {/* Metric 4: Health Alerts */}
-        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              {lang === 'my' ? 'အပိုပစ္စည်း စစ်ဆေးရန်' : 'Maintenance Status'}
-            </span>
-            <div
-              className={`w-7 h-7 rounded-xl flex items-center justify-center ${
-                alertCount > 0 ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'
-              }`}
-            >
-              {alertCount > 0 ? (
-                <ShieldAlert className="w-4 h-4" />
-              ) : (
-                <ShieldCheck className="w-4 h-4" />
-              )}
+        {/* Fuel Price */}
+        <div className="bg-white px-2.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-3.5 h-3.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              {lang === 'my' ? 'ဆီဈေး' : 'Fuel Price'}
+            </div>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-base font-black font-mono text-slate-900 leading-none">
+                {fuelStats.latestPricePerLiter > 0 ? fuelStats.latestPricePerLiter.toLocaleString() : '--'}
+              </span>
+              <span className="text-[9px] font-bold text-orange-600">Ks/L</span>
             </div>
           </div>
-          <div className="flex items-baseline gap-1 pt-1">
-            <span
-              className={`text-2xl font-black font-mono ${
-                alertCount > 0 ? 'text-rose-600' : 'text-slate-900'
-              }`}
-            >
-              {alertCount}
-            </span>
-            <span className="text-xs font-bold text-slate-500">
-              {lang === 'my' ? 'ခု သတိပေးချက်' : 'Alerts'}
-            </span>
+        </div>
+
+        {/* Total Fuel Spent */}
+        <div className="bg-white px-2.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Gauge className="w-3.5 h-3.5" />
           </div>
-          <p className="text-[11px] text-slate-400">
-            {alertCount > 0
-              ? lang === 'my'
-                ? 'အင်ဂျင်ဝိုင် သို့မဟုတ် အပိုပစ္စည်း လဲရန်လိုပါသည်'
-                : 'Services due / overdue'
-              : lang === 'my'
-              ? 'အားလုံး ကောင်းမွန်ပါသည်'
-              : 'All systems healthy'}
-          </p>
+          <div className="min-w-0 flex-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              {lang === 'my' ? 'ဆီဖိုး' : 'Fuel Cost'}
+            </div>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-base font-black font-mono text-emerald-800 leading-none truncate">
+                {fuelStats.totalSpent.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Alerts */}
+        <div className="bg-white px-2.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2 min-w-0">
+          <div className={'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ' + (alertCount > 0 ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600')}>
+            {alertCount > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              {lang === 'my' ? 'သတိပေးချက်' : 'Alerts'}
+            </div>
+            <div className="flex items-baseline gap-0.5">
+              <span className={'text-base font-black font-mono leading-none ' + (alertCount > 0 ? 'text-rose-600' : 'text-slate-900')}>
+                {alertCount}
+              </span>
+              <span className="text-[9px] font-bold text-slate-500">{lang === 'my' ? 'ခု' : 'items'}</span>
+            </div>
+          </div>
         </div>
       </div>
 

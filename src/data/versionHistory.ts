@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.2.6';
-export const CURRENT_BUILD_NUMBER = 207;
+export const CURRENT_APP_VERSION = 'v7.2.7';
+export const CURRENT_BUILD_NUMBER = 208;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.2.7',
+    buildNumber: 208,
+    releaseDate: '2026-10-11',
+    releaseTime: '9:00 AM (MMT)',
+    titleMy: 'သက်တမ်းရက်ပေါင်း ထည့်သွင်းခြင်း Bug ပြင် + UI ကျဉ်းမြောင်းရေး',
+    titleEn: 'Lifespan Days Input Fix + UI Compaction',
+    tag: 'fix',
+    tagLabelMy: 'UI + Bug Fix',
+    tagLabelEn: 'UI + Bug Fix',
+    descriptionMy: 'အပိုပစ္စည်း သက်တမ်း ရက်ပေါင်း input တွင် step=30 ဖြစ်နေသဖြင့် 365, 180, 90 ကဲ့သို့ ကိန်းများ ရိုက်လို့မရခဲ့ပါ။ step=any ပြောင်းပြီး မည်သည့် ကိန်းမဆို ရိုက်နိုင်စေပြီ။ မှတ်စု label ကိုလည်း ပြင်ပြီး၊ Vehicle tab ရှိ sync strip နှင့် metric ကတ်များကို ကျဉ်းမြောင်းစေသည်။',
+    descriptionEn: 'Fixed lifespan days input (step was 30 → now any). Also renamed Note label and compacted sync strip + metric cards on Vehicles tab.',
+    changesMy: [
+      '🐛 သက်တမ်း ရက်ပေါင်း — step 30 → any (365 ရိုက်လို့ရပြီ)',
+      '🐛 သက်တမ်း km — step 500 → any',
+      '🏷️ "မှတ်စု (ရွေးချယ်ရန်)" → "မှတ်စု"',
+      '📐 Sync strip + metric cards + cost summary ကျဉ်းမြောင်းစေ',
+    ],
+    changesEn: [
+      '🐛 Lifespan days — step 30 → any (365 now valid)',
+      '🐛 Lifespan km — step 500 → any',
+      '🏷️ Label "Note (Optional)" → "Note"',
+      '📐 Compacted sync strip + metric cards + cost summary',
+    ],
+  },
   {
     version: 'v7.2.6',
     buildNumber: 207,

@@ -286,12 +286,12 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
       )}
 
       {/* Top Bar: Vehicle Selector & Quick Actions */}
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-3 sm:p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Left: Vehicle Selector & Info */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-amber-400 shadow-md shrink-0">
-              <Car className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-amber-400 shadow-md shrink-0">
+              <Car className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -443,22 +443,13 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
 
         {/* Sync Reassurance Strip */}
-        <div className="px-4 py-2 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white border-t border-emerald-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-emerald-950">
-          <div className="flex items-center gap-1.5">
-            <span className="text-emerald-600 font-bold shrink-0">✓</span>
-            <span className="leading-relaxed">
-              {lang === 'my'
-                ? '💡 ဆီဖိုးနှင့် ကားစရိတ်များသည် ပင်မထွက်ငွေစာရင်း (နဂိုနေရာ) နှင့် တပြိုင်နက် ချိတ်ဆက်ထားသဖြင့် နဂိုနေရာတွင် ၂ ခါ ထပ်ထည့်ရန် လုံးဝမလိုပါ။'
-                : 'Fuel & vehicle costs logged here automatically sync into your main expense records. No need to enter twice.'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsFuelGuideOpen(true)}
-            className="text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer shrink-0"
-          >
-            {lang === 'my' ? 'ရှင်းလင်းချက်ဖတ်ရန် ›' : 'Read Guide ›'}
-          </button>
+        <div className="px-3 py-1.5 bg-emerald-50/60 border-t border-emerald-100 flex items-center gap-2 text-[10px] text-emerald-900">
+          <span className="text-emerald-600 shrink-0">✓</span>
+          <span className="truncate leading-tight">
+            {lang === 'my'
+              ? '💡 ဆီဖိုးနှင့် ကားစရိတ်များသည် ပင်မထွက်ငွေစာရင်းနှင့် တပြိုင်နက် ချိတ်ဆက်ထား — ၂ ခါ ထပ်ထည့်ရန် မလိုပါ။'
+              : 'Fuel & vehicle costs sync into main expense records — no double entry.'}
+          </span>
         </div>
 
         {/* Multi-Vehicle Quick Switcher Strip */}
@@ -506,9 +497,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
       </div>
 
       {/* Top 4 Key Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Metric 1: Fuel Efficiency */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
+        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               {lang === 'my' ? 'ပျမ်းမျှ ဆီစားနှုန်း' : 'Avg Fuel Efficiency'}
@@ -518,7 +509,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </div>
           </div>
           <div className="flex items-baseline gap-1 pt-1">
-            <span className="text-2xl font-black font-mono text-slate-900">
+            <span className="text-xl font-black font-mono text-slate-900">
               {fuelStats.avgEfficiency > 0 ? fuelStats.avgEfficiency : '--'}
             </span>
             <span className="text-xs font-bold text-amber-600">km/L</span>
@@ -533,7 +524,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
 
         {/* Metric 2: Fuel Price */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
+        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               {lang === 'my' ? 'လက်ရှိ ၁ လီတာ ဆီဈေး' : 'Latest Fuel Price'}
@@ -543,7 +534,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </div>
           </div>
           <div className="flex items-baseline gap-1 pt-1">
-            <span className="text-2xl font-black font-mono text-slate-900">
+            <span className="text-xl font-black font-mono text-slate-900">
               {fuelStats.latestPricePerLiter > 0
                 ? fuelStats.latestPricePerLiter.toLocaleString()
                 : '--'}
@@ -567,7 +558,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
 
         {/* Metric 3: Total Fuel Spent */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
+        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               {lang === 'my' ? 'ဆီဖိုး စုစုပေါင်း' : 'Total Fuel Cost'}
@@ -588,7 +579,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
 
         {/* Metric 4: Health Alerts */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
+        <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               {lang === 'my' ? 'အပိုပစ္စည်း စစ်ဆေးရန်' : 'Maintenance Status'}

@@ -106,7 +106,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
   };
 
   return (
-    <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+    <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
       {/* Header + Preset Chips */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -223,7 +223,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
       </div>
 
       {/* Grand Total */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex items-center justify-between">
+      <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex items-center justify-between">
         <div>
           <div className="text-[11px] font-bold text-indigo-200 uppercase tracking-wider">
             {lang === 'my' ? '💰 စုစုပေါင်း ကုန်ကျစရိတ်' : '💰 Grand Total'}
@@ -241,7 +241,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
       </div>
 
       {/* [v6.1.10] Cost per Km */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-emerald-50 border border-indigo-200/70 flex items-center justify-between">
+      <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-50 to-emerald-50 border border-indigo-200/70 flex items-center justify-between">
         <div>
           <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
             <Gauge className="w-3.5 h-3.5" />

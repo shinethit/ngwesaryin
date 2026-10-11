@@ -120,7 +120,8 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       expectedLifespanDays: expectedLifespanDays !== '' ? Number(expectedLifespanDays) : undefined,
       walletId: walletId || wallets[0]?.id || 'cash',
       syncToExpense,
-      note: note.trim() || undefined,
+      // [v7.2.7] Save '' (not undefined) so Firestore merge clears old note
+      note: note.trim(),
       createdAt: editingMaintenance?.createdAt || Date.now(),
     });
 
@@ -338,8 +339,8 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  min="500"
-                  step="500"
+                  min="0"
+                  step="any"
                   value={expectedLifespanKm}
                   onChange={(e) => setExpectedLifespanKm(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="5000"
@@ -353,8 +354,8 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  min="30"
-                  step="30"
+                  min="0"
+                  step="any"
                   value={expectedLifespanDays}
                   onChange={(e) => setExpectedLifespanDays(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="180"
@@ -391,7 +392,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
           {/* Note */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              {lang === 'my' ? 'မှတ်စု (ရွေးချယ်ရန်)' : 'Note (Optional)'}
+              {lang === 'my' ? 'မှတ်စု' : 'Note'}
             </label>
             <input
               type="text"

@@ -14,10 +14,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.2.4';
-export const CURRENT_BUILD_NUMBER = 205;
+export const CURRENT_APP_VERSION = 'v7.2.5';
+export const CURRENT_BUILD_NUMBER = 206;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.2.5',
+    buildNumber: 206,
+    releaseDate: '2026-10-11',
+    releaseTime: '7:00 AM (MMT)',
+    titleMy: 'Version ကို App ဖွင့်တိုင်း Console တွင် ပြသခြင်း',
+    titleEn: 'Version Logged on Every App Boot',
+    tag: 'fix',
+    tagLabelMy: 'Developer UX',
+    tagLabelEn: 'Developer UX',
+    descriptionMy: 'App ဖွင့်တိုင်း လက်ရှိ version + build ကို Browser Console တွင် အရောင် badge ဖြင့် အလိုအလျောက် ပြသစေသည်။ Version ပြောင်းလဲမှုရှိလျှင် Changelog Modal အလိုအလျောက် ပေါ်လာသည်။',
+    descriptionEn: 'Logs current version + build to browser console on every boot. Auto-shows changelog modal on version change.',
+    changesMy: [
+      '📋 App ဖွင့်တိုင်း Console တွင် version + build + timestamp ပြသ',
+      '📋 Version ပြောင်းလျှင် Changelog Modal အလိုအလျောက် ဖွင့်',
+    ],
+    changesEn: [
+      '📋 Logs version + build + timestamp to console on every boot',
+      '📋 Auto-opens changelog modal on version change',
+    ],
+  },
   {
     version: 'v7.2.0',
     buildNumber: 201,

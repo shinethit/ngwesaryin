@@ -66,7 +66,7 @@ import { DatabaseSyncTrackerModal } from './components/DatabaseSyncTrackerModal'
 import { SyncHealthModal } from './components/SyncHealthModal';
 import { SyncStatusDrawer } from './components/SyncStatusDrawer';
 import { EducationView } from './components/EducationView';
-import { CURRENT_APP_VERSION } from './data/versionHistory';
+import { CURRENT_APP_VERSION, CURRENT_BUILD_NUMBER } from './data/versionHistory';
 import { trackVisitorSession } from './lib/analyticsService';
 import { syncWalletsWithTransactions, isWalletMatch, repairOrphanedTransactions, isTransferTransaction } from './utils/walletBalance';
 import { mergeAndCleanCategories } from './utils/categoryCleanUp';
@@ -324,18 +324,22 @@ export default function App() {
     }
   });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [hasCheckedVersion, setHasCheckedVersion] = useState(false);
 
+  // [v7.2.5] Log version on EVERY app boot so it's visible in console.
   useEffect(() => {
-    if (!hasCheckedVersion) {
-      const savedVersion = safeGetItem('ngwe_app_version');
-      if (savedVersion !== CURRENT_APP_VERSION) {
-        setIsVersionHistoryModalOpen(true);
-        safeSetItem('ngwe_app_version', CURRENT_APP_VERSION);
-      }
-      setHasCheckedVersion(true);
+    const ts = new Date().toLocaleString('en-GB', { hour12: false });
+    console.log(
+      '%c[NgweSarYin] ' + CURRENT_APP_VERSION + ' (build ' + CURRENT_BUILD_NUMBER + ') — booted at ' + ts,
+      'background:#10B981;color:#fff;padding:2px 6px;border-radius:3px;font-weight:bold'
+    );
+
+    const savedVersion = safeGetItem('ngwe_app_version');
+    if (savedVersion !== CURRENT_APP_VERSION) {
+      console.log('[NgweSarYin] Version changed: ' + (savedVersion || 'none') + ' → ' + CURRENT_APP_VERSION);
+      setIsVersionHistoryModalOpen(true);
+      safeSetItem('ngwe_app_version', CURRENT_APP_VERSION);
     }
-  }, [hasCheckedVersion]);
+  }, []);
 
   const handleMarkNotificationAsRead = (id: string) => {
     setReadNotificationIds((prev) => {

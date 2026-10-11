@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.3.0';
-export const CURRENT_BUILD_NUMBER = 211;
+export const CURRENT_APP_VERSION = 'v7.3.1';
+export const CURRENT_BUILD_NUMBER = 212;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.3.1',
+    buildNumber: 212,
+    releaseDate: '2026-10-11',
+    releaseTime: '1:00 PM (MMT)',
+    titleMy: 'Dashboard Quick Access Grid — Sidebar Tab ၆ ခု Home တွင် တိုက်ရိုက်',
+    titleEn: 'Dashboard Quick Access Grid — 6 Sidebar Tabs',
+    tag: 'feature',
+    tagLabelMy: 'UI + Feature',
+    tagLabelEn: 'UI + Feature',
+    descriptionMy: 'Home Page ရှိ Recent Transactions ကတ်ကို ဖယ်ရှားပြီး အဲဒီနေရာတွင် Sidebar ကို မဖွင့်ဘဲ တိုက်ရိုက် ဝင်ရောက်နိုင်သည့် ၆ ကတ် Quick Access Grid ကို ထည့်သွင်းလိုက်သည်။',
+    descriptionEn: 'Removed Recent Transactions card and added a 6-card Quick Access Grid for direct tab navigation without opening the Sidebar.',
+    changesMy: [
+      '⚡ Quick Access Grid — ၆ ကတ် (3×2)',
+      '📊 Analytics / 🗄️ Data / 👑 Plan / 🏪 Shops / 📚 Education / 💬 Feedback',
+      '🗑️ Recent Transactions ဖျက် (Smart Calendar အောက်မှာ ရှိပြီးသား)',
+    ],
+    changesEn: [
+      '⚡ Quick Access Grid — 6 compact cards (3×2)',
+      '📊 Analytics / 🗄️ Data / 👑 Plan / 🏪 Shops / 📚 Education / 💬 Feedback',
+      '🗑️ Removed Recent Transactions (already under Smart Calendar)',
+    ],
+  },
   {
     version: 'v7.3.0',
     buildNumber: 211,

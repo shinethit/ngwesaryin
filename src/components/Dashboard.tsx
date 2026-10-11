@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   ArrowDownLeft, ArrowUpRight, HandCoins, AlertCircle,
   Calendar, ChevronRight, ChevronDown, Search, RefreshCw,
+  Store, Database, Crown, MessageCircle, GraduationCap, BarChart3,
 } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, DataScope } from '../types';
 import { formatMMK, formatLakhs, isOverdue } from '../utils/formatters';
@@ -344,48 +345,82 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      {/* RECENT TRANSACTIONS */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-sm text-slate-900">
-            {lang === 'my' ? 'လတ်တလော မှတ်တမ်းများ' : 'Recent Transactions'}
+      {/* [v7.3.1] QUICK ACCESS GRID — 6 tab shortcuts */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-2.5">
+        <div className="flex items-center justify-between mb-2 px-1">
+          <h3 className="font-bold text-[12px] text-slate-900 flex items-center gap-1.5">
+            <span className="text-[14px]">⚡</span>
+            {lang === 'my' ? 'အမြန် ဝင်ရောက်ရန်' : 'Quick Access'}
           </h3>
-          <button type="button" onClick={() => onSelectTab('transactions')}
-            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5 cursor-pointer">
-            {lang === 'my' ? 'အားလုံး' : 'All'}<ChevronRight className="w-3.5 h-3.5" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
+          {/* 1. Analytics (Shops position) */}
+          <button type="button" onClick={() => onSelectTab('analytics')}
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <BarChart3 className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-emerald-900 leading-tight text-center">
+              {lang === 'my' ? 'ဘတ်ဂျက်/ဇယား' : 'Analytics'}
+            </span>
+          </button>
+
+          {/* 2. Data Management */}
+          <button type="button" onClick={() => onSelectTab('data_management')}
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shadow-xs">
+              <Database className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-800 leading-tight text-center">
+              {lang === 'my' ? 'ဒေတာ' : 'Data'}
+            </span>
+          </button>
+
+          {/* 3. Plans */}
+          <button type="button" onClick={() => onSelectTab('plans')}
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-xs">
+              <Crown className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-amber-900 leading-tight text-center">
+              {lang === 'my' ? 'Plan' : 'Plans'}
+            </span>
+          </button>
+
+          {/* 4. Shops (Feedback position) */}
+          <button type="button" onClick={() => onSelectTab('shops')}
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center shadow-xs">
+              <Store className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-orange-900 leading-tight text-center">
+              {lang === 'my' ? 'ဆိုင်လိပ်စာ' : 'Shops'}
+            </span>
+          </button>
+
+          {/* 5. Education */}
+          <button type="button" onClick={() => onSelectTab('education')}
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-xs">
+              <GraduationCap className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-indigo-900 leading-tight text-center">
+              {lang === 'my' ? 'ပညာပေး' : 'Learn'}
+            </span>
+          </button>
+
+          {/* 6. Feedback (Analytics position) */}
+          <button type="button" onClick={() => onSelectTab('feedback')}
+            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-xs">
+              <MessageCircle className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-blue-900 leading-tight text-center">
+              {lang === 'my' ? 'အကြံပြုချက်' : 'Feedback'}
+            </span>
           </button>
         </div>
-        {recentTransactions.length === 0 ? (
-          <div className="py-6 text-center text-slate-400 text-xs">
-            {lang === 'my' ? 'မှတ်တမ်း မရှိသေး' : 'No transactions yet'}
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {recentTransactions.map((t) => {
-              const cat = catMap.get(t.category);
-              const isInc = t.type === 'income';
-              return (
-                <div key={t.id} className="py-2.5 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0"
-                    style={{ backgroundColor: cat?.color || (isInc ? '#10B981' : '#EF4444') }}>
-                    <CategoryIcon name={cat?.icon || 'Tag'} className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-slate-900 truncate">
-                      {lang === 'my' ? cat?.name : (cat?.nameEn || t.category)}
-                    </div>
-                    <div className="text-[10px] text-slate-400 truncate">
-                      {t.date}{t.note ? ' · ' + t.note : ''}
-                    </div>
-                  </div>
-                  <div className={'font-bold text-xs font-mono shrink-0 ' + (isInc ? 'text-emerald-600' : 'text-rose-600')}>
-                    {isInc ? '+' : '-'}{formatMMK(t.amount)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* SMART CALENDAR */}

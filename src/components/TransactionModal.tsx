@@ -11,6 +11,9 @@ import {
   Vehicle,
   VehicleLinkData,
   VehicleServiceType,
+  FuelLog,
+  VehicleMaintenance,
+  TirePressureLog,
 } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
@@ -46,6 +49,10 @@ interface TransactionModalProps {
   onManageCategories?: () => void;
   onOpenAddVehicle?: () => void;
   onOpenVehicleManagement?: () => void;
+  // [v7.2.2] Linked logs for edit-time restore
+  fuelLogs?: FuelLog[];
+  vehicleMaintenance?: VehicleMaintenance[];
+  tirePressureLogs?: TirePressureLog[];
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -67,6 +74,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onManageCategories,
   onOpenAddVehicle,
   onOpenVehicleManagement,
+  fuelLogs = [],
+  vehicleMaintenance = [],
+  tirePressureLogs = [],
 }) => {
   const [type, setType] = useState<TransactionType>(editTransaction?.type || initialType);
   const [amount, setAmount] = useState(editTransaction ? String(editTransaction.amount) : '');
@@ -281,6 +291,49 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           } else {
             setIsVehicleLinkEnabled(false);
           }
+
+          // [v7.2.2] Restore linked vehicle log data (fuel/maintenance/tire)
+          const linkedFuel = fuelLogs.find((f) => f.transactionId === editTransaction.id);
+          const linkedMaint = vehicleMaintenance.find((m) => m.transactionId === editTransaction.id);
+          const linkedTire = tirePressureLogs.find((tp) => tp.transactionId === editTransaction.id);
+          const linkedLog = linkedFuel || linkedMaint || linkedTire;
+
+          if (linkedLog) {
+            setVehicleId(linkedLog.vehicleId || '');
+            if (linkedLog.odometer) setVehicleOdometer(String(linkedLog.odometer));
+          }
+          if (linkedFuel) {
+            setFuelLiters(String(linkedFuel.liters || ''));
+            setFuelPricePerLiter(String(linkedFuel.pricePerLiter || ''));
+            setFuelType(linkedFuel.fuelType || 'Octane 92');
+            setFuelIsFullTank(linkedFuel.isFullTank !== false);
+            const station = linkedFuel.gasStation || '';
+            if (station && !GAS_STATIONS.includes(station)) {
+              setFuelGasStation('Other');
+              setCustomGasStation(station);
+            } else if (station) {
+              setFuelGasStation(station);
+              setCustomGasStation('');
+            } else {
+              setFuelGasStation('Denko');
+              setCustomGasStation('');
+            }
+          }
+          if (linkedMaint) {
+            setMaintServiceType((linkedMaint.serviceType as VehicleServiceType) || 'engine_oil');
+            setMaintTitle(linkedMaint.title || '');
+            setMaintWorkshopName(linkedMaint.workshopName || '');
+            setMaintSparePartBrand(linkedMaint.sparePartBrand || '');
+            setMaintLifespanKm(String(linkedMaint.expectedLifespanKm || 5000));
+            setMaintLifespanDays(String(linkedMaint.expectedLifespanDays || 180));
+          }
+          if (linkedTire) {
+            setTireFL(String(linkedTire.frontLeftPsi || 32));
+            setTireFR(String(linkedTire.frontRightPsi || 32));
+            setTireRL(String(linkedTire.rearLeftPsi || 32));
+            setTireRR(String(linkedTire.rearRightPsi || 32));
+          }
+
           if (editTransaction.items && editTransaction.items.length > 0) {
             setEntryMode('shopping_list');
             setShoppingItems(editTransaction.items);
@@ -387,13 +440,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setVehicleOdometer('');
         setFuelLiters('');
         setFuelPricePerLiter('');
-        setFuelGasStation('');
+        setFuelGasStation('Denko');
+        setCustomGasStation('');
         setMaintTitle('');
         setMaintWorkshopName('');
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, editTransaction, initialType, initialWalletId, wallets, user]);
+  }, [isOpen, editTransaction, initialType, initialWalletId, wallets, user, fuelLogs, vehicleMaintenance, tirePressureLogs]);
 
   // [v6.3.6] Any 2 of Price/Qty/Total known -> compute 3rd (lastEdited priority)
   const computeUnitQtyThird = (edited: 'price' | 'qty' | 'total', pNum: number, qNum: number, tot: number) => {

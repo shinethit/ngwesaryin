@@ -231,6 +231,98 @@ export function useTransactionHandlers({
         deleteSharedWalletTransaction(oldWallet.id, editingTransaction.id, oldWallet.balance, getSharedWalletDocId(oldWallet, user?.uid), user?.uid);
       }
 
+      // [v7.2.2] Update linked vehicle log (fuel/maintenance/tire) on edit
+      if (vehicleLinkData && vehicleLinkData.vehicleId && sanitizedTx.type === 'expense') {
+        const linkedFuel = fuelLogs.find((f) => f.transactionId === editingTransaction.id);
+        const linkedMaint = vehicleMaintenance.find((m) => m.transactionId === editingTransaction.id);
+        const linkedTire = tirePressureLogs.find((tp) => tp.transactionId === editingTransaction.id);
+
+        if (linkedFuel) {
+          const updatedFuel: FuelLog = {
+            ...linkedFuel,
+            vehicleId: vehicleLinkData.vehicleId,
+            date: sanitizedTx.date,
+            odometer: vehicleLinkData.odometer || linkedFuel.odometer,
+            liters: vehicleLinkData.liters || linkedFuel.liters,
+            pricePerLiter: vehicleLinkData.pricePerLiter || linkedFuel.pricePerLiter,
+            totalCost: cleanAmount,
+            isFullTank: vehicleLinkData.isFullTank !== false,
+            fuelType: vehicleLinkData.fuelType || linkedFuel.fuelType,
+            gasStation: vehicleLinkData.gasStation,
+            walletId: sanitizedTx.walletId,
+            note: sanitizedTx.note,
+            updatedAt: Date.now(),
+          };
+          setFuelLogs((prev) => {
+            const next = prev.map((f) => (f.id === updatedFuel.id ? updatedFuel : f));
+            safeSetItem('ngwe_fuel_logs', JSON.stringify(next));
+            return next;
+          });
+          if (user?.uid) {
+            const uid = activeWorkspaceId || user.uid;
+            safeSetDoc(doc(db, 'users', uid, 'fuelLogs', updatedFuel.id), { ...updatedFuel, userId: uid }, { merge: true });
+          }
+        }
+        if (linkedMaint) {
+          const updatedMaint: VehicleMaintenance = {
+            ...linkedMaint,
+            vehicleId: vehicleLinkData.vehicleId,
+            date: sanitizedTx.date,
+            odometer: vehicleLinkData.odometer || linkedMaint.odometer,
+            serviceType: vehicleLinkData.serviceType || linkedMaint.serviceType,
+            title: vehicleLinkData.title || linkedMaint.title,
+            sparePartBrand: vehicleLinkData.sparePartBrand || linkedMaint.sparePartBrand,
+            workshopName: vehicleLinkData.workshopName || linkedMaint.workshopName,
+            expectedLifespanKm: vehicleLinkData.expectedLifespanKm || linkedMaint.expectedLifespanKm,
+            expectedLifespanDays: vehicleLinkData.expectedLifespanDays || linkedMaint.expectedLifespanDays,
+            cost: cleanAmount,
+            walletId: sanitizedTx.walletId,
+            note: sanitizedTx.note,
+            updatedAt: Date.now(),
+          };
+          setVehicleMaintenance((prev) => {
+            const next = prev.map((m) => (m.id === updatedMaint.id ? updatedMaint : m));
+            safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
+            return next;
+          });
+          if (user?.uid) {
+            const uid = activeWorkspaceId || user.uid;
+            safeSetDoc(doc(db, 'users', uid, 'vehicleMaintenance', updatedMaint.id), { ...updatedMaint, userId: uid }, { merge: true });
+          }
+        }
+        if (linkedTire) {
+          const updatedTire: TirePressureLog = {
+            ...linkedTire,
+            vehicleId: vehicleLinkData.vehicleId,
+            date: sanitizedTx.date,
+            odometer: vehicleLinkData.odometer || linkedTire.odometer,
+            frontLeftPsi: vehicleLinkData.frontLeftPsi ?? linkedTire.frontLeftPsi,
+            frontRightPsi: vehicleLinkData.frontRightPsi ?? linkedTire.frontRightPsi,
+            rearLeftPsi: vehicleLinkData.rearLeftPsi ?? linkedTire.rearLeftPsi,
+            rearRightPsi: vehicleLinkData.rearRightPsi ?? linkedTire.rearRightPsi,
+            cost: cleanAmount,
+            walletId: sanitizedTx.walletId,
+            note: sanitizedTx.note,
+            updatedAt: Date.now(),
+          };
+          setTirePressureLogs((prev) => {
+            const next = prev.map((t) => (t.id === updatedTire.id ? updatedTire : t));
+            safeSetItem('ngwe_tire_logs', JSON.stringify(next));
+            return next;
+          });
+          if (user?.uid) {
+            const uid = activeWorkspaceId || user.uid;
+            safeSetDoc(doc(db, 'users', uid, 'tirePressureLogs', updatedTire.id), { ...updatedTire, userId: uid }, { merge: true });
+          }
+        }
+
+        // Update vehicle's odometer if new reading is higher
+        const targetVehicle = vehicles.find((v) => v.id === vehicleLinkData.vehicleId);
+        if (vehicleLinkData.odometer && targetVehicle && vehicleLinkData.odometer > (targetVehicle.currentOdometer || 0)) {
+          handleSaveVehicle({ ...targetVehicle, currentOdometer: vehicleLinkData.odometer });
+        }
+      }
+
       setEditingTransaction(null);
       showToast(lang === 'my' ? 'ပြင်ဆင်ပြီးပါပြီ ✓' : 'Updated successfully ✓');
       return;

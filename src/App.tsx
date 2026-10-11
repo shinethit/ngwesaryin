@@ -2144,6 +2144,9 @@ export default function App() {
         allTransactions={transactions}
         plan={plan}
         lang={lang}
+        fuelLogs={fuelLogs}
+        vehicleMaintenance={vehicleMaintenance}
+        tirePressureLogs={tirePressureLogs}
         onClose={() => {
           setIsTxModalOpen(false);
           setEditingTransaction(null);

@@ -257,6 +257,8 @@ export default function App() {
   const [isVersionHistoryModalOpen, setIsVersionHistoryModalOpen] = useState(false);
   const [isDatabaseTrackerOpen, setIsDatabaseTrackerOpen] = useState(false);
   const [isSyncHealthModalOpen, setIsSyncHealthModalOpen] = useState(false);
+  // [v7.2.6] Cloud version update popup state
+  const [updateAvailable, setUpdateAvailable] = useState<{ version: string; buildNumber: number } | null>(null);
   const [cloudTxIds, setCloudTxIds] = useState<Set<string>>(() => {
     try {
       const saved = safeGetItem('ngwe_cloud_tx_ids');
@@ -340,6 +342,58 @@ export default function App() {
       safeSetItem('ngwe_app_version', CURRENT_APP_VERSION);
     }
   }, []);
+
+  // [v7.2.6] Background Cloud version check.
+  // Fetches /version.json (no-store, bypasses cache) and compares against
+  // the bundled CURRENT_APP_VERSION. If cloud is newer → popup. If same → silent.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/version.json', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = (await res.json()) as { version?: string; buildNumber?: number };
+        if (cancelled) return;
+        const cloudVersion = (data.version || '').trim();
+        const cloudBuild = Number(data.buildNumber) || 0;
+        if (!cloudVersion) return;
+        if (cloudVersion === CURRENT_APP_VERSION) return;
+        if (cloudBuild && cloudBuild <= CURRENT_BUILD_NUMBER) return;
+        const laterFor = safeGetItem('ngwe_version_later');
+        if (laterFor === cloudVersion) return;
+        console.log('[NgweSarYin] Update available: ' + cloudVersion + ' (local: ' + CURRENT_APP_VERSION + ')');
+        setUpdateAvailable({ version: cloudVersion, buildNumber: cloudBuild });
+      } catch (e) {
+        // Network or missing file — silent skip
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleUpdateNow = async () => {
+    try {
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch (e) {
+      console.warn('[update] cache clear notice:', e);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('_updated', String(Date.now()));
+    window.location.replace(url.toString());
+  };
+
+  const handleUpdateLater = () => {
+    if (updateAvailable) {
+      safeSetItem('ngwe_version_later', updateAvailable.version);
+    }
+    setUpdateAvailable(null);
+  };
 
   const handleMarkNotificationAsRead = (id: string) => {
     setReadNotificationIds((prev) => {
@@ -2388,7 +2442,48 @@ export default function App() {
         onDeleteTransaction={handleDeleteTransaction}
       />
 
-      {(isAuthModalOpen || showLoginModal) && (
+      {updateAvailable && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl shrink-0">✨</div>
+              <div className="min-w-0">
+                <h2 className="font-bold text-lg text-slate-900 leading-tight">
+                  {lang === 'my' ? 'ဗားရှင်းအသစ် ရရှိပါပြီ' : 'New Version Available'}
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {lang === 'my' ? 'အသစ်' : 'New'}: <span className="font-mono font-bold text-emerald-700">{updateAvailable.version}</span>
+                  <span className="text-slate-300"> • </span>
+                  <span className="font-mono">{lang === 'my' ? 'လက်ရှိ' : 'Current'}: {CURRENT_APP_VERSION}</span>
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-700 leading-relaxed">
+              {lang === 'my'
+                ? 'ပိုမိုကောင်းမွန်သော ဗားရှင်းအသစ် ထွက်ရှိပါပြီ။ Update လုပ်ရန် နှိပ်ပါ။'
+                : 'A newer version has been released. Tap Update to load the latest.'}
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleUpdateLater}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer"
+              >
+                {lang === 'my' ? 'နောက်မှ' : 'Later'}
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateNow}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-xs active:scale-95 transition-all cursor-pointer"
+              >
+                {lang === 'my' ? '✨ Update လုပ်မည်' : '✨ Update Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {(isAuthModalOpen || showLoginModal) && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
           <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg">
             <LoginScreen

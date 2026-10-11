@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.2.5';
-export const CURRENT_BUILD_NUMBER = 206;
+export const CURRENT_APP_VERSION = 'v7.2.6';
+export const CURRENT_BUILD_NUMBER = 207;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.2.6',
+    buildNumber: 207,
+    releaseDate: '2026-10-11',
+    releaseTime: '8:00 AM (MMT)',
+    titleMy: 'Version Popup — Cloud/Local နှိုင်းယှဉ် Update စနစ်',
+    titleEn: 'Version Popup — Cloud/Local Compare + Auto Update',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'App ဖွင့်တိုင်း Cloud ပေါ်ရှိ version နှင့် Local ဗားရှင်း background မှ အလိုအလျောက် နှိုင်းယှဉ်စစ်ဆေးသည်။ မတူညီပါက Popup ဖြင့် Update လုပ်ရန် အသိပေးပြီး Update နှိပ်လိုက်ပါက Cache အားလုံး ရှင်းကာ version အသစ်ကို ချက်ချင်း ဖွင့်ပေးသည်။ တူညီပါက Popup လုံးဝ မပေါ်ပါ။',
+    descriptionEn: 'On every boot, background-compares deployed cloud version (public/version.json) with bundled local version. If different → popup with Update button. Update clears caches and reloads. If same → silent.',
+    changesMy: [
+      '✨ public/version.json — deployed version tracker',
+      '✨ Background Cloud/Local version compare (no-store fetch)',
+      '✨ Update popup — Update Now / Later',
+      '✨ Update Now — Cache + SW clear + force reload',
+      '✨ Later — localStorage တွင် မှတ်ထား (ထပ်မပြ)',
+    ],
+    changesEn: [
+      '✨ public/version.json — deployed version tracker',
+      '✨ Background cloud/local version compare',
+      '✨ Update popup — Update Now / Later',
+      '✨ Update Now — clears caches + SW, force reload',
+      '✨ Later — saved in localStorage (no re-show)',
+    ],
+  },
   {
     version: 'v7.2.5',
     buildNumber: 206,

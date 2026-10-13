@@ -87,7 +87,7 @@ import { usePersistedState } from './hooks/usePersistedState';
 import { hashPin, generateSalt, isHashedPinFormat } from './utils/pinHash';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 // [v6.8-i18n] Centralized translations
-import { t } from './utils/i18n';
+import { t, type Lang } from './utils/i18n';
 import { useVehicleHandlers } from './hooks/useVehicleHandlers';
 import { useDataHandlers } from './hooks/useDataHandlers';
 import { useWalletHandlers } from './hooks/useWalletHandlers';
@@ -134,8 +134,15 @@ const validateImportPayload = (parsed: any): { valid: boolean; error?: string } 
       return { valid: false, error: 'field "' + field + '" must be an array' };
     }
   }
-  if (parsed.lang !== undefined && parsed.lang !== 'my' && parsed.lang !== 'en') {
-    return { valid: false, error: 'lang must be "my" or "en"' };
+  // [v7.4.0] Now accepts 4 languages.
+  if (
+    parsed.lang !== undefined &&
+    parsed.lang !== 'my' &&
+    parsed.lang !== 'en' &&
+    parsed.lang !== 'zh' &&
+    parsed.lang !== 'th'
+  ) {
+    return { valid: false, error: 'lang must be "my", "en", "zh", or "th"' };
   }
   return { valid: true };
 };
@@ -144,7 +151,7 @@ const validateImportPayload = (parsed: any): { valid: boolean; error?: string } 
 if (typeof window !== 'undefined') {
   try {
     const legacy = localStorage.getItem('ngwe_lang');
-    if (legacy === 'my' || legacy === 'en') {
+    if (legacy === 'my' || legacy === 'en' || legacy === 'zh' || legacy === 'th') {
       localStorage.setItem('ngwe_lang', JSON.stringify(legacy));
       console.log('[migration] ngwe_lang converted to JSON');
     }
@@ -212,7 +219,10 @@ export default function App() {
   }, [user, userProfile]);
 
 
-  const [lang, setLang] = usePersistedState<'my' | 'en'>('ngwe_lang', 'my');
+  // [v7.4.0] lang state now stores Lang ('my'|'en'|'zh'|'th').
+  // Child components still only support 'my'|'en' — Phase 1 narrows.
+  const [langRaw, setLangRaw] = usePersistedState<Lang>('ngwe_lang', 'my');
+  const lang: 'my' | 'en' = langRaw === 'my' ? 'my' : 'en';
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
@@ -1247,7 +1257,7 @@ export default function App() {
         if (parsed.fuelLogs) setFuelLogs(parsed.fuelLogs);
         if (parsed.vehicleMaintenance) setVehicleMaintenance(parsed.vehicleMaintenance);
         if (parsed.tirePressureLogs) setTirePressureLogs(parsed.tirePressureLogs);
-        if (parsed.lang) setLang(parsed.lang);
+        if (parsed.lang) setLangRaw(parsed.lang as Lang);
         showToast(t('toast.backupRestored', lang));
       } catch (err) {
         alert(t('errors.fileRead', lang));
@@ -1258,7 +1268,8 @@ export default function App() {
   };
 
   const handleToggleLang = () => {
-    setLang((prev) => (prev === 'my' ? 'en' : 'my'));
+    // Phase 1: quick my<->en toggle. Phase 2 adds a 4-lang picker.
+    setLangRaw((prev) => (prev === 'my' ? 'en' : 'my'));
   };
 
   const {

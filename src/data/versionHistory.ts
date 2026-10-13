@@ -14,10 +14,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.3.1';
-export const CURRENT_BUILD_NUMBER = 212;
+export const CURRENT_APP_VERSION = 'v7.4.0';
+export const CURRENT_BUILD_NUMBER = 213;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.4.0',
+    buildNumber: 213,
+    releaseDate: '2026-10-13',
+    releaseTime: '10:00 AM (MMT)',
+    titleMy: 'ဘာသာစကား ၄ မျိုး ပံ့ပိုးမှု — i18n အခြေခံစနစ်',
+    titleEn: 'Multi-Language Support — i18n Foundation (4 Languages)',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Myanmar / English / Chinese / Thai ဘာသာစကား ၄ မျိုးအတွက် အခြေခံစနစ် ထည့်သွင်းလိုက်သည်။ ဘာသာပြန်ချက် မရှိသေးသော စာသားများအတွက် English သို့ အလိုအလျောက် ကျဆင်း (fallback) ဖြစ်စေသည်။ UI အပြောင်းအလဲ မပါဝင်သေးပါ — နောက် version တွင် Language Picker ထည့်သွင်းမည်။',
+    descriptionEn: 'i18n foundation for 4 languages (Burmese/English/Chinese/Thai). Translation fallback to English when target lang is missing. No visible UI changes yet — Language Picker comes in the next release.',
+    changesMy: [
+      '🌐 Lang type — my | en | zh | th သို့ တိုးချဲ့',
+      '📖 i18n.ts — ဘာသာစကား ၄ မျိုးအတွက် စာသားများ ဖြည့်စွက်',
+      '⬇️ Fallback rule — ဘာသာပြန် မရှိရင် English သို့ အလိုအလျောက် ကျဆင်း',
+      '🔧 SUPPORTED_LANGS + DEFAULT_LANG helper exports',
+      '⚙️ localStorage migration — zh/th raw strings ပါ JSON သို့ ပြောင်း',
+      '📥 JSON import validator — zh/th လက်ခံ',
+    ],
+    changesEn: [
+      "🌐 Lang type — extended to 'my' | 'en' | 'zh' | 'th'",
+      '📖 i18n.ts — added Chinese & Thai strings for existing keys',
+      '⬇️ Fallback rule — auto-falls to English when target lang is missing',
+      '🔧 Exported SUPPORTED_LANGS + DEFAULT_LANG helpers',
+      '⚙️ localStorage migration — handles zh/th raw strings',
+      '📥 JSON import validator — accepts zh/th',
+    ],
+  },
   {
     version: 'v7.3.1',
     buildNumber: 212,

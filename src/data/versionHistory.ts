@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.0';
-export const CURRENT_BUILD_NUMBER = 215;
+export const CURRENT_APP_VERSION = 'v7.5.1';
+export const CURRENT_BUILD_NUMBER = 216;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.1',
+    buildNumber: 216,
+    releaseDate: '2026-10-13',
+    releaseTime: '1:00 PM (MMT)',
+    titleMy: 'Wallet ငွေကြေး Lock + Live Rate Info',
+    titleEn: 'Wallet Currency Lock & Live Rate Info',
+    tag: 'fix',
+    tagLabelMy: 'Wallet ငွေကြေး UX',
+    tagLabelEn: 'Wallet Currency UX',
+    descriptionMy: 'Wallet Modal တွင် ငွေကြေး အမျိုးအစားကို ဖန်တီးတုန်းသာ ပြောင်းလို့ရပြီး edit ချိန် lock ဖြစ်စေသည် (Q1=A)။ Exchange rate ကို Live rate info banner + "Override" checkbox ဖြင့် စိတ်ကြိုက် သတ်မှတ်နိုင်သည် (Q2=A, Q3)။ Live / Cache / Default status ကို တိုက်ရိုက် ပြသသည်။',
+    descriptionEn: 'Wallet currency is now locked after creation (Q1=A). Exchange rate UX shows a Live rate info banner + optional "Override" checkbox for custom values (Q2=A, Q3). Live/Cache/Default source badge displayed inline.',
+    changesMy: [
+      '🔒 Wallet ဖန်တီးပြီးနောက် ငွေကြေး ပြောင်း၍ မရ',
+      '💡 Live rate info banner — source (Live/Cache/Default) ပြသ',
+      '✏️ Override checkbox — ကိုယ်တိုင် ငွေလဲနှုန်း သတ်မှတ်လိုရင်',
+      '🔁 Override ပိတ်လိုက်ရင် default ကို auto-restore',
+    ],
+    changesEn: [
+      '🔒 Currency locked after wallet creation',
+      '💡 Live rate info banner — source badge (Live/Cache/Default)',
+      '✏️ Override checkbox for custom exchange rate',
+      '🔁 Auto-restores default when Override is unchecked',
+    ],
+  },
   {
     version: 'v7.5.0',
     buildNumber: 215,

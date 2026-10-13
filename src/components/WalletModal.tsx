@@ -21,6 +21,12 @@ import {
   formatCurrency,
   convertToMMK,
 } from '../utils/currency';
+import {
+  bootstrapExchangeRates,
+  subscribeRates,
+  getRateSnapshot,
+  type RateSnapshot,
+} from '../lib/exchangeRates';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -70,6 +76,18 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const [color, setColor] = useState('#10B981');
   const [icon, setIcon] = useState('wallet');
   const [includeInTotals, setIncludeInTotals] = useState<boolean>(true);
+  // [v7.5.1] Live rate + manual override state.
+  const [rateSnapshot, setRateSnapshot] = useState<RateSnapshot>(getRateSnapshot());
+  const [overrideRate, setOverrideRate] = useState<boolean>(false);
+
+  // Q1=A: Currency is locked when editing an existing wallet.
+  const isCurrencyLocked = Boolean(walletToEdit);
+
+  useEffect(() => {
+    bootstrapExchangeRates();
+    const unsub = subscribeRates((snap) => setRateSnapshot(snap));
+    return () => { unsub(); };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -96,6 +114,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         setColor('#10B981');
         setIcon('wallet');
         setIncludeInTotals(true);
+        setOverrideRate(false); // [v7.5.1] New wallet: default to live rate
+      }
+      // [v7.5.1] On edit: auto-detect if the stored rate differs from live.
+      if (walletToEdit && walletToEdit.currency && walletToEdit.currency !== 'MMK') {
+        const live = getCurrencyInfo(walletToEdit.currency).defaultRateToMMK;
+        const stored = walletToEdit.exchangeRate || live;
+        setOverrideRate(Math.abs(stored - live) > 0.01);
+      } else {
+        setOverrideRate(false);
       }
     }
   }, [isOpen, walletToEdit]);
@@ -229,7 +256,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <select
                 value={currency}
                 onChange={(e) => handleCurrencyChange(e.target.value)}
-                className="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+                disabled={isCurrencyLocked}
+                className={`w-full p-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                  isCurrencyLocked ? 'opacity-60 cursor-not-allowed bg-slate-100' : 'cursor-pointer'
+                }`}
               >
                 {SUPPORTED_CURRENCIES.map((curr) => (
                   <option key={curr.code} value={curr.code}>
@@ -237,49 +267,95 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   </option>
                 ))}
               </select>
+              {isCurrencyLocked && (
+                <p className="text-[11px] text-amber-700 mt-1 flex items-start gap-1 font-medium">
+                  <span>🔒</span>
+                  <span>
+                    {lang === 'my'
+                      ? 'ငွေကြေး အမျိုးအစားကို ဖန်တီးပြီးနောက် ပြောင်းလဲ၍ မရပါ။ Wallet အသစ် ဖန်တီးပြီး ပြောင်းရွှေ့နိုင်ပါသည်။'
+                      : 'Currency is locked after creation. Create a new wallet to use a different currency.'}
+                  </span>
+                </p>
+              )}
             </div>
 
             {/* Exchange Rate Input if Currency != MMK */}
             {currency !== 'MMK' && (
-              <div className="pt-2 border-t border-slate-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>
-                      {lang === 'my'
-                        ? `ငွေလဲနှုန်း (၁ ${currency} လျှင် မြန်မာကျပ်):`
-                        : `Exchange Rate (1 ${currency} in MMK):`}
-                    </span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setExchangeRate(String(selectedCurrInfo.defaultRateToMMK))}
-                    className="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold underline cursor-pointer"
-                    title="Reset to default estimated rate"
-                  >
-                    {lang === 'my'
-                      ? `ပေါက်ဈေး (${selectedCurrInfo.defaultRateToMMK.toLocaleString()} Ks) ထည့်မည်`
-                      : `Use default rate (${selectedCurrInfo.defaultRateToMMK})`}
-                  </button>
+              <div className="pt-2 border-t border-slate-200/80 space-y-3">
+                {/* [v7.5.1] Live rate status banner */}
+                <div className="p-2.5 rounded-xl bg-white border border-indigo-100 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <TrendingUp className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-slate-900">
+                          1 {currency} = {selectedCurrInfo.defaultRateToMMK.toLocaleString()} Ks
+                        </span>
+                        {rateSnapshot.source === 'live' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            {lang === 'my' ? 'ပေါက်ဈေး လက်ရှိ' : 'Live'}
+                          </span>
+                        )}
+                        {rateSnapshot.source === 'cache' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            {lang === 'my' ? 'Cache' : 'Cache'}
+                          </span>
+                        )}
+                        {rateSnapshot.source === 'default' && (
+                          <span className="text-[10px] font-bold text-slate-500">
+                            {lang === 'my' ? 'Default' : 'Default'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {lang === 'my'
+                          ? 'Auto-fetch ဖြစ်သည် — စိတ်ကြိုက် ပြင်လိုပါက အောက်တွင် Override ဖွင့်ပါ'
+                          : 'Auto-fetched. Enable Override below for a custom rate.'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="relative">
+
+                {/* [v7.5.1] Override toggle */}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
-                    type="number"
-                    step="any"
-                    required
-                    value={exchangeRate}
-                    onChange={(e) => setExchangeRate(e.target.value)}
-                    placeholder={String(selectedCurrInfo.defaultRateToMMK)}
-                    className="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 pr-16 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    type="checkbox"
+                    checked={overrideRate}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      setOverrideRate(on);
+                      if (!on) setExchangeRate(String(selectedCurrInfo.defaultRateToMMK));
+                    }}
+                    className="w-4 h-4 accent-indigo-600 cursor-pointer"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                    MMK
+                  <span className="text-xs font-bold text-slate-800">
+                    {lang === 'my' ? 'ငွေလဲနှုန်း ကိုယ်တိုင် သတ်မှတ်မည် (Override)' : 'Override exchange rate manually'}
                   </span>
-                </div>
+                </label>
+
+                {overrideRate && (
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      value={exchangeRate}
+                      onChange={(e) => setExchangeRate(e.target.value)}
+                      placeholder={String(selectedCurrInfo.defaultRateToMMK)}
+                      className="w-full p-2.5 bg-white border border-indigo-200 rounded-xl font-bold text-slate-800 pr-16 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      MMK
+                    </span>
+                  </div>
+                )}
+
                 <p className="text-[11px] text-slate-500">
                   {lang === 'my'
-                    ? `* ၁ ${currency} = ${parsedRate.toLocaleString()} ကျပ်နှုန်းဖြင့် စုစုပေါင်း ပိုင်ဆိုင်မှုတွင် ထည့်သွင်းတွက်ချက်ပေးပါမည်။`
-                    : `* Used to calculate total net assets in MMK at 1 ${currency} = ${parsedRate.toLocaleString()} MMK.`}
+                    ? `* ၁ ${currency} = ${parsedRate.toLocaleString()} ကျပ်နှုန်းဖြင့် စုစုပေါင်း ပိုင်ဆိုင်မှုတွင် ထည့်သွင်းတွက်ချက်ပါမည်။`
+                    : `* Total net assets are calculated at 1 ${currency} = ${parsedRate.toLocaleString()} MMK.`}
                 </p>
               </div>
             )}

@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.1';
-export const CURRENT_BUILD_NUMBER = 216;
+export const CURRENT_APP_VERSION = 'v7.5.2';
+export const CURRENT_BUILD_NUMBER = 217;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.2',
+    buildNumber: 217,
+    releaseDate: '2026-10-13',
+    releaseTime: '2:00 PM (MMT)',
+    titleMy: 'ငွေကြေး Drill-Down + Transaction Conversion',
+    titleEn: 'Currency Drill-Down & Transaction Conversion',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Dashboard ရှိ စုစုပေါင်း လက်ကျန်ကို နှိပ်လိုက်ပါက ငွေကြေး အလိုက် ခွဲခြမ်းချက် (per-currency breakdown) Modal ဖြင့် ကြည့်ရှုနိုင်သည်။ နိုင်ငံခြားငွေ Wallet စာရင်းများတွင် မူရင်းငွေကြေးအပြင် မြန်မာကျပ် ပြောင်းလဲချက် (≈) ကိုပါ ပြသသည်။',
+    descriptionEn: 'Tapping the Total Balance on the Dashboard opens a per-currency breakdown modal. Foreign-currency transaction rows now show a "≈ MMK" conversion alongside the native amount.',
+    changesMy: [
+      '💰 Dashboard လက်ကျန် နှိပ်၍ ငွေကြေး ခွဲခြမ်း Modal',
+      '📊 ငွေကြေးအလိုက် စုစုပေါင်း + အကောင့်အရေအတွက်',
+      '💱 Transactions မှာ နိုင်ငံခြားငွေ ≈ MMK ပြသ',
+      '🏳️ Flag + symbol + converted MMK',
+    ],
+    changesEn: [
+      '💰 Dashboard Total Balance — tap for currency breakdown modal',
+      '📊 Per-currency totals + wallet count',
+      '💱 Transactions — foreign currency shows "≈ MMK" conversion',
+      '🏳️ Flag + symbol + converted MMK totals',
+    ],
+  },
   {
     version: 'v7.5.1',
     buildNumber: 216,

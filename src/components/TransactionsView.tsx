@@ -981,6 +981,15 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   <span className={`font-mono font-bold text-xs sm:text-sm shrink-0 ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`}>
                                     {isIncome ? `+${formatCurrency(t.amount, wallet?.currency)}` : `-${formatCurrency(t.amount, wallet?.currency)}`}
                                   </span>
+                                  {/* [v7.5.2] Native + MMK conversion for foreign wallets (Q4b=B) */}
+                                  {wallet && wallet.currency && wallet.currency !== 'MMK' && (
+                                    <span
+                                      className="hidden sm:inline text-slate-400 text-[10px] font-mono shrink-0"
+                                      title={formatMMK(convertToMMK(t.amount, wallet.currency, wallet.exchangeRate))}
+                                    >
+                                      ≈ {formatMMK(convertToMMK(t.amount, wallet.currency, wallet.exchangeRate))}
+                                    </span>
+                                  )}
                                   {t.note && (
                                     <>
                                       <span className="text-slate-300 shrink-0">•</span>

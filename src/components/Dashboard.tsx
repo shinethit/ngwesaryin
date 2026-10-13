@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, DataScope } from '../types';
 import { formatMMK, formatLakhs, isOverdue } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
+import { convertToMMK, getCurrencyInfo } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { MultiWalletSelector } from './MultiWalletSelector';
 import { SmartCalendarCard } from './SmartCalendarCard';
@@ -54,6 +54,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const periodDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedWalletId, setSelectedWalletId] = useState<string>('all');
   const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
+
+  // [v7.5.2] Currency-breakdown drill-down modal (Q4a=C)
+  const [showCurrencyBreakdown, setShowCurrencyBreakdown] = useState<boolean>(false);
 
   const handleSetTimeFilter = (f: TimeFilterOption) => {
     setTimeFilter(f);
@@ -208,6 +211,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
     (s, w) => s + convertToMMK(w.balance, w.currency, w.exchangeRate), 0
   );
 
+  // [v7.5.2] Group scoped wallets by currency.
+  const currencyBreakdownData = useMemo(() => {
+    const map: Record<string, { code: string; total: number; count: number; totalMMK: number; flag: string; symbol: string }> = {};
+    scopedWallets.forEach((w) => {
+      const code = (w.currency || 'MMK').toUpperCase();
+      if (!map[code]) {
+        const info = getCurrencyInfo(code);
+        map[code] = { code, total: 0, count: 0, totalMMK: 0, flag: info.flag, symbol: info.symbol };
+      }
+      map[code].total += w.balance;
+      map[code].count += 1;
+      map[code].totalMMK += convertToMMK(w.balance, w.currency, w.exchangeRate);
+    });
+    return Object.values(map).sort((a, b) => b.totalMMK - a.totalMMK);
+  }, [scopedWallets]);
+
   const activeDebts = debts.filter((d) => d.status === 'active');
 
   const recentTransactions = [...scopedTransactions].sort((a, b) => {
@@ -313,9 +332,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">
           {lang === 'my' ? 'စုစုပေါင်း လက်ကျန်' : 'Total Balance'}
         </div>
-        <div className="text-3xl sm:text-4xl font-black mt-1.5 tracking-tight" title={formatMMK(totalWalletBalance)}>
-          {formatLakhs(totalWalletBalance, lang)}
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowCurrencyBreakdown(true)}
+          className="text-3xl sm:text-4xl font-black mt-1.5 tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left"
+          title={(lang === 'my' ? 'ငွေကြေး အလိုက် ကြည့်ရန် နှိပ်ပါ • ' : 'Tap for currency breakdown • ') + formatMMK(totalWalletBalance)}
+        >
+          <span>{formatLakhs(totalWalletBalance, lang)}</span>
+          <ChevronRight className="w-5 h-5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+        </button>
+        {currencyBreakdownData.length > 1 && (
+          <div className="text-[10px] text-slate-400 mt-1 font-medium">
+            {lang === 'my'
+              ? `👆 နှိပ်၍ ငွေကြေး ${currencyBreakdownData.length} မျိုး ခွဲခြမ်းကြည့်ပါ`
+              : `Tap to view ${currencyBreakdownData.length} currency breakdown`}
+          </div>
+        )}
         <div className="flex items-center gap-4 mt-3 text-xs flex-wrap">
           <span className="flex items-center gap-1 text-emerald-400 font-bold">
             <ArrowDownLeft className="w-3.5 h-3.5" /><span title={formatMMK(totalIncome)}>+{formatLakhs(totalIncome, lang)}</span>
@@ -467,6 +499,86 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
+      {/* [v7.5.2] Currency Breakdown Modal (drill-down) */}
+      {showCurrencyBreakdown && (
+        <div
+          className="fixed inset-0 z-[150] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowCurrencyBreakdown(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-lg">💰</div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">
+                    {lang === 'my' ? 'ငွေကြေး အလိုက် ခွဲခြမ်းချက်' : 'Currency Breakdown'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    {lang === 'my'
+                      ? `ပိုက်ဆံအိတ် ${scopedWallets.length} ခု · ငွေကြေး ${currencyBreakdownData.length} မျိုး`
+                      : `${scopedWallets.length} wallets · ${currencyBreakdownData.length} currencies`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCurrencyBreakdown(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg cursor-pointer"
+              >×</button>
+            </div>
+
+            <div className="space-y-2">
+              {currencyBreakdownData.length === 0 ? (
+                <div className="py-6 text-center text-sm text-slate-500">
+                  {lang === 'my' ? 'ပိုက်ဆံအိတ် မရှိပါ' : 'No wallets'}
+                </div>
+              ) : (
+                currencyBreakdownData.map((row) => (
+                  <div
+                    key={row.code}
+                    className="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-2xl shrink-0">{row.flag}</span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-slate-900">{row.code}</div>
+                        <div className="text-[10px] text-slate-500">
+                          {row.count} {lang === 'my' ? 'အကောင့်' : 'wallets'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-mono font-bold text-sm text-slate-900">
+                        {row.total.toLocaleString('en-US', { maximumFractionDigits: 2 })} {row.symbol}
+                      </div>
+                      {row.code !== 'MMK' && (
+                        <div className="text-[10px] text-emerald-700 font-bold">
+                          ≈ {formatMMK(row.totalMMK)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {currencyBreakdownData.length > 0 && (
+              <div className="pt-3 border-t-2 border-dashed border-slate-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700">
+                  {lang === 'my' ? 'စုစုပေါင်း (ကျပ်ဖြင့်)' : 'Total (MMK)'}
+                </span>
+                <span className="font-mono font-black text-base text-emerald-700">
+                  {formatMMK(totalWalletBalance)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

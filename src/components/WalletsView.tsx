@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { WalletCards, Plus, ArrowRightLeft, Lock, Edit2, Trash2, TrendingUp, Scale, UserPlus, Users, LogOut, Building2, CreditCard, Smartphone, Coins, PiggyBank, DollarSign, Globe, Landmark, ShieldCheck, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
 import { PlanType, Wallet, WalletPermissions, Transaction } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
@@ -8,6 +8,13 @@ import {
   formatCurrency,
   convertToMMK,
 } from '../utils/currency';
+import {
+  bootstrapExchangeRates,
+  subscribeRates,
+  getRateSnapshot,
+  refreshExchangeRates,
+  type RateSnapshot,
+} from '../lib/exchangeRates';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { isWalletMatch } from '../utils/walletBalance';
 import { ShareWalletModal } from './ShareWalletModal';
@@ -79,6 +86,16 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   const [calcCurrency, setCalcCurrency] = useState<string>('USD');
   const [calcCustomRate, setCalcCustomRate] = useState<string>('');
 
+  // [v7.5.0] Live exchange rate snapshot (from exchangeRates service).
+  const [ratesSnapshot, setRatesSnapshot] = useState<RateSnapshot>(getRateSnapshot());
+  const [isRefreshingRates, setIsRefreshingRates] = useState(false);
+
+  useEffect(() => {
+    bootstrapExchangeRates();
+    const unsub = subscribeRates((snap) => setRatesSnapshot(snap));
+    return () => { unsub(); };
+  }, []);
+
   // Transfer form states
   const [transferFrom, setTransferFrom] = useState(wallets[0]?.id || '');
   const [transferTo, setTransferTo] = useState(wallets[1]?.id || '');
@@ -109,7 +126,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       const converted = convertToMMK(w.balance, w.currency, w.exchangeRate);
       return sum + converted;
     }, 0);
-  }, [includedWallets]);
+  }, [includedWallets, ratesSnapshot.updatedAt]);
 
   // Excluded total (MMK)
   const totalExcludedMMK = useMemo(() => {
@@ -117,7 +134,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       const converted = convertToMMK(w.balance, w.currency, w.exchangeRate);
       return sum + converted;
     }, 0);
-  }, [excludedWallets]);
+  }, [excludedWallets, ratesSnapshot.updatedAt]);
 
   // Grand total of all wallets combined (MMK)
   const grandTotalAllMMK = useMemo(() => {
@@ -125,7 +142,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       const converted = convertToMMK(w.balance, w.currency, w.exchangeRate);
       return sum + converted;
     }, 0);
-  }, [wallets]);
+  }, [wallets, ratesSnapshot.updatedAt]);
 
   const displayedWallets = useMemo(() => {
     if (walletFilter === 'included') return includedWallets;
@@ -157,7 +174,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       map[code].totalMMK += convertToMMK(w.balance, w.currency, w.exchangeRate);
     });
     return map;
-  }, [wallets]);
+  }, [wallets, ratesSnapshot.updatedAt]);
 
   const hasForeignCurrency = useMemo(() => {
     return wallets.some((w) => w.currency && w.currency !== 'MMK');
@@ -226,7 +243,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       return parseFloat(calcCustomRate);
     }
     return getCurrencyInfo(calcCurrency).defaultRateToMMK;
-  }, [calcCurrency, calcCustomRate]);
+  }, [calcCurrency, calcCustomRate, ratesSnapshot.updatedAt]);
 
   const calcResultMMK = useMemo(() => {
     const amt = parseFloat(calcAmount) || 0;
@@ -480,6 +497,51 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* [v7.5.0] Rate source + last updated + refresh */}
+          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 -mt-1 flex-wrap">
+            <span className="flex items-center gap-1.5">
+              {ratesSnapshot.source === 'live' ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-emerald-800">
+                    {lang === 'my' ? 'ပေါက်ဈေး လက်ရှိ (Live)' : 'Live rate'}
+                  </span>
+                </>
+              ) : ratesSnapshot.source === 'cache' ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="font-semibold text-amber-800">
+                    {lang === 'my' ? 'Cache မှ ရယူထားသည်' : 'From cache'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  <span>
+                    {lang === 'my' ? 'Default တန်ဖိုးများ' : 'Default rates'}
+                  </span>
+                </>
+              )}
+              {ratesSnapshot.updatedAt > 0 && (
+                <span className="text-slate-400">
+                  · {new Date(ratesSnapshot.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsRefreshingRates(true);
+                try { await refreshExchangeRates(true); } finally { setIsRefreshingRates(false); }
+              }}
+              disabled={isRefreshingRates}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 disabled:opacity-50 cursor-pointer"
+            >
+              <TrendingUp className="w-3 h-3" />
+              <span>{lang === 'my' ? 'ပေါက်ဈေး ပြန်ရယူမည်' : 'Refresh rates'}</span>
+            </button>
           </div>
 
           {/* Popular Currencies Grid */}

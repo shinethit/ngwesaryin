@@ -20,9 +20,33 @@ export const SUPPORTED_CURRENCIES: CurrencyInfo[] = [
   { code: 'KRW', symbol: '₩', name: 'ကိုရီးယားဝမ် (KRW)', nameEn: 'Korean Won (KRW)', defaultRateToMMK: 3.3, flag: '🇰🇷' },
 ];
 
+// [v7.5.0] Live rate override — populated by src/lib/exchangeRates.ts.
+// When present, getCurrencyInfo().defaultRateToMMK reflects the live
+// market rate. A wallet-level `exchangeRate` still wins inside
+// convertToMMK() so users can pin custom rates per wallet.
+let __liveRates: Record<string, number> | null = null;
+
+export function setLiveRates(rates: Record<string, number> | null): void {
+  if (!rates || typeof rates !== 'object') { __liveRates = null; return; }
+  const clean: Record<string, number> = {};
+  Object.keys(rates).forEach((k) => {
+    const v = Number(rates[k]);
+    if (Number.isFinite(v) && v > 0) clean[k.toUpperCase()] = v;
+  });
+  __liveRates = Object.keys(clean).length > 0 ? clean : null;
+}
+
+export function hasLiveRates(): boolean {
+  return __liveRates !== null;
+}
+
 export const getCurrencyInfo = (currencyCode: string = 'MMK'): CurrencyInfo => {
   const code = (currencyCode || 'MMK').toUpperCase();
-  return SUPPORTED_CURRENCIES.find((c) => c.code === code) || SUPPORTED_CURRENCIES[0];
+  const info = SUPPORTED_CURRENCIES.find((c) => c.code === code) || SUPPORTED_CURRENCIES[0];
+  if (__liveRates && __liveRates[info.code] !== undefined) {
+    return { ...info, defaultRateToMMK: __liveRates[info.code] };
+  }
+  return info;
 };
 
 export const formatCurrency = (amount: number, currencyCode: string = 'MMK'): string => {

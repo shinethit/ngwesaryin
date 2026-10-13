@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.4.1';
-export const CURRENT_BUILD_NUMBER = 214;
+export const CURRENT_APP_VERSION = 'v7.5.0';
+export const CURRENT_BUILD_NUMBER = 215;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.0',
+    buildNumber: 215,
+    releaseDate: '2026-10-13',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ငွေလဲနှုန်း အလိုအလျောက် ရယူစနစ် (Live Exchange Rates)',
+    titleEn: 'Live Exchange Rates (Auto-fetch + Cache)',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'နိုင်ငံခြားငွေလဲနှုန်းများကို open.er-api.com မှ အလိုအလျောက် ရယူသည်။ ၃၀ မိနစ် memory cache + ၂၄ နာရီ disk cache + hardcoded fallback ဖြင့် offline ဆိုရင်လည်း အလုပ်လုပ်သည်။ WalletsView ငွေလဲနှုန်း Panel တွင် "Live / Cache / Default" status + Refresh ခလုတ် ထည့်သွင်းထားသည်။ Wallet တစ်ခုချင်းစီ၏ စိတ်ကြိုက် exchangeRate ရှိပါက ထိုတန်ဖိုးက ဆက်လက် ဦးစားပေးမည်။',
+    descriptionEn: 'Auto-fetches live FX rates from open.er-api.com. 30-min memory cache + 24-hr disk cache + hardcoded fallback for offline use. WalletsView rate panel now shows "Live / Cache / Default" status with a Refresh button. Per-wallet custom exchangeRate still wins.',
+    changesMy: [
+      '🌐 Live FX fetch — open.er-api.com (no key)',
+      '💾 30-min memory + 24-hr disk cache + offline fallback',
+      '🔁 Refresh button + "Live/Cache/Default" status indicator',
+      '💵 Wallet-level exchangeRate ရှိရင် ဦးစားပေး',
+      '📊 Totals & breakdown များ အလိုအလျောက် update',
+    ],
+    changesEn: [
+      '🌐 Live FX fetch — open.er-api.com (no key needed)',
+      '💾 30-min memory + 24-hr disk cache + offline fallback',
+      '🔁 Refresh button + "Live/Cache/Default" status indicator',
+      '💵 Wallet-level exchangeRate still takes priority',
+      '📊 Totals & breakdown auto-update when rates change',
+    ],
+  },
   {
     version: 'v7.4.1',
     buildNumber: 214,

@@ -89,6 +89,7 @@ import { lazyWithRetry } from './utils/lazyWithRetry';
 // [v6.8-i18n] Centralized translations
 import { t, type Lang } from './utils/i18n';
 import { LanguagePickerModal } from './components/LanguagePickerModal';
+import { bootstrapExchangeRates } from './lib/exchangeRates';
 import { useVehicleHandlers } from './hooks/useVehicleHandlers';
 import { useDataHandlers } from './hooks/useDataHandlers';
 import { useWalletHandlers } from './hooks/useWalletHandlers';
@@ -361,6 +362,13 @@ export default function App() {
       setIsVersionHistoryModalOpen(true);
       safeSetItem('ngwe_app_version', CURRENT_APP_VERSION);
     }
+  }, []);
+
+  // [v7.5.0] Bootstrap live exchange rates (non-blocking).
+  // Reads disk cache synchronously for instant display, then refreshes
+  // from open.er-api.com in the background.
+  useEffect(() => {
+    bootstrapExchangeRates();
   }, []);
 
   // [v7.2.6] Background Cloud version check.

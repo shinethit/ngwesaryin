@@ -88,6 +88,7 @@ import { hashPin, generateSalt, isHashedPinFormat } from './utils/pinHash';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 // [v6.8-i18n] Centralized translations
 import { t, type Lang } from './utils/i18n';
+import { LanguagePickerModal } from './components/LanguagePickerModal';
 import { useVehicleHandlers } from './hooks/useVehicleHandlers';
 import { useDataHandlers } from './hooks/useDataHandlers';
 import { useWalletHandlers } from './hooks/useWalletHandlers';
@@ -223,6 +224,15 @@ export default function App() {
   // Child components still only support 'my'|'en' — Phase 1 narrows.
   const [langRaw, setLangRaw] = usePersistedState<Lang>('ngwe_lang', 'my');
   const lang: 'my' | 'en' = langRaw === 'my' ? 'my' : 'en';
+
+  // [v7.4.1] Language picker state.
+  // firstLaunchPicker: true only when user has never chosen before (device-global flag).
+  // overlayPickerOpen: user-triggered popup from Navbar/Sidebar/Login buttons.
+  const [firstLaunchPicker, setFirstLaunchPicker] = useState<boolean>(() => {
+    try { return !safeGetItem('ngwe_lang_picker_seen'); }
+    catch { return false; }
+  });
+  const [overlayPickerOpen, setOverlayPickerOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
@@ -1267,9 +1277,16 @@ export default function App() {
     e.target.value = '';
   };
 
+  const handleSelectLang = (next: Lang) => {
+    setLangRaw(next);
+    safeSetItem('ngwe_lang_picker_seen', 'true');
+    setFirstLaunchPicker(false);
+    setOverlayPickerOpen(false);
+  };
+
   const handleToggleLang = () => {
-    // Phase 1: quick my<->en toggle. Phase 2 adds a 4-lang picker.
-    setLangRaw((prev) => (prev === 'my' ? 'en' : 'my'));
+    // [v7.4.1] Now opens the 4-language picker (previously a my<->en toggle).
+    setOverlayPickerOpen(true);
   };
 
   const {
@@ -1469,6 +1486,19 @@ export default function App() {
     setIsLocked(true);
     showToast(t('toast.pinSet', lang));
   };
+
+  // [v7.4.1] First-launch language picker — full-screen takeover.
+  // Only shown once per device (device-global flag ngwe_lang_picker_seen).
+  if (firstLaunchPicker) {
+    return (
+      <LanguagePickerModal
+        isOpen
+        current={langRaw}
+        onSelect={handleSelectLang}
+        isFirstLaunch
+      />
+    );
+  }
 
   // Loading screen
   if (loading) {
@@ -2513,6 +2543,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <LanguagePickerModal
+        isOpen={overlayPickerOpen}
+        current={langRaw}
+        onSelect={handleSelectLang}
+        onClose={() => setOverlayPickerOpen(false)}
+      />
     </div>
   );
 }

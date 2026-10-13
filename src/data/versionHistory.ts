@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.4.0';
-export const CURRENT_BUILD_NUMBER = 213;
+export const CURRENT_APP_VERSION = 'v7.4.1';
+export const CURRENT_BUILD_NUMBER = 214;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.4.1',
+    buildNumber: 214,
+    releaseDate: '2026-10-13',
+    releaseTime: '11:00 AM (MMT)',
+    titleMy: 'ဘာသာစကား ရွေးချယ်စနစ် + Switcher Shortcut',
+    titleEn: 'Language Picker & Switcher Shortcut',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'App စတင်ဖွင့်ချင်းတွင် ဘာသာစကား ၄ မျိုး (မြန်မာ/English/中文/ไทย) ရွေးချယ်စေမည့် Modal ကို ထည့်သွင်းလိုက်သည်။ Default သည် မြန်မာဖြစ်ပြီး တစ်ကြိမ်သာ ပြသမည်။ လက်ရှိ ENG/မြန်မာ ခလုတ်များကလည်း picker popup ကို ဖွင့်ပေးပြီး အလွယ်တကူ ပြောင်းနိုင်သည်။',
+    descriptionEn: 'First-launch modal for choosing among 4 languages (Burmese/English/Chinese/Thai). Default is Myanmar, shown once per device. Existing ENG/မြန်မာ buttons now open the picker popup for easy switching.',
+    changesMy: [
+      '🌐 First-launch Language Picker Modal — ၄ ဘာသာ',
+      '🇲🇲 Default = မြန်မာ (ပြောင်းလို့ရသည်)',
+      '✨ ENG/မြန်မာ ခလုတ် → 4-language popup ဖွင့်',
+      '🔒 Flag: ngwe_lang_picker_seen (device-global)',
+      '🎨 Flag emoji + native label + English label',
+    ],
+    changesEn: [
+      '🌐 First-launch Language Picker Modal — 4 languages',
+      '🇲🇲 Default = Myanmar (changeable anytime)',
+      '✨ ENG/မြန်မာ button now opens 4-language popup',
+      '🔒 Flag: ngwe_lang_picker_seen (device-global)',
+      '🎨 Flag emoji + native label + English label',
+    ],
+  },
   {
     version: 'v7.4.0',
     buildNumber: 213,

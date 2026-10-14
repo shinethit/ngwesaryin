@@ -69,6 +69,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [visitorsList, setVisitorsList] = useState<VisitorDoc[]>([]);
   const [visitorFilter, setVisitorFilter] = useState<'all' | 'guest' | 'member' | 'active'>('all');
   const [visitorSearch, setVisitorSearch] = useState('');
+  // [wallet-backfill] Prevents double-clicks during the users↔cloud wallet sync
+  const [isBackfillingWallets, setIsBackfillingWallets] = useState(false);
 
   // Codes & Users combined state
   const [codes, setCodes] = useState<ActivationCode[]>([]);
@@ -1925,7 +1927,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </h4>
                     </div>
                     <span className="text-[10px] font-mono text-slate-400">
-                      {effectiveWallets.length} {lang === 'my' ? 'ပိုက်ဆံအိတ် (စနစ်တစ်ခုလုံး)' : 'system wallets'}
+                      {effectiveWallets.length} {lang === 'my' ? 'Cloud Wallet (Users အားလုံး)' : 'Cloud Wallets (all users)'}
                     </span>
                   </div>
 

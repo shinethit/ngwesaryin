@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.2';
-export const CURRENT_BUILD_NUMBER = 217;
+export const CURRENT_APP_VERSION = 'v7.5.3';
+export const CURRENT_BUILD_NUMBER = 218;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.3',
+    buildNumber: 218,
+    releaseDate: '2026-10-14',
+    releaseTime: '3:00 PM (MMT)',
+    titleMy: 'UAE ဒါဟမ် (AED) ငွေကြေး ထည့်သွင်းခြင်း',
+    titleEn: 'Add AED (UAE Dirham) Currency Support',
+    tag: 'feature',
+    tagLabelMy: 'ငွေကြေး အသစ်',
+    tagLabelEn: 'New Currency',
+    descriptionMy: 'Wallet ငွေကြေး စာရင်းတွင် UAE ဒါဟမ် (AED) ကို ထပ်ထည့်လိုက်သည်။ Live rate မရရင် default 1,225 MMK ဖြင့် တွက်ချက်သည်။',
+    descriptionEn: 'Added UAE Dirham (AED) to supported currencies. Uses live rate when available, falls back to 1,225 MMK default.',
+    changesMy: [
+      '🇦🇪 AED (UAE Dirham) — Wallet currency dropdown တွင်',
+      '💱 Default rate: 1 AED ≈ 1,225 MMK',
+      '📡 Live rate ရရင် အလိုအလျောက် ပြောင်း',
+    ],
+    changesEn: [
+      '🇦🇪 AED (UAE Dirham) — added to wallet currency dropdown',
+      '💱 Default rate: 1 AED ≈ 1,225 MMK',
+      '📡 Auto-switches to live rate when available',
+    ],
+  },
   {
     version: 'v7.5.2',
     buildNumber: 217,

@@ -18,6 +18,7 @@ export const SUPPORTED_CURRENCIES: CurrencyInfo[] = [
   { code: 'JPY', symbol: '¥', name: 'ဂျပန်ယန်း (JPY)', nameEn: 'Japanese Yen (JPY)', defaultRateToMMK: 30, flag: '🇯🇵' },
   { code: 'GBP', symbol: '£', name: 'ဗြိတိသျှပေါင် (GBP)', nameEn: 'British Pound (GBP)', defaultRateToMMK: 5700, flag: '🇬🇧' },
   { code: 'KRW', symbol: '₩', name: 'ကိုရီးယားဝမ် (KRW)', nameEn: 'Korean Won (KRW)', defaultRateToMMK: 3.3, flag: '🇰🇷' },
+  { code: 'AED', symbol: 'د.إ', name: 'UAE ဒါဟမ် (AED)', nameEn: 'UAE Dirham (AED)', defaultRateToMMK: 1225, flag: '🇦🇪' },
 ];
 
 // [v7.5.0] Live rate override — populated by src/lib/exchangeRates.ts.

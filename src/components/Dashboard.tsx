@@ -151,7 +151,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (dataScope === 'included') return wallets.filter((w) => w.includeInTotals !== false);
     if (dataScope === 'personal') return wallets.filter((w) => !w.isSharedFromOther && (!w.sharedWith || w.sharedWith.length === 0));
     if (dataScope === 'shared')   return wallets.filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
-    return wallets;
+    // [calc-fix] Respect the per-wallet "Separate" flag so Dashboard totals
+    // match WalletsView. Wallets with includeInTotals === false are excluded
+    // from all Dashboard aggregates (balance, income, expense, net).
+    return wallets.filter((w) => w.includeInTotals !== false);
   }, [wallets, selectedWalletId, selectedWalletIds, dataScope]);
 
   const scopedTransactions = useMemo(() => {

@@ -114,6 +114,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [txDatePreset, setTxDatePreset] = useState<'all' | 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'custom'>('all');
   const [txDateFrom, setTxDateFrom] = useState<string>('');
   const [txDateTo, setTxDateTo] = useState<string>('');
+  // [calc-fix] Per-user summary date range
+  const [summaryDatePreset, setSummaryDatePreset] = useState<'all' | 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'custom'>('all');
+  const [summaryFrom, setSummaryFrom] = useState<string>('');
+  const [summaryTo, setSummaryTo] = useState<string>('');
   const [txSortBy, setTxSortBy] = useState<'date' | 'amount' | 'user' | 'category'>('date');
   const [txSortOrder, setTxSortOrder] = useState<'asc' | 'desc'>('desc');
   // [admin-dr] Apply preset → set from/to dates. Local timezone.
@@ -147,6 +151,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setTxDateFrom(toStr(start)); setTxDateTo(toStr(end)); return;
     }
     // 'custom' — leave as-is; user will edit the from/to inputs
+  };
+
+  // [calc-fix] Same preset logic for the per-user summary table.
+  const applySummaryDatePreset = (preset: 'all' | 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'custom') => {
+    setSummaryDatePreset(preset);
+    const toStr = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    };
+    const now = new Date();
+    const todayStr = toStr(now);
+    if (preset === 'all') { setSummaryFrom(''); setSummaryTo(''); return; }
+    if (preset === 'today') { setSummaryFrom(todayStr); setSummaryTo(todayStr); return; }
+    if (preset === '7d') {
+      const d = new Date(now); d.setDate(d.getDate() - 6);
+      setSummaryFrom(toStr(d)); setSummaryTo(todayStr); return;
+    }
+    if (preset === '30d') {
+      const d = new Date(now); d.setDate(d.getDate() - 29);
+      setSummaryFrom(toStr(d)); setSummaryTo(todayStr); return;
+    }
+    if (preset === 'this_month') {
+      const d = new Date(now.getFullYear(), now.getMonth(), 1);
+      setSummaryFrom(toStr(d)); setSummaryTo(todayStr); return;
+    }
+    if (preset === 'last_month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      setSummaryFrom(toStr(start)); setSummaryTo(toStr(end)); return;
+    }
   };
 
   const [isDeletingTxId, setIsDeletingTxId] = useState<string | null>(null);
@@ -1677,16 +1713,61 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             {/* [QUOTA-GUARD v6.1.2] Per-User Financial Summary */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-emerald-600" />
-                  <h4 className="font-bold text-xs sm:text-sm text-slate-900">
-                    {lang === 'my' ? '👥 အသုံးပြုစူမ်ာအလိုက် ဝင်ငွေ/ထွက်ငွေ အနှစ်ချုပ်' : 'Per-User Income / Expense Summary'}
-                  </h4>
+              <div className="flex flex-col gap-2 border-b border-slate-100 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-600" />
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+                      {lang === 'my' ? '👥 အသုံးပြုသူအကောင့်များအလိုက် ဝင်ငွေ/ထွက်ငွေ အနှစ်ချုပ်' : 'Per-User Income / Expense Summary'}
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {usersList.length} {lang === 'my' ? 'အကောင့်' : 'accounts'}
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {usersList.length} {lang === 'my' ? 'အကောင်' : 'accounts'}
-                </span>
+
+                {/* [calc-fix] Date Range filter */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{lang === 'my' ? 'ရက်စွဲ:' : 'Date:'}</span>
+                  </div>
+                  <select
+                    value={summaryDatePreset}
+                    onChange={(e) => applySummaryDatePreset(e.target.value as any)}
+                    className="text-[11px] font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value="all">{lang === 'my' ? 'အားလုံး' : 'All Time'}</option>
+                    <option value="today">{lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
+                    <option value="7d">{lang === 'my' ? '၇ ရက်' : 'Last 7 days'}</option>
+                    <option value="30d">{lang === 'my' ? '၃၀ ရက်' : 'Last 30 days'}</option>
+                    <option value="this_month">{lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
+                    <option value="last_month">{lang === 'my' ? 'ပြီးခဲ့သည့်လ' : 'Last Month'}</option>
+                    <option value="custom">{lang === 'my' ? 'စိတ်ကြိုက်' : 'Custom'}</option>
+                  </select>
+                  {summaryDatePreset === 'custom' && (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={summaryFrom}
+                        onChange={(e) => setSummaryFrom(e.target.value)}
+                        className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                      <span className="text-slate-400 text-[11px]">→</span>
+                      <input
+                        type="date"
+                        value={summaryTo}
+                        onChange={(e) => setSummaryTo(e.target.value)}
+                        className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
+                  {summaryDatePreset !== 'all' && summaryFrom && summaryTo && (
+                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+                      {summaryFrom === summaryTo ? summaryFrom : `${summaryFrom} → ${summaryTo}`}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -1709,7 +1790,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </tr>
                     ) : (
                       usersList.map((u) => {
-                        const userTxs = effectiveTransactions.filter((t) => ((t as any)._userId || t.userId) === u.id);
+                        // [calc-fix] Date range filter
+                        const userTxs = effectiveTransactions.filter((t) => {
+                          if (((t as any)._userId || t.userId) !== u.id) return false;
+                          if (summaryDatePreset !== 'all') {
+                            const txDate = t.date || (t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : '');
+                            if (summaryFrom && txDate < summaryFrom) return false;
+                            if (summaryTo && txDate > summaryTo) return false;
+                          }
+                          return true;
+                        });
                         const income = userTxs.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
                         const expense = userTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
                         const net = income - expense;

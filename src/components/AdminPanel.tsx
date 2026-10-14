@@ -1677,7 +1677,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* Activation Codes Status */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-1">
+              <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-2xs space-y-1">
                 <div className="flex items-center justify-between text-slate-500">
                   <span className="text-[11px] font-bold uppercase tracking-wider">
                     {lang === 'my' ? 'လိုင်စင် ကုဒ်များ' : 'Activation Codes'}

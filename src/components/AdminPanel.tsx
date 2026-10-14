@@ -1133,7 +1133,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           userId: existing.userId || v.userId,
           userEmail: existing.userEmail || v.userEmail,
           userName: resolvedName,
-          visitCount: Math.max(existing.visitCount || 1, v.visitCount || 1) + 1,
+          visitCount: Math.max(existing.visitCount || 1, v.visitCount || 1),
           firstSeenAt: Math.min(existing.firstSeenAt || existing.lastActiveAt, v.firstSeenAt || v.lastActiveAt),
           lastActiveAt: Math.max(existing.lastActiveAt, v.lastActiveAt),
           country: existing.country || v.country,
@@ -3290,7 +3290,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 </div>
                               )}
                               <span className="text-[10px] text-slate-400 font-mono">
-                                {isMember ? 'UID: ' : 'ID: '}{v.id.replace(/^u_/, '').substring(0, 12)}...
+                                {isMember ? 'UID: ' : 'ID: '}{v.id.length > 22 ? v.id.slice(0, 10) + '…' + v.id.slice(-8) : v.id}
                               </span>
                             </td>
 

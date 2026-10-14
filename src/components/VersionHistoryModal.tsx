@@ -16,6 +16,8 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   const [filter, setFilter] = useState<'all' | 'major' | 'security' | 'feature'>('all');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+  // [v7.5.4] Real update check state
+  const [pendingUpdate, setPendingUpdate] = useState<{ version: string; buildNumber: number } | null>(null);
 
   if (!isOpen) return null;
 
@@ -27,53 +29,72 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     return true;
   });
 
-  const handleCheckUpdate = () => {
+  // [v7.5.4] Real update check — fetches /version.json and compares.
+  const handleCheckUpdate = async () => {
     setCheckingUpdate(true);
     setUpdateMsg(null);
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .getRegistration()
-        .then((reg) => {
-          if (reg) {
-            return reg.update().then(() => {
-              setTimeout(() => {
-                setCheckingUpdate(false);
-                setUpdateMsg(
-                  lang === 'my'
-                    ? '✨ အက်ပ်သည် နောက်ဆုံးပေါ် ဗားရှင်းသို့ ရောက်ရှိနေပါပြီ။'
-                    : '✨ You are running the latest version.'
-                );
-              }, 600);
-            });
-          } else {
-            setTimeout(() => {
-              setCheckingUpdate(false);
-              setUpdateMsg(
-                lang === 'my'
-                  ? '✨ အက်ပ်သည် နောက်ဆုံးပေါ် ဗားရှင်းသို့ ရောက်ရှိနေပါပြီ။'
-                  : '✨ You are running the latest version.'
-              );
-            }, 500);
-          }
-        })
-        .catch(() => {
-          setCheckingUpdate(false);
-          setUpdateMsg(
-            lang === 'my'
-              ? '✨ အက်ပ်သည် နောက်ဆုံးပေါ် ဗားရှင်းသို့ ရောက်ရှိနေပါပြီ။'
-              : '✨ You are running the latest version.'
-          );
-        });
-    } else {
-      setTimeout(() => {
-        setCheckingUpdate(false);
+    setPendingUpdate(null);
+
+    // SW update (best-effort, non-blocking)
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) reg.update().catch(() => {});
+      }
+    } catch { /* ignore */ }
+
+    // Real check: fetch deployed version.json with no cache
+    try {
+      const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const cloudVersion = String(data.version || '').trim();
+      const cloudBuild = Number(data.buildNumber) || 0;
+
+      if (!cloudVersion) throw new Error('No version in payload');
+
+      if (cloudVersion !== CURRENT_APP_VERSION && cloudBuild > CURRENT_BUILD_NUMBER) {
+        setPendingUpdate({ version: cloudVersion, buildNumber: cloudBuild });
         setUpdateMsg(
           lang === 'my'
-            ? '✨ အက်ပ်သည် နောက်ဆုံးပေါ် ဗားရှင်းသို့ ရောက်ရှိနေပါပြီ။'
-            : '✨ You are running the latest version.'
+            ? `🎉 ဗားရှင်းအသစ် (${cloudVersion}) ရရှိပါပြီ — Update လုပ်ရန် နှိပ်ပါ`
+            : `🎉 New version (${cloudVersion}) available — tap Update Now`
         );
-      }, 500);
+      } else {
+        setUpdateMsg(
+          lang === 'my'
+            ? `✨ အက်ပ်သည် နောက်ဆုံးပေါ် ဗားရှင်း (${CURRENT_APP_VERSION}) ဖြစ်ပါသည်။`
+            : `✨ You are on the latest version (${CURRENT_APP_VERSION}).`
+        );
+      }
+    } catch (e: any) {
+      setUpdateMsg(
+        lang === 'my'
+          ? `⚠️ ဗားရှင်း စစ်ဆေး၍ မရပါ: ${e?.message || 'Network error'}`
+          : `⚠️ Could not check: ${e?.message || 'Network error'}`
+      );
+    } finally {
+      setCheckingUpdate(false);
     }
+  };
+
+  // [v7.5.4] Force update: clears caches + SW, reloads with cache-bust.
+  const handleForceUpdate = async () => {
+    try {
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch (e) {
+      console.warn('[update] cache clear notice:', e);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', String(Date.now()));
+    window.location.replace(url.toString());
   };
 
   const getTagBadge = (item: VersionItem) => {
@@ -182,8 +203,23 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         </div>
 
         {updateMsg && (
-          <div className="px-4 py-2 bg-emerald-100 text-emerald-900 text-xs font-bold text-center border-b border-emerald-200 animate-fadeIn">
-            {updateMsg}
+          <div className={`px-4 py-2 text-xs font-bold text-center border-b animate-fadeIn ${
+            pendingUpdate
+              ? 'bg-amber-100 text-amber-900 border-amber-300'
+              : 'bg-emerald-100 text-emerald-900 border-emerald-200'
+          }`}>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span>{updateMsg}</span>
+              {pendingUpdate && (
+                <button
+                  type="button"
+                  onClick={handleForceUpdate}
+                  className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs active:scale-95 cursor-pointer"
+                >
+                  {lang === 'my' ? '✨ Update လုပ်မည်' : '✨ Update Now'}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

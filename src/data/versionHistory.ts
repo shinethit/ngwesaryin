@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.3';
-export const CURRENT_BUILD_NUMBER = 218;
+export const CURRENT_APP_VERSION = 'v7.5.4';
+export const CURRENT_BUILD_NUMBER = 219;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.4',
+    buildNumber: 219,
+    releaseDate: '2026-10-14',
+    releaseTime: '4:00 PM (MMT)',
+    titleMy: 'ဗားရှင်း စစ်ဆေးစနစ် အသစ် (Real Update Check)',
+    titleEn: 'Real Update Check — Version Fetch + Force Update',
+    tag: 'fix',
+    tagLabelMy: 'Update Check',
+    tagLabelEn: 'Update Check',
+    descriptionMy: 'Version History Modal ရှိ "Update စစ်ဆေးမည်" ခလုတ်သည် အရင်က ဗားရှင်း အသစ် ရှိ/မရှိ မစစ်ဆေးဘဲ "ရောက်နေပြီ" လို့သာ ပြခဲ့သည်။ ယခုအခါ /version.json ကို တိုက်ရိုက်ဖတ်ပြီး Cloud version နှင့် နှိုင်းယှဉ်ကာ Update ရှိပါက "Update လုပ်မည်" ခလုတ်ဖြင့် Cache အားလုံး ရှင်းကာ Force reload လုပ်ပေးသည်။',
+    descriptionEn: 'The "Check Updates" button previously showed "you are on latest" without ever checking. Now fetches /version.json, compares with the local bundle, and offers an "Update Now" button that clears cache + force reloads when a newer version is available.',
+    changesMy: [
+      '🔄 Version History Modal — စစ်မှန်သော Update စစ်ဆေးစနစ်',
+      '📡 /version.json ကို no-store fetch ဖြင့် တိုက်ရိုက်ဖတ်',
+      '🎯 Cloud version > Local version ဖြစ်ပါက Update button ပေါ်',
+      '⚡ Cache + SW Clear + Force reload (one-click)',
+      '🌐 Network error ဖြစ်ပါက တိကျသော error message',
+    ],
+    changesEn: [
+      '🔄 Version History Modal — real update-check logic',
+      '📡 Fetches /version.json with cache-bust (no-store)',
+      '🎯 Shows "Update Now" button when cloud > local version',
+      '⚡ One-click cache + SW clear + force reload',
+      '🌐 Precise error message on network failure',
+    ],
+  },
   {
     version: 'v7.5.3',
     buildNumber: 218,

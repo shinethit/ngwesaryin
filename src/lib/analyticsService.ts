@@ -319,7 +319,7 @@ export function subscribeVisitors(
   onUpdate: (visitors: VisitorDoc[]) => void
 ): () => void {
   try {
-    const q = query(collection(db, 'visitors'), orderBy('lastActiveAt', 'desc'), limit(150));
+    const q = query(collection(db, 'visitors'), orderBy('lastActiveAt', 'desc'), limit(500));
     return onSnapshot(
       q,
       (snapshot) => {
@@ -338,4 +338,52 @@ export function subscribeVisitors(
     onUpdate([]);
     return () => {};
   }
+}
+
+
+/**
+ * [admin-backfill] One-time repair: ensures every registered user has a
+ * matching `u_<uid>` visitor doc. Fixes the "user signed up but never
+ * appeared in visitors" gap caused by earlier tracking failures or
+ * quota pauses.
+ *
+ * Admin-only. Idempotent — skips users that already have a visitor doc.
+ */
+export async function backfillMemberVisitors(
+  users: Array<{ uid: string; email?: string | null; displayName?: string | null }>
+): Promise<{ created: number; skipped: number; errors: number }> {
+  let created = 0;
+  let skipped = 0;
+  let errors = 0;
+  const now = Date.now();
+
+  for (const u of users) {
+    if (!u || !u.uid) { skipped++; continue; }
+    const docId = `u_${u.uid}`;
+    try {
+      const snap = await getDoc(doc(db, 'visitors', docId));
+      if (snap.exists()) { skipped++; continue; }
+      await setDoc(doc(db, 'visitors', docId), {
+        id: docId,
+        isGuest: false,
+        userId: u.uid,
+        userEmail: u.email || '',
+        userName:
+          u.displayName || (u.email ? u.email.split('@')[0] : 'Member'),
+        country: 'Myanmar',
+        countryCode: 'MM',
+        city: 'Yangon',
+        device: 'desktop',
+        browser: 'Unknown',
+        visitCount: 1,
+        firstSeenAt: now,
+        lastActiveAt: now,
+      }, { merge: true });
+      created++;
+    } catch {
+      errors++;
+    }
+  }
+
+  return { created, skipped, errors };
 }

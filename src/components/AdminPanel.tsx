@@ -1422,12 +1422,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn overflow-hidden">
-      <div className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 relative max-h-[94vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-5xl w-full p-3 sm:p-6 shadow-2xl border border-slate-200 relative max-h-[96vh] sm:max-h-[94vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 pb-2 sm:pb-4 border-b border-slate-100 shrink-0">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-black text-slate-800 tracking-tight">
+              <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight">
                 Admin Control Center
               </h2>
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
@@ -1451,11 +1451,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         {/* Unified 6 Tabs Navigation */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-3 pb-2 shrink-0 border-b border-slate-100">
+        <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 sm:pt-3 pb-2 shrink-0 border-b border-slate-100 overflow-x-auto sm:overflow-visible -mx-1 px-1">
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'overview'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1485,7 +1485,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('users_codes')}
-            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'users_codes'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1502,7 +1502,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('broadcast')}
-            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'broadcast'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1519,7 +1519,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('contact_info')}
-            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'contact_info'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1536,7 +1536,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'analytics'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1605,7 +1605,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {activeTab === 'overview' && (
           <div className="flex-1 overflow-y-auto pt-3 space-y-4 pr-1">
             {/* Privacy Architecture Highlight Card */}
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-md border border-indigo-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-indigo-900/50 flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-3">
               <div className="flex items-start sm:items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -1641,7 +1641,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             {/* Core KPI Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {/* Total Registered Accounts */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-1">
+              <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-2xs space-y-1">
                 <div className="flex items-center justify-between text-slate-500">
                   <span className="text-[11px] font-bold uppercase tracking-wider">
                     {lang === 'my' ? 'အသုံးပြုသူ စုစုပေါင်း' : 'Total Registered'}
@@ -1659,7 +1659,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* Premium Adoption Rate */}
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 rounded-2xl p-4 shadow-2xs space-y-1">
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-2xs space-y-1">
                 <div className="flex items-center justify-between text-amber-800">
                   <span className="text-[11px] font-bold uppercase tracking-wider">
                     {lang === 'my' ? 'Premium အချိုးအစား' : 'Premium Share'}
@@ -1805,7 +1805,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         const net = income - expense;
                         return (
                           <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-2.5 px-3">
+                            <td className="py-1.5 px-2 sm:py-2.5 sm:px-3">
                               <div className="font-bold text-slate-800 truncate max-w-[200px]">
                                 {u.displayName || (u.email ? u.email.split('@')[0] : 'User')}
                               </div>
@@ -3313,8 +3313,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 {/* Search & Filter Bar */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative flex-1 sm:w-48">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <div className="relative flex-1 min-w-[140px] sm:w-48">
                     <input
                       type="text"
                       value={visitorSearch}
@@ -3378,12 +3378,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-bold">
-                      <th className="p-3">Visitor / User</th>
-                      <th className="p-3">Type</th>
-                      <th className="p-3">Country & City</th>
-                      <th className="p-3">Device & Browser</th>
+                      <th className="p-2 sm:p-3">Visitor / User</th>
+                      <th className="p-2 sm:p-3">Type</th>
+                      <th className="p-2 sm:p-3">Country & City</th>
+                      <th className="p-2 sm:p-3">Device & Browser</th>
                       <th className="p-3 text-center">Sessions</th>
-                      <th className="p-3">First Seen (စတင်ကြည့်သည့်ချိန်)</th>
+                      <th className="p-2 sm:p-3">First Seen (စတင်ကြည့်သည့်ချိန်)</th>
                       <th className="p-3 text-right">Last Active (နောက်ဆုံးကြည့်ချိန်)</th>
                       <th className="p-3 text-center">Action</th>
                     </tr>
@@ -3408,7 +3408,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                         return (
                           <tr key={v.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3">
                               <div className="font-bold text-slate-900 flex items-center gap-1.5">
                                 <span className={`w-2 h-2 rounded-full ${isRecentlyActive ? 'bg-emerald-500 animate-ping' : 'bg-slate-300'}`} />
                                 <span className="truncate max-w-[160px]">{displayName}</span>
@@ -3423,7 +3423,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               </span>
                             </td>
 
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3">
                               {isMember ? (
                                 <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full border border-indigo-300 inline-flex items-center gap-1">
                                   ✅ Member
@@ -3435,7 +3435,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               )}
                             </td>
 
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3">
                               <div className="flex items-center gap-1.5 font-bold text-slate-800">
                                 <span className="text-base">{flag}</span>
                                 <span>{v.country || 'Myanmar'}</span>
@@ -3445,7 +3445,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               </span>
                             </td>
 
-                            <td className="p-3">
+                            <td className="p-2 sm:p-3">
                               <div className="font-medium text-slate-700 capitalize flex items-center gap-1">
                                 {v.device === 'mobile' ? (
                                   <Smartphone className="w-3.5 h-3.5 text-amber-600" />
@@ -3881,7 +3881,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </div>
                     </th>
 
-                    <th className="py-2.5 px-3">Note / Description</th>
+                    <th className="py-1.5 px-2 sm:py-2.5 sm:px-3">Note / Description</th>
 
                     {/* Amount Column Header with sort toggle */}
                     <th
@@ -3915,7 +3915,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         )}
                       </div>
                     </th>
-                    <th className="py-2.5 px-3 text-right">Action</th>
+                    <th className="py-1.5 px-2 sm:py-2.5 sm:px-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -4003,12 +4003,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           <td className="py-2.5 px-3 font-mono text-slate-600 text-[11px] whitespace-nowrap">
                             {tx.date || (tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—')}
                           </td>
-                          <td className="py-2.5 px-3">
+                          <td className="py-1.5 px-2 sm:py-2.5 sm:px-3">
                             <div className="font-semibold text-slate-800 truncate max-w-[160px]" title={userDisplay}>
                               {userDisplay}
                             </div>
                           </td>
-                          <td className="py-2.5 px-3">
+                          <td className="py-1.5 px-2 sm:py-2.5 sm:px-3">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 font-semibold text-slate-700 text-[11px]">
                               {catName}
                             </span>

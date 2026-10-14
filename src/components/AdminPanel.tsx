@@ -16,7 +16,7 @@ import { INITIAL_CATEGORIES } from '../data/initialData';
 import { fetchContactInfo, saveContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';
 import { subscribeVisitors, getCountryFlag, deleteVisitorDoc } from '../lib/analyticsService';
 import { QuotaDashboard } from './QuotaDashboard';
-import { X, Copy, CheckCircle, Trash2, Plus, RefreshCw, Key, Megaphone, AlertTriangle, FileText, Edit2, Check, Users, Search, Clock, Sparkles, ShieldCheck, UserCheck, Crown, Phone, Send, CreditCard, Save, Globe, Smartphone, Monitor, Eye, Activity, TrendingUp, PieChart, Wallet as WalletIcon, ArrowUpRight, Sliders, Flame, Database, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Copy, CheckCircle, Trash2, Plus, RefreshCw, Key, Megaphone, AlertTriangle, FileText, Edit2, Check, Users, Search, Clock, Sparkles, ShieldCheck, UserCheck, Crown, Phone, Send, CreditCard, Save, Globe, Smartphone, Monitor, Eye, Activity, TrendingUp, PieChart, Wallet as WalletIcon, ArrowUpRight, Sliders, Calendar, Flame, Database, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ActivationCode {
   code: string;
@@ -108,8 +108,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [selectedFilterCategory, setSelectedFilterCategory] = useState<string>('all');
   const [selectedFilterUser, setSelectedFilterUser] = useState<string>('all');
   const [searchTxQuery, setSearchTxQuery] = useState('');
+  // [admin-dr] Date range filter for TxManagerModal
+  const [txDatePreset, setTxDatePreset] = useState<'all' | 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'custom'>('all');
+  const [txDateFrom, setTxDateFrom] = useState<string>('');
+  const [txDateTo, setTxDateTo] = useState<string>('');
   const [txSortBy, setTxSortBy] = useState<'date' | 'amount' | 'user' | 'category'>('date');
   const [txSortOrder, setTxSortOrder] = useState<'asc' | 'desc'>('desc');
+  // [admin-dr] Apply preset → set from/to dates. Local timezone.
+  const applyTxDatePreset = (preset: 'all' | 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'custom') => {
+    setTxDatePreset(preset);
+    const toStr = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    };
+    const now = new Date();
+    const todayStr = toStr(now);
+    if (preset === 'all') { setTxDateFrom(''); setTxDateTo(''); return; }
+    if (preset === 'today') { setTxDateFrom(todayStr); setTxDateTo(todayStr); return; }
+    if (preset === '7d') {
+      const d = new Date(now); d.setDate(d.getDate() - 6);
+      setTxDateFrom(toStr(d)); setTxDateTo(todayStr); return;
+    }
+    if (preset === '30d') {
+      const d = new Date(now); d.setDate(d.getDate() - 29);
+      setTxDateFrom(toStr(d)); setTxDateTo(todayStr); return;
+    }
+    if (preset === 'this_month') {
+      const d = new Date(now.getFullYear(), now.getMonth(), 1);
+      setTxDateFrom(toStr(d)); setTxDateTo(todayStr); return;
+    }
+    if (preset === 'last_month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      setTxDateFrom(toStr(start)); setTxDateTo(toStr(end)); return;
+    }
+    // 'custom' — leave as-is; user will edit the from/to inputs
+  };
+
   const [isDeletingTxId, setIsDeletingTxId] = useState<string | null>(null);
   const [isPurgingBatch, setIsPurgingBatch] = useState(false);
   const [actionSuccessToast, setActionSuccessToast] = useState<string>('');
@@ -3569,6 +3606,71 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   )}
                 </div>
               </div>
+
+              {/* [admin-dr] Date Range filter — full-width row */}
+              <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/70">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>{lang === 'my' ? 'ရက်စွဲ အပိုင်းအခြား:' : 'Date Range:'}</span>
+                </div>
+
+                {/* Preset dropdown */}
+                <select
+                  value={txDatePreset}
+                  onChange={(e) => applyTxDatePreset(e.target.value as any)}
+                  className="text-[11px] font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="all">{lang === 'my' ? 'အားလုံး' : 'All Time'}</option>
+                  <option value="today">{lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
+                  <option value="7d">{lang === 'my' ? '၇ ရက်' : 'Last 7 days'}</option>
+                  <option value="30d">{lang === 'my' ? '၃၀ ရက်' : 'Last 30 days'}</option>
+                  <option value="this_month">{lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
+                  <option value="last_month">{lang === 'my' ? 'ပြီးခဲ့သည့်လ' : 'Last Month'}</option>
+                  <option value="custom">{lang === 'my' ? 'စိတ်ကြိုက်' : 'Custom'}</option>
+                </select>
+
+                {/* From / To inputs (only when custom) */}
+                {txDatePreset === 'custom' && (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="date"
+                      value={txDateFrom}
+                      onChange={(e) => setTxDateFrom(e.target.value)}
+                      className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <span className="text-slate-400 text-[11px]">→</span>
+                    <input
+                      type="date"
+                      value={txDateTo}
+                      onChange={(e) => setTxDateTo(e.target.value)}
+                      className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                )}
+
+                {/* Active range display */}
+                {txDatePreset !== 'all' && txDateFrom && txDateTo && (
+                  <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-lg">
+                    {txDateFrom === txDateTo ? txDateFrom : `${txDateFrom} → ${txDateTo}`}
+                  </span>
+                )}
+
+                {/* Reset button — only when any filter is active */}
+                {(txDatePreset !== 'all' || selectedFilterCategory !== 'all' || selectedFilterUser !== 'all' || searchTxQuery.trim()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyTxDatePreset('all');
+                      setSelectedFilterCategory('all');
+                      setSelectedFilterUser('all');
+                      setSearchTxQuery('');
+                    }}
+                    className="ml-auto text-[10px] font-bold text-rose-600 hover:text-rose-800 hover:bg-rose-50 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                  >
+                    ↺ {lang === 'my' ? 'ဖြုတ်မည်' : 'Reset'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Batch Purge Action Bar */}
@@ -3739,6 +3841,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         const uId = (tx as any)._userId || tx.userId;
                         if (uId !== selectedFilterUser) return false;
                       }
+                      // [admin-dr] Date Range Filter
+                      if (txDatePreset !== 'all') {
+                        const txDate = tx.date || (tx.createdAt ? new Date(tx.createdAt).toISOString().split('T')[0] : '');
+                        if (txDateFrom && txDate < txDateFrom) return false;
+                        if (txDateTo && txDate > txDateTo) return false;
+                      }
+
                       // Query Filter
                       if (searchTxQuery.trim()) {
                         const q = searchTxQuery.toLowerCase();

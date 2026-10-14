@@ -400,7 +400,18 @@ service cloud.firestore {
     // =========================================================
     match /users/{userId} {
       // ----- Root user document -----
-      allow read: if canAccess(userId);
+      // [admin-fix] Split get vs list for admin query-ability.
+      // Single-doc reads keep the original rule (owner/admin/collaborator).
+      // Collection LIST queries need a rule Firestore can pre-evaluate:
+      //   - admin: list all users
+      //   - self: list own doc
+      //   - collaborator: list docs where the user's email is in collaborators[]
+      allow get: if canAccess(userId);
+      allow list: if isAdmin()
+        || (isSignedIn() && request.auth.uid == userId)
+        || (isSignedIn() && request.auth.token.email != null
+            && (request.auth.token.email in resource.data.get('collaborators', [])
+                || request.auth.token.email.lower() in resource.data.get('collaborators', [])));
       // [v6.16.0] Prevent self-registration with 'premium' plan.
       allow create: if isOwner(userId)
         && request.resource.data.userId == userId

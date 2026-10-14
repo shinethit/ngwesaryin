@@ -357,6 +357,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
 
 
+    // [admin-realtime-fix] Live system-wide listeners.
+    // Uses collectionGroup so admin sees updates from ALL users'
+    // subcollections without any manual refresh.
+    const unsubSystemTxs = onSnapshot(
+      query(collectionGroup(db, 'transactions')),
+      (snap) => {
+        const txs = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          _docPath: d.ref.path,
+          _userId: (d.data() as any).userId || d.ref.parent?.parent?.id || '',
+        } as unknown as Transaction));
+        console.log('[admin] live txs:', txs.length);
+        setSystemTransactions(txs);
+      },
+      (err) => console.warn('[admin] live tx listener error:', err)
+    );
+
+    const unsubSystemWallets = onSnapshot(
+      query(collectionGroup(db, 'wallets')),
+      (snap) => {
+        const wls = snap.docs.map((d) => ({ id: d.id, ...d.data() } as unknown as Wallet));
+        console.log('[admin] live wallets:', wls.length);
+        setSystemWallets(wls);
+      },
+      (err) => console.warn('[admin] live wallet listener error:', err)
+    );
+
+    const unsubSystemCats = onSnapshot(
+      query(collectionGroup(db, 'categories')),
+      (snap) => {
+        const cats = snap.docs.map((d) => ({ id: d.id, ...d.data() } as unknown as Category));
+        console.log('[admin] live categories:', cats.length);
+        setSystemCategories(cats);
+      },
+      (err) => console.warn('[admin] live category listener error:', err)
+    );
+
     // 8. Contact Info
     loadContactInfoData();
 
@@ -369,7 +407,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       unsubDefaultUsers();
       unsubMsgs();
       unsubVisitors();
-
+      unsubSystemTxs();
+      unsubSystemWallets();
+      unsubSystemCats();
     };
   }, [isOpen, isAdmin, user, loadSystemWideData]);
 

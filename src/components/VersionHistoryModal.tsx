@@ -30,48 +30,48 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   });
 
   // [v7.5.4] Real update check — fetches /version.json and compares.
+  // [iosupd-fix] Bulletproof version check — 5s timeout, no SW call.
   const handleCheckUpdate = async () => {
     setCheckingUpdate(true);
     setUpdateMsg(null);
-    setPendingUpdate(null);
+    // (pendingUpdate declared in v7.5.4; add guarded set)
+    try { if (typeof (setPendingUpdate as any) === 'function') (setPendingUpdate as any)(null); } catch {}
 
-    // SW update (best-effort, non-blocking)
-    try {
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) reg.update().catch(() => {});
-      }
-    } catch { /* ignore */ }
-
-    // Real check: fetch deployed version.json with no cache
-    try {
+    const fetchCheck = (async () => {
       const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const cloudVersion = String(data.version || '').trim();
-      const cloudBuild = Number(data.buildNumber) || 0;
+      return await res.json();
+    })();
+    const timeout = new Promise<never>((_, rej) =>
+      setTimeout(() => rej(new Error('timeout')), 5000)
+    );
 
-      if (!cloudVersion) throw new Error('No version in payload');
+    try {
+      const data: any = await Promise.race([fetchCheck, timeout]);
+      const cloudV = String(data?.version || '').trim();
+      const cloudB = Number(data?.buildNumber) || 0;
+      if (!cloudV) throw new Error('Bad payload');
 
-      if (cloudVersion !== CURRENT_APP_VERSION && cloudBuild > CURRENT_BUILD_NUMBER) {
-        setPendingUpdate({ version: cloudVersion, buildNumber: cloudBuild });
+      if (cloudV !== CURRENT_APP_VERSION && cloudB > CURRENT_BUILD_NUMBER) {
+        try { if (typeof (setPendingUpdate as any) === 'function') (setPendingUpdate as any)({ version: cloudV, buildNumber: cloudB }); } catch {}
         setUpdateMsg(
-          lang === 'my'
-            ? `🎉 ဗားရှင်းအသစ် (${cloudVersion}) ရရှိပါပြီ — Update လုပ်ရန် နှိပ်ပါ`
-            : `🎉 New version (${cloudVersion}) available — tap Update Now`
+          (lang as any) === 'my'
+            ? `🎉 ဗားရှင်းအသစ် (${cloudV}) ရရှိပါပြီ — Update လုပ်ရန် နှိပ်ပါ`
+            : `🎉 New version (${cloudV}) available — tap Update Now`
         );
       } else {
         setUpdateMsg(
-          lang === 'my'
+          (lang as any) === 'my'
             ? `✨ အက်ပ်သည် နောက်ဆုံးပေါ် ဗားရှင်း (${CURRENT_APP_VERSION}) ဖြစ်ပါသည်။`
-            : `✨ You are on the latest version (${CURRENT_APP_VERSION}).`
+            : `✨ Latest version (${CURRENT_APP_VERSION}) — up to date.`
         );
       }
     } catch (e: any) {
+      const msg = e?.message === 'timeout' ? 'Network timeout (5s)' : (e?.message || 'Error');
       setUpdateMsg(
-        lang === 'my'
-          ? `⚠️ ဗားရှင်း စစ်ဆေး၍ မရပါ: ${e?.message || 'Network error'}`
-          : `⚠️ Could not check: ${e?.message || 'Network error'}`
+        (lang as any) === 'my'
+          ? `⚠️ ဗားရှင်း စစ်ဆေး၍ မရပါ: ${msg}`
+          : `⚠️ Check failed: ${msg}`
       );
     } finally {
       setCheckingUpdate(false);

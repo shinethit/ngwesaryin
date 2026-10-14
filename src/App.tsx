@@ -378,7 +378,19 @@ export default function App() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/version.json', { cache: 'no-store' });
+        // [iosupd-fix] Cache-bust query + 5s timeout — iOS SW can
+        // intercept no-store and serve stale; unique URL bypasses it.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        let res: Response;
+        try {
+          res = await fetch('/version.json?t=' + Date.now(), {
+            cache: 'no-store',
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timer);
+        }
         if (!res.ok) return;
         const data = (await res.json()) as { version?: string; buildNumber?: number };
         if (cancelled) return;

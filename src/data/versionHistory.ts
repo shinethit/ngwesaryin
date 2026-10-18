@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.4';
-export const CURRENT_BUILD_NUMBER = 219;
+export const CURRENT_APP_VERSION = 'v7.5.5';
+export const CURRENT_BUILD_NUMBER = 220;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.5',
+    buildNumber: 220,
+    releaseDate: '2026-10-15',
+    releaseTime: '11:00 AM (MMT)',
+    titleMy: '3 လ Free Trial Claim Bug ပြင်ဆင်ခြင်း',
+    titleEn: 'Free Trial Claim Fix',
+    tag: 'fix',
+    tagLabelMy: 'Trial Claim Fix',
+    tagLabelEn: 'Trial Claim Fix',
+    descriptionMy: 'User အသစ်များ ၃ လ Free Trial ယူပြီးနောက် Admin Panel (Firestore) တွင် plan: free ဖြစ်နေရသည့် ပြဿနာ။ ယခုအခါ claimFreeTrial သည် Firestore write အောင်မြင်မှသာ client state ကို Premium အဖြစ် ပြောင်းလဲပြီး၊ Firestore Rules တွင်လည်း premiumMonths (1-12) အထိ ခွင့်ပြုပြီး trial stack ကို ဖြေလျှော့ထားသည်။',
+    descriptionEn: 'Fixed the bug where new users who claimed 3-month trial still appeared as FREE in Admin Panel (Firestore). claimFreeTrial now only commits local Premium state if Firestore write succeeded, and Firestore Rules relaxed to accept 1-12 months (was strictly 3).',
+    changesMy: [
+      '🐛 claimFreeTrial: safeSetDoc return value ကို စစ်ဆေး',
+      '🐛 Firestore write fail = client Premium မဖြစ်',
+      '🔧 Rules: premiumMonths 1-12 (was strictly 3)',
+      '✨ User သည် ချက်ချင်း error message မြင်ရမည်',
+    ],
+    changesEn: [
+      '🐛 claimFreeTrial now checks safeSetDoc return',
+      '🐛 Firestore write fail = no local Premium',
+      '🔧 Rules: premiumMonths 1-12 (was strictly 3)',
+      '✨ User sees clear error message on failure',
+    ],
+  },
   {
     version: 'v7.5.4',
     buildNumber: 219,

@@ -343,13 +343,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         accountCreatedAt: rawCreatedAt,
       };
 
-      await safeSetDoc(userRef, {
+      // [trial-fix] safeSetDoc returns boolean — MUST check before
+      // committing local state. Previously always returned success
+      // even when Firestore write failed (quota/permission).
+      const writeOk = await safeSetDoc(userRef, {
         userId: currentUid,
         email: auth.currentUser.email || '',
         displayName: auth.currentUser.displayName || '',
         ...updatedProfile,
         updatedAt: now.toISOString(),
       }, { merge: true });
+
+      if (!writeOk) {
+        return {
+          success: false,
+          error: 'Cloud သို့ သိမ်းဆည်းမရပါ — အင်တာနက်/VPN စစ်ပြီး ပြန်ကြိုးစားပါ (Cloud write failed)',
+        };
+      }
 
       setUserProfile(updatedProfile);
       safeSetItem('ngwe_user_profile', JSON.stringify(updatedProfile));

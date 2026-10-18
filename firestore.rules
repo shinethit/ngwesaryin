@@ -85,7 +85,13 @@ service cloud.firestore {
             request.resource.data.trialClaimed == true
             && resource.data.get('trialClaimed', false) != true
             && resource.data.get('premiumActivatedAt', null) == null
-            && request.resource.data.premiumMonths == 3
+            // [trial-fix] Allow 1-12 months (was strictly == 3).
+            // claimFreeTrial may stack +3 onto an existing value if user
+            // already had partial months. Allow that band without
+            // opening a floodgate (still requires fresh trialClaimed).
+            && request.resource.data.premiumMonths is number
+            && request.resource.data.premiumMonths >= 1
+            && request.resource.data.premiumMonths <= 12
             && request.resource.data.premiumExpiresAt is string
             && request.resource.data.premiumExpiresAt.size() >= 20
             && request.resource.data.premiumExpiresAt.size() <= 30

@@ -57,6 +57,8 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
     }
   };
 
+  const isLicenseRenewal = serviceType === 'license_renewal';
+
   useEffect(() => {
     if (editingMaintenance) {
       setVehicleId(editingMaintenance.vehicleId);
@@ -231,6 +233,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
               />
             </div>
 
+{!isLicenseRenewal && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-slate-700">
@@ -255,6 +258,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                 />
               </div>
             </div>
+            )}
           </div>
 
           {/* Cost & Payment Wallet */}
@@ -333,6 +337,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                 : 'Used to alert you when the part is due for replacement'}
             </p>
             <div className="grid grid-cols-2 gap-3 pt-1">
+{!isLicenseRenewal && (
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                   {lang === 'my' ? 'မိုင်/ကီလို သက်တမ်း (km)' : 'Distance (km)'}
@@ -347,6 +352,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                   className="w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 />
               </div>
+              )}
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">

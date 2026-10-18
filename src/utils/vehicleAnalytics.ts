@@ -59,6 +59,12 @@ export const SERVICE_TYPE_CONFIG: Record<
   VehicleServiceType,
   { labelMy: string; labelEn: string; defaultLifespanKm: number; defaultLifespanDays: number }
 > = {
+  license_renewal: {
+    labelMy: '🪪 လိုင်စင် သက်တမ်းတိုးခြင်း',
+    labelEn: '🪪 License Renewal',
+    defaultLifespanKm: 0,
+    defaultLifespanDays: 365,
+  },
   engine_oil: {
     labelMy: 'အင်ဂျင်ဝိုင် (Engine Oil)',
     labelEn: 'Engine Oil',
@@ -466,4 +472,126 @@ export function formatDurationDays(days: number, lang: 'my' | 'en'): string {
     return lang === 'my' ? `${months} လ` : `${months} mos`;
   }
   return lang === 'my' ? `${months} လ ${remDays} ရက်` : `${months} mos ${remDays} days`;
+}
+
+/**
+ * [v7.5.7] Maintenance lifespan alerts.
+ * Returns alerts at 50%, 75%, and 100km-to-due milestones.
+ * For license renewals, uses day-based thresholds (90/30/14/7/3/0 days).
+ */
+export interface MaintenanceAlert {
+  id: string;
+  vehicleId: string;
+  vehicleName: string;
+  title: string;
+  message: string;
+  severity: 'danger' | 'warning' | 'info';
+  createdAt: number;
+  milestone: string;
+}
+
+export function getMaintenanceAlerts(
+  vehicle: Vehicle,
+  logs: VehicleMaintenance[],
+  lang: 'my' | 'en'
+): MaintenanceAlert[] {
+  const out: MaintenanceAlert[] = [];
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayMs = new Date(todayStr).getTime();
+
+  logs.forEach((log) => {
+    // License renewal — day-based
+    if (log.serviceType === 'license_renewal') {
+      const days = log.expectedLifespanDays || 0;
+      const expiresAtMs = new Date(log.date).getTime() + days * 86400000;
+      const expiresInDays = Math.ceil((expiresAtMs - todayMs) / 86400000);
+
+      const milestones = [
+        { d: 90, tag: '90d', sev: 'info' as const },
+        { d: 30, tag: '30d', sev: 'info' as const },
+        { d: 14, tag: '14d', sev: 'warning' as const },
+        { d: 7,  tag: '7d',  sev: 'warning' as const },
+        { d: 3,  tag: '3d',  sev: 'danger' as const },
+        { d: 0,  tag: '0d',  sev: 'danger' as const },
+      ];
+
+      const hit = milestones.find((m) => expiresInDays <= m.d && expiresInDays > m.d - 3);
+      if (hit) {
+        const expiryStr = new Date(expiresAtMs).toISOString().split('T')[0];
+        out.push({
+          id: 'notif_license_' + log.id + '_' + hit.tag + '_' + log.date,
+          vehicleId: vehicle.id,
+          vehicleName: vehicle.name,
+          title:
+            lang === 'my'
+              ? '🪪 ' + vehicle.name + ' — လိုင်စင် သက်တမ်း ' + expiresInDays + ' ရက် ကျန်ရှိ'
+              : '🪪 ' + vehicle.name + ' — License expires in ' + expiresInDays + ' day(s)',
+          message:
+            lang === 'my'
+              ? 'သက်တမ်းကုန်ဆုံးရက်: ' + expiryStr + ' — သက်တမ်းတိုးရန် အချိန်ရောက်ပါပြီ'
+              : 'Expiry: ' + expiryStr + ' — renewal due soon',
+          severity: hit.sev,
+          createdAt: todayMs,
+          milestone: hit.tag,
+        });
+      }
+      return;
+    }
+
+    // Regular part — km-based
+    if (!log.expectedLifespanKm || !log.odometer) return;
+    const usedKm = vehicle.currentOdometer - log.odometer;
+    const remainingKm = log.expectedLifespanKm - usedKm;
+    if (remainingKm <= 0) {
+      out.push({
+        id: 'notif_maint_overdue_' + log.id + '_' + log.date,
+        vehicleId: vehicle.id,
+        vehicleName: vehicle.name,
+        title:
+          lang === 'my'
+            ? '🔧 ' + vehicle.name + ' — ' + log.title + ' လဲရန် ကျော်လွန်နေပြီ'
+            : '🔧 ' + vehicle.name + ' — ' + log.title + ' is OVERDUE',
+        message:
+          lang === 'my'
+            ? 'ကျော်လွန်: ' + Math.abs(remainingKm).toLocaleString() + ' km — အမြန်ဆုံး လဲလှယ်ပါ'
+            : 'Overdue by ' + Math.abs(remainingKm).toLocaleString() + ' km — replace ASAP',
+        severity: 'danger',
+        createdAt: todayMs,
+        milestone: 'overdue',
+      });
+      return;
+    }
+
+    const pctUsed = (usedKm / log.expectedLifespanKm) * 100;
+    let milestone = '';
+    let sev: 'info' | 'warning' | 'danger' = 'info';
+    if (pctUsed >= 75) { milestone = '75pct'; sev = 'warning'; }
+    else if (pctUsed >= 50) { milestone = '50pct'; sev = 'info'; }
+
+    if (remainingKm <= 100) {
+      milestone = '100km';
+      sev = 'warning';
+    }
+
+    if (milestone) {
+      out.push({
+        id: 'notif_maint_' + milestone + '_' + log.id + '_' + log.date,
+        vehicleId: vehicle.id,
+        vehicleName: vehicle.name,
+        title:
+          lang === 'my'
+            ? '🔧 ' + vehicle.name + ' — ' + log.title + ' (' + milestone + ')'
+            : '🔧 ' + vehicle.name + ' — ' + log.title + ' (' + milestone + ')',
+        message:
+          lang === 'my'
+            ? 'ကျန်ရှိ ' + remainingKm.toLocaleString() + ' km (' + Math.round(pctUsed) + '% သုံးပြီး)'
+            : remainingKm.toLocaleString() + ' km remaining (' + Math.round(pctUsed) + '% used)',
+        severity: sev,
+        createdAt: todayMs,
+        milestone,
+      });
+    }
+  });
+
+  return out;
 }

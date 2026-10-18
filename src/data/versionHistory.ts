@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.6';
-export const CURRENT_BUILD_NUMBER = 221;
+export const CURRENT_APP_VERSION = 'v7.5.7';
+export const CURRENT_BUILD_NUMBER = 222;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.7',
+    buildNumber: 222,
+    releaseDate: '2026-10-15',
+    releaseTime: '2:00 PM (MMT)',
+    titleMy: 'လိုင်စင်သက်တမ်း + အပိုပစ္စည်း သက်တမ်း သတိပေးချက်များ',
+    titleEn: 'License Renewal + Part Lifespan Alerts',
+    tag: 'feature',
+    tagLabelMy: 'Alert အသစ်',
+    tagLabelEn: 'New Alerts',
+    descriptionMy: 'AddMaintenanceModal တွင် လိုင်စင် သက်တမ်းတိုး အမျိုးအစား ထည့်သွင်းပြီး သက်တမ်းကုန်ရက် မတိုင်မီ ၉၀/၃၀/၁၄/၇/၃/၀ ရက် အလို သတိပေးမည်။ အပိုပစ္စည်းများအတွက် ၅၀%၊ ၇၅% နှင့် ၁၀၀ km ကျန် သတိပေး။',
+    descriptionEn: 'Added License Renewal type. Alerts at 90/30/14/7/3/0 days. Parts alert at 50%, 75%, 100km remaining.',
+    changesMy: ['🪪 လိုင်စင် သက်တမ်းတိုး အမျိုးအစား', '📅 လိုင်စင် ၆ ကြိမ် သတိပေး', '🔧 အပိုပစ္စည်း ၅၀%၊ ၇၅%၊ ၁၀၀ km', '🔔 Notification တွင် ပေါ်'],
+    changesEn: ['🪪 License Renewal type', '📅 6 license reminders', '🔧 Parts 50%, 75%, 100km', '🔔 Appears in Notification'],
+  },
   {
     version: 'v7.5.6',
     buildNumber: 221,

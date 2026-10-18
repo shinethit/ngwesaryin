@@ -407,6 +407,7 @@ export type VehicleServiceType =
   | 'wheel_alignment'
   | 'suspension'
   | 'general_repair'
+  | 'license_renewal'
   | 'other';
 
 export interface VehicleMaintenance {

@@ -12,6 +12,7 @@ import {
   AdminSystemMessage,
 } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { getMaintenanceAlerts } from '../utils/vehicleAnalytics';
 
 export interface NotificationItem {
   id: string;
@@ -234,6 +235,25 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         createdAt: new Date(log.nextCheckDate).getTime() || Date.now(),
       });
     }
+  });
+
+  // 3b. [v7.5.7] Maintenance / License alerts
+  vehicles.forEach((vehicle) => {
+    const vLogs = maintenanceLogs.filter((m) => m.vehicleId === vehicle.id);
+    if (vLogs.length === 0) return;
+    const alerts = getMaintenanceAlerts(vehicle, vLogs, lang);
+    alerts.forEach((a) => {
+      generatedNotifications.push({
+        id: a.id,
+        type: 'vehicle',
+        title: a.title,
+        message: a.message,
+        severity: a.severity,
+        actionTab: 'vehicles',
+        actionText: lang === 'my' ? 'ယာဉ်စာရင်း ကြည့်မည်' : 'View Vehicle',
+        createdAt: a.createdAt,
+      });
+    });
   });
 
   // 4. Recurring Transaction Reminders

@@ -376,6 +376,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // [auto-sync-plan] Reconcile local plan with Firestore on every boot.
+  // Fixes false-positive Premium (localStorage cached 'premium' while
+  // Firestore says 'free' — happens when trial write previously failed).
+  useEffect(() => {
+    if (!auth.currentUser || loading) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser!.uid));
+        if (!userDoc.exists() || cancelled) return;
+        const d = userDoc.data();
+        const cloudPlan = (d.plan as PlanType) || 'free';
+        const localPlan = (safeGetItem('ngwe_plan') || '') as string;
+        if (localPlan && localPlan !== cloudPlan) {
+          console.log('[auto-sync-plan] Plan mismatch — local:', localPlan, '→ cloud:', cloudPlan);
+          safeSetItem('ngwe_plan', cloudPlan);
+          const refreshed = {
+            plan: cloudPlan,
+            premiumExpiresAt: d.premiumExpiresAt || null,
+            premiumActivatedAt: d.premiumActivatedAt || null,
+            premiumMonths: d.premiumMonths || null,
+            premiumCodeUsed: d.premiumCodeUsed || null,
+            trialClaimed: !!d.trialClaimed,
+            trialClaimedAt: d.trialClaimedAt || null,
+            accountCreatedAt: d.createdAt || new Date().toISOString(),
+          };
+          setUserProfile(refreshed);
+          safeSetItem('ngwe_user_profile', JSON.stringify(refreshed));
+        }
+      } catch (e) {
+        console.warn('[auto-sync-plan] reconcile failed:', e);
+      }
+    }, 1500);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [user?.uid, loading]);
+
   useEffect(() => {
     console.log('AuthContext: Setting up auth listener...');
     // Fail-safe timer to guarantee loading state resolves even on slow connections

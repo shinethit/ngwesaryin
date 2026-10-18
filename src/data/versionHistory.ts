@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.5';
-export const CURRENT_BUILD_NUMBER = 220;
+export const CURRENT_APP_VERSION = 'v7.5.6';
+export const CURRENT_BUILD_NUMBER = 221;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.6',
+    buildNumber: 221,
+    releaseDate: '2026-10-15',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Trial Claim Fail-safe + Plan Auto-Sync',
+    titleEn: 'Trial Claim Fail-safe + Plan Auto-Sync',
+    tag: 'fix',
+    tagLabelMy: 'Trial Sync',
+    tagLabelEn: 'Trial Sync',
+    descriptionMy: 'Trial claim မအောင်မြင်ဘဲ client မှာ Premium ဖြစ်နေသည့် False Positive ပြဿနာကို ဖြေရှင်းခြင်း။ App ဖွင့်တိုင်း Firestore မှ plan ကို re-check ပြီး localStorage နှင့် မတူပါက အလိုအလျောက် ပြန်ညှိပေးမည်။ User များ Log out/in ပြုလုပ်ရန် မလိုအပ်တော့ပါ။',
+    descriptionEn: 'Fixes False Positive Premium where client showed Premium after a failed trial claim. On every boot, plan is reconciled with Firestore — mismatch is auto-corrected. No manual logout needed.',
+    changesMy: [
+      '🔄 Auto-sync plan — Firestore နှင့် တိုက်စစ်',
+      '❌ False Positive Premium ဖယ်ရှား',
+      '🔔 User Log out/in မလိုအပ်',
+      '🐛 claimFreeTrial safeSetDoc return စစ် (Rules fail-safe)',
+    ],
+    changesEn: [
+      '🔄 Auto-sync plan — reconcile with Firestore',
+      '❌ False Positive Premium eliminated',
+      '🔔 No manual logout required',
+      '🐛 claimFreeTrial safeSetDoc return check (Rules fail-safe)',
+    ],
+  },
   {
     version: 'v7.5.5',
     buildNumber: 220,

@@ -36,6 +36,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   const [workshopName, setWorkshopName] = useState('');
   const [expectedLifespanKm, setExpectedLifespanKm] = useState<number | ''>(5000);
   const [expectedLifespanDays, setExpectedLifespanDays] = useState<number | ''>(180);
+  const [expiryDate, setExpiryDate] = useState<string>('');
   const [walletId, setWalletId] = useState('');
   const [syncToExpense, setSyncToExpense] = useState(true);
   const [note, setNote] = useState('');
@@ -58,6 +59,30 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   };
 
   const isLicenseRenewal = serviceType === 'license_renewal';
+
+  // [FIX] Auto-calculate days when Expiry Date or Date changes
+  useEffect(() => {
+    if (expiryDate && date) {
+      const d1 = new Date(date).getTime();
+      const d2 = new Date(expiryDate).getTime();
+      if (!isNaN(d1) && !isNaN(d2)) {
+        const diff = Math.ceil((d2 - d1) / (1000 * 3600 * 24));
+        setExpectedLifespanDays(diff > 0 ? diff : 0);
+      }
+    }
+  }, [expiryDate, date]);
+
+  // [FIX] Lock scroll to prevent background scrolling
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (editingMaintenance) {
@@ -131,7 +156,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 overscroll-none touch-none" onWheel={(e) => e.stopPropagation()}>
       <div
         id="add-maintenance-modal-container"
         className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]"
@@ -166,7 +191,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto overscroll-contain space-y-4 flex-1">
           {/* Vehicle Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -323,6 +348,22 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          {/* [FIX] Expiry Date */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {lang === 'my' ? 'ကုန်ဆုံးမည့် ရက်စွဲ (Expiry Date) - ရွေးချယ်ရန်' : 'Expiry Date (Optional)'}
+            </label>
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              {lang === 'my' ? '* ရက်စွဲ ရွေးပါက အောက်တွင် သက်တမ်းကို အလိုအလျောက် တွက်ပြပါမည်' : '* Days will auto-calculate based on the selected date.'}
+            </p>
           </div>
 
           {/* Lifespan Estimates */}

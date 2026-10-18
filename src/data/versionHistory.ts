@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.7';
-export const CURRENT_BUILD_NUMBER = 222;
+export const CURRENT_APP_VERSION = 'v7.5.8';
+export const CURRENT_BUILD_NUMBER = 223;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.8',
+    buildNumber: 223,
+    releaseDate: '2026-10-19',
+    releaseTime: '10:00 AM (MMT)',
+    titleMy: 'ယာဉ်ပြုပြင်မှု သက်တမ်း (Date/Km) နှင့် Scroll Fix',
+    titleEn: 'Vehicle Maintenance Expiry Date & Scroll Fix',
+    tag: 'fix',
+    tagLabelMy: 'UI + Logic Fix',
+    tagLabelEn: 'UI + Logic Fix',
+    descriptionMy: 'AddMaintenanceModal တွင် ကုန်ဆုံးမည့်ရက်စွဲ (Expiry Date) ကို ထည့်သွင်းနိုင်ပြီး ရက်စွဲရွေးချယ်လိုက်ပါက သက်တမ်းရက်များကို အလိုအလျောက် တွက်ချက်ပေးမည်။ ထို့အပြင် Modal ဖွင့်ထားစဉ် အနောက်က စာမျက်နှာများ လိုက်ပါ Scroll ဖြစ်နေခြင်းကို ပိတ်ဆို့ပေးထားသည်။',
+    descriptionEn: 'Added Expiry Date option to AddMaintenanceModal. Days auto-calculate when a date is picked. Fixed background scroll bleed when the modal is open.',
+    changesMy: [
+      '📅 Expiry Date ထည့်သွင်းနိုင်ပြီး ရက်များ အလိုအလျောက် တွက်',
+      '🔒 Modal ဖွင့်ထားစဉ် အနောက်က စာမျက်နှာ မလှုပ်တော့ပါ',
+      '📱 iOS Scroll Bleed ပြဿနာ ပြင်ဆင်ပြီး',
+    ],
+    changesEn: [
+      '📅 Added Expiry Date input with auto-calculated days',
+      '🔒 Locked background scroll while modal is open',
+      '📱 Fixed iOS scroll bleed',
+    ],
+  },
   {
     version: 'v7.5.7',
     buildNumber: 222,

@@ -497,6 +497,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return Array.from(map.values());
   }, [systemCategories, categories]);
 
+  // [prem-fix] Compute effective plan per user — expired premium = free.
+  const getUserEffectivePlan = (u: UserDoc): 'free' | 'premium' => {
+    if (u.plan !== 'premium') return 'free';
+    if (!u.premiumExpiresAt) return 'premium';
+    try {
+      const t = new Date(String(u.premiumExpiresAt).replace(' ', 'T')).getTime();
+      if (isNaN(t)) return 'premium';
+      return t < Date.now() ? 'free' : 'premium';
+    } catch { return 'premium'; }
+  };
+
   // Active dataset of transactions across the entire system (Default sorted newest first by date)
   const effectiveTransactions = useMemo(() => {
     const list = systemTransactions.length > 0 ? systemTransactions : (transactions || []);
@@ -2568,18 +2579,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 </div>
                               </td>
                               <td className="py-3 px-4">
-                                <span
-                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                    u.plan === 'premium'
-                                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                      : 'bg-slate-100 text-slate-600'
-                                  }`}
-                                >
-                                  {u.plan === 'premium' && (
-                                    <Crown className="w-3 h-3 text-amber-600" />
-                                  )}
-                                  {u.plan || 'free'}
-                                </span>
+                                {(() => {
+                                  const eff = getUserEffectivePlan(u);
+                                  return (
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                        eff === 'premium'
+                                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                          : 'bg-slate-100 text-slate-600'
+                                      }`}
+                                    >
+                                      {eff === 'premium' && (
+                                        <Crown className="w-3 h-3 text-amber-600" />
+                                      )}
+                                      {eff}
+                                    </span>
+                                  );
+                                })()}
                               </td>
                               <td className="py-3 px-4">
                                 <div className="space-y-0.5">

@@ -76,12 +76,16 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
+      // touchmove-prevent: Stop iOS scroll bleed
+      const preventDefault = (e: TouchEvent) => {
+        if (e.target === document.body) e.preventDefault();
+      };
+      document.body.addEventListener('touchmove', preventDefault, { passive: false });
+      return () => {
+        document.body.style.overflow = '';
+        document.body.removeEventListener('touchmove', preventDefault);
+      };
     }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    };
   }, [isOpen]);
 
   useEffect(() => {

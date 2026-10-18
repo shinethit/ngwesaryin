@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.8';
-export const CURRENT_BUILD_NUMBER = 223;
+export const CURRENT_APP_VERSION = 'v7.5.9';
+export const CURRENT_BUILD_NUMBER = 224;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.9',
+    buildNumber: 224,
+    releaseDate: '2026-10-19',
+    releaseTime: '11:00 AM (MMT)',
+    titleMy: 'လိုင်စင် ချိတ်ဆက်မှုနှင့် Scroll ပြဿနာ ပြင်ဆင်ခြင်း',
+    titleEn: 'License Sync & Scroll Bleed Fix',
+    tag: 'fix',
+    tagLabelMy: 'Logic + UI Fix',
+    tagLabelEn: 'Logic + UI Fix',
+    descriptionMy: 'Category Picker မှ "လိုင်စင်/အခွန်" ရွေးချယ်ပါက အလိုအလျောက် License Renewal အဖြစ် သတ်မှတ်ပြီး ယာဉ်မှတ်တမ်းသို့ ချိတ်ဆက်သွားမည်။ ထို့အပြင် Modal ဖွင့်ထားစဉ် အနောက်က စာမျက်နှာများ လိုက်ပါ Scroll ဖြစ်နေခြင်းကို အပြီးအပိုင် ပိတ်ဆို့ပေးထားသည်။',
+    descriptionEn: 'Added auto-select for License Renewal when chosen from Category Picker. Completely fixed background scroll bleed for both Transaction and Maintenance modals.',
+    changesMy: [
+      '🪪 လိုင်စင် ရွေးလိုက်တာနဲ့ အလိုအလျောက် License Renewal ဖြစ်သွားမည်',
+      '🔄 ငွေစာရင်းနှင့် ယာဉ်မှတ်တမ်း အလိုအလျောက် ချိတ်ဆက်',
+      '🔒 Modal ဖွင့်ထားစဉ် အနောက်က စာမျက်နှာ လုံးဝ မလှုပ်တော့ပါ',
+    ],
+    changesEn: [
+      '🪪 Auto-selects License Renewal from Category Picker',
+      '🔄 Auto-syncs with Vehicle Maintenance log',
+      '🔒 Locked background scroll for all modals',
+    ],
+  },
   {
     version: 'v7.5.8',
     buildNumber: 223,

@@ -1213,7 +1213,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           vehicleId: targetVehicleId,
           logType: 'maintenance',
           serviceType: maintServiceType,
-          title: maintTitle.trim() || extraNote.trim() || (maintServiceType === 'license_renewal' ? (lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal') : (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service')),
+          title: maintTitle.trim() || extraNote.trim() || ((maintServiceType as string) === 'license_renewal' ? (lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal') : (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service')),
           sparePartBrand: maintSparePartBrand.trim() || undefined,
           workshopName: maintWorkshopName.trim() || undefined,
           expectedLifespanKm: parseFloat(maintLifespanKm) || undefined,

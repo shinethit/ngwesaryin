@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.18';
-export const CURRENT_BUILD_NUMBER = 233;
+export const CURRENT_APP_VERSION = 'v7.5.20';
+export const CURRENT_BUILD_NUMBER = 235;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.20',
+    buildNumber: 235,
+    releaseDate: '2026-10-19',
+    releaseTime: '5:30 PM (MMT)',
+    titleMy: 'Type Error ပြင်ဆင်ခြင်းနှင့် Entry Form အဆင့်မြှင့်တင်မှု',
+    titleEn: 'Type Error Fix & Entry Form Enhancement',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'TypeScript Type အမှားအယွင်းကို ပြင်ဆင်ပြီး ပင်မ Entry Form ထဲက ဆီဖိုးနှင့် ပြုပြင်မှု စနစ်များကို အဆင့်မြှင့်တင်ထားသည်။',
+    descriptionEn: 'Fixed TypeScript type error and enhanced the main Transaction Entry Form fuel & maintenance logic.',
+    changesMy: ['🐛 Type Error ပြင်ဆင်ခြင်း'],
+    changesEn: ['🐛 Fixed Type Error'],
+  },
   {
     version: 'v7.5.18',
     buildNumber: 233,

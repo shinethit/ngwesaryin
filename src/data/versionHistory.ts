@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.26';
-export const CURRENT_BUILD_NUMBER = 241;
+export const CURRENT_APP_VERSION = 'v7.5.27';
+export const CURRENT_BUILD_NUMBER = 242;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.27',
+    buildNumber: 242,
+    releaseDate: '2026-10-19',
+    releaseTime: '8:30 PM (MMT)',
+    titleMy: 'Dashboard ပေါ်တွင် အက်ပ် မျှဝေရန် ခလုတ် ထည့်သွင်းခြင်း',
+    titleEn: 'Added Share App Button to Dashboard',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'အသုံးပြုသူများ အက်ပ်ကို ပိုမိုလွယ်ကူစွာ မျှဝေနိုင်ရန် Dashboard ၏ Quick Access Grid တွင် "အက်ပ် မျှဝေရန်" ခလုတ်ကို ထည့်သွင်းပေးလိုက်သည်။',
+    descriptionEn: 'Added a "Share App" button directly to the Dashboard Quick Access Grid for easier sharing.',
+    changesMy: ['📱 Dashboard တွင် Share ခလုတ် ထည့်သွင်းခြင်း'],
+    changesEn: ['📱 Added Share button on Dashboard'],
+  },
   {
     version: 'v7.5.26',
     buildNumber: 241,

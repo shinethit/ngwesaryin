@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.17';
-export const CURRENT_BUILD_NUMBER = 232;
+export const CURRENT_APP_VERSION = 'v7.5.18';
+export const CURRENT_BUILD_NUMBER = 233;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.18',
+    buildNumber: 233,
+    releaseDate: '2026-10-19',
+    releaseTime: '4:30 PM (MMT)',
+    titleMy: 'ဆီဖိုးနှင့် ပြုပြင်မှု မှတ်တမ်းများအတွက် ဈေးနှိုင်းယှဉ်မှုနှင့် Odometer ကာကွယ်မှု (Final)',
+    titleEn: 'Fuel & Maintenance Price Comparison + Odometer Validation (Final)',
+    tag: 'feature',
+    tagLabelMy: 'ယာဉ်စီမံခန့်ခွဲမှု အဆင့်မြှင့်တင်ခြင်း',
+    tagLabelEn: 'Vehicle Management Enhancement',
+    descriptionMy: 'ဆီဖိုးနှင့် အပိုပစ္စည်းမှတ်တမ်းများတွင် ယခင်ဝယ်ခဲ့သော ဈေးနှုန်းနှင့် နှိုင်းယှဉ်ပြသော လုပ်ဆောင်ချက် ထည့်သွင်းပြီး Odometer နည်းနေခြင်း သို့မဟုတ် ထပ်နေခြင်းများကို ကာကွယ်နိုင်ရန် စစ်ဆေးမှုများ ထည့်သွင်းထားသည်။ ဆီထည့်သည့်နေရာတွင် လီတာပမာဏကို အလိုအလျောက်တွက်ချက်ပြီး ထည့်သွင်းဖူးသော ဆီဆိုင်များကိုပါ ပြန်လည်မှတ်သားထားပေးသည်။',
+    descriptionEn: 'Added price comparison UI and Odometer validation (prevents double entry & lower odometer) for Fuel and Maintenance modals. Liters field in Fuel modal is now auto-calculated and read-only. Custom gas stations are now remembered.',
+    changesMy: [
+      '📈 ဆီဖိုးနှင့် ပြုပြင်မှုမှတ်တမ်းများတွင် ယခင်ဈေးနှင့် နှိုင်းယှဉ်ပြခြင်း',
+      '🛡️ Odometer နည်းနေခြင်း/ထပ်နေခြင်းကို ကာကွယ်ခြင်း (Double Entry)',
+      '⛽ ဆီထည့်တဲ့နေရာမှာ Liters ကို အလိုအလျောက်တွက်ချက်ခြင်း',
+      '🏪 ထည့်ဖူးတဲ့ ဆီဆိုင်အမည်များကို မှတ်သားထားခြင်း',
+    ],
+    changesEn: [
+      '📈 Added price comparison UI in Fuel & Maintenance modals',
+      '🛡️ Added Odometer validation (prevent double entry / lower odometer)',
+      '⛽ Auto-calculated (read-only) Liters field in Fuel modal',
+      '🏪 Remembered custom gas stations',
+    ],
+  },
   {
     version: 'v7.5.17',
     buildNumber: 232,

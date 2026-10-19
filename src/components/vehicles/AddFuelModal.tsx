@@ -89,10 +89,19 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
   // Find the last fuel log for this vehicle to compare prices and odometer
   const lastLogForComparison = useMemo(() => {
     if (!fuelLogs || fuelLogs.length === 0) return null;
-    return fuelLogs
+    const sorted = fuelLogs
       .filter(l => l.vehicleId === vehicleId && l.id !== editingLog?.id)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-  }, [fuelLogs, vehicleId, editingLog]);
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    let match = sorted.find(l => l.gasStation === gasStation && l.fuelType === fuelType);
+    if (!match) match = sorted.find(l => l.fuelType === fuelType);
+    if (!match) match = sorted[0];
+    return match || null;
+  }, [fuelLogs, vehicleId, editingLog, gasStation, fuelType]);
 
   useEffect(() => {
     if (editingLog) {

@@ -738,10 +738,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   
   const lastFuelLogForComparison = useMemo(() => {
     if (!fuelLogs || fuelLogs.length === 0) return null;
-    return fuelLogs
+    const sorted = fuelLogs
       .filter(l => l.vehicleId === vehicleId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-  }, [fuelLogs, vehicleId]);
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    let match = sorted.find(l => l.gasStation === fuelGasStation && l.fuelType === fuelType);
+    if (!match) match = sorted.find(l => l.fuelType === fuelType);
+    if (!match) match = sorted[0];
+    return match || null;
+  }, [fuelLogs, vehicleId, fuelGasStation, fuelType]);
 
   const currentVehicle = useMemo(() => {
     return vehicles.find((v) => v.id === vehicleId) || vehicles[0];
@@ -749,9 +758,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const lastMaintLogForComparison = useMemo(() => {
     if (!vehicleMaintenance || vehicleMaintenance.length === 0) return null;
-    return vehicleMaintenance
-      .filter(m => m.vehicleId === vehicleId && m.serviceType === maintServiceType)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const sorted = vehicleMaintenance
+      .filter(m => m.vehicleId === vehicleId)
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    let match = sorted.find(m => m.serviceType === maintServiceType);
+    if (!match) match = sorted[0];
+    return match || null;
   }, [vehicleMaintenance, vehicleId, maintServiceType]);
 
   useEffect(() => {

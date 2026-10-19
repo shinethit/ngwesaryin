@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.22';
-export const CURRENT_BUILD_NUMBER = 237;
+export const CURRENT_APP_VERSION = 'v7.5.24';
+export const CURRENT_BUILD_NUMBER = 239;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.24',
+    buildNumber: 239,
+    releaseDate: '2026-10-19',
+    releaseTime: '7:15 PM (MMT)',
+    titleMy: 'ဈေးနှိုင်းယှဉ်မှု စနစ် အဆင့်မြှင့်တင်ခြင်း (Smart Matching)',
+    titleEn: 'Smart Price Comparison Upgrade',
+    tag: 'fix',
+    tagLabelMy: 'Logic Fix',
+    tagLabelEn: 'Logic Fix',
+    descriptionMy: 'ဈေးနှိုင်းယှဉ်မှုစနစ်ကို ပိုမိုတိကျစေရန် ပြင်ဆင်လိုက်ပါသည်။ ယခုအခါ ရက်စွဲတူညီပါက အချိန် (createdAt) ဖြင့် နောက်ဆုံးထည့်သွင်းမှုကို ဦးစားပေးယူမည်ဖြစ်ပြီး၊ ဆီဆိုင်နှင့် ဆီအမျိုးအစား အတူတူဖြစ်သော မှတ်တမ်းကိုသာ ဦးစွာရှာပြီး နှိုင်းယှဉ်ပြသပေးမည်။ ပင်မ Entry Form နှင့် သီးသန့် Modal အားလုံးတွင် အတူတူ အလုပ်လုပ်ပါသည်။',
+    descriptionEn: 'Upgraded price comparison logic across all modals. Now correctly sorts by time (createdAt) for same-day entries and prioritizes matching Gas Stations and Fuel Types before falling back.',
+    changesMy: ['🐛 ရက်စွဲတူပါက အချိန်ဖြင့် နောက်ဆုံးဈေးကို မှန်ကန်စွာယူခြင်း', '🏪 ဆီဆိုင်နှင့် အမျိုးအစား တူတာကို ဦးစားပေး နှိုင်းယှဉ်ခြင်း'],
+    changesEn: ['🐛 Fixed same-day sorting using createdAt', '🏪 Smart matching prioritizes same station & fuel type'],
+  },
   {
     version: 'v7.5.22',
     buildNumber: 237,

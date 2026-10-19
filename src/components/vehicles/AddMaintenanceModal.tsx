@@ -49,9 +49,17 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
 
   const lastMaintLogForComparison = useMemo(() => {
     if (!vehicleMaintenance || vehicleMaintenance.length === 0) return null;
-    return vehicleMaintenance
-      .filter(m => m.vehicleId === vehicleId && m.serviceType === serviceType && m.id !== editingMaintenance?.id)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const sorted = vehicleMaintenance
+      .filter(m => m.vehicleId === vehicleId && m.id !== editingMaintenance?.id)
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    let match = sorted.find(m => m.serviceType === serviceType);
+    if (!match) match = sorted[0];
+    return match || null;
   }, [vehicleMaintenance, vehicleId, serviceType, editingMaintenance]);
 
   const isLicenseRenewal = serviceType === 'license_renewal';

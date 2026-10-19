@@ -14,10 +14,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.11';
-export const CURRENT_BUILD_NUMBER = 226;
+export const CURRENT_APP_VERSION = 'v7.5.13';
+export const CURRENT_BUILD_NUMBER = 228;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.13',
+    buildNumber: 228,
+    releaseDate: '2026-10-19',
+    releaseTime: '2:00 PM (MMT)',
+    titleMy: 'ယာဉ်လိုင်စင် သက်တမ်းတိုး UI ပြင်ဆင်မှု (v3)',
+    titleEn: 'Vehicle License Renewal UI Fix (v3)',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'ယာဉ်မှတ်တမ်း (Add Maintenance Modal) တွင် လိုင်စင် သက်တမ်းတိုး ရွေးချယ်ပါက Odometer၊ ခေါင်းစဉ်၊ အပိုပစ္စည်းတံဆိပ်၊ ဝပ်ရှော့အမည်နှင့် Km သက်တမ်း အကွက်များကို ဖျောက်ထားပြီး ရက်စွဲအပေါ် အခြေခံသည့် သက်တမ်းကိုသာ ပြသစေရန် ပြင်ဆင်ထားသည်။',
+    descriptionEn: 'In Add Maintenance Modal, when License Renewal is selected, Odometer, Title, Brand, Workshop, and Km lifespan fields are now hidden. Only date-based lifespan is shown.',
+    changesMy: [
+      '🪪 လိုင်စင် ရွေးရင် မလိုအပ်တဲ့ Field တွေ အကုန်ဖျောက်ထားသည်',
+      '📅 Expiry Date နဲ့ Days ကိုပဲ ပြသပေးသည်',
+    ],
+    changesEn: [
+      '🪪 Hides irrelevant fields for License Renewal',
+      '📅 Shows only Expiry Date and Days',
+    ],
+  },
   {
     version: 'v7.5.11',
     buildNumber: 226,

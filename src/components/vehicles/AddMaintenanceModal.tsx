@@ -233,7 +233,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
           </div>
 
           {/* Title / Description */}
-          <div>
+          <div className={isLicenseRenewal ? 'hidden' : ''}>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               {lang === 'my' ? 'မှတ်တမ်း ခေါင်းစဉ် / အမည် *' : 'Title / Service Description *'}
             </label>
@@ -326,7 +326,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
           </div>
 
           {/* Spare Part Brand & Workshop */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${isLicenseRenewal ? 'hidden' : ''}`}>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 {lang === 'my' ? 'အပိုပစ္စည်း တံဆိပ်/အမျိုးအစား' : 'Brand / Part Details'}
@@ -383,7 +383,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
             </p>
             <div className="grid grid-cols-2 gap-3 pt-1">
 {!isLicenseRenewal && (
-              <div>
+              <div className={isLicenseRenewal ? 'hidden' : ''}>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                   {lang === 'my' ? 'မိုင်/ကီလို သက်တမ်း (km)' : 'Distance (km)'}
                 </label>

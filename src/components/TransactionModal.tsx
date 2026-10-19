@@ -1213,7 +1213,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           vehicleId: targetVehicleId,
           logType: 'maintenance',
           serviceType: maintServiceType,
-          title: maintTitle.trim() || extraNote.trim() || (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service'),
+          title: maintTitle.trim() || extraNote.trim() || (maintServiceType === 'license_renewal' ? (lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal') : (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service')),
           sparePartBrand: maintSparePartBrand.trim() || undefined,
           workshopName: maintWorkshopName.trim() || undefined,
           expectedLifespanKm: parseFloat(maintLifespanKm) || undefined,
@@ -1880,43 +1880,75 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <option value="other">{lang === "my" ? "📦 အခြား" : "📦 Other"}</option>
                   </select>
                 </div>
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={maintTitle}
-                    onChange={(e) => setMaintTitle(e.target.value)}
-                    placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'}
-                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
-                  />
-                </div>
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={maintWorkshopName}
-                    onChange={(e) => setMaintWorkshopName(e.target.value)}
-                    placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'}
-                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
-                  />
-                </div>
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                    <Gauge className="w-5 h-5 text-slate-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}
+
+                {maintServiceType === 'license_renewal' ? (
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                      <Calendar className="w-5 h-5 text-indigo-600" />
                     </div>
-                    <input
-                      type="number"
-                      value={vehicleOdometer}
-                      onChange={(e) => setVehicleOdometer(e.target.value)}
-                      placeholder="0"
-                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
-                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-slate-500">
+                        {lang === 'my' ? 'ကုန်ဆုံးမည့်ရက်စွဲ (Expiry Date) *' : 'Expiry Date *'}
+                      </div>
+                      <input
+                        type="date"
+                        value={maintExpiryDate}
+                        onChange={(e) => {
+                          setMaintExpiryDate(e.target.value);
+                          if (e.target.value && date) {
+                            const d1 = new Date(date).getTime();
+                            const d2 = new Date(e.target.value).getTime();
+                            if (!isNaN(d1) && !isNaN(d2)) {
+                              const diff = Math.ceil((d2 - d1) / (1000 * 3600 * 24));
+                              setMaintLifespanDays(String(diff > 0 ? diff : 0));
+                            }
+                          }
+                        }}
+                        className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5"
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                      <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                      <input
+                        type="text"
+                        value={maintTitle}
+                        onChange={(e) => setMaintTitle(e.target.value)}
+                        placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'}
+                        className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
+                      />
+                    </div>
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                      <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
+                      <input
+                        type="text"
+                        value={maintWorkshopName}
+                        onChange={(e) => setMaintWorkshopName(e.target.value)}
+                        placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'}
+                        className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
+                      />
+                    </div>
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                        <Gauge className="w-5 h-5 text-slate-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-slate-500">
+                          {lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}
+                        </div>
+                        <input
+                          type="number"
+                          value={vehicleOdometer}
+                          onChange={(e) => setVehicleOdometer(e.target.value)}
+                          placeholder="0"
+                          className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
 

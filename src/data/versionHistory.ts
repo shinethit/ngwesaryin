@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.10';
-export const CURRENT_BUILD_NUMBER = 225;
+export const CURRENT_APP_VERSION = 'v7.5.11';
+export const CURRENT_BUILD_NUMBER = 226;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.11',
+    buildNumber: 226,
+    releaseDate: '2026-10-19',
+    releaseTime: '1:00 PM (MMT)',
+    titleMy: 'လိုင်စင် သက်တမ်းတိုး UI နှင့် Expiry Date ပြင်ဆင်မှု',
+    titleEn: 'License UI & Expiry Date Fix',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'လိုင်စင် သက်တမ်းတိုး ရွေးချယ်လိုက်ပါက Odometer၊ ခေါင်းစဉ်နှင့် ဝပ်ရှော့အမည် အကွက်များကို ဖျောက်ပြီး ကုန်ဆုံးမည့်ရက်စွဲ (Expiry Date) ကို သီးသန့် ထည့်သွင်းနိုင်စေရန် ပြင်ဆင်ပေးထားသည်။',
+    descriptionEn: 'When License Renewal is selected, Odometer, Title, and Workshop fields are hidden. Only the Expiry Date field is shown and calculated correctly.',
+    changesMy: [
+      '🪪 လိုင်စင် ရွေးရင် Odometer/Title/Workshop အကွက်များ ဖျောက်ထားသည်',
+      '📅 Expiry Date ထည့်သွင်းနိုင်ပြီး Days အလိုအလျောက် တွက်ပေးသည်',
+      '🔄 ယာဉ်မှတ်တမ်းသို့ မှန်ကန်စွာ ချိတ်ဆက်သွားမည်',
+    ],
+    changesEn: [
+      '🪪 Hides Odometer, Title, Workshop for License Renewal',
+      '📅 Shows Expiry Date field and auto-calculates days',
+      '🔄 Syncs correctly to Vehicle Maintenance log',
+    ],
+  },
   {
     version: 'v7.5.10',
     buildNumber: 225,

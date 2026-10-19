@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.27';
-export const CURRENT_BUILD_NUMBER = 242;
+export const CURRENT_APP_VERSION = 'v7.5.28';
+export const CURRENT_BUILD_NUMBER = 243;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.28',
+    buildNumber: 243,
+    releaseDate: '2026-10-19',
+    releaseTime: '9:00 PM (MMT)',
+    titleMy: 'Dashboard Share ခလုတ် ချိတ်ဆက်မှု ပြင်ဆင်ခြင်း',
+    titleEn: 'Fixed Dashboard Share Button Connection',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Dashboard ပေါ်ရှိ "အက်ပ် မျှဝေရန်" ခလုတ်ကို နှိပ်လိုက်ပါက Share App Modal ပွင့်လာစေရန် App.tsx တွင် ချိတ်ဆက်မှု (Prop) ကို ဖြည့်စွက်ပေးလိုက်သည်။',
+    descriptionEn: 'Injected the missing onOpenShareApp prop in App.tsx so the Dashboard Share button successfully opens the Share Modal.',
+    changesMy: ['🐛 Share ခလုတ် အလုပ်မလုပ်ခြင်းကို ပြင်ဆင်ခြင်း'],
+    changesEn: ['🐛 Fixed non-functional Share button'],
+  },
   {
     version: 'v7.5.27',
     buildNumber: 242,

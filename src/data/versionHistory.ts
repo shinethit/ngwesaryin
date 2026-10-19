@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.25';
-export const CURRENT_BUILD_NUMBER = 240;
+export const CURRENT_APP_VERSION = 'v7.5.26';
+export const CURRENT_BUILD_NUMBER = 241;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.26',
+    buildNumber: 241,
+    releaseDate: '2026-10-19',
+    releaseTime: '8:00 PM (MMT)',
+    titleMy: 'Share Modal တွင် QR Code နှင့် Share စာသားများ ထည့်သွင်းခြင်း',
+    titleEn: 'Added QR Code & Share Text to Share Modal',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'အက်ပ်ကို ပိုမိုလွယ်ကူစွာ မျှဝေနိုင်ရန် Share App Modal တွင် QR Code နှင့် အက်ပ်အကြောင်း အတိုချုပ်ပါ စာသားများကို ၁ ချက်နှိပ်ရုံဖြင့် Copy ကူးယူနိုင်သော စနစ်ကို ထည့်သွင်းပေးလိုက်သည်။',
+    descriptionEn: 'Added QR code and 1-click copyable App summary text to the Share App modal to make sharing easier.',
+    changesMy: ['📱 QR Code ထည့်သွင်းခြင်း', '📋 App အကြောင်း အတိုချုပ် Copy ကူးနိုင်ခြင်း'],
+    changesEn: ['📱 Added QR Code', '📋 Added 1-click copyable App summary'],
+  },
   {
     version: 'v7.5.25',
     buildNumber: 240,

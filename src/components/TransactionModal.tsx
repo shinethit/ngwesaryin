@@ -25,6 +25,7 @@ import { FuelExpenseGuideModal } from './vehicles/FuelExpenseGuideModal';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { getAllItemSuggestions, findMatchingItemInfo } from '../utils/itemIntelligence';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 const GAS_STATIONS = ['Denko', 'BOC', 'Other'];
 
@@ -49,7 +50,6 @@ interface TransactionModalProps {
   onManageCategories?: () => void;
   onOpenAddVehicle?: () => void;
   onOpenVehicleManagement?: () => void;
-  // [v7.2.2] Linked logs for edit-time restore
   fuelLogs?: FuelLog[];
   vehicleMaintenance?: VehicleMaintenance[];
   tirePressureLogs?: TirePressureLog[];
@@ -100,7 +100,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [itemName, setItemName] = useState(editTransaction?.note || '');
   const [extraNote, setExtraNote] = useState('');
 
-  // 3 Primary Models: 1. General | 2. ဆီဖိုး (Fuel) | 3. Other Vehicle Services
   const getResolvedModel = (): EntryModel => {
     if (editTransaction) {
       if (
@@ -130,13 +129,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const [entryModel, setEntryModel] = useState<EntryModel>(getResolvedModel);
-
-  // Ref to detect when modal is newly opened or edit transaction switches
   const prevIsOpenRef = React.useRef(false);
   const prevEditTxIdRef = React.useRef<string | undefined>(undefined);
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  // Calculation & Entry Modes: 'direct' | 'unit_qty' | 'shopping_list'
   const [entryMode, setEntryMode] = useState<'direct' | 'unit_qty' | 'shopping_list'>(
     editTransaction?.items && editTransaction.items.length > 0
       ? 'shopping_list'
@@ -145,7 +141,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       : 'direct'
   );
 
-  // Unit Price x Quantity State
   const [unitPrice, setUnitPrice] = useState<string>(
     editTransaction?.unitPrice ? String(editTransaction.unitPrice) : ''
   );
@@ -153,22 +148,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     editTransaction?.quantity ? String(editTransaction.quantity) : '1'
   );
 
-  // Shopping List Items State
   const [shoppingItems, setShoppingItems] = useState<TransactionItem[]>(
     editTransaction?.items && editTransaction.items.length > 0
       ? editTransaction.items
       : [{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]
   );
 
-  // Quick add sub-category inline state
-  // [v6.3.6] Track last edited field for any-2-of-3 auto-compute
   const [unitQtyLastEdited, setUnitQtyLastEdited] = useState<'price' | 'qty' | 'total' | null>(null);
   const shoppingLastEditedRef = useRef<Record<string, 'price' | 'qty' | 'amount'>>({});
-  // [v6.4] Debounce timers for smooth typing
   const unitQtyAmountTimerRef = useRef<NodeJS.Timeout | null>(null);
   const shoppingAmountTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
-  // [v7.2.0] Default ON so item name input shows immediately in direct mode
   const [showQuickAddSub, setShowQuickAddSub] = useState(true);
   const [newSubName, setNewSubName] = useState('');
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
@@ -178,9 +168,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [walletExpanded, setWalletExpanded] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
 
-  // ==========================================
-  // Vehicle Linkage Progressive Disclosure State
-  // ==========================================
+  // Vehicle Linkage State
   const [isVehicleLinkEnabled, setIsVehicleLinkEnabled] = useState(false);
   const [vehicleId, setVehicleId] = useState<string>(vehicles[0]?.id || '');
   const [vehicleLogType, setVehicleLogType] = useState<'fuel' | 'maintenance' | 'tire'>('fuel');
@@ -194,6 +182,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [fuelGasStation, setFuelGasStation] = useState<string>('Denko');
   const [customGasStation, setCustomGasStation] = useState<string>('');
   const [fuelIsFullTank, setFuelIsFullTank] = useState<boolean>(true);
+  const [customStations, setCustomStations] = usePersistedState<string[]>('ngwe_custom_gas_stations', []);
 
   // Maintenance fields
   const [maintServiceType, setMaintServiceType] = useState<VehicleServiceType>('engine_oil');
@@ -210,37 +199,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [tireRL, setTireRL] = useState<string>('32');
   const [tireRR, setTireRR] = useState<string>('32');
 
-  // Common vehicle field
   const [vehicleOdometer, setVehicleOdometer] = useState<string>('');
-
-  const handleFuelLitersChange = (lVal: string) => {
-    setFuelLiters(lVal);
-    const lNum = parseFloat(lVal) || 0;
-    const pNum = parseFloat(fuelPricePerLiter) || 0;
-    if (lNum > 0 && pNum > 0) {
-      setAmount(String(Math.round(lNum * pNum)));
-    }
-  };
-
-  const handleFuelPriceChange = (pVal: string) => {
-    setFuelPricePerLiter(pVal);
-    const pNum = parseFloat(pVal) || 0;
-    const lNum = parseFloat(fuelLiters) || 0;
-    if (lNum > 0 && pNum > 0) {
-      setAmount(String(Math.round(lNum * pNum)));
-    } else if (pNum > 0 && parseFloat(amount) > 0) {
-      setFuelLiters(String(Number((parseFloat(amount) / pNum).toFixed(2))));
-    }
-  };
-
-  const handleAmountChangeWithFuelSync = (val: string) => {
-    setAmount(val);
-    const numAmt = parseFloat(val) || 0;
-    const numPpl = parseFloat(fuelPricePerLiter) || 0;
-    if (numAmt > 0 && numPpl > 0 && (fuelEntryStyle === 'detailed' || isVehicleLinkEnabled)) {
-      setFuelLiters(String(Number((numAmt / numPpl).toFixed(2))));
-    }
-  };
 
   const { user } = useAuth();
   const selectedWallet = useMemo(() => wallets.find((w) => w.id === walletId) || wallets[0], [wallets, walletId]);
@@ -268,9 +227,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     prevEditTxIdRef.current = editTransaction?.id;
 
     if (isOpen) {
-      if (formRef.current) {
-        formRef.current.scrollTop = 0;
-      }
+      if (formRef.current) formRef.current.scrollTop = 0;
       if (editTransaction) {
         if (isNewlyOpened || isEditTxChanged) {
           if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
@@ -298,7 +255,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             setIsVehicleLinkEnabled(false);
           }
 
-          // [v7.2.2] Restore linked vehicle log data (fuel/maintenance/tire)
           const linkedFuel = fuelLogs.find((f) => f.transactionId === editTransaction.id);
           const linkedMaint = vehicleMaintenance.find((m) => m.transactionId === editTransaction.id);
           const linkedTire = tirePressureLogs.find((tp) => tp.transactionId === editTransaction.id);
@@ -356,7 +312,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       } else if (isNewlyOpened) {
         setUnitQtyLastEdited(null);
         shoppingLastEditedRef.current = {};
-        // Only initialize default values when the modal first opens (prefer last used wallet)
         const lastUsedWalletId = typeof localStorage !== 'undefined' ? localStorage.getItem('fortune_last_used_wallet_id') : null;
         let chosenWalletId =
           (initialWalletId && wallets.some((w) => w.id === initialWalletId))
@@ -455,7 +410,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [isOpen, editTransaction, initialType, initialWalletId, wallets, user, fuelLogs, vehicleMaintenance, tirePressureLogs]);
 
-  // [v6.3.6] Any 2 of Price/Qty/Total known -> compute 3rd (lastEdited priority)
   const computeUnitQtyThird = (edited: 'price' | 'qty' | 'total', pNum: number, qNum: number, tot: number) => {
     const last = unitQtyLastEdited;
     if (edited === 'price') {
@@ -485,7 +439,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const handleUnitQtyAmountChange = (amtStr: string) => {
-    // [v6.4] Update raw value immediately, but debounce the reverse-calc
     setAmount(amtStr);
     if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
     unitQtyAmountTimerRef.current = setTimeout(() => {
@@ -497,7 +450,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }, 500);
   };
 
-  // Shopping List item row — [v6.3.6] any 2 of Price/Qty/Total -> compute 3rd
+  const unifiedItemSuggestions = useMemo(() => {
+    return getAllItemSuggestions(allTransactions, categories);
+  }, [allTransactions, categories]);
+
   const updateShoppingItem = (id: string, field: keyof TransactionItem, val: any) => {
     setShoppingItems((prev) => {
       const updated = prev.map((item) => {
@@ -525,7 +481,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             else { if (pNum > 0) newItem.amount = Number((pNum * qNum).toFixed(2)); else if (qNum > 0 && aNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
             shoppingLastEditedRef.current[id] = 'qty';
           } else if (field === 'amount') {
-            // [v6.4] Immediate raw value update, debounced reverse-calc
             newItem.amount = aNum;
             if (shoppingAmountTimersRef.current[id]) clearTimeout(shoppingAmountTimersRef.current[id]);
             const capturedId = id;
@@ -568,33 +523,23 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     ]);
   };
 
-  // Auto-scroll to newly added shopping item row and focus input
   useEffect(() => {
     if (newlyAddedItemIdRef.current && shoppingListContainerRef.current) {
       const targetId = newlyAddedItemIdRef.current;
       const timer = setTimeout(() => {
         if (shoppingListContainerRef.current) {
-          shoppingListContainerRef.current.scrollTo({
-            top: shoppingListContainerRef.current.scrollHeight,
-            behavior: 'smooth',
-          });
+          shoppingListContainerRef.current.scrollTo({ top: shoppingListContainerRef.current.scrollHeight, behavior: 'smooth' });
         }
         const inputElem = document.getElementById(`input-name-${targetId}`);
-        if (inputElem) {
-          inputElem.focus();
-        }
+        if (inputElem) inputElem.focus();
         newlyAddedItemIdRef.current = null;
       }, 50);
       return () => clearTimeout(timer);
     }
   }, [shoppingItems.length]);
 
-  // Unified item suggestions across all past shopping lists, unit prices, notes, and subcategories
-  const unifiedItemSuggestions = useMemo(() => {
-    return getAllItemSuggestions(allTransactions, categories);
-  }, [allTransactions, categories]);
 
-  // Lookup latest previous purchase price for an item name across all past expense transactions & unified items
+
   const getPastPriceForItem = (itemName: string) => {
     if (!itemName || itemName.trim().length < 1) return null;
     const found = findMatchingItemInfo(itemName, unifiedItemSuggestions);
@@ -621,24 +566,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     });
   };
 
-  // Auto-generate note summary from shopping list items
   const autoGenerateShoppingNote = () => {
     const validItems = shoppingItems.filter((i) => i.name.trim());
     if (validItems.length === 0) return;
-    const summary = validItems
-      .map((i) => `${i.name.trim()}${i.quantity > 1 ? ` x${i.quantity}` : ''} (${formatMMK(i.amount)})`)
-      .join(' + ');
+    const summary = validItems.map((i) => `${i.name.trim()}${i.quantity > 1 ? ` x${i.quantity}` : ''} (${formatMMK(i.amount)})`).join(' + ');
     setExtraNote(summary);
   };
 
-  // Sort categories by highest historical usage frequency across all transactions (Transfer category is accessible under both Income and Expense)
   const filteredCats = useMemo(() => {
     const cats = categories.filter(
-      (c) =>
-        c.type === type ||
-        c.id === 'cat_transfer' ||
-        (c.name && c.name.includes('ငွေလွှဲ')) ||
-        (c.nameEn && c.nameEn.toLowerCase().includes('transfer'))
+      (c) => c.type === type || c.id === 'cat_transfer' || (c.name && c.name.includes('ငွေလွှဲ')) || (c.nameEn && c.nameEn.toLowerCase().includes('transfer'))
     );
     const countMap = new Map<string, number>();
     if (allTransactions && allTransactions.length > 0) {
@@ -651,47 +588,26 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     return [...cats].sort((a, b) => {
       const countA = countMap.get(a.id) || 0;
       const countB = countMap.get(b.id) || 0;
-      if (countB !== countA) {
-        return countB - countA; // Most frequently used first
-      }
+      if (countB !== countA) return countB - countA;
       return (lang === 'my' ? a.name : a.nameEn).localeCompare(lang === 'my' ? b.name : b.nameEn);
     });
   }, [categories, type, allTransactions, lang]);
 
-  // Set default category if not matching
   const currentCat = categories.find((c) => c.id === categoryId);
   const isCurrentTransferCat = Boolean(
-    currentCat &&
-      (currentCat.id === 'cat_transfer' ||
-        (currentCat.name && currentCat.name.includes('ငွေလွှဲ')) ||
-        (currentCat.nameEn && currentCat.nameEn.toLowerCase().includes('transfer')))
+    currentCat && (currentCat.id === 'cat_transfer' || (currentCat.name && currentCat.name.includes('ငွေလွှဲ')) || (currentCat.nameEn && currentCat.nameEn.toLowerCase().includes('transfer')))
   );
-  // [v6.24] If user has explicitly picked a category, honor it — do NOT
-  // silently fall back when its type differs. The auto-type effect will
-  // flip `type` to match. Fallback only when nothing is picked yet.
-  const effectiveCategoryId = categoryId
-    ? categoryId
-    : (filteredCats[0]?.id || '');
+  const effectiveCategoryId = categoryId ? categoryId : (filteredCats[0]?.id || '');
   const selectedCatObj = categories.find((c) => c.id === (categoryId || effectiveCategoryId));
 
-  // Check if selected category is Transfer (ငွေလွှဲပြောင်းခြင်း)
   const isTransferCategory = useMemo(() => {
     if (!selectedCatObj) return false;
     const id = (selectedCatObj.id || '').toLowerCase();
     const name = (selectedCatObj.name || '').toLowerCase();
     const nameEn = (selectedCatObj.nameEn || '').toLowerCase();
-
-    return (
-      id === 'cat_transfer' ||
-      id.includes('transfer') ||
-      name.includes('ငွေလွှဲ') ||
-      nameEn.includes('transfer')
-    );
+    return id === 'cat_transfer' || id.includes('transfer') || name.includes('ငွေလွှဲ') || nameEn.includes('transfer');
   }, [selectedCatObj]);
 
-  // Auto-sync type and subcategory for Transfer Category
-  // ငွေလွှဲထွက် (Transfer Out) -> Expense (အထွက်)
-  // ငွေလွှဲဝင် (Transfer In) -> Income (အဝင်)
   useEffect(() => {
     if (isTransferCategory) {
       if (subCategoryId === 'sub_tf_out' || subCategoryId.includes('out') || subCategoryId.includes('ထွက်')) {
@@ -702,7 +618,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [subCategoryId, isTransferCategory]);
 
-  // [v7.0.1] Auto-switch vehicle entry model when vehicle sub-category is picked
   useEffect(() => {
     if (!isOpen) return;
     if (entryModel !== 'general') return;
@@ -712,17 +627,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     } else if (subCategoryId === 'sub_veh_tire') {
       handleSwitchModel('vehicle_service');
       setMaintServiceType('tires');
-    } else if (
-      subCategoryId === 'sub_veh_maintenance' ||
-      subCategoryId === 'sub_veh_parts' ||
-      subCategoryId === 'sub_veh_wash' ||
-      subCategoryId === 'sub_veh_license'
-    ) {
+    } else if (subCategoryId === 'sub_veh_maintenance' || subCategoryId === 'sub_veh_parts' || subCategoryId === 'sub_veh_wash' || subCategoryId === 'sub_veh_license') {
       handleSwitchModel('vehicle_service');
     }
   }, [isOpen, subCategoryId, entryModel]);
 
-  // [v7.5.9] Auto-calc days from Expiry Date
   useEffect(() => {
     if (maintExpiryDate && date) {
       const d1 = new Date(date).getTime();
@@ -734,14 +643,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [maintExpiryDate, date]);
 
-  // [v7.5.9] Auto-set service type to license_renewal when chosen
   useEffect(() => {
     if (isOpen && subCategoryId === 'sub_veh_license' && entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal') {
       setMaintServiceType('license_renewal');
     }
   }, [isOpen, subCategoryId, entryModel]);
 
-  // Sort sub-categories by highest historical usage frequency inside this category
   const availableSubCats = useMemo(() => {
     const subs = selectedCatObj?.subCategories || [];
     if (!subs || subs.length === 0) return [];
@@ -756,49 +663,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     return [...subs].sort((a, b) => {
       const countA = subCountMap.get(a.id) || 0;
       const countB = subCountMap.get(b.id) || 0;
-      if (countB !== countA) {
-        return countB - countA; // Most frequently used first
-      }
+      if (countB !== countA) return countB - countA;
       return (lang === 'my' ? a.name : a.nameEn).localeCompare(lang === 'my' ? b.name : b.nameEn);
     });
   }, [selectedCatObj, allTransactions, effectiveCategoryId, lang]);
 
-  // Check if currently selected category is related to Vehicle Management (dedicated module)
   const isVehicleRelatedCategory = useMemo(() => {
     if (type !== 'expense' || !selectedCatObj) return false;
     const id = (selectedCatObj.id || '').toLowerCase();
     const name = (selectedCatObj.name || '').toLowerCase();
     const nameEn = (selectedCatObj.nameEn || '').toLowerCase();
-    // [v7-fix] Custom category whose sub-cats look vehicle-related
     const subIds = (selectedCatObj.subCategories || []).map((s) => (s.id || '').toLowerCase());
     const subNames = (selectedCatObj.subCategories || []).map((s) => (s.name || '').toLowerCase());
-    const hasVehicleSub = subIds.some((sid) => sid.startsWith('sub_veh_')) ||
-      subNames.some((sn) => sn.includes('ဆီဖိုး') || sn.includes('ဆီ') || sn.includes('မော်တော်') || sn.includes('အင်ဂျင်ဝိုင်'));
+    const hasVehicleSub = subIds.some((sid) => sid.startsWith('sub_veh_')) || subNames.some((sn) => sn.includes('ဆီဖိုး') || sn.includes('ဆီ') || sn.includes('မော်တော်') || sn.includes('အင်ဂျင်ဝိုင်'));
     if (hasVehicleSub) return true;
-
-    return (
-      id === 'cat_vehicle' ||
-      id === 'cat_vehicle_management' ||
-      id === 'cat_expense_car' ||
-      id === 'cat_transport' ||
-      id.includes('vehicle') ||
-      id.includes('fuel') ||
-      name.includes('ယာဉ်') ||
-      name.includes('ကား') ||
-      name.includes('စက်သုံးဆီ') ||
-      name.includes('ဆီဖိုး') ||
-      nameEn.includes('vehicle') ||
-      nameEn.includes('fuel') ||
-      nameEn.includes('petrol') ||
-      nameEn.includes('transport')
-    );
+    return id === 'cat_vehicle' || id === 'cat_vehicle_management' || id === 'cat_expense_car' || id === 'cat_transport' || id.includes('vehicle') || id.includes('fuel') || name.includes('ယာဉ်') || name.includes('ကား') || name.includes('စက်သုံးဆီ') || name.includes('ဆီဖိုး') || nameEn.includes('vehicle') || nameEn.includes('fuel') || nameEn.includes('petrol') || nameEn.includes('transport');
   }, [type, selectedCatObj]);
 
   const showModelSelector = useMemo(() => {
     return isVehicleRelatedCategory || initialModel === 'fuel' || initialModel === 'vehicle_service';
   }, [isVehicleRelatedCategory, initialModel]);
 
-  // Auto-reset to 'general' model if selected category is not vehicle-related
   useEffect(() => {
     if (!showModelSelector && entryModel !== 'general') {
       setEntryModel('general');
@@ -806,23 +691,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [showModelSelector, entryModel]);
 
-  // Handle Switching between the 3 Primary Models: 1. General | 2. ဆီဖိုး (Fuel) | 3. Other Vehicle Services
   const handleSwitchModel = (newModel: EntryModel) => {
     setEntryModel(newModel);
     if (newModel === 'fuel') {
       setType('expense');
       setIsVehicleLinkEnabled(true);
       setVehicleLogType('fuel');
-      const vehCat = categories.find(
-        (c) =>
-          c.id === 'cat_vehicle' ||
-          c.id === 'cat_vehicle_management' ||
-          c.name.includes('ယာဉ်') ||
-          (c.nameEn && c.nameEn.toLowerCase().includes('vehicle'))
-      );
-      if (vehCat) {
-        setCategoryId(vehCat.id);
-      }
+      const vehCat = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle')));
+      if (vehCat) setCategoryId(vehCat.id);
       setSubCategoryId('sub_veh_fuel');
       if (vehicles && vehicles.length > 0) {
         if (!vehicleId) {
@@ -841,48 +717,43 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setType('expense');
       setIsVehicleLinkEnabled(true);
       setVehicleLogType('maintenance');
-      const vehCat = categories.find(
-        (c) =>
-          c.id === 'cat_vehicle' ||
-          c.id === 'cat_vehicle_management' ||
-          c.name.includes('ယာဉ်') ||
-          (c.nameEn && c.nameEn.toLowerCase().includes('vehicle'))
-      );
-      if (vehCat) {
-        setCategoryId(vehCat.id);
-      }
-      if (!subCategoryId || subCategoryId === 'sub_veh_fuel') {
-        setSubCategoryId('sub_veh_maintenance');
-      }
+      const vehCat = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle')));
+      if (vehCat) setCategoryId(vehCat.id);
+      if (!subCategoryId || subCategoryId === 'sub_veh_fuel') setSubCategoryId('sub_veh_maintenance');
       if (vehicles && vehicles.length > 0) {
         if (!vehicleId) {
           setVehicleId(vehicles[0].id);
           if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
         } else {
           const target = vehicles.find((x) => x.id === vehicleId);
-          if (target && target.currentOdometer && !vehicleOdometer) {
-            setVehicleOdometer(String(target.currentOdometer));
-          }
+          if (target && target.currentOdometer && !vehicleOdometer) setVehicleOdometer(String(target.currentOdometer));
         }
       }
     } else {
-      // 'general'
       setIsVehicleLinkEnabled(false);
     }
   };
 
-  // Check if currently entering a Fuel Expense
-  const isFuelMode = useMemo(() => {
-    return entryModel === 'fuel';
-  }, [entryModel]);
+  const isFuelMode = useMemo(() => entryModel === 'fuel', [entryModel]);
+  
+  const lastFuelLogForComparison = useMemo(() => {
+    if (!fuelLogs || fuelLogs.length === 0) return null;
+    return fuelLogs
+      .filter(l => l.vehicleId === vehicleId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  }, [fuelLogs, vehicleId]);
 
-  // Dedicated Vehicle Expense View (Fuel, Maintenance, Vehicle logs)
-  // When active, generic grocery item name & shopping list calculation tabs are hidden to eliminate duplicate price inputs!
-  const isDedicatedVehicleView = useMemo(() => {
-    return entryModel === 'fuel' || entryModel === 'vehicle_service';
-  }, [entryModel]);
+  const currentVehicle = useMemo(() => {
+    return vehicles.find((v) => v.id === vehicleId) || vehicles[0];
+  }, [vehicles, vehicleId]);
 
-  // Auto-activate Fuel Linkage and default vehicle when Fuel Mode is active
+  const lastMaintLogForComparison = useMemo(() => {
+    if (!vehicleMaintenance || vehicleMaintenance.length === 0) return null;
+    return vehicleMaintenance
+      .filter(m => m.vehicleId === vehicleId && m.serviceType === maintServiceType)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  }, [vehicleMaintenance, vehicleId, maintServiceType]);
+
   useEffect(() => {
     if (isFuelMode) {
       setIsVehicleLinkEnabled(true);
@@ -904,7 +775,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [isFuelMode, vehicles, vehicleId, fuelType, vehicleOdometer]);
 
-  // [v7.0.2] Auto-default vehicleId when vehicles list becomes available
   useEffect(() => {
     if (!isOpen) return;
     if (vehicleId) return;
@@ -912,207 +782,79 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setVehicleId(vehicles[0].id);
   }, [isOpen, vehicleId, vehicles]);
 
-  // Interface for smart previous purchase match
   interface MatchedPreviousPurchase {
-    amount: number;
-    date: string;
-    matchedName: string;
-    matchType: 'item' | 'note' | 'subcategory' | 'category';
-    originalTxId?: string;
-    note?: string;
+    amount: number; date: string; matchedName: string; matchType: 'item' | 'note' | 'subcategory' | 'category'; originalTxId?: string; note?: string;
   }
 
-  // Find previous purchases for this item (Smart matching: Product/Item Name FIRST -> SubCategory fallback if no specific item)
   const latestPreviousPurchase = useMemo<MatchedPreviousPurchase | null>(() => {
-    if (!isOpen || type !== 'expense' || !allTransactions || allTransactions.length === 0) {
-      return null;
-    }
-
-    // If shopping list mode is on with multiple items, the individual items have their own in-row comparisons
-    if (entryMode === 'shopping_list' && shoppingItems.length > 1) {
-      return null;
-    }
-
+    if (!isOpen || type !== 'expense' || !allTransactions || allTransactions.length === 0) return null;
+    if (entryMode === 'shopping_list' && shoppingItems.length > 1) return null;
     const currentTxId = editTransaction?.id;
     const cleanItemName = itemName.trim();
     const cleanItemNameLower = cleanItemName.toLowerCase();
-
-    // Get selected subcategory object if any
     const selectedSub = selectedCatObj?.subCategories?.find((s) => s.id === subCategoryId);
     const subName = selectedSub?.name?.trim() || '';
     const subNameLower = subName.toLowerCase();
-
-    // Past expense transactions (excluding currently edited transaction) sorted newest to oldest
-    const pastExpenseTxs = allTransactions
-      .filter((t) => t.id !== currentTxId && t.type === 'expense')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
+    const pastExpenseTxs = allTransactions.filter((t) => t.id !== currentTxId && t.type === 'expense').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     if (pastExpenseTxs.length === 0) return null;
-
-    // Target item name: either from single shopping list item or itemName input
-    const targetItemName = entryMode === 'shopping_list' && shoppingItems[0]?.name?.trim()
-      ? shoppingItems[0].name.trim()
-      : cleanItemName;
+    const targetItemName = entryMode === 'shopping_list' && shoppingItems[0]?.name?.trim() ? shoppingItems[0].name.trim() : cleanItemName;
     const targetItemLower = targetItemName.toLowerCase();
-
-    // -------------------------------------------------------------------------
-    // PRIORITY 1: Specific Product/Item Name Match (တူညီသော ကုန်ပစ္စည်းအမည် တိုက်ရိုက်ယှဉ်ခြင်း)
-    // -------------------------------------------------------------------------
     if (targetItemLower.length >= 1) {
-      // 1.1: Match in past shopping list items (t.items)
       for (const tx of pastExpenseTxs) {
         if (tx.items && tx.items.length > 0) {
-          const matchedItem = tx.items.find(
-            (it) => it.name && it.name.trim().toLowerCase() === targetItemLower
-          );
+          const matchedItem = tx.items.find((it) => it.name && it.name.trim().toLowerCase() === targetItemLower);
           if (matchedItem) {
-            const unitPrice =
-              matchedItem.price > 0
-                ? matchedItem.price
-                : matchedItem.quantity > 0 && matchedItem.amount
-                ? Math.round(matchedItem.amount / matchedItem.quantity)
-                : matchedItem.amount || 0;
-            if (unitPrice > 0) {
-              return {
-                amount: unitPrice,
-                date: tx.date,
-                matchedName: matchedItem.name.trim(),
-                matchType: 'item',
-                originalTxId: tx.id,
-                note: matchedItem.name,
-              };
-            }
+            const unitPrice = matchedItem.price > 0 ? matchedItem.price : matchedItem.quantity > 0 && matchedItem.amount ? Math.round(matchedItem.amount / matchedItem.quantity) : matchedItem.amount || 0;
+            if (unitPrice > 0) return { amount: unitPrice, date: tx.date, matchedName: matchedItem.name.trim(), matchType: 'item', originalTxId: tx.id, note: matchedItem.name };
           }
         }
       }
-
-      // 1.2: Match in past transactions whose note matches the target item name
       for (const tx of pastExpenseTxs) {
         if (tx.note && (tx.note.trim().toLowerCase() === targetItemLower || tx.note.trim().toLowerCase().startsWith(targetItemLower))) {
           const unitPrice = tx.unitPrice && tx.unitPrice > 0 ? tx.unitPrice : tx.amount || 0;
-          if (unitPrice > 0) {
-            return {
-              amount: unitPrice,
-              date: tx.date,
-              matchedName: tx.note.trim(),
-              matchType: 'note',
-              originalTxId: tx.id,
-              note: tx.note,
-            };
-          }
+          if (unitPrice > 0) return { amount: unitPrice, date: tx.date, matchedName: tx.note.trim(), matchType: 'note', originalTxId: tx.id, note: tx.note };
         }
       }
-
-      // 1.3: Match if target item name matches a past subcategory item (e.g. subcategory "ရေသန့်")
       for (const tx of pastExpenseTxs) {
         if (tx.subCategoryId) {
           const cat = categories.find((c) => c.id === tx.category);
           const sub = cat?.subCategories?.find((s) => s.id === tx.subCategoryId);
           if (sub && sub.name.trim().toLowerCase() === targetItemLower && tx.amount > 0) {
-            return {
-              amount: tx.amount,
-              date: tx.date,
-              matchedName: sub.name.trim(),
-              matchType: 'item',
-              originalTxId: tx.id,
-              note: tx.note || sub.name,
-            };
+            return { amount: tx.amount, date: tx.date, matchedName: sub.name.trim(), matchType: 'item', originalTxId: tx.id, note: tx.note || sub.name };
           }
         }
       }
-
-      // 1.4: Check unified item intelligence suggestions database
       const foundInSuggestions = findMatchingItemInfo(targetItemName, unifiedItemSuggestions);
       if (foundInSuggestions && foundInSuggestions.latestPrice > 0) {
-        return {
-          amount: foundInSuggestions.latestPrice,
-          date: foundInSuggestions.latestDate || getLocalDateString(),
-          matchedName: foundInSuggestions.name,
-          matchType: 'item',
-          note: foundInSuggestions.name,
-        };
+        return { amount: foundInSuggestions.latestPrice, date: foundInSuggestions.latestDate || getLocalDateString(), matchedName: foundInSuggestions.name, matchType: 'item', note: foundInSuggestions.name };
       }
-
-      // If user typed a specific item/product name (e.g., "ရေသန့်" or "ဆန် 1 အိတ်") and NO past purchase of that item exists:
-      // If the note is distinct (not empty and not the subcategory name itself), do NOT compare with unrelated items in the subcategory!
       const isGenericOrSubMatch = !targetItemLower || targetItemLower === subNameLower;
-      if (!isGenericOrSubMatch) {
-        return null;
-      }
+      if (!isGenericOrSubMatch) return null;
     }
-
-    // -------------------------------------------------------------------------
-    // PRIORITY 2: Sub-Category Fallback (ကုန်ပစ္စည်းသီးသန့်မပါသော အသုံးစရိတ် - ဥပမာ မနက်စာ)
-    // -------------------------------------------------------------------------
     if (subCategoryId) {
-      // Find past transactions with the same subCategoryId (prefer transactions without complex shopping baskets)
       for (const tx of pastExpenseTxs) {
         if (tx.subCategoryId === subCategoryId && tx.amount > 0) {
-          return {
-            amount: tx.amount,
-            date: tx.date,
-            matchedName: subName || 'Sub-Category',
-            matchType: 'subcategory',
-            originalTxId: tx.id,
-            note: tx.note || subName,
-          };
+          return { amount: tx.amount, date: tx.date, matchedName: subName || 'Sub-Category', matchType: 'subcategory', originalTxId: tx.id, note: tx.note || subName };
         }
       }
     }
-
-    // -------------------------------------------------------------------------
-    // PRIORITY 3: Category Fallback (if no subcategory and no note)
-    // -------------------------------------------------------------------------
     if (!subCategoryId && targetItemLower.length === 0 && effectiveCategoryId) {
       for (const tx of pastExpenseTxs) {
         if (tx.category === effectiveCategoryId && !tx.subCategoryId && tx.amount > 0) {
-          return {
-            amount: tx.amount,
-            date: tx.date,
-            matchedName: selectedCatObj?.name || 'Category',
-            matchType: 'category',
-            originalTxId: tx.id,
-            note: tx.note,
-          };
+          return { amount: tx.amount, date: tx.date, matchedName: selectedCatObj?.name || 'Category', matchType: 'category', originalTxId: tx.id, note: tx.note };
         }
       }
     }
-
     return null;
-  }, [
-    isOpen,
-    type,
-    allTransactions,
-    editTransaction,
-    entryMode,
-    shoppingItems,
-    itemName,
-    subCategoryId,
-    selectedCatObj,
-    effectiveCategoryId,
-    categories,
-    unifiedItemSuggestions,
-  ]);
+  }, [isOpen, type, allTransactions, editTransaction, entryMode, shoppingItems, itemName, subCategoryId, selectedCatObj, effectiveCategoryId, categories, unifiedItemSuggestions]);
 
-  // Calculate price difference between current typed price (Unit price in unit_qty mode, or total in direct mode) and latest past purchase
-  const currentEffectivePrice = useMemo(() => {
-    if (entryMode === 'unit_qty') {
-      return parseFloat(unitPrice) || 0;
-    }
-    return parseFloat(amount) || 0;
-  }, [entryMode, unitPrice, amount]);
+  const currentEffectivePrice = useMemo(() => (entryMode === 'unit_qty' ? parseFloat(unitPrice) || 0 : parseFloat(amount) || 0), [entryMode, unitPrice, amount]);
 
   const priceComparison = useMemo(() => {
     if (!isOpen || !latestPreviousPurchase || currentEffectivePrice <= 0) return null;
     const diff = currentEffectivePrice - latestPreviousPurchase.amount;
     const percent = latestPreviousPurchase.amount > 0 ? (diff / latestPreviousPurchase.amount) * 100 : 0;
-    return {
-      diff,
-      percent,
-      isHigher: diff > 0,
-      isLower: diff < 0,
-      isEqual: diff === 0,
-    };
+    return { diff, percent, isHigher: diff > 0, isLower: diff < 0, isEqual: diff === 0 };
   }, [isOpen, latestPreviousPurchase, currentEffectivePrice]);
 
   const handleApplyPreviousPrice = () => {
@@ -1127,7 +869,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
-  // [v6.24] Auto-derive transaction type from category selection
   useEffect(() => {
     if (!isOpen) return;
     if (!selectedCatObj) return;
@@ -1145,16 +886,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const handleCreateQuickSub = () => {
     if (!newSubName.trim()) return;
-    if (plan !== 'premium') {
-      onOpenUpgrade();
-      return;
-    }
+    if (plan !== 'premium') { onOpenUpgrade(); return; }
     if (onAddSubCategory && effectiveCategoryId) {
-      onAddSubCategory(effectiveCategoryId, {
-        name: newSubName.trim(),
-        nameEn: newSubName.trim(),
-        isCustom: true,
-      });
+      onAddSubCategory(effectiveCategoryId, { name: newSubName.trim(), nameEn: newSubName.trim(), isCustom: true });
       setNewSubName('');
       setShowQuickAddSub(false);
     }
@@ -1168,17 +902,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     setIsSubmitting(true);
 
-    // Filter valid shopping items
-    const validItems = shoppingItems
-      .filter((i) => i.name.trim() && i.price > 0 && i.quantity > 0)
-      .map((i) => ({
-        name: i.name.trim(),
-        price: i.price,
-        quantity: i.quantity,
-        amount: i.price * i.quantity,
-      }));
-
-    // Enforce relational integrity for transaction amount
+    const validItems = shoppingItems.filter((i) => i.name.trim() && i.price > 0 && i.quantity > 0).map((i) => ({ name: i.name.trim(), price: i.price, quantity: i.quantity, amount: i.price * i.quantity }));
     let finalAmount = numAmount;
     if (entryMode === 'shopping_list' && validItems.length > 0) {
       finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);
@@ -1191,12 +915,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const targetVehicleId = vehicleId || (vehicles && vehicles[0]?.id) || '';
 
       if (entryModel === 'fuel' && targetVehicleId) {
-        const odoNum = parseFloat(vehicleOdometer) || undefined;
+        const odoNum = parseFloat(vehicleOdometer) || 0;
+        const currVeh = vehicles.find(v => v.id === targetVehicleId);
+        if (currVeh && odoNum <= (currVeh.currentOdometer || 0)) {
+          alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်။' : 'Odometer must be greater than the current vehicle odometer.');
+          setIsSubmitting(false);
+          return;
+        }
+        if (lastFuelLogForComparison && odoNum === lastFuelLogForComparison.odometer) {
+          alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry.');
+          setIsSubmitting(false);
+          return;
+        }
+        
         const litersNum = parseFloat(fuelLiters) || 0;
         const pplNum = parseFloat(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
-        const resolvedStation = fuelGasStation === 'Other'
-          ? (customGasStation.trim() || undefined)
-          : (fuelGasStation.trim() || undefined);
+        const resolvedStation = fuelGasStation === 'Other' ? (customGasStation.trim() || undefined) : (fuelGasStation.trim() || undefined);
+        
+        if (fuelGasStation === 'Other' && resolvedStation && !customStations.includes(resolvedStation)) {
+          setCustomStations(prev => [...prev, resolvedStation]);
+        }
+
         vehicleLinkPayload = {
           vehicleId: targetVehicleId,
           logType: 'fuel',
@@ -1207,27 +946,51 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           isFullTank: fuelIsFullTank,
           odometer: odoNum,
         };
-      } else if (entryModel === 'vehicle_service' && targetVehicleId) {
-        const odoNum = parseFloat(vehicleOdometer) || undefined;
+      } else if (entryModel === 'vehicle_service' && targetVehicleId && maintServiceType !== 'license_renewal') {
+        const odoNum = parseFloat(vehicleOdometer) || 0;
+        const currVeh = vehicles.find(v => v.id === targetVehicleId);
+        if (currVeh && odoNum <= (currVeh.currentOdometer || 0)) {
+          alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်။' : 'Odometer must be greater than the current vehicle odometer.');
+          setIsSubmitting(false);
+          return;
+        }
+        if (lastMaintLogForComparison && odoNum === lastMaintLogForComparison.odometer) {
+          alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြီးရန်)' : 'Odometer is the same as the last entry.');
+          setIsSubmitting(false);
+          return;
+        }
         vehicleLinkPayload = {
           vehicleId: targetVehicleId,
           logType: 'maintenance',
           serviceType: maintServiceType,
-          title: maintTitle.trim() || extraNote.trim() || ((maintServiceType as string) === 'license_renewal' ? (lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal') : (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service')),
+          title: maintTitle.trim() || extraNote.trim() || (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service'),
           sparePartBrand: maintSparePartBrand.trim() || undefined,
           workshopName: maintWorkshopName.trim() || undefined,
           expectedLifespanKm: parseFloat(maintLifespanKm) || undefined,
           expectedLifespanDays: parseFloat(maintLifespanDays) || undefined,
           odometer: odoNum,
         };
+      } else if (entryModel === 'vehicle_service' && maintServiceType === 'license_renewal') {
+        vehicleLinkPayload = {
+          vehicleId: targetVehicleId,
+          logType: 'maintenance',
+          serviceType: maintServiceType,
+          title: lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal',
+          expectedLifespanKm: 0,
+          expectedLifespanDays: parseFloat(maintLifespanDays) || 365,
+          odometer: currentVehicle?.currentOdometer || 0,
+        };
       } else if (type === 'expense' && isVehicleLinkEnabled && targetVehicleId) {
-        const odoNum = parseFloat(vehicleOdometer) || undefined;
+        const odoNum = parseFloat(vehicleOdometer) || 0;
         if (vehicleLogType === 'fuel') {
           const litersNum = parseFloat(fuelLiters) || 0;
           const pplNum = parseFloat(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
-          const resolvedStation = fuelGasStation === 'Other'
-            ? (customGasStation.trim() || undefined)
-            : (fuelGasStation.trim() || undefined);
+          const resolvedStation = fuelGasStation === 'Other' ? (customGasStation.trim() || undefined) : (fuelGasStation.trim() || undefined);
+          
+          if (fuelGasStation === 'Other' && resolvedStation && !customStations.includes(resolvedStation)) {
+            setCustomStations(prev => [...prev, resolvedStation]);
+          }
+          
           vehicleLinkPayload = {
             vehicleId: targetVehicleId,
             logType: 'fuel',
@@ -1265,16 +1028,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
       let targetCategory = effectiveCategoryId;
       if (entryModel === 'fuel' || entryModel === 'vehicle_service' || (type === 'expense' && isVehicleLinkEnabled)) {
-        const vehicleCategory = categories.find(
-          (c) =>
-            c.id === 'cat_vehicle' ||
-            c.id === 'cat_vehicle_management' ||
-            c.name.includes('ယာဉ်စီမံ') ||
-            (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management'))
-        );
-        if (vehicleCategory) {
-          targetCategory = vehicleCategory.id;
-        }
+        const vehicleCategory = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်စီမံ') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management')));
+        if (vehicleCategory) targetCategory = vehicleCategory.id;
       }
 
       let targetSubCategory = subCategoryId || undefined;
@@ -1289,46 +1044,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
 
       let finalNote: string | undefined = undefined;
-      // [v7.2.3] Fuel / Service mode: note = user's extraNote only.
-      // Auto-generated fuelType/gasStation string removed — those details
-      // live in the linked FuelLog (visible in AddFuelModal), and the
-      // transaction already carries cat_vehicle + sub_veh_fuel for context.
       if (entryModel === 'fuel' || entryModel === 'vehicle_service') {
-        // [v7.2.4] Keep '' (not undefined) so Firestore merge clears old note.
         finalNote = extraNote.trim();
       } else if (type === 'expense') {
-        if (entryMode === 'shopping_list') {
-          finalNote = extraNote.trim() || (itemName.trim() || undefined);
-        } else {
+        if (entryMode === 'shopping_list') finalNote = extraNote.trim() || (itemName.trim() || undefined);
+        else {
           const cleanItem = itemName.trim();
           const cleanExtra = extraNote.trim();
-          if (cleanItem && cleanExtra) {
-            finalNote = `${cleanItem} (${cleanExtra})`;
-          } else if (cleanItem) {
-            finalNote = cleanItem;
-          } else if (cleanExtra) {
-            finalNote = cleanExtra;
-          }
+          if (cleanItem && cleanExtra) finalNote = `${cleanItem} (${cleanExtra})`;
+          else if (cleanItem) finalNote = cleanItem;
+          else if (cleanExtra) finalNote = cleanExtra;
         }
       } else {
         const cleanItem = itemName.trim();
         const cleanExtra = extraNote.trim();
-        if (cleanItem && cleanExtra) {
-          finalNote = `${cleanItem} (${cleanExtra})`;
-        } else {
-          finalNote = cleanItem || cleanExtra || undefined;
-        }
+        if (cleanItem && cleanExtra) finalNote = `${cleanItem} (${cleanExtra})`;
+        else finalNote = cleanItem || cleanExtra || undefined;
       }
 
-      const isTransferTx =
-        isTransferCategory ||
-        targetSubCategory === 'sub_tf_out' ||
-        targetSubCategory === 'sub_tf_in';
+      const isTransferTx = isTransferCategory || targetSubCategory === 'sub_tf_out' || targetSubCategory === 'sub_tf_in';
 
-      const finalWalletId = walletId;
-
-      if (typeof localStorage !== 'undefined' && finalWalletId) {
-        localStorage.setItem('fortune_last_used_wallet_id', finalWalletId);
+      if (typeof localStorage !== 'undefined' && walletId) {
+        localStorage.setItem('fortune_last_used_wallet_id', walletId);
       }
 
       onSubmit({
@@ -1336,15 +1073,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         amount: finalAmount,
         category: targetCategory,
         subCategoryId: targetSubCategory,
-        walletId: finalWalletId,
+        walletId: walletId,
         date,
         note: finalNote,
         isTransfer: isTransferTx,
         transferType: isTransferTx ? (type === 'expense' ? 'transfer_out' : 'transfer_in') : undefined,
-        transferToWalletId:
-          isTransferTx && transferToWalletId && transferToWalletId !== walletId
-            ? transferToWalletId
-            : undefined,
+        transferToWalletId: isTransferTx && transferToWalletId && transferToWalletId !== walletId ? transferToWalletId : undefined,
         items: entryModel === 'general' && entryMode === 'shopping_list' && validItems.length > 0 ? validItems : undefined,
         unitPrice: entryModel === 'general' && entryMode === 'unit_qty' && parseFloat(unitPrice) > 0 ? parseFloat(unitPrice) : undefined,
         quantity: entryModel === 'general' && entryMode === 'unit_qty' && parseFloat(quantity) > 0 ? parseFloat(quantity) : undefined,
@@ -1355,85 +1089,35 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
-
-
   return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-3 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white w-full sm:max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <form
-          ref={formRef}
-          onSubmit={handleSubmit}
-          className="flex flex-col h-full min-h-0"
-        >
-          {/* ── NAV BAR ── */}
+    <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-3 sm:p-4" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 -ml-2"
-            >
+            <button type="button" onClick={onClose} className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 -ml-2">
               {lang === 'my' ? 'မလုပ်တော့' : 'Cancel'}
             </button>
             <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
-              {isEditing
-                ? (lang === 'my' ? 'စာရင်းပြင်ဆင်ခြင်း' : 'Edit Transaction')
-                : (lang === 'my' ? 'စာရင်းအသစ်' : 'New Transaction')}
+              {isEditing ? (lang === 'my' ? 'စာရင်းပြင်ဆင်ခြင်း' : 'Edit Transaction') : (lang === 'my' ? 'စာရင်းအသစ်' : 'New Transaction')}
             </h2>
-            <button
-              type="submit"
-              disabled={isSubmitting || !isActionAllowed}
-              className="text-sm font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-1 -mr-2 flex items-center gap-1"
-            >
-              {isSubmitting ? '...' : (
-                <>
-                  <Check className="w-3.5 h-3.5" strokeWidth={3} />
-                  <span>{lang === 'my' ? 'သိမ်း' : 'Save'}</span>
-                </>
-              )}
+            <button type="submit" disabled={isSubmitting || !isActionAllowed} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-1 -mr-2 flex items-center gap-1">
+              {isSubmitting ? '...' : (<><Check className="w-3.5 h-3.5" strokeWidth={3} /><span>{lang === 'my' ? 'သိမ်း' : 'Save'}</span></>)}
             </button>
           </div>
 
-          {/* ── MORE OPTIONS BAR ── */}
           <div className="px-3 py-2 border-b border-slate-100 shrink-0">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMoreOpen(!moreOpen)}
-                className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700"
-              >
+              <button type="button" onClick={() => setMoreOpen(!moreOpen)} className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
                 <span className="flex items-center gap-2">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                   <span>
-                    {entryModel === 'fuel'
-                      ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel')
-                      : entryModel === 'vehicle_service' && maintServiceType === 'tires'
-                      ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire')
-                      : entryModel === 'vehicle_service'
-                      ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service')
-                      : entryMode === 'unit_qty'
-                      ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty')
-                      : entryMode === 'shopping_list'
-                      ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List')
-                      : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
+                    {entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : entryMode === 'unit_qty' ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty') : entryMode === 'shopping_list' ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List') : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
                   </span>
                 </span>
-                {moreOpen
-                  ? <ChevronUp className="w-4 h-4 text-slate-400" />
-                  : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                {moreOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </button>
               {isVehicleRelatedCategory && (
-                <button
-                  type="button"
-                  onClick={() => setShowFuelGuideModal(true)}
-                  className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
-                  title={lang === "my" ? "ဆီဖိုး လမ်းညွှန်" : "Fuel Guide"}
-                >
+                <button type="button" onClick={() => setShowFuelGuideModal(true)} className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200" title={lang === "my" ? "ဆီဖိုး လမ်းညွှန်" : "Fuel Guide"}>
                   <HelpCircle className="w-4 h-4" />
                 </button>
               )}
@@ -1443,71 +1127,32 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div className="mt-1.5 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                 {(isVehicleRelatedCategory || showModelSelector) && (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => { handleSwitchModel("fuel"); setMoreOpen(false); }}
-                      className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "fuel" ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50")}
-                    >
-                      <Fuel className="w-4 h-4" />
-                      <span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>
-                      {entryModel === "fuel" && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" strokeWidth={3} />}
+                    <button type="button" onClick={() => { handleSwitchModel("fuel"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "fuel" ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50")}>
+                      <Fuel className="w-4 h-4" /><span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>{entryModel === "fuel" && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" strokeWidth={3} />}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { handleSwitchModel("vehicle_service"); setMoreOpen(false); }}
-                      className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50")}
-                    >
-                      <Wrench className="w-4 h-4" />
-                      <span>{lang === 'my' ? 'ဝန်ဆောင်မှု / ပြုပြင်' : 'Service / Repair'}</span>
-                      {entryModel === "vehicle_service" && maintServiceType !== "tires" && <Check className="w-3.5 h-3.5 ml-auto text-blue-600" strokeWidth={3} />}
+                    <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50")}>
+                      <Wrench className="w-4 h-4" /><span>{lang === 'my' ? 'ဝန်ဆောင်မှု / ပြုပြင်' : 'Service / Repair'}</span>{entryModel === "vehicle_service" && maintServiceType !== "tires" && <Check className="w-3.5 h-3.5 ml-auto text-blue-600" strokeWidth={3} />}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); setMoreOpen(false); }}
-                      className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType === "tires" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}
-                    >
-                      <Car className="w-4 h-4" />
-                      <span>{lang === 'my' ? 'တာယာ လဲလှယ်' : 'Tire Replacement'}</span>
-                      {entryModel === "vehicle_service" && maintServiceType === "tires" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
+                    <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType === "tires" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}>
+                      <Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာ လဲလှယ်' : 'Tire Replacement'}</span>{entryModel === "vehicle_service" && maintServiceType === "tires" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
                     </button>
                     <div className="h-px bg-slate-100 my-0.5" />
                   </>
                 )}
-                <button
-                  type="button"
-                  onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }}
-                  className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "unit_qty" && entryModel === "general" ? "bg-indigo-50 text-indigo-800" : "text-slate-700 hover:bg-slate-50")}
-                >
-                  <Boxes className="w-4 h-4" />
-                  <span>{lang === 'my' ? 'ဈေး × အရေအတွက်' : 'Unit Price × Qty'}</span>
-                  {entryMode === "unit_qty" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-indigo-600" strokeWidth={3} />}
+                <button type="button" onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "unit_qty" && entryModel === "general" ? "bg-indigo-50 text-indigo-800" : "text-slate-700 hover:bg-slate-50")}>
+                  <Boxes className="w-4 h-4" /><span>{lang === 'my' ? 'ဈေး × အရေအတွက်' : 'Unit Price × Qty'}</span>{entryMode === "unit_qty" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-indigo-600" strokeWidth={3} />}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }}
-                  className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "shopping_list" && entryModel === "general" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>
-                  {entryMode === "shopping_list" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
+                <button type="button" onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "shopping_list" && entryModel === "general" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}>
+                  <ShoppingCart className="w-4 h-4" /><span>{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>{entryMode === "shopping_list" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowQuickAddSub(true); setEntryMode("direct"); setEntryModel("general"); setMoreOpen(false); }}
-                  className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (showQuickAddSub ? "bg-slate-100 text-slate-800" : "text-slate-700 hover:bg-slate-50")}
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</span>
-                  {showQuickAddSub && <Check className="w-3.5 h-3.5 ml-auto text-slate-700" strokeWidth={3} />}
+                <button type="button" onClick={() => { setShowQuickAddSub(true); setEntryMode("direct"); setEntryModel("general"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (showQuickAddSub ? "bg-slate-100 text-slate-800" : "text-slate-700 hover:bg-slate-50")}>
+                  <FileText className="w-4 h-4" /><span>{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</span>{showQuickAddSub && <Check className="w-3.5 h-3.5 ml-auto text-slate-700" strokeWidth={3} />}
                 </button>
               </div>
             )}
           </div>
 
-          {/* ── SCROLLABLE CONTENT ── */}
           <div className="flex-1 overflow-y-auto overscroll-contain">
-
-            {/* Vehicle mode badge */}
             {entryModel !== "general" && (
               <div className="px-3 pt-3">
                 <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
@@ -1516,46 +1161,37 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     {entryModel === 'vehicle_service' && maintServiceType === 'tires' && (lang === 'my' ? '🛞 တာယာ Mode' : '🛞 Tire Mode')}
                     {entryModel === 'vehicle_service' && maintServiceType !== 'tires' && (lang === 'my' ? '🔧 ဝန်ဆောင်မှု Mode' : '🔧 Service Mode')}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => { setEntryModel("general"); setIsVehicleLinkEnabled(false); }}
-                    className="text-[10px] font-bold text-slate-500 hover:text-slate-800"
-                  >
-                    ✕ {lang === 'my' ? 'ပိတ်' : 'Close'}
-                  </button>
+                  <button type="button" onClick={() => { setEntryModel("general"); setIsVehicleLinkEnabled(false); }} className="text-[10px] font-bold text-slate-500 hover:text-slate-800">✕ {lang === 'my' ? 'ပိတ်' : 'Close'}</button>
                 </div>
               </div>
             )}
 
-            {/* Type indicator */}
             <div className="px-4 pt-3 pb-1 text-center">
-              {type === "income"
-                ? <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
-                    <ArrowDownLeft className="w-3 h-3" />
-                    {lang === 'my' ? 'ဝင်ငွေ' : 'Income'}
-                  </span>
-                : <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600">
-                    <ArrowUpRight className="w-3 h-3" />
-                    {lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}
-                  </span>}
+              {type === "income" ? <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600"><ArrowDownLeft className="w-3 h-3" />{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</span> : <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600"><ArrowUpRight className="w-3 h-3" />{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</span>}
             </div>
 
-            {/* BIG AMOUNT */}
             <div className="px-4 py-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <span className="text-xl font-black text-slate-400 shrink-0">
-                  {selectedWallet?.currency || 'MMK'}
-                </span>
-                <input
-                  type="number"
-                  step="any"
-                  value={amount}
-                  onChange={(e) => handleAmountChangeWithFuelSync(e.target.value)}
-                  placeholder="0"
-                  autoFocus={!isEditing}
-                  className="flex-1 min-w-0 text-4xl font-black text-slate-900 bg-transparent border-0 focus:outline-none text-center"
-                />
+                <span className="text-xl font-black text-slate-400 shrink-0">{selectedWallet?.currency || 'MMK'}</span>
+                <input type="number" step="any" value={amount} onChange={(e) => {
+                  setAmount(e.target.value);
+                  const numAmt = parseFloat(e.target.value) || 0;
+                  const numPpl = parseFloat(fuelPricePerLiter) || 0;
+                  if (entryModel === 'fuel' && numAmt > 0 && numPpl > 0) {
+                    setFuelLiters(String(Number((numAmt / numPpl).toFixed(2))));
+                  }
+                }} placeholder="0" autoFocus={!isEditing} className="flex-1 min-w-0 text-4xl font-black text-slate-900 bg-transparent border-0 focus:outline-none text-center" />
               </div>
+              {entryModel === 'vehicle_service' && lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && amount && (
+                <div className="text-[10px] text-center mt-1 flex items-center justify-center gap-1">
+                  <span className="text-slate-500">{lang === 'my' ? 'ယခင်ကုန်ကျစရိတ်:' : 'Prev Cost:'} {lastMaintLogForComparison.cost.toLocaleString()} Ks</span>
+                  {Number(amount) > lastMaintLogForComparison.cost ? (
+                    <span className="text-rose-600 font-bold flex items-center gap-0.5"><TrendingUp className="w-3 h-3" /> +{Math.round(((Number(amount) - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
+                  ) : Number(amount) < lastMaintLogForComparison.cost ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-0.5"><TrendingDown className="w-3 h-3" /> {Math.round(((Number(amount) - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
+                  ) : <span className="text-slate-400">(Same)</span>}
+                </div>
+              )}
               {!(entryModel === "fuel" && vehicleId) && (
                 <div className="flex justify-center gap-1.5 mt-2 flex-wrap">
                   <button type="button" onClick={() => handleAddAmount(1000)} className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-600">+1K</button>
@@ -1565,44 +1201,21 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               )}
             </div>
 
-            {/* CATEGORY ROW */}
-            <button
-              type="button"
-              onClick={() => setIsCategoryPickerOpen(true)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
-                style={{ backgroundColor: selectedCatObj?.color || "#94A3B8" }}
-              >
+            <button type="button" onClick={() => setIsCategoryPickerOpen(true)} className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: selectedCatObj?.color || "#94A3B8" }}>
                 <CategoryIcon name={selectedCatObj?.icon || "Tag"} className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
                 {categoryId ? (
                   <>
-                    <div className="text-sm font-bold text-slate-900 truncate">
-                      {selectedCatObj ? (lang === 'my' ? selectedCatObj.name : selectedCatObj.nameEn) : ''}
-                    </div>
-                    {(() => {
-                      const sub = availableSubCats.find((s) => s.id === subCategoryId);
-                      if (!sub) return null;
-                      return (
-                        <div className="text-xs text-emerald-700 truncate mt-0.5">
-                          ↳ {lang === 'my' ? sub.name : sub.nameEn}
-                        </div>
-                      );
-                    })()}
+                    <div className="text-sm font-bold text-slate-900 truncate">{selectedCatObj ? (lang === 'my' ? selectedCatObj.name : selectedCatObj.nameEn) : ''}</div>
+                    {(() => { const sub = availableSubCats.find((s) => s.id === subCategoryId); if (!sub) return null; return (<div className="text-xs text-emerald-700 truncate mt-0.5">↳ {lang === 'my' ? sub.name : sub.nameEn}</div>); })()}
                   </>
-                ) : (
-                  <div className="text-sm font-bold text-slate-400">
-                    {lang === 'my' ? 'ကဏ္ဍ ရွေးရန်' : 'Select category'}
-                  </div>
-                )}
+                ) : <div className="text-sm font-bold text-slate-400">{lang === 'my' ? 'ကဏ္ဍ ရွေးရန်' : 'Select category'}</div>}
               </div>
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
 
-            {/* [v7.0.1] INLINE VEHICLE TYPE SELECTOR (when vehicle cat picked but no model chosen) */}
             {isVehicleRelatedCategory && entryModel === "general" && (
               <div className="px-4 py-3 border-b border-slate-100">
                 <div className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
@@ -1610,141 +1223,76 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <span>{lang === 'my' ? 'ယာဉ် မှတ်တမ်း အမျိုးအစား ရွေးပါ:' : 'Select vehicle entry type:'}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchModel("fuel")}
-                    className="py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"
-                  >
-                    <Fuel className="w-4 h-4" />
-                    <span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchModel("vehicle_service")}
-                    className="py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"
-                  >
-                    <Wrench className="w-4 h-4" />
-                    <span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); }}
-                    className="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"
-                  >
-                    <Car className="w-4 h-4" />
-                    <span>{lang === 'my' ? 'တာယာ' : 'Tire'}</span>
-                  </button>
+                  <button type="button" onClick={() => handleSwitchModel("fuel")} className="py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Fuel className="w-4 h-4" /><span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
+                  <button type="button" onClick={() => handleSwitchModel("vehicle_service")} className="py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Wrench className="w-4 h-4" /><span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
+                  <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); }} className="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာ' : 'Tire'}</span></button>
                 </div>
               </div>
             )}
 
-            {/* TRANSFER WALLETS */}
             {isTransferCategory && (
               <div className="px-4 py-3 border-b border-slate-100 space-y-2">
-                <div className="text-xs font-bold text-indigo-900">
-                  {lang === 'my' ? 'ငွေလွှဲပြောင်းမှု' : 'Transfer'}
-                </div>
+                <div className="text-xs font-bold text-indigo-900">{lang === 'my' ? 'ငွေလွှဲပြောင်းမှု' : 'Transfer'}</div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <div className="text-[10px] font-bold text-rose-700 mb-0.5">
-                      {lang === 'my' ? 'မှ' : 'From'}
-                    </div>
-                    <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-                      {wallets.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {lang === 'my' ? w.name : w.nameEn}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="text-[10px] font-bold text-rose-700 mb-0.5">{lang === 'my' ? 'မှ' : 'From'}</div>
+                    <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">{wallets.map((w) => (<option key={w.id} value={w.id}>{lang === 'my' ? w.name : w.nameEn}</option>))}</select>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold text-emerald-700 mb-0.5">
-                      {lang === 'my' ? 'သို့' : 'To'}
-                    </div>
-                    <select value={transferToWalletId} onChange={(e) => setTransferToWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-                      {wallets.filter((w) => w.id !== walletId).map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {lang === 'my' ? w.name : w.nameEn}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="text-[10px] font-bold text-emerald-700 mb-0.5">{lang === 'my' ? 'သို့' : 'To'}</div>
+                    <select value={transferToWalletId} onChange={(e) => setTransferToWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">{wallets.filter((w) => w.id !== walletId).map((w) => (<option key={w.id} value={w.id}>{lang === 'my' ? w.name : w.nameEn}</option>))}</select>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* FUEL ROWS */}
             {entryModel === "fuel" && (
               <>
                 <div className="px-4 py-3 border-b border-slate-100">
-                  <div className="text-xs font-bold text-slate-500 mb-1">
-                    {lang === 'my' ? 'ယာဉ်' : 'Vehicle'}
-                  </div>
-                  <select
-                    value={vehicleId}
-                    onChange={(e) => {
-                      setVehicleId(e.target.value);
-                      const v = vehicles.find((x) => x.id === e.target.value);
-                      if (v?.currentOdometer) setVehicleOdometer(String(v.currentOdometer));
-                      if (v?.fuelType) setFuelType(v.fuelType);
-                      if (v?.walletId && wallets.some((w) => w.id === v.walletId)) setWalletId(v.walletId);
-                    }}
-                    className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  >
-                    {vehicles.length === 0 ? (
-                      <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး — Vehicles ထဲ သွားထည့်ပါ --' : '-- No vehicles — Add one in Vehicles --'}</option>
-                    ) : (
-                      vehicles.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}
-                        </option>
-                      ))
-                    )}
+                  <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ယာဉ်' : 'Vehicle'}</div>
+                  <select value={vehicleId} onChange={(e) => {
+                    setVehicleId(e.target.value);
+                    const v = vehicles.find((x) => x.id === e.target.value);
+                    if (v?.currentOdometer) setVehicleOdometer(String(v.currentOdometer));
+                    if (v?.fuelType) setFuelType(v.fuelType);
+                    if (v?.walletId && wallets.some((w) => w.id === v.walletId)) setWalletId(v.walletId);
+                  }} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
+                    {vehicles.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicles.map((v) => (<option key={v.id} value={v.id}>{v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}</option>))}
                   </select>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                    <Fuel className="w-5 h-5 text-emerald-600" />
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0"><Fuel className="w-5 h-5 text-emerald-600" /></div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? 'ဆီပမာဏ (L)' : 'Liters (L)'}
-                    </div>
-                    <input
-                      type="number"
-                      step="any"
-                      value={fuelLiters}
-                      onChange={(e) => handleFuelLitersChange(e.target.value)}
-                      placeholder="0"
-                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
-                    />
+                    <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'ဆီပမာဏ (L)' : 'Liters (L)'}</div>
+                    <input type="number" step="any" value={fuelLiters} readOnly placeholder="0" className="w-full text-sm font-bold bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 focus:outline-none font-mono mt-0.5 text-slate-500 cursor-not-allowed" />
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                    <span className="text-amber-600 font-black text-lg">K</span>
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0"><span className="text-amber-600 font-black text-lg">K</span></div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? '၁ လီတာ ဈေး (Ks)' : 'Price per Liter (Ks)'}
-                    </div>
-                    <input
-                      type="number"
-                      value={fuelPricePerLiter}
-                      onChange={(e) => handleFuelPriceChange(e.target.value)}
-                      placeholder="0"
-                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
-                    />
+                    <div className="text-xs font-bold text-slate-500">{lang === 'my' ? '၁ လီတာ ဈေး (Ks)' : 'Price per Liter (Ks)'}</div>
+                    <input type="number" value={fuelPricePerLiter} onChange={(e) => {
+                      setFuelPricePerLiter(e.target.value);
+                      const numPpl = parseFloat(e.target.value) || 0;
+                      const numAmt = parseFloat(amount) || 0;
+                      if (numPpl > 0 && numAmt > 0) setFuelLiters(String(Number((numAmt / numPpl).toFixed(2))));
+                    }} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                    {lastFuelLogForComparison && lastFuelLogForComparison.pricePerLiter > 0 && fuelPricePerLiter && (
+                      <div className="text-[10px] mt-1 flex items-center gap-1">
+                        <span className="text-slate-500">{lang === 'my' ? 'ယခင်ဈေး:' : 'Prev:'} {lastFuelLogForComparison.pricePerLiter.toLocaleString()} Ks</span>
+                        {Number(fuelPricePerLiter) > lastFuelLogForComparison.pricePerLiter ? (
+                          <span className="text-rose-600 font-bold flex items-center gap-0.5"><TrendingUp className="w-3 h-3" /> +{Math.round(((Number(fuelPricePerLiter) - lastFuelLogForComparison.pricePerLiter) / lastFuelLogForComparison.pricePerLiter) * 100)}%</span>
+                        ) : Number(fuelPricePerLiter) < lastFuelLogForComparison.pricePerLiter ? (
+                          <span className="text-emerald-600 font-bold flex items-center gap-0.5"><TrendingDown className="w-3 h-3" /> {Math.round(((Number(fuelPricePerLiter) - lastFuelLogForComparison.pricePerLiter) / lastFuelLogForComparison.pricePerLiter) * 100)}%</span>
+                        ) : <span className="text-slate-400">(Same)</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-5 h-5 text-blue-600" />
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0"><Sparkles className="w-5 h-5 text-blue-600" /></div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? 'ဆီအမျိုးအစား' : 'Fuel Type'}
-                    </div>
+                    <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'ဆီအမျိုးအစား' : 'Fuel Type'}</div>
                     <select value={fuelType} onChange={(e) => setFuelType(e.target.value)} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5">
                       <option value="Octane 92">Octane 92</option>
                       <option value="Octane 95">Octane 95</option>
@@ -1756,114 +1304,48 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                    <History className="w-5 h-5 text-indigo-600" />
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0"><History className="w-5 h-5 text-indigo-600" /></div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? 'ဆီဆိုင်' : 'Gas Station'}
-                    </div>
+                    <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'ဆီဆိုင်' : 'Gas Station'}</div>
                     <select value={fuelGasStation} onChange={(e) => setFuelGasStation(e.target.value)} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5">
                       <option value="">{lang === 'my' ? '-- ရွေးပါ --' : '-- Select --'}</option>
-                      {GAS_STATIONS.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
+                      {Array.from(new Set([...GAS_STATIONS.filter(s => s !== 'Other'), ...customStations])).map((s) => (<option key={s} value={s}>{s}</option>))}
+                      <option value="Other">{lang === 'my' ? '➕ အခြား / အသစ်ရေးရန်' : '➕ Other'}</option>
                     </select>
                     {fuelGasStation === 'Other' && (
-                      <input
-                        type="text"
-                        value={customGasStation}
-                        onChange={(e) => setCustomGasStation(e.target.value)}
-                        placeholder={lang === 'my' ? 'ဆီဆိုင် အမည် ရိုက်ထည့်ပါ' : 'Type station name'}
-                        className="w-full mt-1.5 text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                        autoFocus
-                      />
+                      <input type="text" value={customGasStation} onChange={(e) => setCustomGasStation(e.target.value)} placeholder={lang === 'my' ? 'ဆီဆိုင် အမည် ရိုက်ထည့်ပါ' : 'Type station name'} className="w-full mt-1.5 text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400" autoFocus />
                     )}
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                    <Gauge className="w-5 h-5 text-slate-600" />
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}
-                    </div>
-                    <input
-                      type="number"
-                      value={vehicleOdometer}
-                      onChange={(e) => setVehicleOdometer(e.target.value)}
-                      placeholder="0"
-                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
-                    />
-                  </div>
-                </div>
-                {/* Expiry Date for Maintenance */}
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                    <Calendar className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? 'ကုန်ဆုံးမည့်ရက်စွဲ (Expiry Date)' : 'Expiry Date'}
-                    </div>
-                    <input
-                      type="date"
-                      value={maintExpiryDate}
-                      onChange={(e) => setMaintExpiryDate(e.target.value)}
-                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5"
-                    />
+                    <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}</div>
+                    <input type="number" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                    {fuelIsFullTank ? <Check className="w-5 h-5 text-emerald-600" /> : <X className="w-5 h-5 text-slate-400" />}
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">{fuelIsFullTank ? <Check className="w-5 h-5 text-emerald-600" /> : <X className="w-5 h-5 text-slate-400" />}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-500">
-                      {lang === 'my' ? 'တိုင်ကီအပြည့်' : 'Full Tank'}
-                    </div>
-                    <div className="text-sm font-bold text-slate-900 mt-0.5">
-                      {fuelIsFullTank ? (lang === 'my' ? 'အပြည့်' : 'Yes') : (lang === 'my' ? 'တစ်စိတ်တပိုင်း' : 'Partial')}
-                    </div>
+                    <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'တိုင်ကီအပြည့်' : 'Full Tank'}</div>
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">{fuelIsFullTank ? (lang === 'my' ? 'အပြည့်' : 'Yes') : (lang === 'my' ? 'တစ်စိတ်တပိုင်း' : 'Partial')}</div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setFuelIsFullTank(!fuelIsFullTank)}
-                    className={"w-10 h-6 rounded-full transition-colors relative shrink-0 " + (fuelIsFullTank ? "bg-emerald-600" : "bg-slate-300")}
-                  >
-                    <span className={"absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all " + (fuelIsFullTank ? "left-[18px]" : "left-0.5")} />
-                  </button>
+                  <button type="button" onClick={() => setFuelIsFullTank(!fuelIsFullTank)} className={"w-10 h-6 rounded-full transition-colors relative shrink-0 " + (fuelIsFullTank ? "bg-emerald-600" : "bg-slate-300")}><span className={"absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all " + (fuelIsFullTank ? "left-[18px]" : "left-0.5")} /></button>
                 </div>
               </>
             )}
 
-            {/* VEHICLE SERVICE ROWS */}
             {entryModel === "vehicle_service" && (
               <>
                 <div className="px-4 py-3 border-b border-slate-100">
-                  <div className="text-xs font-bold text-slate-500 mb-1">
-                    {lang === 'my' ? 'ယာဉ်' : 'Vehicle'}
-                  </div>
+                  <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ယာဉ်' : 'Vehicle'}</div>
                   <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
-                    {vehicles.length === 0 ? (
-                      <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option>
-                    ) : (
-                      vehicles.map((v) => (
-                        <option key={v.id} value={v.id}>{v.name}</option>
-                      ))
-                    )}
+                    {vehicles.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicles.map((v) => (<option key={v.id} value={v.id}>{v.name}</option>))}
                   </select>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100">
-                  <div className="text-xs font-bold text-slate-500 mb-1">
-                    {lang === 'my' ? 'ဝန်ဆောင်မှု အမျိုးအစား' : 'Service Type'}
-                  </div>
-                  <select
-                    value={maintServiceType}
-                    onChange={(e) => setMaintServiceType(e.target.value as VehicleServiceType)}
-                    className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  >
+                  <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ဝန်ဆောင်မှု အမျိုးအစား' : 'Service Type'}</div>
+                  <select value={maintServiceType} onChange={(e) => setMaintServiceType(e.target.value as VehicleServiceType)} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
                     <option value="engine_oil">{lang === "my" ? "🛢️ အင်ဂျင်ဝိုင်" : "🛢️ Engine Oil"}</option>
                     <option value="oil_filter">{lang === "my" ? "🔧 ဝိုင်စစ်" : "🔧 Oil Filter"}</option>
                     <option value="air_filter">{lang === "my" ? "💨 လေစစ်" : "💨 Air Filter"}</option>
@@ -1883,68 +1365,37 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
                 {maintServiceType === 'license_renewal' ? (
                   <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                      <Calendar className="w-5 h-5 text-indigo-600" />
-                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0"><Calendar className="w-5 h-5 text-indigo-600" /></div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-slate-500">
-                        {lang === 'my' ? 'ကုန်ဆုံးမည့်ရက်စွဲ (Expiry Date) *' : 'Expiry Date *'}
-                      </div>
-                      <input
-                        type="date"
-                        value={maintExpiryDate}
-                        onChange={(e) => {
-                          setMaintExpiryDate(e.target.value);
-                          if (e.target.value && date) {
-                            const d1 = new Date(date).getTime();
-                            const d2 = new Date(e.target.value).getTime();
-                            if (!isNaN(d1) && !isNaN(d2)) {
-                              const diff = Math.ceil((d2 - d1) / (1000 * 3600 * 24));
-                              setMaintLifespanDays(String(diff > 0 ? diff : 0));
-                            }
+                      <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'ကုန်ဆုံးမည့်ရက်စွဲ (Expiry Date) *' : 'Expiry Date *'}</div>
+                      <input type="date" value={maintExpiryDate} onChange={(e) => {
+                        setMaintExpiryDate(e.target.value);
+                        if (e.target.value && date) {
+                          const d1 = new Date(date).getTime();
+                          const d2 = new Date(e.target.value).getTime();
+                          if (!isNaN(d1) && !isNaN(d2)) {
+                            const diff = Math.ceil((d2 - d1) / (1000 * 3600 * 24));
+                            setMaintLifespanDays(String(diff > 0 ? diff : 0));
                           }
-                        }}
-                        className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5"
-                      />
+                        }
+                      }} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5" />
                     </div>
                   </div>
                 ) : (
                   <>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                      <input
-                        type="text"
-                        value={maintTitle}
-                        onChange={(e) => setMaintTitle(e.target.value)}
-                        placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'}
-                        className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
-                      />
+                      <input type="text" value={maintTitle} onChange={(e) => setMaintTitle(e.target.value)} placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'} className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none" />
                     </div>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
-                      <input
-                        type="text"
-                        value={maintWorkshopName}
-                        onChange={(e) => setMaintWorkshopName(e.target.value)}
-                        placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'}
-                        className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none"
-                      />
+                      <input type="text" value={maintWorkshopName} onChange={(e) => setMaintWorkshopName(e.target.value)} placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'} className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none" />
                     </div>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                        <Gauge className="w-5 h-5 text-slate-600" />
-                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-slate-500">
-                          {lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}
-                        </div>
-                        <input
-                          type="number"
-                          value={vehicleOdometer}
-                          onChange={(e) => setVehicleOdometer(e.target.value)}
-                          placeholder="0"
-                          className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5"
-                        />
+                        <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}</div>
+                        <input type="number" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
                     </div>
                   </>
@@ -1952,48 +1403,26 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </>
             )}
 
-            {/* UNIT QTY ROWS */}
             {entryMode === "unit_qty" && entryModel === "general" && (
               <>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "ဈေးနှုန်း" : "Unit Price"}</span>
-                  <input
-                    type="number"
-                    value={unitPrice}
-                    onChange={(e) => handleUnitQtyChange("price", e.target.value)}
-                    placeholder="0"
-                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right"
-                  />
+                  <input type="number" value={unitPrice} onChange={(e) => handleUnitQtyChange("price", e.target.value)} placeholder="0" className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "အရေအတွက်" : "Quantity"}</span>
-                  <input
-                    type="number"
-                    step="any"
-                    value={quantity}
-                    onChange={(e) => handleUnitQtyChange("qty", e.target.value)}
-                    placeholder="1"
-                    className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right"
-                  />
+                  <input type="number" step="any" value={quantity} onChange={(e) => handleUnitQtyChange("qty", e.target.value)} placeholder="1" className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
               </>
             )}
 
-            {/* SHOPPING LIST */}
             {entryMode === "shopping_list" && entryModel === "general" && (
               <div className="px-3 py-3 border-b border-slate-100">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                    <ShoppingCart className="w-3.5 h-3.5" />
-                    {lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}
-                  </span>
+                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5"><ShoppingCart className="w-3.5 h-3.5" />{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setIsShoppingPriceHistoryOpen(true)} className="text-[10px] font-bold text-indigo-700 hover:underline">
-                      {lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'History'}
-                    </button>
-                    <button type="button" onClick={autoGenerateShoppingNote} className="text-[10px] font-bold text-amber-800 hover:underline">
-                      ✨ {lang === 'my' ? 'မှတ်ချက်ရေး' : 'Note'}
-                    </button>
+                    <button type="button" onClick={() => setIsShoppingPriceHistoryOpen(true)} className="text-[10px] font-bold text-indigo-700 hover:underline">{lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'History'}</button>
+                    <button type="button" onClick={autoGenerateShoppingNote} className="text-[10px] font-bold text-amber-800 hover:underline">✨ {lang === 'my' ? 'မှတ်ချက်ရေး' : 'Note'}</button>
                   </div>
                 </div>
                 <div ref={shoppingListContainerRef} className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -2002,178 +1431,89 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     return (
                       <div key={item.id || idx} className="bg-slate-50 rounded-xl p-2.5 space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            list="db-item-suggestions"
-                            value={item.name}
-                            onChange={(e) => updateShoppingItem(item.id || "", "name", e.target.value)}
-                            placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'}
-                            className="flex-1 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none"
-                          />
-                          <button type="button" onClick={() => removeShoppingItemRow(item.id || "")} className="p-1 text-slate-400 hover:text-rose-600 shrink-0">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <input type="text" list="db-item-suggestions" value={item.name} onChange={(e) => updateShoppingItem(item.id || "", "name", e.target.value)} placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'} className="flex-1 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none" />
+                          <button type="button" onClick={() => removeShoppingItemRow(item.id || "")} className="p-1 text-slate-400 hover:text-rose-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                         <div className="grid grid-cols-3 gap-1.5">
                           <input type="number" value={item.price || ""} onChange={(e) => updateShoppingItem(item.id || "", "price", e.target.value)} placeholder="ဈေး" className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
                           <input type="number" step="any" value={item.quantity || ""} onChange={(e) => updateShoppingItem(item.id || "", "quantity", e.target.value)} placeholder="Qty" className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
                           <input type="number" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
                         </div>
-                        {pastPurchase && item.price > 0 && (
-                          <div className="text-[10px] text-slate-500">
-                            {lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})
-                          </div>
-                        )}
+                        {pastPurchase && item.price > 0 && (<div className="text-[10px] text-slate-500">{lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})</div>)}
                       </div>
                     );
                   })}
                 </div>
-                <button type="button" onClick={addShoppingItemRow} className="w-full mt-2 py-1.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50">
-                  + {lang === 'my' ? 'ပစ္စည်းထပ်ထည့်' : 'Add item'}
-                </button>
+                <button type="button" onClick={addShoppingItemRow} className="w-full mt-2 py-1.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50">+ {lang === 'my' ? 'ပစ္စည်းထပ်ထည့်' : 'Add item'}</button>
               </div>
             )}
 
-            {/* ITEM NAME (from More Options) */}
             {showQuickAddSub && entryModel === "general" && entryMode === "direct" && (
               <div className="px-4 py-3 border-b border-slate-100">
-                <div className="text-xs font-bold text-slate-500 mb-1">
-                  {lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}
-                </div>
-                <input
-                  type="text"
-                  list="db-item-suggestions"
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                  placeholder={lang === 'my' ? 'ဥပမာ - ဆန် / ဆီ' : 'e.g. Rice'}
-                  className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none"
-                />
+                <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</div>
+                <input type="text" list="db-item-suggestions" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder={lang === 'my' ? 'ဥပမာ - ဆန် / ဆီ' : 'e.g. Rice'} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none" />
               </div>
             )}
 
-            {/* PRICE COMPARISON */}
             {entryModel === "general" && latestPreviousPurchase && currentEffectivePrice > 0 && priceComparison && (
               <div className="px-4 py-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 text-xs flex-wrap">
                   <History className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                   <span className="text-slate-500">{lang === 'my' ? 'ယခင်ဈေး' : 'Prev'}:</span>
-                  <button type="button" onClick={handleApplyPreviousPrice} className="font-bold text-indigo-700 underline font-mono">
-                    {formatMMK(latestPreviousPurchase.amount)}
-                  </button>
-                  {priceComparison.isHigher && (
-                    <span className="text-rose-600 font-bold flex items-center gap-0.5 ml-auto">
-                      <TrendingUp className="w-3 h-3" /> +{Math.round(priceComparison.percent)}%
-                    </span>
-                  )}
-                  {priceComparison.isLower && (
-                    <span className="text-emerald-600 font-bold flex items-center gap-0.5 ml-auto">
-                      <TrendingDown className="w-3 h-3" /> {Math.round(priceComparison.percent)}%
-                    </span>
-                  )}
-                  {priceComparison.isEqual && (
-                    <span className="text-slate-500 font-bold ml-auto flex items-center gap-0.5">
-                      <Minus className="w-3 h-3" /> {lang === 'my' ? 'တူညီ' : 'Same'}
-                    </span>
-                  )}
+                  <button type="button" onClick={handleApplyPreviousPrice} className="font-bold text-indigo-700 underline font-mono">{formatMMK(latestPreviousPurchase.amount)}</button>
+                  {priceComparison.isHigher && (<span className="text-rose-600 font-bold flex items-center gap-0.5 ml-auto"><TrendingUp className="w-3 h-3" /> +{Math.round(priceComparison.percent)}%</span>)}
+                  {priceComparison.isLower && (<span className="text-emerald-600 font-bold flex items-center gap-0.5 ml-auto"><TrendingDown className="w-3 h-3" /> {Math.round(priceComparison.percent)}%</span>)}
+                  {priceComparison.isEqual && (<span className="text-slate-500 font-bold ml-auto flex items-center gap-0.5"><Minus className="w-3 h-3" /> {lang === 'my' ? 'တူညီ' : 'Same'}</span>)}
                 </div>
               </div>
             )}
 
-            {/* WALLET ROW */}
-            <button
-              type="button"
-              onClick={() => setWalletExpanded(!walletExpanded)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: selectedWallet?.color || "#6366F1" }}>
-                <Wallet className="w-5 h-5" />
-              </div>
+            <button type="button" onClick={() => setWalletExpanded(!walletExpanded)} className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: selectedWallet?.color || "#6366F1" }}><Wallet className="w-5 h-5" /></div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-slate-900 truncate">
-                  {selectedWallet ? (lang === 'my' ? selectedWallet.name : selectedWallet.nameEn) : (lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'Wallet')}
-                </div>
-                <div className="text-xs text-slate-500 truncate mt-0.5 font-mono">
-                  {formatCurrency(selectedWallet?.balance || 0, selectedWallet?.currency || 'MMK')}
-                </div>
+                <div className="text-sm font-bold text-slate-900 truncate">{selectedWallet ? (lang === 'my' ? selectedWallet.name : selectedWallet.nameEn) : (lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'Wallet')}</div>
+                <div className="text-xs text-slate-500 truncate mt-0.5 font-mono">{formatCurrency(selectedWallet?.balance || 0, selectedWallet?.currency || 'MMK')}</div>
               </div>
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
             {walletExpanded && (
               <div className="px-3 py-2 border-b border-slate-100 flex flex-wrap gap-1.5">
                 {wallets.map((w) => (
-                  <button
-                    key={w.id}
-                    type="button"
-                    onClick={() => { setWalletId(w.id); setWalletExpanded(false); }}
-                    className={"px-3 py-1.5 rounded-lg text-xs font-bold transition-colors " + (walletId === w.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")}
-                  >
-                    <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: w.color }} />
-                    {lang === 'my' ? w.name : w.nameEn}
+                  <button key={w.id} type="button" onClick={() => { setWalletId(w.id); setWalletExpanded(false); }} className={"px-3 py-1.5 rounded-lg text-xs font-bold transition-colors " + (walletId === w.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")}>
+                    <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: w.color }} />{lang === 'my' ? w.name : w.nameEn}
                   </button>
                 ))}
               </div>
             )}
 
-            {/* DATE ROW */}
             <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                <Calendar className="w-5 h-5 text-blue-600" />
-              </div>
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0"><Calendar className="w-5 h-5 text-blue-600" /></div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-slate-500">
-                  {lang === 'my' ? 'နေ့ရက်' : 'Date'}
-                </div>
+                <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'နေ့ရက်' : 'Date'}</div>
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5" />
               </div>
             </div>
 
-            {/* NOTE ROW */}
             <div className="px-4 py-3 border-b border-slate-100">
               <button type="button" onClick={() => setNoteExpanded(!noteExpanded)} className="w-full flex items-center gap-3 text-left">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                  <FileText className="w-5 h-5 text-slate-600" />
-                </div>
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-slate-600" /></div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-slate-500">
-                    {lang === 'my' ? 'မှတ်ချက်' : 'Note'}
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 truncate mt-0.5">
-                    {extraNote || (lang === 'my' ? 'ထည့်ရန် နှိပ်ပါ' : 'Tap to add')}
-                  </div>
+                  <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'မှတ်ချက်' : 'Note'}</div>
+                  <div className="text-sm font-bold text-slate-900 truncate mt-0.5">{extraNote || (lang === 'my' ? 'ထည့်ရန် နှိပ်ပါ' : 'Tap to add')}</div>
                 </div>
               </button>
-              {noteExpanded && (
-                <input
-                  type="text"
-                  value={extraNote}
-                  onChange={(e) => setExtraNote(e.target.value)}
-                  autoFocus
-                  placeholder={lang === 'my' ? 'မှတ်ချက် ထည့်ပါ...' : 'Note...'}
-                  className="w-full mt-2 text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none"
-                />
-              )}
+              {noteExpanded && (<input type="text" value={extraNote} onChange={(e) => setExtraNote(e.target.value)} autoFocus placeholder={lang === 'my' ? 'မှတ်ချက် ထည့်ပါ...' : 'Note...'} className="w-full mt-2 text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none" />)}
             </div>
 
-            {/* PERMISSION WARNING */}
             {!isActionAllowed && (
               <div className="mx-3 my-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-800 text-xs font-bold">
-                <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>
-                  {lang === 'my'
-                    ? 'ဤ Wallet ပိုင်ရှင်မှ ခွင့်မပြုထားပါ'
-                    : 'Permission denied by wallet owner'}
-                </span>
+                <Lock className="w-4 h-4 text-amber-600 shrink-0" /><span>{lang === 'my' ? 'ဤ Wallet ပိုင်ရှင်မှ ခွင့်မပြုထားပါ' : 'Permission denied by wallet owner'}</span>
               </div>
             )}
 
-            {/* Hidden datalist */}
             <datalist id="db-item-suggestions">
               {unifiedItemSuggestions.slice(0, 50).map((item) => (
-                <option
-                  key={item.normalizedName}
-                  value={item.name}
-                  label={item.latestPrice > 0 ? formatMMK(item.latestPrice) + " (" + item.latestDate + ")" : undefined}
-                />
+                <option key={item.normalizedName} value={item.name} label={item.latestPrice > 0 ? formatMMK(item.latestPrice) + " (" + item.latestDate + ")" : undefined} />
               ))}
             </datalist>
 
@@ -2182,42 +1522,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         </form>
       </div>
 
-      {/* MODALS OUTSIDE FORM */}
       {isShoppingPriceHistoryOpen && (
-        <ItemPriceHistoryModal
-          isOpen={isShoppingPriceHistoryOpen}
-          onClose={() => setIsShoppingPriceHistoryOpen(false)}
-          transactions={allTransactions}
-          categories={categories}
-          wallets={wallets}
-          lang={lang}
-        />
+        <ItemPriceHistoryModal isOpen={isShoppingPriceHistoryOpen} onClose={() => setIsShoppingPriceHistoryOpen(false)} transactions={allTransactions} categories={categories} wallets={wallets} lang={lang} />
       )}
 
-      <CategoryPickerModal
-        isOpen={isCategoryPickerOpen}
-        onClose={() => setIsCategoryPickerOpen(false)}
-        categories={categories}
-        selectedCategoryId={categoryId}
-        selectedSubCategoryId={subCategoryId}
-        currentType={type}
-        lang={lang}
-        plan={plan}
-        onSelect={(catId, subId) => {
-          setCategoryId(catId);
-          setSubCategoryId(subId || "");
-          setIsCategoryPickerOpen(false);
-        }}
-        onOpenUpgrade={onOpenUpgrade}
-        onAddSubCategory={onAddSubCategory}
-        onManageCategories={onManageCategories}
-      />
+      <CategoryPickerModal isOpen={isCategoryPickerOpen} onClose={() => setIsCategoryPickerOpen(false)} categories={categories} selectedCategoryId={categoryId} selectedSubCategoryId={subCategoryId} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { setCategoryId(catId); setSubCategoryId(subId || ""); setIsCategoryPickerOpen(false); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} />
 
-      <FuelExpenseGuideModal
-        isOpen={showFuelGuideModal}
-        onClose={() => setShowFuelGuideModal(false)}
-        lang={lang}
-      />
+      <FuelExpenseGuideModal isOpen={showFuelGuideModal} onClose={() => setShowFuelGuideModal(false)} lang={lang} />
     </div>
   );
 };

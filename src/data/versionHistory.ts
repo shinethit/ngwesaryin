@@ -14,10 +14,40 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.20';
-export const CURRENT_BUILD_NUMBER = 235;
+export const CURRENT_APP_VERSION = 'v7.5.22';
+export const CURRENT_BUILD_NUMBER = 237;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.22',
+    buildNumber: 237,
+    releaseDate: '2026-10-19',
+    releaseTime: '6:30 PM (MMT)',
+    titleMy: 'TransactionModal Type Error ပြင်ဆင်ခြင်း',
+    titleEn: 'TransactionModal Type Error Fix',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'TransactionModal ထဲတွင် currentVehicle variable လွတ်နေသည့် Type Error ကို ပြင်ဆင်ပြီး Build ပြန်လည်အောင်မြင်စေရန် ပြုလုပ်ထားသည်။',
+    descriptionEn: 'Fixed missing currentVehicle variable causing type errors in TransactionModal.',
+    changesMy: ['🐛 Type Error ပြင်ဆင်ခြင်း'],
+    changesEn: ['🐛 Fixed Type Error'],
+  },
+  {
+    version: 'v7.5.21',
+    buildNumber: 236,
+    releaseDate: '2026-10-19',
+    releaseTime: '6:00 PM (MMT)',
+    titleMy: 'ပင်မ Entry Form အတွင်း ဆီဖိုးနှင့် ပြုပြင်မှု စနစ် အပြီးသတ် ပြင်ဆင်ခြင်း',
+    titleEn: 'Finalize Main Entry Form Fuel & Maintenance Logic',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ပင်မ စာရင်းသွင်းတဲ့ Entry Form ထဲက ဆီဖိုးနှင့် ပြုပြင်မှု စနစ်များကို အပြည့်အစုံ ပြန်လည်ရေးသားပြီး လိုင်စင် Expiry Date နေရာလွဲမှားမှုကို ဖြေရှင်းပေးထားသည်။',
+    descriptionEn: 'Fully overwrote the main TransactionModal.tsx to resolve UI placement issues and ensure auto-calc, Odometer validation, and price comparison work flawlessly.',
+    changesMy: ['🐛 Liters အလိုအလျောက်တွက်ချက်မှု အပြီးသတ်ပြင်ဆင်ခြင်း', '🐛 Odometer Validation ထည့်သွင်းခြင်း', '🐛 လိုင်စင် Expiry Date နေရာမှန်အောင် ရွှေ့ခြင်း'],
+    changesEn: ['🐛 Finalized auto-calc (read-only) Liters', '🐛 Added Odometer validation', '🐛 Fixed Expiry Date placement'],
+  },
   {
     version: 'v7.5.20',
     buildNumber: 235,

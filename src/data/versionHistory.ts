@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.24';
-export const CURRENT_BUILD_NUMBER = 239;
+export const CURRENT_APP_VERSION = 'v7.5.25';
+export const CURRENT_BUILD_NUMBER = 240;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.25',
+    buildNumber: 240,
+    releaseDate: '2026-10-19',
+    releaseTime: '7:45 PM (MMT)',
+    titleMy: 'Share App Modal UI ကို ရှင်းလင်းသပ်ရပ်စေခြင်း',
+    titleEn: 'Cleaned up Share App Modal UI',
+    tag: 'fix',
+    tagLabelMy: 'UI ပြုပြင်ခြင်း',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'Share App Modal ထဲက စာသားရှည်ကြီးများနှင့် ရှုပ်ထွေးနေသော သတိပေးချက်များကို ဖယ်ရှားပြီး တရားဝင် Link နှင့် Install လုပ်နည်း အဆင့်များကိုသာ ရှင်းလင်းစွာ ပြသအောင် ပြင်ဆင်လိုက်ပါသည်။',
+    descriptionEn: 'Cleaned up the Share App modal by removing clutter and long warnings. It now clearly displays the official URL and step-by-step PWA install instructions.',
+    changesMy: ['✨ UI ကို သန့်ရှင်းသပ်ရပ်စေခြင်း', '🔗 တရားဝင် Link (ngwesaryin.pages.dev) ကို ပြသခြင်း'],
+    changesEn: ['✨ Cleaned up and modernized UI', '🔗 Displays official link clearly'],
+  },
   {
     version: 'v7.5.24',
     buildNumber: 239,

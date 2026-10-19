@@ -14,10 +14,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.15';
-export const CURRENT_BUILD_NUMBER = 230;
+export const CURRENT_APP_VERSION = 'v7.5.16';
+export const CURRENT_BUILD_NUMBER = 231;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.16',
+    buildNumber: 231,
+    releaseDate: '2026-10-19',
+    releaseTime: '3:30 PM (MMT)',
+    titleMy: 'စာရင်းသွင်းပုံစံ (Entry Form) ကို အလယ်တည့်တည့် ပြောင်းလဲခြင်း (v2)',
+    titleEn: 'Center Transaction Modal on Mobile (v2)',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'ဖုန်းများတွင် စာရင်းသွင်းသည့် Entry Form သည် အောက်ခြေတွင် ကပ်နေသဖြင့် အသုံးပြုရာတွင် အဆင်မပြေဖြစ်နေခဲ့သည်။ ယခုအခါ အခြားသော Modal များကဲ့သို့ပင် စခရင်အလယ်တည့်တည့်တွင် ပေါ်လာမည်ဖြစ်ပြီး ဘေးပတ်လည်တွင်လည်း အနည်းငယ် ကွာဟသွားမည်ဖြစ်သည်။',
+    descriptionEn: 'Centered the transaction entry modal on mobile devices. Added padding around the edges and made the corners uniformly rounded to match other modals.',
+    changesMy: [
+      '📱 Entry Form ကို ဖုန်းစခရင် အလယ်တည့်တည့်တွင် ပြသမည်',
+      '📐 ဘေးပတ်လည်တွင် အနည်းငယ် ကွာဟစေရန် Padding ထည့်ထားသည်',
+    ],
+    changesEn: [
+      '📱 Centered the Entry Form on mobile screens',
+      '📐 Added padding around the edges',
+    ],
+  },
   {
     version: 'v7.5.15',
     buildNumber: 230,

@@ -404,7 +404,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                   {lang === 'my' ? 'ရက်ပေါင်း သက်တမ်း (Days)' : 'Duration (Days)'}
                 </label>
                 <input
-                  type="number"
+                  type="number" readOnly={isLicenseRenewal}
                   min="0"
                   step="any"
                   value={expectedLifespanDays}

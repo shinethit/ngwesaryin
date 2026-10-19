@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Wrench, Gauge, Shield, Save, Trash2 } from 'lucide-react';
+import { X, Wrench, Gauge, Shield, Save, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
 import { VehicleMaintenance, Vehicle, Wallet, VehicleServiceType } from '../../types';
 import { SERVICE_TYPE_CONFIG } from '../../utils/vehicleAnalytics';
 
@@ -13,6 +13,7 @@ interface AddMaintenanceModalProps {
   wallets: Wallet[];
   selectedVehicleId?: string;
   lang: 'my' | 'en';
+  vehicleMaintenance?: VehicleMaintenance[];
 }
 
 export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
@@ -25,6 +26,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   wallets,
   selectedVehicleId,
   lang,
+  vehicleMaintenance = [],
 }) => {
   const [vehicleId, setVehicleId] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -44,6 +46,13 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   const currentVehicle = useMemo(() => {
     return vehicles.find((v) => v.id === vehicleId) || vehicles[0];
   }, [vehicles, vehicleId]);
+
+  const lastMaintLogForComparison = useMemo(() => {
+    if (!vehicleMaintenance || vehicleMaintenance.length === 0) return null;
+    return vehicleMaintenance
+      .filter(m => m.vehicleId === vehicleId && m.serviceType === serviceType && m.id !== editingMaintenance?.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  }, [vehicleMaintenance, vehicleId, serviceType, editingMaintenance]);
 
   // When service type changes, auto-fill default title and lifespan
   const handleServiceTypeChange = (type: VehicleServiceType) => {
@@ -130,6 +139,16 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vehicleId || !date || cost === '' || !title.trim()) {
+      return;
+    }
+
+    // Odometer Validation
+    if (!isLicenseRenewal && currentVehicle && Number(odometer) < (currentVehicle.currentOdometer || 0)) {
+      alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် နည်းနေပါသည်။' : 'Odometer cannot be less than the current vehicle odometer.');
+      return;
+    }
+    if (!isLicenseRenewal && lastMaintLogForComparison && Number(odometer) === lastMaintLogForComparison.odometer) {
+      alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကွယ်ရန်)' : 'Odometer is the same as the last entry. (Prevent Double Entry)');
       return;
     }
 
@@ -305,6 +324,22 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                 placeholder="e.g. 120000"
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-900"
               />
+              {lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && cost && (
+                <div className="text-[10px] mt-1 flex items-center gap-1">
+                  <span className="text-slate-500">{lang === 'my' ? 'ယခင်ကုန်ကျစရိတ်:' : 'Prev Cost:'} {lastMaintLogForComparison.cost.toLocaleString()} Ks</span>
+                  {Number(cost) > lastMaintLogForComparison.cost ? (
+                    <span className="text-rose-600 font-bold flex items-center gap-0.5">
+                      <TrendingUp className="w-3 h-3" /> +{Math.round(((Number(cost) - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%
+                    </span>
+                  ) : Number(cost) < lastMaintLogForComparison.cost ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                      <TrendingDown className="w-3 h-3" /> {Math.round(((Number(cost) - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">(Same)</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>

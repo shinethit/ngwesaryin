@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Fuel, Gauge, CheckCircle2, Save, Trash2, Building2 } from 'lucide-react';
+import { X, Fuel, Gauge, CheckCircle2, Save, Trash2, Building2, TrendingUp, TrendingDown } from 'lucide-react';
 import { FuelLog, Vehicle, Wallet } from '../../types';
 import { usePersistedState } from '../../hooks/usePersistedState';
 
@@ -13,6 +13,7 @@ interface AddFuelModalProps {
   wallets: Wallet[];
   selectedVehicleId?: string;
   lang: 'my' | 'en';
+  fuelLogs?: FuelLog[];
 }
 
 // [v6.1.5] Default gas stations (user-customizable stations live in localStorage)
@@ -32,6 +33,7 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
   wallets,
   selectedVehicleId,
   lang,
+  fuelLogs = [],
 }) => {
   const [vehicleId, setVehicleId] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -91,6 +93,13 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
   const currentVehicle = useMemo(() => {
     return vehicles.find((v) => v.id === vehicleId) || vehicles[0];
   }, [vehicles, vehicleId]);
+
+  const lastLogForComparison = useMemo(() => {
+    if (!fuelLogs || fuelLogs.length === 0) return null;
+    return fuelLogs
+      .filter(l => l.vehicleId === vehicleId && l.id !== editingLog?.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  }, [fuelLogs, vehicleId, editingLog]);
 
   useEffect(() => {
     if (editingLog) {
@@ -169,7 +178,20 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       return;
     }
 
+    // Odometer Validation
+    if (currentVehicle && Number(odometer) < (currentVehicle.currentOdometer || 0)) {
+      alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် နည်းနေပါသည်။' : 'Odometer cannot be less than the current vehicle odometer.');
+      return;
+    }
+    if (lastLogForComparison && Number(odometer) === lastLogForComparison.odometer) {
+      alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry. (Prevent Double Entry)');
+      return;
+    }
+
     const station = gasStation === 'Other' ? customGasStation.trim() : gasStation;
+    if (gasStation === 'Other' && station && !customStations.includes(station)) {
+      setCustomStations((prev) => [...prev, station]);
+    }
     const fuelId = editingLog?.id || `fuel_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     onSave({
@@ -329,9 +351,9 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
                 step="0.01"
                 min="0.1"
                 value={liters}
-                onChange={(e) => handleLitersChange(e.target.value)}
-                placeholder="e.g. 35.5"
-                className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-amber-900"
+                readOnly
+                className="w-full px-3.5 py-2.5 text-sm bg-slate-100 border border-slate-200 rounded-xl focus:outline-none font-mono font-bold text-slate-500 cursor-not-allowed"
+                title={lang === 'my' ? 'ကျသင့်ငွေနှင့် ဈေးနှုန်းမှ အလိုအလျောက် တွက်ချက်ထားသည်' : 'Auto-calculated from Total Cost & Price'}
               />
             </div>
 
@@ -349,6 +371,22 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
                 placeholder="e.g. 3150"
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
               />
+              {lastLogForComparison && lastLogForComparison.pricePerLiter > 0 && pricePerLiter && (
+                <div className="text-[10px] mt-1 flex items-center gap-1">
+                  <span className="text-slate-500">{lang === 'my' ? 'ယခင်ဈေး:' : 'Prev:'} {lastLogForComparison.pricePerLiter.toLocaleString()} Ks</span>
+                  {Number(pricePerLiter) > lastLogForComparison.pricePerLiter ? (
+                    <span className="text-rose-600 font-bold flex items-center gap-0.5">
+                      <TrendingUp className="w-3 h-3" /> +{Math.round(((Number(pricePerLiter) - lastLogForComparison.pricePerLiter) / lastLogForComparison.pricePerLiter) * 100)}%
+                    </span>
+                  ) : Number(pricePerLiter) < lastLogForComparison.pricePerLiter ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                      <TrendingDown className="w-3 h-3" /> {Math.round(((Number(pricePerLiter) - lastLogForComparison.pricePerLiter) / lastLogForComparison.pricePerLiter) * 100)}%
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">(Same)</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

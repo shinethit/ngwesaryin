@@ -1148,6 +1148,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         wallets={wallets}
         selectedVehicleId={currentVehicle?.id}
         lang={lang}
+        fuelLogs={vehicleFuelLogs}
       />
 
       <AddMaintenanceModal
@@ -1160,6 +1161,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         wallets={wallets}
         selectedVehicleId={currentVehicle?.id}
         lang={lang}
+        vehicleMaintenance={vehicleMaintenanceLogs}
       />
 
       <AddTirePressureModal

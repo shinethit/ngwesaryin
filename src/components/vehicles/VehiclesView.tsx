@@ -834,9 +834,15 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                               : 'text-slate-700'
                           }`}
                         >
-                          {item.remainingKm > 0
-                            ? `${item.remainingKm.toLocaleString()} km`
-                            : `${Math.abs(item.remainingKm).toLocaleString()} km ကျော်`}
+                          {item.serviceType === 'license_renewal' ? (
+                            item.remainingDays > 0
+                              ? `${item.remainingDays} ရက်`
+                              : `${Math.abs(item.remainingDays)} ရက် ကျော်`
+                          ) : (
+                            item.remainingKm > 0
+                              ? `${item.remainingKm.toLocaleString()} km`
+                              : `${Math.abs(item.remainingKm).toLocaleString()} km ကျော်`
+                          )}
                         </span>
                       </div>
                     </div>

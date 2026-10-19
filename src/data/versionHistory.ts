@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.30';
-export const CURRENT_BUILD_NUMBER = 245;
+export const CURRENT_APP_VERSION = 'v7.5.32';
+export const CURRENT_BUILD_NUMBER = 247;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.32',
+    buildNumber: 247,
+    releaseDate: '2026-10-19',
+    releaseTime: '10:00 PM (MMT)',
+    titleMy: 'လိုင်စင်သက်တမ်း ကျန်ရှိရက် ပြသမှု အပြီးသတ် ပြင်ဆင်ခြင်း',
+    titleEn: 'Finalized License Days Remaining UI',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'ယာဉ်စီမံခန့်ခွဲမှုတွင် လိုင်စင်သက်တမ်းကို ကီလိုမီတာအစား ကျန်ရှိသည့် ရက်အရေအတွက်ဖြင့် မှန်ကန်စွာ ပြသစေရန် အပြီးသတ် ပြင်ဆင်လိုက်သည်။',
+    descriptionEn: 'Fixed the Vehicle Management UI to correctly display remaining days for License Renewal instead of kilometers.',
+    changesMy: ['📅 လိုင်စင်သက်တမ်းကို ရက်ဖြင့် ပြသခြင်း'],
+    changesEn: ['📅 Shows license lifespan in days'],
+  },
   {
     version: 'v7.5.30',
     buildNumber: 245,

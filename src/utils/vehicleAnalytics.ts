@@ -388,6 +388,7 @@ export function calculateServiceHealthStatuses(
     'transmission_fluid',
     'coolant',
     'wheel_alignment',
+    'license_renewal',
   ];
 
   return serviceTypes.map((type) => {
@@ -426,16 +427,26 @@ export function calculateServiceHealthStatuses(
     const remainingDays = expDays - daysSinceLast;
 
     let status: ServiceHealthStatus['status'] = 'good';
-    if (remainingKm <= 0 || remainingDays <= 0) {
-      status = 'overdue';
-    } else if (remainingKm <= 500 || remainingDays <= 15) {
-      status = 'due_soon';
-    }
+    let healthPercent = 100;
 
-    // Health percent based on remaining distance and time
-    const kmRatio = Math.max(0, Math.min(1, remainingKm / expKm));
-    const daysRatio = Math.max(0, Math.min(1, remainingDays / expDays));
-    const healthPercent = Math.round(Math.min(kmRatio, daysRatio) * 100);
+    if (type === 'license_renewal') {
+      if (remainingDays <= 0) status = 'overdue';
+      else if (remainingDays <= 30) status = 'due_soon';
+      
+      const daysRatio = Math.max(0, Math.min(1, remainingDays / expDays));
+      healthPercent = Math.round(daysRatio * 100);
+    } else {
+      if (remainingKm <= 0 || remainingDays <= 0) {
+        status = 'overdue';
+      } else if (remainingKm <= 500 || remainingDays <= 15) {
+        status = 'due_soon';
+      }
+
+      // Health percent based on remaining distance and time
+      const kmRatio = Math.max(0, Math.min(1, remainingKm / expKm));
+      const daysRatio = Math.max(0, Math.min(1, remainingDays / expDays));
+      healthPercent = Math.round(Math.min(kmRatio, daysRatio) * 100);
+    }
 
     return {
       serviceType: type,

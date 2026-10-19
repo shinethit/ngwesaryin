@@ -202,6 +202,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [maintWorkshopName, setMaintWorkshopName] = useState<string>('');
   const [maintLifespanKm, setMaintLifespanKm] = useState<string>('5000');
   const [maintLifespanDays, setMaintLifespanDays] = useState<string>('180');
+  const [maintExpiryDate, setMaintExpiryDate] = useState<string>('');
 
   // Tire fields
   const [tireFL, setTireFL] = useState<string>('32');
@@ -254,6 +255,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const isActionAllowed = isEditing
     ? (type === 'income' ? canEditIncome : canEditExpense)
     : (type === 'income' ? canAddIncome : canAddExpense);
+
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   useEffect(() => {
     const isNewlyOpened = isOpen && !prevIsOpenRef.current;
@@ -713,6 +719,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       subCategoryId === 'sub_veh_license'
     ) {
       handleSwitchModel('vehicle_service');
+    }
+  }, [isOpen, subCategoryId, entryModel]);
+
+  // [v7.5.9] Auto-calc days from Expiry Date
+  useEffect(() => {
+    if (maintExpiryDate && date) {
+      const d1 = new Date(date).getTime();
+      const d2 = new Date(maintExpiryDate).getTime();
+      if (!isNaN(d1) && !isNaN(d2)) {
+        const diff = Math.ceil((d2 - d1) / (1000 * 3600 * 24));
+        setMaintLifespanDays(String(diff > 0 ? diff : 0));
+      }
+    }
+  }, [maintExpiryDate, date]);
+
+  // [v7.5.9] Auto-set service type to license_renewal when chosen
+  useEffect(() => {
+    if (isOpen && subCategoryId === 'sub_veh_license' && entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal') {
+      setMaintServiceType('license_renewal');
     }
   }, [isOpen, subCategoryId, entryModel]);
 
@@ -1773,6 +1798,23 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     />
                   </div>
                 </div>
+                {/* Expiry Date for Maintenance */}
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">
+                      {lang === 'my' ? 'ကုန်ဆုံးမည့်ရက်စွဲ (Expiry Date)' : 'Expiry Date'}
+                    </div>
+                    <input
+                      type="date"
+                      value={maintExpiryDate}
+                      onChange={(e) => setMaintExpiryDate(e.target.value)}
+                      className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5"
+                    />
+                  </div>
+                </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
                     {fuelIsFullTank ? <Check className="w-5 h-5 text-emerald-600" /> : <X className="w-5 h-5 text-slate-400" />}
@@ -1834,6 +1876,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <option value="wheel_alignment">{lang === "my" ? "🎯 ဘီးချိန်" : "🎯 Wheel Alignment"}</option>
                     <option value="suspension">{lang === "my" ? "🪑 ရှော့ဘား" : "🪑 Suspension"}</option>
                     <option value="general_repair">{lang === "my" ? "🔨 အထွေထွေ ပြုပြင်" : "🔨 General Repair"}</option>
+                    <option value="license_renewal">{lang === "my" ? "🪪 လိုင်စင် သက်တမ်းတိုး" : "🪪 License Renewal"}</option>
                     <option value="other">{lang === "my" ? "📦 အခြား" : "📦 Other"}</option>
                   </select>
                 </div>

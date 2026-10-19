@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.9';
-export const CURRENT_BUILD_NUMBER = 224;
+export const CURRENT_APP_VERSION = 'v7.5.10';
+export const CURRENT_BUILD_NUMBER = 225;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.10',
+    buildNumber: 225,
+    releaseDate: '2026-10-19',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'လိုင်စင် Expiry Date နှင့် Auto-Sync ပြင်ဆင်မှု',
+    titleEn: 'License Expiry Date & Auto-Sync Fix',
+    tag: 'fix',
+    tagLabelMy: 'Logic Fix',
+    tagLabelEn: 'Logic Fix',
+    descriptionMy: 'Transaction Modal မှတဆင့် လိုင်စင်/အခွန် ရွေးချယ်ပါက Expiry Date ကို ထည့်သွင်းနိုင်ပြီး သက်တမ်းရက်များကို အလိုအလျောက် တွက်ချက်ကာ ယာဉ်မှတ်တမ်းသို့ တိုက်ရိုက် ချိတ်ဆက်သွားမည်။',
+    descriptionEn: 'Added Expiry Date support directly inside TransactionModal for vehicle maintenance. Days auto-calculate and sync to Vehicle records.',
+    changesMy: [
+      '🪪 Transaction Modal ထဲမှာတင် လိုင်စင် Expiry Date ထည့်နိုင်',
+      '🔄 ရက်စွဲရွေးလိုက်တာနဲ့ သက်တမ်းရက်များ အလိုအလျောက် တွက်',
+      '🔒 Modal ဖွင့်ထားစဉ် အနောက်က စာမျက်နှာ လုံးဝ မလှုပ်တော့ပါ',
+    ],
+    changesEn: [
+      '🪪 Added Expiry Date input directly in TransactionModal',
+      '🔄 Auto-calculates days based on expiry date',
+      '🔒 Locked background scroll for all modals',
+    ],
+  },
   {
     version: 'v7.5.9',
     buildNumber: 224,

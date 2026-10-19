@@ -1575,6 +1575,7 @@ export default function App() {
       <PWAInstallPrompt lang={lang} />
 
       <Navbar
+        onOpenShareApp={() => setIsShareAppModalOpen(true)}
         currentPlan={plan}
         onOpenSidebar={() => setIsSidebarOpen(true)}
         onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}

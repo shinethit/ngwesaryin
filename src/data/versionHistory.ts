@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.28';
-export const CURRENT_BUILD_NUMBER = 243;
+export const CURRENT_APP_VERSION = 'v7.5.29';
+export const CURRENT_BUILD_NUMBER = 244;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.29',
+    buildNumber: 244,
+    releaseDate: '2026-10-19',
+    releaseTime: '9:15 PM (MMT)',
+    titleMy: 'Share ခလုတ်ကို Navbar သို့ ရွှေ့ပြောင်းခြင်း',
+    titleEn: 'Moved Share Button to Navbar',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'Dashboard ၏ Quick Access Grid ထဲမှ Share ခလုတ်ကို ဖယ်ရှားပြီး၊ အပေါ်ဆုံး Navbar တွင် ထင်ရှားစွာ မြင်နိုင်သော နေရာတွင် ပြောင်းရွှေ့ထည့်သွင်းပေးလိုက်သည်။',
+    descriptionEn: 'Removed Share from the Dashboard Quick Access grid and added it to the top Navbar for easier access.',
+    changesMy: ['🔝 Navbar တွင် Share ခလုတ် ထည့်သွင်းခြင်း', '🗑️ Dashboard မှ ဖယ်ရှားခြင်း'],
+    changesEn: ['🔝 Added Share button to Navbar', '🗑️ Removed from Dashboard'],
+  },
   {
     version: 'v7.5.28',
     buildNumber: 243,

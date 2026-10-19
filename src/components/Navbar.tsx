@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Menu, Lock, Bell } from 'lucide-react';
+import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Menu, Lock, Bell, Share2 } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
@@ -29,6 +29,7 @@ interface NavbarProps {
   onOpenAdminPanel?: () => void;
   onOpenDatabaseTracker?: () => void;
   pendingCloudCount?: number;
+  onOpenShareApp?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -54,6 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdminPanel,
   onOpenDatabaseTracker,
   pendingCloudCount = 0,
+  onOpenShareApp,
 }) => {
   const { user, isGuest, isSyncing, activeWorkspaceId, isAdmin } = useAuth();
   const { isInstalled, isStandalone } = usePWAInstall();
@@ -281,6 +283,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                   </span>
                 )}
+              </button>
+            )}
+
+            {/* 1.5. Share App Button */}
+            {onOpenShareApp && (
+              <button
+                id="navbar-share-btn"
+                type="button"
+                onClick={onOpenShareApp}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
+                title={lang === 'my' ? 'အက်ပ် မျှဝေရန်' : 'Share App'}
+              >
+                <Share2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="hidden md:inline font-bold">
+                  {lang === 'my' ? 'မျှဝေရန်' : 'Share'}
+                </span>
               </button>
             )}
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   ArrowDownLeft, ArrowUpRight, HandCoins, AlertCircle,
   Calendar, ChevronRight, ChevronDown, Search, RefreshCw,
-  Store, Database, Crown, MessageCircle, GraduationCap, BarChart3, Share2,
+  Store, Database, Crown, MessageCircle, GraduationCap, BarChart3,
 } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, DataScope } from '../types';
 import { formatMMK, formatLakhs, isOverdue } from '../utils/formatters';
@@ -34,7 +34,6 @@ interface DashboardProps {
   onImportJson?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onManualSync?: () => void;
   onOpenDatabaseTracker?: () => void;
-  onOpenShareApp?: () => void;
   cloudTxIds?: Set<string>;
 }
 
@@ -43,7 +42,7 @@ type TimeFilterOption = 'all' | 'this_month' | 'this_week' | 'last_30' | 'this_y
 export const Dashboard: React.FC<DashboardProps> = ({
   transactions, debts, wallets, categories,
   lang, dataScope = 'all',
-  onAddTransaction, onAddDebt, onSelectTab, onOpenSearch, onOpenShareApp,
+  onAddTransaction, onAddDebt, onSelectTab, onOpenSearch,
 }) => {
   const { user, isSyncing, syncDataToCloud } = useAuth();
 
@@ -457,18 +456,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </span>
           </button>
 
-          {/* 7. Share App */}
-          {onOpenShareApp && (
-            <button type="button" onClick={onOpenShareApp}
-              className="flex flex-col items-center gap-1 p-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200/70 transition-all active:scale-95 cursor-pointer col-span-3 sm:col-span-1">
-              <div className="w-8 h-8 rounded-lg bg-teal-500 text-white flex items-center justify-center shadow-xs">
-                <Share2 className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-bold text-teal-900 leading-tight text-center">
-                {lang === 'my' ? 'အက်ပ် မျှဝေရန်' : 'Share App'}
-              </span>
-            </button>
-          )}
         </div>
       </div>
 

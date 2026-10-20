@@ -460,10 +460,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         if (item.id === id) {
           const newItem = { ...item, [field]: val };
           if (field === 'name' && typeof val === 'string' && val.trim().length >= 1) {
-            const match = findMatchingItemInfo(val, unifiedItemSuggestions);
-            if (match && match.categoryId && (!categoryId || categoryId === 'cat_food' || categoryId === 'cat_expense_other')) {
-              setCategoryId(match.categoryId);
-              if (match.subCategoryId) setSubCategoryId(match.subCategoryId);
+            // [FIX] Only auto-switch if current category is not Vehicle related.
+            const isVehCat = categoryId?.startsWith('cat_vehicle') || categoryId?.startsWith('cat_expense_car');
+            if (!isVehCat) {
+              const match = findMatchingItemInfo(val, unifiedItemSuggestions);
+              if (match && match.categoryId && (!categoryId || categoryId === 'cat_food' || categoryId === 'cat_expense_other')) {
+                setCategoryId(match.categoryId);
+                if (match.subCategoryId) setSubCategoryId(match.subCategoryId);
+              }
             }
           }
           const pNum = parseFloat(newItem.price as any) || 0;

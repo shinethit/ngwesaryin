@@ -14,10 +14,25 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.32';
-export const CURRENT_BUILD_NUMBER = 247;
+export const CURRENT_APP_VERSION = 'v7.5.35';
+export const CURRENT_BUILD_NUMBER = 250;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.35',
+    buildNumber: 250,
+    releaseDate: '2026-10-20',
+    releaseTime: '9:00 AM (MMT)',
+    titleMy: 'Shopping List Auto-Category Bug ပြင်ဆင်ခြင်း',
+    titleEn: 'Fixed Shopping List Auto-Category Bug',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Shopping List ထဲမှာ ပစ္စည်းအမည် ရိုက်ထည့်တဲ့အခါ ယာဉ်နှင့်ဆိုင်တဲ့ စကားလုံးတွေ ပါဝင်နေရင် Vehicle Management ထဲကို အလိုအလျောက် ခုန်ပြောင်းသွားတဲ့ ပြဿနာကို ပြင်ဆင်လိုက်ပါတယ်။',
+    descriptionEn: 'Fixed an issue where typing item names in Shopping List accidentally switched the entire transaction to Vehicle Management.',
+    changesMy: ['🐛 ဈေးဝယ်စာရင်းမှ ယာဉ်စီမံခန့်ခွဲမှုသို့ အလိုအလျောက် ခုန်ပြောင်းခြင်းကို ရပ်တန့်ခြင်း'],
+    changesEn: ['🐛 Prevented shopping items from auto-switching to Vehicle category'],
+  },
   {
     version: 'v7.5.32',
     buildNumber: 247,

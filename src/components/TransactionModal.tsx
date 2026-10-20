@@ -107,6 +107,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [itemName, setItemName] = useState(editTransaction?.note || '');
   const [extraNote, setExtraNote] = useState('');
   const [shopName, setShopName] = useState('');
+  const [shopInput, setShopInput] = useState('');
+  const [itemInput, setItemInput] = useState('');
 
   const getResolvedModel = (): EntryModel => {
     if (editTransaction) {
@@ -142,10 +144,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const formRef = React.useRef<HTMLFormElement>(null);
 
   const [entryMode, setEntryMode] = useState<'direct' | 'unit_qty' | 'shopping_list'>(
-    editTransaction?.items && editTransaction.items.length > 0
-      ? 'shopping_list'
-      : editTransaction?.unitPrice
+    editTransaction?.unitPrice
       ? 'unit_qty'
+      : editTransaction?.items && editTransaction.items.length > 0
+      ? 'shopping_list'
       : 'direct'
   );
 
@@ -249,8 +251,34 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setSubCategoryId(editTransaction.subCategoryId || '');
           setWalletId(editTransaction.walletId || wallets[0]?.id || 'cash');
           setDate(getLocalDateString(editTransaction.date));
-          setItemName(editTransaction.note || '');
-          setExtraNote('');
+          const fullNote = editTransaction.note || '';
+          if (editTransaction.items && editTransaction.items.length > 0) {
+            if (editTransaction.unitPrice) {
+              setItemName(editTransaction.items[0].name || '');
+              setExtraNote(fullNote);
+            } else {
+              setItemName('');
+              setExtraNote(fullNote);
+            }
+          } else if (editTransaction.unitPrice) {
+            const match = fullNote.match(/^(.*?) \((.*)\)$/);
+            if (match) {
+              setItemName(match[1].trim());
+              setExtraNote(match[2].trim());
+            } else {
+              setItemName(fullNote);
+              setExtraNote('');
+            }
+          } else {
+            const match = fullNote.match(/^(.*?) \((.*)\)$/);
+            if (match) {
+              setItemName(match[1].trim());
+              setExtraNote(match[2].trim());
+            } else {
+              setItemName(fullNote);
+              setExtraNote('');
+            }
+          }
           setShopName('');
           const resolvedModel = getResolvedModel();
           setEntryModel(resolvedModel);
@@ -305,13 +333,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             setTireRR(String(linkedTire.rearRightPsi || 32));
           }
 
-          if (editTransaction.items && editTransaction.items.length > 0) {
-            setEntryMode('shopping_list');
-            setShoppingItems(editTransaction.items);
-          } else if (editTransaction.unitPrice) {
+          if (editTransaction.unitPrice) {
             setEntryMode('unit_qty');
             setUnitPrice(String(editTransaction.unitPrice));
             setQuantity(String(editTransaction.quantity || 1));
+          } else if (editTransaction.items && editTransaction.items.length > 0) {
+            setEntryMode('shopping_list');
+            setShoppingItems(editTransaction.items);
           } else {
             setEntryMode('direct');
           }
@@ -748,6 +776,21 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
+  const filteredShopsForDatalist = useMemo(() => {
+    if (!shopInput.trim()) return shops.slice(0, 5).concat(publicShops.slice(0, 5) as any);
+    const q = shopInput.toLowerCase();
+    return [
+      ...shops.filter((s) => s.name.toLowerCase().includes(q)),
+      ...publicShops.filter((s) => s.name.toLowerCase().includes(q) && !shops.some((ps) => ps.name === s.name))
+    ].slice(0, 5);
+  }, [shopInput, shops, publicShops]);
+
+  const filteredItemsForDatalist = useMemo(() => {
+    if (!itemInput.trim()) return unifiedItemSuggestions.slice(0, 5);
+    const q = itemInput.toLowerCase();
+    return unifiedItemSuggestions.filter((i) => i.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [itemInput, unifiedItemSuggestions]);
+
   const isFuelMode = useMemo(() => entryModel === 'fuel', [entryModel]);
   
   const lastFuelLogForComparison = useMemo(() => {
@@ -1075,22 +1118,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
 
       let finalNote: string | undefined = undefined;
+      let txItems: TransactionItem[] | undefined = undefined;
+
       if (entryModel === 'fuel' || entryModel === 'vehicle_service') {
-        finalNote = extraNote.trim();
-      } else if (type === 'expense') {
-        if (entryMode === 'shopping_list') finalNote = extraNote.trim() || (itemName.trim() || undefined);
-        else {
-          const cleanItem = itemName.trim();
-          const cleanExtra = extraNote.trim();
-          if (cleanItem && cleanExtra) finalNote = `${cleanItem} (${cleanExtra})`;
-          else if (cleanItem) finalNote = cleanItem;
-          else if (cleanExtra) finalNote = cleanExtra;
+        finalNote = extraNote.trim() || undefined;
+      } else if (entryMode === 'shopping_list') {
+        finalNote = extraNote.trim() || undefined;
+        txItems = validItems.length > 0 ? validItems : undefined;
+      } else if (entryMode === 'unit_qty') {
+        finalNote = extraNote.trim() || undefined;
+        if (itemName.trim()) {
+          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseFloat(unitPrice) || 0, quantity: parseFloat(quantity) || 1, amount: finalAmount }];
         }
       } else {
         const cleanItem = itemName.trim();
         const cleanExtra = extraNote.trim();
         if (cleanItem && cleanExtra) finalNote = `${cleanItem} (${cleanExtra})`;
-        else finalNote = cleanItem || cleanExtra || undefined;
+        else if (cleanItem) finalNote = cleanItem;
+        else if (cleanExtra) finalNote = cleanExtra;
+        else finalNote = undefined;
       }
 
       const isTransferTx = isTransferCategory || targetSubCategory === 'sub_tf_out' || targetSubCategory === 'sub_tf_in';
@@ -1146,7 +1192,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         isTransfer: isTransferTx,
         transferType: isTransferTx ? (type === 'expense' ? 'transfer_out' : 'transfer_in') : undefined,
         transferToWalletId: isTransferTx && transferToWalletId && transferToWalletId !== walletId ? transferToWalletId : undefined,
-        items: entryModel === 'general' && entryMode === 'shopping_list' && validItems.length > 0 ? validItems : undefined,
+        items: txItems,
         unitPrice: entryModel === 'general' && entryMode === 'unit_qty' && parseFloat(unitPrice) > 0 ? parseFloat(unitPrice) : undefined,
         quantity: entryModel === 'general' && entryMode === 'unit_qty' && parseFloat(quantity) > 0 ? parseFloat(quantity) : undefined,
       }, vehicleLinkPayload);
@@ -1167,8 +1213,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
               {isEditing ? (lang === 'my' ? 'စာရင်းပြင်ဆင်ခြင်း' : 'Edit Transaction') : (lang === 'my' ? 'စာရင်းအသစ်' : 'New Transaction')}
             </h2>
-            <button type="submit" disabled={isSubmitting || !isActionAllowed} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-1 -mr-2 flex items-center gap-1">
-              {isSubmitting ? '...' : (<><Check className="w-3.5 h-3.5" strokeWidth={3} /><span>{lang === 'my' ? 'သိမ်း' : 'Save'}</span></>)}
+            <button type="submit" disabled={isSubmitting || !isActionAllowed} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer">
+              {isSubmitting ? (lang === 'my' ? 'သိမ်းနေသည်...' : 'Saving...') : (<><Check className="w-4 h-4" strokeWidth={3} /><span>{lang === 'my' ? 'သိမ်းမည်' : 'Save'}</span></>)}
             </button>
           </div>
 
@@ -1473,6 +1519,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             {entryMode === "unit_qty" && entryModel === "general" && (
               <>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input type="text" list="db-item-suggestions" autoComplete="off" value={itemName} onChange={(e) => { setItemName(e.target.value); setItemInput(e.target.value); }} placeholder={lang === 'my' ? 'ပစ္စည်းအမည် (ဥပမာ - ဆန်)' : 'Item name (e.g. Rice)'} className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none" />
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "ဈေးနှုန်း" : "Unit Price"}</span>
                   <input type="number" value={unitPrice} onChange={(e) => handleUnitQtyChange("price", e.target.value)} placeholder="0" className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
@@ -1518,7 +1568,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             {showQuickAddSub && entryModel === "general" && entryMode === "direct" && (
               <div className="px-4 py-3 border-b border-slate-100">
                 <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</div>
-                <input type="text" list="db-item-suggestions" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder={lang === 'my' ? 'ဥပမာ - ဆန် / ဆီ' : 'e.g. Rice'} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none" />
+                <input type="text" list="db-item-suggestions" autoComplete="off" value={itemName} onChange={(e) => { setItemName(e.target.value); setItemInput(e.target.value); }} placeholder={lang === 'my' ? 'ဥပမာ - ဆန် / ဆီ' : 'e.g. Rice'} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none" />
               </div>
             )}
 
@@ -1571,8 +1621,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <input
                     type="text"
                     list="shop-suggestions"
+                    autoComplete="off"
                     value={shopName}
-                    onChange={(e) => setShopName(e.target.value)}
+                    onChange={(e) => { setShopName(e.target.value); setShopInput(e.target.value); }}
                     placeholder={lang === 'my' ? 'ဆိုင်အမည် ရိုက်ထည့်ပါ သို့မဟုတ် ရွေးပါ' : 'Type or select shop name'}
                     className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5"
                   />
@@ -1598,16 +1649,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             )}
 
             <datalist id="shop-suggestions">
-              {shops.map((s) => (
+              {filteredShopsForDatalist.map((s) => (
                 <option key={s.id} value={s.name} />
-              ))}
-              {publicShops.filter((ps) => !shops.some((s) => s.name === ps.name)).map((ps) => (
-                <option key={ps.id} value={ps.name} />
               ))}
             </datalist>
 
             <datalist id="db-item-suggestions">
-              {unifiedItemSuggestions.slice(0, 50).map((item) => (
+              {filteredItemsForDatalist.map((item) => (
                 <option key={item.normalizedName} value={item.name} label={item.latestPrice > 0 ? formatMMK(item.latestPrice) + " (" + item.latestDate + ")" : undefined} />
               ))}
             </datalist>

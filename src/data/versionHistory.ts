@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.37';
-export const CURRENT_BUILD_NUMBER = 252;
+export const CURRENT_APP_VERSION = 'v7.5.38';
+export const CURRENT_BUILD_NUMBER = 253;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.38',
+    buildNumber: 253,
+    releaseDate: '2026-10-21',
+    releaseTime: '02:00 AM (MMT)',
+    titleMy: 'ဈေးနှုန်း×အရေအတွက် တွင် ပစ္စည်းအမည်နှင့် မှတ်ချက် သီးသန့်သိမ်းဆည်းခြင်း',
+    titleEn: 'Fixed Item Name & Note Separation in Unit Qty Entry',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဈေးနှုန်း×အရေအတွက် (Unit Qty) ဖြင့် စာရင်းသွင်းပြီး ပြန်ဖွင့်ကြည့်သည့်အခါ ပစ္စည်းအမည်သည် မှတ်ချက်အကွက်ထဲသို့ ရောက်သွားပြီး ပစ္စည်းအမည်အကွက် ဗလာဖြစ်နေသည့် ပြဿနာကို ပြင်ဆင်လိုက်ပါသည်။ ယခုအခါ ပစ္စည်းအမည်ကို items array ထဲတွင်လည်းကောင်း၊ မှတ်ချက်ကို note ထဲတွင်လည်းကောင်း သီးသန့်စီ သိမ်းဆည်းသွားမည်ဖြစ်ပါသည်။',
+    descriptionEn: 'Fixed an issue where the Item Name was incorrectly merged into the Note field when saving Unit Qty entries, causing the Item Name input to be empty on edit. Item name is now saved in the items array, and notes are kept separate in the note field.',
+    changesMy: [
+      '🐛 ဈေးနှုန်း×အရေအတွက် တွင် ပစ္စည်းအမည် သီးသန့်သိမ်းဆည်းခြင်း',
+      '🐛 ပြန်ဖွင့်သည့်အခါ ပစ္စည်းအမည်နှင့် မှတ်ချက် မှန်ကန်စွာ ပြန်ပေါ်စေခြင်း',
+      '🎨 သိမ်းမည် ခလုတ်ကို အစိမ်းရောင် Button အစစ်အဖြစ် ပြောင်းလဲခြင်း',
+      '⚡ စာရိုက်ရာတွင် Autocomplete ပိုမိုမြန်ဆန်စေရန် အကောင်းဆုံး ၅ ခုသာ ပြသစေခြင်း',
+    ],
+    changesEn: [
+      '🐛 Saved Item Name separately in Unit Qty mode',
+      '🐛 Correctly populated Item Name and Note fields on edit',
+      '🎨 Upgraded Save button to a prominent solid button',
+      '⚡ Optimized Autocomplete to only show top 5 matching results for faster typing',
+    ],
+  },
   {
     version: 'v7.5.37',
     buildNumber: 252,

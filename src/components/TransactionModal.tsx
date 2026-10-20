@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Boxes, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Boxes, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle, Store } from 'lucide-react';
 import {
   Category,
   PlanType,
@@ -15,6 +15,7 @@ import {
   VehicleMaintenance,
   TirePressureLog,
 } from '../types';
+import { ShopContact } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -26,6 +27,8 @@ import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { getAllItemSuggestions, findMatchingItemInfo } from '../utils/itemIntelligence';
 import { usePersistedState } from '../hooks/usePersistedState';
+import { db, safeSetDoc } from '../lib/firebase';
+import { doc } from 'firebase/firestore';
 
 const GAS_STATIONS = ['Denko', 'BOC', 'Other'];
 
@@ -40,6 +43,8 @@ interface TransactionModalProps {
   categories: Category[];
   wallets: WalletType[];
   allTransactions?: Transaction[];
+  shops?: ShopContact[];
+  publicShops?: Array<{ id: string; name: string }>;
   vehicles?: Vehicle[];
   plan: PlanType;
   lang: 'my' | 'en';
@@ -64,6 +69,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   categories,
   wallets,
   allTransactions = [],
+  shops = [],
+  publicShops = [],
   vehicles = [],
   plan,
   lang,
@@ -99,6 +106,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   );
   const [itemName, setItemName] = useState(editTransaction?.note || '');
   const [extraNote, setExtraNote] = useState('');
+  const [shopName, setShopName] = useState('');
 
   const getResolvedModel = (): EntryModel => {
     if (editTransaction) {
@@ -243,6 +251,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setDate(getLocalDateString(editTransaction.date));
           setItemName(editTransaction.note || '');
           setExtraNote('');
+          setShopName('');
           const resolvedModel = getResolvedModel();
           setEntryModel(resolvedModel);
           if (resolvedModel === 'fuel') {
@@ -392,6 +401,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setDate(getLocalDateString());
         setItemName('');
         setExtraNote('');
+        setShopName('');
         setEntryMode('direct');
         setUnitPrice('');
         setQuantity('1');
@@ -1089,7 +1099,43 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         localStorage.setItem('fortune_last_used_wallet_id', walletId);
       }
 
-      onSubmit({
+      // [v7.5.36] Auto-add new shop name to public_shops if not in private or public list
+      const cleanShopForAdd = shopName.trim();
+      if (cleanShopForAdd && user) {
+        const inPrivate = shops.some((s) => s.name.trim().toLowerCase() === cleanShopForAdd.toLowerCase());
+        const inPublic = publicShops.some((s) => s.name.trim().toLowerCase() === cleanShopForAdd.toLowerCase());
+        if (!inPrivate && !inPublic) {
+          try {
+            const newId = `pub_shop_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            safeSetDoc(doc(db, 'public_shops', newId), {
+              id: newId,
+              name: cleanShopForAdd,
+              phone: '',
+              phones: [],
+              address: '',
+              addresses: [],
+              note: '',
+              stateRegion: '',
+              township: '',
+              city: '',
+              ward: '',
+              kpayNumber: '',
+              generalNotes: '',
+              addedBy: user.email || user.displayName || 'User',
+              addedByUid: user.uid,
+              createdAt: Date.now(),
+              helpfulCount: 0,
+              items: [],
+            }).catch((err) => {
+              console.warn('[auto-add-public-shop] failed:', err);
+            });
+          } catch (e) {
+            console.warn('[auto-add-public-shop] error:', e);
+          }
+        }
+      }
+
+            onSubmit({
         type: entryModel === 'fuel' || entryModel === 'vehicle_service' ? 'expense' : type,
         amount: finalAmount,
         category: targetCategory,
@@ -1515,6 +1561,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             </div>
 
+            {entryModel === "general" && (
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                  <Store className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'ဆိုင်အမည် (Shop Name)' : 'Shop Name'}</div>
+                  <input
+                    type="text"
+                    list="shop-suggestions"
+                    value={shopName}
+                    onChange={(e) => setShopName(e.target.value)}
+                    placeholder={lang === 'my' ? 'ဆိုင်အမည် ရိုက်ထည့်ပါ သို့မဟုတ် ရွေးပါ' : 'Type or select shop name'}
+                    className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="px-4 py-3 border-b border-slate-100">
               <button type="button" onClick={() => setNoteExpanded(!noteExpanded)} className="w-full flex items-center gap-3 text-left">
                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-slate-600" /></div>
@@ -1531,6 +1596,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <Lock className="w-4 h-4 text-amber-600 shrink-0" /><span>{lang === 'my' ? 'ဤ Wallet ပိုင်ရှင်မှ ခွင့်မပြုထားပါ' : 'Permission denied by wallet owner'}</span>
               </div>
             )}
+
+            <datalist id="shop-suggestions">
+              {shops.map((s) => (
+                <option key={s.id} value={s.name} />
+              ))}
+              {publicShops.filter((ps) => !shops.some((s) => s.name === ps.name)).map((ps) => (
+                <option key={ps.id} value={ps.name} />
+              ))}
+            </datalist>
 
             <datalist id="db-item-suggestions">
               {unifiedItemSuggestions.slice(0, 50).map((item) => (

@@ -52,6 +52,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   // View Mode: 'grid' or 'compact'
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
 
+  // Sort mode: 'newest' | 'name-asc' | 'name-desc' | 'helpful' | 'group-category'
+  const [sortMode, setSortMode] = useState<'newest' | 'name-asc' | 'name-desc' | 'helpful' | 'group-category'>('newest');
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<ShopContact | PublicShop | null>(null);
@@ -475,7 +478,61 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     searchQuery,
   ]);
 
-  const hasActiveFilters =
+  // [v7.5.37] Sort + Group logic
+  const sortedAndGrouped = useMemo(() => {
+    // First sort the filtered shops
+    const sorted = [...filteredShops].sort((a, b) => {
+      const aName = (a.name || '').toLowerCase();
+      const bName = (b.name || '').toLowerCase();
+      const aCreated = (a as any).createdAt || 0;
+      const bCreated = (b as any).createdAt || 0;
+      const aHelpful = (a as any).helpfulCount || 0;
+      const bHelpful = (b as any).helpfulCount || 0;
+
+      if (sortMode === 'name-asc') return aName.localeCompare(bName);
+      if (sortMode === 'name-desc') return bName.localeCompare(aName);
+      if (sortMode === 'helpful') return bHelpful - aHelpful;
+      // newest (default)
+      return bCreated - aCreated;
+    });
+
+    // If not grouping, return flat
+    if (sortMode !== 'group-category') {
+      return { flat: sorted, groups: null };
+    }
+
+    // Group by category (note field)
+    const groupMap = new Map<string, (ShopContact | PublicShop)[]>();
+    sorted.forEach((shop) => {
+      const cat = shop.note || 'other';
+      if (!groupMap.has(cat)) groupMap.set(cat, []);
+      groupMap.get(cat)!.push(shop);
+    });
+
+    // Sort groups by PRESET_TAGS order
+    const orderedGroups: Array<{ key: string; label: string; shops: (ShopContact | PublicShop)[] }> = [];
+    PRESET_TAGS.filter((t) => t.value !== 'all').forEach((tag) => {
+      const shops = groupMap.get(tag.value);
+      if (shops && shops.length > 0) {
+        orderedGroups.push({
+          key: tag.value,
+          label: lang === 'my' ? tag.labelMy : tag.labelEn,
+          shops,
+        });
+        groupMap.delete(tag.value);
+      }
+    });
+    // Any custom categories not in PRESET_TAGS
+    groupMap.forEach((shops, key) => {
+      if (shops.length > 0) {
+        orderedGroups.push({ key, label: key, shops });
+      }
+    });
+
+    return { flat: null, groups: orderedGroups };
+  }, [filteredShops, sortMode, lang]);
+
+    const hasActiveFilters =
     searchQuery.trim() !== '' ||
     selectedTagFilter !== 'all' ||
     selectedStateRegionFilter !== 'all' ||
@@ -495,146 +552,101 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const selectedRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === selectedStateRegionFilter);
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto">
+    <div className="space-y-4 max-w-7xl mx-auto">
       {/* --------------------------------------------------------------------- */}
-      {/* 1. TOP HEADER & DIRECTORY SWITCHER                                    */}
+      {/* 1. COMPACT HEADER                                                     */}
       {/* --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          {/* Title & Description */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <Store className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                  {lang === 'my' ? 'ပေါင်းစပ်ဆိုင်လမ်းညွှန်' : 'Community & Shop Directory'}
-                </h1>
-                <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                  {directoryType === 'public'
-                    ? lang === 'my'
-                      ? '👥 အများပြည်သူ ပူးပေါင်းပါဝင် ပြုပြင်နိုင်သော Wiki-style ဒေတာဘေ့စ်'
-                      : '👥 Collaborative community Wiki directory'
-                    : lang === 'my'
-                    ? '🔒 သင့်တစ်ဦးတည်းသာ မြင်နိုင်သော သီးသန့်ဆိုင်စာရင်း (Premium)'
-                    : '🔒 Private directory visible only to you (Premium)'}
-                </p>
-              </div>
+      <div className="bg-white rounded-2xl border border-slate-200/80 px-4 py-3 shadow-xs">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          {/* Left: Title */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <Store className="w-5 h-5" />
             </div>
-            <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-              {lang === 'my'
-                ? 'ဆိုင်လိပ်စာများ၊ ဖုန်းနံပါတ်မျိုးစုံ၊ KPay နှင့် ပစ္စည်းစာရင်း/ဈေးနှုန်းများကို မြို့အလိုက် စုပေါင်းရှာဖွေ၊ တည်းဖြတ်နိုင်ပါသည်။'
-                : 'Search & contribute shop contacts, multiple phone numbers, KPay details, and real-time item prices across townships.'}
-            </p>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">
+                {lang === 'my' ? 'ပေါင်းစပ်ဆိုင်လမ်းညွှန်' : 'Shop Directory'}
+              </h1>
+              <p className="text-[10px] font-semibold text-slate-500 truncate">
+                {directoryType === 'public'
+                  ? (lang === 'my' ? '👥 ပြည်သူ့လမ်းညွှန်' : '👥 Public')
+                  : (lang === 'my' ? '🔒 ကိုယ်ပိုင်' : '🔒 Private')}
+              </p>
+            </div>
           </div>
 
-          {/* Top Actions: Add Shop Button */}
-          <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>
-                {directoryType === 'public'
-                  ? lang === 'my'
-                    ? 'ဆိုင်အချက်အလက် မျှဝေမည်'
-                    : 'Contribute Shop'
-                  : lang === 'my'
-                  ? 'ဆိုင်အသစ် ထည့်သွင်းမည်'
-                  : 'Add New Shop'}
-              </span>
-            </button>
-          </div>
+          {/* Right: Add button */}
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{lang === 'my' ? 'ဆိုင်အသစ်' : 'Add Shop'}</span>
+          </button>
         </div>
 
-        {/* DIRECTORY SEGMENT SWITCHER */}
-        <div className="mt-5 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex p-1 bg-slate-100/90 rounded-2xl max-w-md border border-slate-200/60">
+        {/* Directory Switcher + View Mode — SAME ROW */}
+        <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+          {/* Directory Tabs */}
+          <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/60 flex-1 min-w-0 max-w-xs">
             <button
               type="button"
-              onClick={() => {
-                setDirectoryType('public');
-                handleResetFilters();
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                directoryType === 'public'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
+              onClick={() => { setDirectoryType('public'); handleResetFilters(); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${directoryType === 'public' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
             >
-              <Globe className="w-4 h-4 text-emerald-600" />
-              <span>{lang === 'my' ? 'ပြည်သူ့လမ်းညွှန်' : 'Public Directory'}</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-slate-100 text-[10px] text-slate-600 font-extrabold border border-slate-200/60">
+              <Globe className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{lang === 'my' ? 'ပြည်သူ့' : 'Public'}</span>
+              <span className="px-1 py-0.2 rounded-full bg-slate-100 text-[9px] text-slate-600 font-extrabold border border-slate-200/60">
                 {publicShops.length}
               </span>
             </button>
-
             <button
               type="button"
-              onClick={() => {
-                setDirectoryType('private');
-                handleResetFilters();
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                directoryType === 'private'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
+              onClick={() => { setDirectoryType('private'); handleResetFilters(); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${directoryType === 'private' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
             >
-              <Lock className="w-4 h-4 text-amber-500" />
-              <span>{lang === 'my' ? 'ကိုယ်ပိုင်ဆိုင်များ' : 'Private List'}</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-slate-100 text-[10px] text-slate-600 font-extrabold border border-slate-200/60">
+              <Lock className="w-3.5 h-3.5 text-amber-500" />
+              <span>{lang === 'my' ? 'ကိုယ်ပိုင်' : 'Private'}</span>
+              <span className="px-1 py-0.2 rounded-full bg-slate-100 text-[9px] text-slate-600 font-extrabold border border-slate-200/60">
                 {privateShops.length}
               </span>
             </button>
           </div>
 
-          {/* VIEW MODE TOGGLE (Grid vs Compact List) */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-end sm:self-auto">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200/60 shrink-0">
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'grid'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title={lang === 'my' ? 'ကတ်ပြကွက်' : 'Card Grid View'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+              title={lang === 'my' ? 'ကတ်ပြကွက်' : 'Grid'}
             >
-              <LayoutGrid className="w-4 h-4" />
-              <span className="text-[11px] hidden sm:inline">{lang === 'my' ? 'ကတ်' : 'Cards'}</span>
+              <LayoutGrid className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               onClick={() => setViewMode('compact')}
-              className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'compact'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title={lang === 'my' ? 'ကျစ်ကျစ်လစ်လစ် စာရင်းပြကွက်' : 'Compact List View'}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'compact' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+              title={lang === 'my' ? 'စာရင်း' : 'List'}
             >
-              <List className="w-4 h-4" />
-              <span className="text-[11px] hidden sm:inline">{lang === 'my' ? 'စာရင်း' : 'List'}</span>
+              <List className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
       {/* --------------------------------------------------------------------- */}
-      {/* 2. LOCKED SCREEN FOR PRIVATE LIST (IF FREE USER)                      */}
+      {/* 2. LOCKED SCREEN FOR PRIVATE LIST                                     */}
       {/* --------------------------------------------------------------------- */}
       {directoryType === 'private' && plan !== 'premium' ? (
-        <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto shadow-xs space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto shadow-xs space-y-4">
           <div className="w-14 h-14 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-center mx-auto text-amber-600 shadow-2xs">
             <Lock className="w-7 h-7" />
           </div>
           <div className="space-y-1.5">
             <h3 className="font-extrabold text-slate-900 text-base">
-              {lang === 'my' ? 'ကိုယ်ပိုင်ဆိုင်လမ်းညွှန် (Private Shop List)' : 'Private Shop Directory'}
+              {lang === 'my' ? 'ကိုယ်ပိုင်ဆိုင်လမ်းညွှန်' : 'Private Shop Directory'}
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
               {lang === 'my'
@@ -653,92 +665,105 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       ) : (
         <>
           {/* ----------------------------------------------------------------- */}
-          {/* 3. SEARCH & REFINED FILTER TOOLBAR (The user's key pain point)   */}
+          {/* 3. COMPACT SEARCH + FILTER BAR                                    */}
           {/* ----------------------------------------------------------------- */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-4">
-            {/* Primary Search Bar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs space-y-2.5">
+            {/* Row 1: Search + Location toggle + Reset + Count */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={
                     lang === 'my'
-                      ? 'ဆိုင်အမည်၊ ဖုန်းနံပါတ်၊ KPay၊ တည်နေရာ သို့မဟုတ် ရောင်းချသည့်ပစ္စည်း ရှာရန်...'
-                      : 'Search by shop name, phone, KPay, township, or item price...'
+                      ? 'ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် ရှာရန်...'
+                      : 'Search shops, phone, KPay, township...'
                   }
-                  className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-2xl text-xs sm:text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
+                  className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
 
-              {/* Location Filter Toggle Button */}
+              {/* Sort Dropdown */}
+              <div className="relative shrink-0">
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value as any)}
+                  className="appearance-none pl-2.5 pr-7 py-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-[11px] font-bold text-slate-700 outline-none cursor-pointer"
+                  title={lang === 'my' ? 'စီစဥ်ရန်' : 'Sort'}
+                >
+                  <option value="newest">{lang === 'my' ? '🆕 အသစ်ဆုံး' : '🆕 Newest'}</option>
+                  <option value="name-asc">{lang === 'my' ? '🔤 အမည် A→Z' : '🔤 Name A→Z'}</option>
+                  <option value="name-desc">{lang === 'my' ? '🔤 အမည် Z→A' : '🔤 Name Z→A'}</option>
+                  <option value="helpful">{lang === 'my' ? '👍 မဲအများဆုံး' : '👍 Most Helpful'}</option>
+                  <option value="group-category">{lang === 'my' ? '📁 အုပ်စုခွဲ (အမျိုးအစား)' : '📁 Group by Category'}</option>
+                </select>
+                <ChevronDown className="w-3 h-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              {/* Location Filter Icon Button */}
               <button
                 type="button"
                 onClick={() => setIsLocationFilterExpanded(!isLocationFilterExpanded)}
-                className={`flex items-center justify-between sm:justify-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                  selectedStateRegionFilter !== 'all' || isLocationFilterExpanded
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
+                className={`flex items-center gap-1 px-2.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${selectedStateRegionFilter !== 'all' || isLocationFilterExpanded ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                title={lang === 'my' ? 'မြို့နယ်အလိုက် စစ်ထုတ်ရန်' : 'Filter by Location'}
               >
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>
-                    {selectedStateRegionFilter !== 'all'
-                      ? selectedTownshipFilter !== 'all'
-                        ? `${selectedTownshipFilter} • ${selectedStateRegionFilter.replace('တိုင်းဒေသကြီး', '').replace('ပြည်နယ်', '')}`
-                        : selectedStateRegionFilter
-                      : lang === 'my'
-                      ? 'မြို့နယ်အလိုက် စစ်ထုတ်ရန်'
-                      : 'Filter by Location'}
+                <MapPin className="w-3.5 h-3.5" />
+                {selectedStateRegionFilter !== 'all' && (
+                  <span className="text-[10px] font-black">
+                    {selectedTownshipFilter !== 'all' ? selectedTownshipFilter : selectedStateRegionFilter.replace('တိုင်းဒေသကြီး', '').replace('ပြည်နယ်', '').trim()}
                   </span>
-                </div>
-                {isLocationFilterExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                )}
               </button>
 
-              {/* Reset All Filters if Active */}
+              {/* Reset (icon only) */}
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold transition-colors cursor-pointer shrink-0"
+                  className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-colors cursor-pointer shrink-0"
                   title={lang === 'my' ? 'စစ်ထုတ်မှုအားလုံး ပယ်ဖျက်မည်' : 'Reset all filters'}
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>{lang === 'my' ? 'ရှင်းမည်' : 'Reset'}</span>
                 </button>
               )}
             </div>
 
-            {/* EXPANDABLE HIERARCHICAL LOCATION PANEL (Drop Down format as requested) */}
-            {isLocationFilterExpanded && (
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                  <span className="flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{lang === 'my' ? 'တည်နေရာ အဆင့်ဆင့် စစ်ထုတ်ခြင်း' : 'Hierarchical Location Filters'}</span>
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-normal">
-                    {lang === 'my' ? 'ပြည်နယ်/တိုင်း > မြို့နယ် > မြို့ > ရပ်ကွက်' : 'State/Region > Township > City > Ward'}
-                  </span>
-                </div>
+            {/* Row 2: Category Pills (flex-wrap, NO horizontal scroll) */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {PRESET_TAGS.map((tag) => {
+                const isSelected = selectedTagFilter === tag.value;
+                return (
+                  <button
+                    key={tag.value}
+                    type="button"
+                    onClick={() => setSelectedTagFilter(tag.value)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 border cursor-pointer ${isSelected ? 'bg-slate-900 border-slate-900 text-white shadow-2xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    {lang === 'my' ? tag.labelMy : tag.labelEn}
+                  </button>
+                );
+              })}
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
-                  {/* 1. State / Region */}
+            {/* Row 3: Expandable Location Panel */}
+            {isLocationFilterExpanded && (
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 animate-fade-in">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* State */}
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                      {lang === 'my' ? '၁။ ပြည်နယ် / တိုင်း' : '1. State / Region'}
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                      {lang === 'my' ? 'ပြည်နယ်/တိုင်း' : 'Region'}
                     </label>
                     <select
                       value={selectedStateRegionFilter}
@@ -748,9 +773,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                         setSelectedCityFilter('all');
                         setSelectedWardFilter('all');
                       }}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none cursor-pointer"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 outline-none cursor-pointer"
                     >
-                      <option value="all">{lang === 'my' ? 'အားလုံး (တစ်နိုင်ငံလုံး)' : 'All Regions'}</option>
+                      <option value="all">{lang === 'my' ? 'အားလုံး' : 'All'}</option>
                       {MYANMAR_REGIONS.map((r) => (
                         <option key={r.id} value={r.nameMy}>
                           {lang === 'my' ? r.nameMy : r.nameEn}
@@ -759,10 +784,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     </select>
                   </div>
 
-                  {/* 2. Township */}
+                  {/* Township */}
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                      {lang === 'my' ? '၂။ မြို့နယ်' : '2. Township'}
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                      {lang === 'my' ? 'မြို့နယ်' : 'Township'}
                     </label>
                     <select
                       value={selectedTownshipFilter}
@@ -772,9 +797,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                         setSelectedCityFilter('all');
                         setSelectedWardFilter('all');
                       }}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none disabled:opacity-50 cursor-pointer"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 outline-none disabled:opacity-50 cursor-pointer"
                     >
-                      <option value="all">{lang === 'my' ? 'မြို့နယ်အားလုံး' : 'All Townships'}</option>
+                      <option value="all">{lang === 'my' ? 'အားလုံး' : 'All'}</option>
                       {selectedRegionObj?.townships.map((t) => (
                         <option key={t.id} value={t.nameMy}>
                           {lang === 'my' ? t.nameMy : t.nameEn}
@@ -783,64 +808,50 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     </select>
                   </div>
 
-                  {/* 3. City / Sub-town */}
+                  {/* City */}
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                      {lang === 'my' ? '၃။ မြို့ / မြို့မ' : '3. City'}
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                      {lang === 'my' ? 'မြို့' : 'City'}
                     </label>
                     <select
                       value={selectedCityFilter}
                       disabled={selectedTownshipFilter === 'all'}
                       onChange={(e) => setSelectedCityFilter(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none disabled:opacity-50 cursor-pointer"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 outline-none disabled:opacity-50 cursor-pointer"
                     >
-                      <option value="all">{lang === 'my' ? 'မြို့အားလုံး' : 'All Cities'}</option>
+                      <option value="all">{lang === 'my' ? 'အားလုံး' : 'All'}</option>
                       {Array.from(
                         new Set(
                           activeShopsList
-                            .filter(
-                              (s) =>
-                                s.stateRegion === selectedStateRegionFilter &&
-                                s.township === selectedTownshipFilter &&
-                                (s as any).city
-                            )
+                            .filter((s) => s.stateRegion === selectedStateRegionFilter && s.township === selectedTownshipFilter && (s as any).city)
                             .map((s) => (s as any).city)
                         )
                       ).map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
+                        <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
                   </div>
 
-                  {/* 4. Ward */}
+                  {/* Ward */}
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                      {lang === 'my' ? '၄။ ရပ်ကွက်' : '4. Ward'}
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                      {lang === 'my' ? 'ရပ်ကွက်' : 'Ward'}
                     </label>
                     <select
                       value={selectedWardFilter}
                       disabled={selectedTownshipFilter === 'all'}
                       onChange={(e) => setSelectedWardFilter(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none disabled:opacity-50 cursor-pointer"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 outline-none disabled:opacity-50 cursor-pointer"
                     >
-                      <option value="all">{lang === 'my' ? 'ရပ်ကွက်အားလုံး' : 'All Wards'}</option>
+                      <option value="all">{lang === 'my' ? 'အားလုံး' : 'All'}</option>
                       {Array.from(
                         new Set(
                           activeShopsList
-                            .filter(
-                              (s) =>
-                                s.stateRegion === selectedStateRegionFilter &&
-                                s.township === selectedTownshipFilter &&
-                                (s as any).ward
-                            )
+                            .filter((s) => s.stateRegion === selectedStateRegionFilter && s.township === selectedTownshipFilter && (s as any).ward)
                             .map((s) => (s as any).ward)
                         )
                       ).map((w) => (
-                        <option key={w} value={w}>
-                          {w}
-                        </option>
+                        <option key={w} value={w}>{w}</option>
                       ))}
                     </select>
                   </div>
@@ -848,72 +859,28 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </div>
             )}
 
-            {/* CATEGORY TAG PILLS CAROUSEL */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {PRESET_TAGS.map((tag) => {
-                const isSelected = selectedTagFilter === tag.value;
-                return (
-                  <button
-                    key={tag.value}
-                    type="button"
-                    onClick={() => setSelectedTagFilter(tag.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 border cursor-pointer ${
-                      isSelected
-                        ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>{lang === 'my' ? tag.labelMy : tag.labelEn}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* ACTIVE FILTERS SUMMARY & COUNT */}
-            <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
-              <div className="flex items-center gap-2 flex-wrap">
+            {/* Row 4: Count + Active Filter Chips */}
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-slate-800">
-                  {lang === 'my'
-                    ? `တွေ့ရှိသောဆိုင် (${filteredShops.length}) ဆိုင်`
-                    : `Showing ${filteredShops.length} shops`}
+                  {lang === 'my' ? `တွေ့ရှိ ${filteredShops.length} ဆိုင်` : `${filteredShops.length} shops`}
                 </span>
                 {selectedStateRegionFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded-md text-[10px] font-bold border border-emerald-100">
-                    📍 {selectedStateRegionFilter}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedStateRegionFilter('all');
-                        setSelectedTownshipFilter('all');
-                      }}
-                      className="hover:text-emerald-950"
-                    >
-                      ✕
-                    </button>
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[10px] font-bold border border-emerald-100">
+                    📍 {selectedStateRegionFilter.replace('တိုင်းဒေသကြီး', '').replace('ပြည်နယ်', '').trim()}
+                    <button type="button" onClick={() => { setSelectedStateRegionFilter('all'); setSelectedTownshipFilter('all'); setSelectedCityFilter('all'); setSelectedWardFilter('all'); }} className="hover:text-emerald-950 ml-0.5">✕</button>
                   </span>
                 )}
                 {selectedTownshipFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded-md text-[10px] font-bold border border-emerald-100">
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[10px] font-bold border border-emerald-100">
                     🏘️ {selectedTownshipFilter}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTownshipFilter('all')}
-                      className="hover:text-emerald-950"
-                    >
-                      ✕
-                    </button>
+                    <button type="button" onClick={() => { setSelectedTownshipFilter('all'); setSelectedCityFilter('all'); setSelectedWardFilter('all'); }} className="hover:text-emerald-950 ml-0.5">✕</button>
                   </span>
                 )}
                 {selectedTagFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-800 rounded-md text-[10px] font-bold border border-slate-200">
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-bold border border-slate-200">
                     🏷️ {PRESET_TAGS.find((t) => t.value === selectedTagFilter)?.labelMy || selectedTagFilter}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTagFilter('all')}
-                      className="hover:text-black"
-                    >
-                      ✕
-                    </button>
+                    <button type="button" onClick={() => setSelectedTagFilter('all')} className="hover:text-black ml-0.5">✕</button>
                   </span>
                 )}
               </div>
@@ -921,7 +888,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           </div>
 
           {/* ----------------------------------------------------------------- */}
-          {/* 4. SHOPS LIST / GRID DISPLAY                                      */}
+          {/* 4. SHOPS LIST / GRID DISPLAY (with sort + group)                  */}
           {/* ----------------------------------------------------------------- */}
           {filteredShops.length === 0 ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
@@ -955,43 +922,106 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 </button>
               </div>
             </div>
-          ) : viewMode === 'compact' ? (
-            <div className="space-y-2.5">
-              {filteredShops.map((shop) => (
-                <ShopCard
-                  key={shop.id}
-                  shop={shop}
-                  isPublic={directoryType === 'public'}
-                  lang={lang}
-                  viewMode="compact"
-                  hasVoted={votedIds.includes(shop.id)}
-                  onToggleVote={handleToggleVote}
-                  onOpenEdit={handleOpenEdit}
-                  onDelete={handleDelete}
-                  onAddPricingItem={handleAddPricingItem}
-                  onDeletePricingItem={handleDeletePricingItem}
-                />
+          ) : sortMode === 'group-category' && sortedAndGrouped.groups ? (
+            // GROUPED VIEW
+            <div className="space-y-5">
+              {sortedAndGrouped.groups.map((group) => (
+                <div key={group.key} className="space-y-2.5">
+                  {/* Group Header */}
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="h-px flex-1 bg-slate-200" />
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-lg border border-slate-200/60">
+                      <span className="text-[11px] font-black text-slate-700">
+                        {group.label}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded-full bg-white text-[9px] font-bold text-slate-600 border border-slate-200">
+                        {group.shops.length}
+                      </span>
+                    </div>
+                    <div className="h-px flex-1 bg-slate-200" />
+                  </div>
+
+                  {/* Group Shops */}
+                  {viewMode === 'compact' ? (
+                    <div className="space-y-2.5">
+                      {group.shops.map((shop) => (
+                        <ShopCard
+                          key={shop.id}
+                          shop={shop}
+                          isPublic={directoryType === 'public'}
+                          lang={lang}
+                          viewMode="compact"
+                          hasVoted={votedIds.includes(shop.id)}
+                          onToggleVote={handleToggleVote}
+                          onOpenEdit={handleOpenEdit}
+                          onDelete={handleDelete}
+                          onAddPricingItem={handleAddPricingItem}
+                          onDeletePricingItem={handleDeletePricingItem}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {group.shops.map((shop) => (
+                        <ShopCard
+                          key={shop.id}
+                          shop={shop}
+                          isPublic={directoryType === 'public'}
+                          lang={lang}
+                          viewMode="grid"
+                          hasVoted={votedIds.includes(shop.id)}
+                          onToggleVote={handleToggleVote}
+                          onOpenEdit={handleOpenEdit}
+                          onDelete={handleDelete}
+                          onAddPricingItem={handleAddPricingItem}
+                          onDeletePricingItem={handleDeletePricingItem}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredShops.map((shop) => (
-                <ShopCard
-                  key={shop.id}
-                  shop={shop}
-                  isPublic={directoryType === 'public'}
-                  lang={lang}
-                  viewMode="grid"
-                  hasVoted={votedIds.includes(shop.id)}
-                  onToggleVote={handleToggleVote}
-                  onOpenEdit={handleOpenEdit}
-                  onDelete={handleDelete}
-                  onAddPricingItem={handleAddPricingItem}
-                  onDeletePricingItem={handleDeletePricingItem}
-                />
-              ))}
-            </div>
-          )}
+          ) : sortedAndGrouped.flat ? (
+            // FLAT VIEW (sorted)
+            viewMode === 'compact' ? (
+              <div className="space-y-2.5">
+                {sortedAndGrouped.flat.map((shop) => (
+                  <ShopCard
+                    key={shop.id}
+                    shop={shop}
+                    isPublic={directoryType === 'public'}
+                    lang={lang}
+                    viewMode="compact"
+                    hasVoted={votedIds.includes(shop.id)}
+                    onToggleVote={handleToggleVote}
+                    onOpenEdit={handleOpenEdit}
+                    onDelete={handleDelete}
+                    onAddPricingItem={handleAddPricingItem}
+                    onDeletePricingItem={handleDeletePricingItem}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedAndGrouped.flat.map((shop) => (
+                  <ShopCard
+                    key={shop.id}
+                    shop={shop}
+                    isPublic={directoryType === 'public'}
+                    lang={lang}
+                    viewMode="grid"
+                    hasVoted={votedIds.includes(shop.id)}
+                    onToggleVote={handleToggleVote}
+                    onOpenEdit={handleOpenEdit}
+                    onDelete={handleDelete}
+                    onAddPricingItem={handleAddPricingItem}
+                    onDeletePricingItem={handleDeletePricingItem}
+                  />
+                ))}
+              </div>
+            )
+          ) : null}
         </>
       )}
 

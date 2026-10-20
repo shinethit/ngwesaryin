@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.35';
-export const CURRENT_BUILD_NUMBER = 250;
+export const CURRENT_APP_VERSION = 'v7.5.36';
+export const CURRENT_BUILD_NUMBER = 251;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.36',
+    buildNumber: 251,
+    releaseDate: '2026-10-20',
+    releaseTime: '11:00 AM (MMT)',
+    titleMy: 'ဆိုင်အမည် ထည့်သွင်းခြင်း၊ ပြည်သူ့ဆိုင်စာရင်း အလိုအလျောက် ထည့်သွင်းခြင်းနှင့် ဆိုင်လမ်းညွှန် UI ပြုပြင်ခြင်း',
+    titleEn: 'Shop Name in Entry Form, Public Shop Auto-add & Shop Directory UI Cleanup',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Entry Form ထဲတွင် ဆိုင်အမည် (Shop Name) ထည့်သွင်းနိုင်ပြီး Private နှင့် Public ဆိုင်နာမည်များမှ အလိုအလျောက် ရွေးချယ်နိုင်ပါပြီ။ ဆိုင်နာမည် အသစ် ရိုက်ထည့်ပါက ပြည်သူ့ဆိုင်စာရင်း (Public Shop List) ထဲသို့ အလိုအလျောက် ထည့်သွင်းပေးမည်။ ထို့အပြင် ဆိုင်လမ်းညွှန် UI ကို ပိုမိုရှင်းလင်းစေရန် ပြင်ဆင်ပြီး အမျိုးအစားအလိုက် စီစဥ်ခြင်း (Sort) နှင့် အုပ်စုခွဲခြင်း (Group by Category) များ ထည့်သွင်းပေးထားပါသည်။',
+    descriptionEn: 'Added Shop Name input to Entry Form with autocomplete from both private and public shop lists. New shop names are automatically added to the Public Shop List. Also cleaned up the Shop Directory UI and added sorting and grouping options.',
+    changesMy: [
+      '🏪 Entry Form ထဲတွင် ဆိုင်အမည် (Shop Name) ထည့်သွင်းနိုင်ခြင်း',
+      '🔍 Private + Public ဆိုင်နာမည်များမှ Autocomplete ရွေးချယ်နိုင်ခြင်း',
+      '➕ ဆိုင်အမည်အသစ် ရိုက်ထည့်ပါက ပြည်သူ့ဆိုင်စာရင်းထဲသို့ အလိုအလျောက် ထည့်သွင်းပေးခြင်း',
+      '🧹 ဆိုင်လမ်းညွှန် UI ကို ပိုမိုရှင်းလင်းစေရန် ပြင်ဆင်ခြင်း',
+      '📊 အမျိုးအစား/အမည်အလိုက် စီစဥ်ခြင်း (Sort) နှင့် အုပ်စုခွဲခြင်း (Group by Category) ထည့်သွင်းခြင်း',
+    ],
+    changesEn: [
+      '🏪 Added Shop Name input to Entry Form',
+      '🔍 Autocomplete from both private and public shop lists',
+      '➕ New shop names are auto-added to the Public Shop List',
+      '🧹 Cleaned up the Shop Directory UI for better readability',
+      '📊 Added sorting (newest / name A-Z / name Z-A / most helpful) and group-by-category options',
+    ],
+  },
   {
     version: 'v7.5.35',
     buildNumber: 250,

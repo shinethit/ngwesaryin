@@ -49,7 +49,7 @@ import { ClayFloatingCoinButton } from './components/ClayIllustrations';
 import { LayoutDashboard, ArrowLeftRight, HandCoins, Search, Cloud, KeyRound, Trash2, Download, Upload, Menu } from 'lucide-react';
 import { SubCategory, PinLockSettings } from './types';
 import { useAuth, parseExpiryTime } from './context/AuthContext';
-import { doc, collection, onSnapshot, writeBatch } from 'firebase/firestore';
+import { doc, collection, onSnapshot, writeBatch, query } from 'firebase/firestore';
 import { db, cleanForFirestore, handleFirestoreError, OperationType, isQuotaExhausted, pauseNetworkDueToQuota, safeSetDoc, safeDeleteDoc } from './lib/firebase';
 import { syncQueue } from './lib/syncQueue';
 import { recordSyncOperationStart, finishSyncOperation } from './lib/syncOperationLogger';
@@ -248,6 +248,7 @@ export default function App() {
   const [debts, setDebts] = usePersistedState<Debt[]>('ngwe_debts', []);
   const [wallets, setWallets] = usePersistedState<Wallet[]>('ngwe_wallets', INITIAL_WALLETS);
   const [shops, setShops] = usePersistedState<ShopContact[]>('ngwe_shops', []);
+  const [publicShops, setPublicShops] = useState<Array<{ id: string; name: string }>>([]);
   const [vehicles, setVehicles] = usePersistedState<Vehicle[]>('ngwe_vehicles', []);
   const [fuelLogs, setFuelLogs] = usePersistedState<FuelLog[]>('ngwe_fuel_logs', []);
   const [vehicleMaintenance, setVehicleMaintenance] = usePersistedState<VehicleMaintenance[]>('ngwe_vehicle_maintenance', []);
@@ -911,6 +912,25 @@ export default function App() {
       }
     }
   }, [debts.length, transactions.length]);
+
+  // [v7.5.36] Fetch public shops for Entry Form autocomplete
+  useEffect(() => {
+    const q = query(collection(db, 'public_shops'));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list = snap.docs.map((d) => ({
+          id: d.id,
+          name: (d.data() as any).name || '',
+        })).filter((s) => s.name);
+        setPublicShops(list);
+      },
+      () => {
+        // silent fail — public shops are optional
+      }
+    );
+    return () => unsub();
+  }, []);
 
   // Real-time listener for incoming shared wallets from collaborators
   useEffect(() => {
@@ -2263,6 +2283,7 @@ export default function App() {
         wallets={computedWallets}
         vehicles={vehicles}
         allTransactions={transactions}
+        publicShops={publicShops}
         plan={plan}
         lang={lang}
         fuelLogs={fuelLogs}

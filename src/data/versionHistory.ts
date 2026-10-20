@@ -14,10 +14,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.36';
-export const CURRENT_BUILD_NUMBER = 251;
+export const CURRENT_APP_VERSION = 'v7.5.37';
+export const CURRENT_BUILD_NUMBER = 252;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.37',
+    buildNumber: 252,
+    releaseDate: '2026-10-20',
+    releaseTime: '03:00 PM (MMT)',
+    titleMy: 'ဆိုင်လမ်းညွှန် ဒေတာများ တိုးချဲ့ခြင်း၊ Sub-Category ထည့်သွင်းခြင်းနှင့် Sorting/UI ပြုပြင်ခြင်း',
+    titleEn: 'Shop Directory Expansion, Sub-Categories & Sorting UI Fixes',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'တောင်ကြီးမြို့နယ်မှ ဆိုင်အချက်အလက်ပေါင်း ၁၀၀၀ ကျော်ကို ပြည်သူ့ဆိုင်လမ်းညွှန်ထဲသို့ ထည့်သွင်းပြီး၊ ဆိုင်များကို Category (အပေါ်ထပ်) နှင့် Sub-Category (အောက်ထပ်) အဖြစ် ခွဲခြားသိမ်းဆည်းနိုင်စေရန် ပြင်ဆင်ခဲ့ပါသည်။ ထို့အပြင် အသုံးပြုသူများ ရှာဖွေရလွယ်ကူစေရန် Default အနေဖြင့် အုပ်စုခွဲပြသခြင်းနှင့် အမည်အလိုက် စီစဥ်ခြင်းများ ပြုလုပ်ပေးထားပါသည်။',
+    descriptionEn: 'Imported over 1000 shops from Taunggyi into the Public Directory, implemented Category/Sub-Category data structure, and enhanced the UI with default grouping and alphabetical sorting.',
+    changesMy: [
+      '🏪 တောင်ကြီးမြို့နယ်မှ ဆိုင်အချက်အလက် ၁,၀၀၀ ကျော် ထည့်သွင်းခြင်း',
+      '📂 Category (အပေါ်ထပ်) နှင့် Sub-Category (အောက်ထပ်) စနစ် ထည့်သွင်းခြင်း',
+      '📊 ဆိုင်များကို အုပ်စုခွဲပြသခြင်းကို Default အဖြစ် သတ်မှတ်ခြင်း',
+      '🔤 အုပ်စုတစ်ခုအတွင်း ဆိုင်အမည်များကို A-Z အလိုက် စီစဥ်ပေးခြင်း',
+      '👁️ အမည်မသိဆိုင်များ (Unknown) ကို ဖျောက်ထား/ပြသနိုင်သော Toggle ထည့်သွင်းခြင်း',
+    ],
+    changesEn: [
+      '🏪 Imported 1,000+ shops from Taunggyi area',
+      '📂 Implemented Category/Sub-Category hierarchical data structure',
+      '📊 Set "Group by Category" as the default sorting mode',
+      '🔤 Enforced alphabetical sorting (A-Z) within each category group',
+      '👁️ Added toggle to show/hide Unknown imported shops',
+    ],
+  },
   {
     version: 'v7.5.36',
     buildNumber: 251,

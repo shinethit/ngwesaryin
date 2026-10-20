@@ -51,9 +51,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
   // View Mode: 'grid' or 'compact'
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
+  const [showUnknown, setShowUnknown] = useState(false);
 
   // Sort mode: 'newest' | 'name-asc' | 'name-desc' | 'helpful' | 'group-category'
-  const [sortMode, setSortMode] = useState<'newest' | 'name-asc' | 'name-desc' | 'helpful' | 'group-category'>('newest');
+  const [sortMode, setSortMode] = useState<'newest' | 'name-asc' | 'name-desc' | 'helpful' | 'group-category'>('group-category');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -409,9 +410,16 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
   const filteredShops = useMemo(() => {
     return activeShopsList.filter((shop) => {
-      // 1. Tag type filter
-      if (selectedTagFilter !== 'all' && shop.note !== selectedTagFilter) {
-        return false;
+
+      // 1. Tag type filter (Category သို့မဟုတ် Sub Category နဲ့ ကိုက်ညီမှုရှာခြင်း)
+      if (selectedTagFilter !== 'all') {
+        const isUnknown = shop.name.startsWith('Unknown ');
+        const shopCat = isUnknown ? 'unknown' : (shop.note || 'other');
+        const shopSubCat = shop.subCategory || '';
+        
+        if (shopCat !== selectedTagFilter && shopSubCat !== selectedTagFilter) {
+          return false;
+        }
       }
 
       // 2. Hierarchical Location filters
@@ -451,7 +459,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         (tagMeta &&
           (tagMeta.labelMy.toLowerCase().includes(queryStr) ||
             tagMeta.labelEn.toLowerCase().includes(queryStr))) ||
-        (shop.note && shop.note.toLowerCase().includes(queryStr));
+        (shop.note && shop.note.toLowerCase().includes(queryStr)) ||
+        (shop.subCategory && shop.subCategory.toLowerCase().includes(queryStr));
 
       const itemsMatch = (shop.items || []).some(
         (it) => it.name.toLowerCase().includes(queryStr) || String(it.price).includes(queryStr)
@@ -504,7 +513,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     // Group by category (note field)
     const groupMap = new Map<string, (ShopContact | PublicShop)[]>();
     sorted.forEach((shop) => {
-      const cat = shop.note || 'other';
+      const isUnknown = shop.name.startsWith('Unknown ');
+      
+      // Unknown ဖြစ်ပြီး Toggle က ပိတ်ထားရင် ဒီ Group ထဲ ထည့်မှာ မဟုတ်ပါဘူး
+      if (isUnknown && !showUnknown) return; 
+      
+      const cat = isUnknown ? 'unknown' : (shop.note || 'other');
       if (!groupMap.has(cat)) groupMap.set(cat, []);
       groupMap.get(cat)!.push(shop);
     });
@@ -530,7 +544,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     });
 
     return { flat: null, groups: orderedGroups };
-  }, [filteredShops, sortMode, lang]);
+  }, [filteredShops, sortMode, lang, showUnknown]);
 
     const hasActiveFilters =
     searchQuery.trim() !== '' ||
@@ -702,11 +716,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   className="appearance-none pl-2.5 pr-7 py-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-[11px] font-bold text-slate-700 outline-none cursor-pointer"
                   title={lang === 'my' ? 'စီစဥ်ရန်' : 'Sort'}
                 >
+                  <option value="group-category">{lang === 'my' ? '📁 အုပ်စုခွဲ (အမျိုးအစား)' : '📁 Group by Category'}</option>
                   <option value="newest">{lang === 'my' ? '🆕 အသစ်ဆုံး' : '🆕 Newest'}</option>
                   <option value="name-asc">{lang === 'my' ? '🔤 အမည် A→Z' : '🔤 Name A→Z'}</option>
                   <option value="name-desc">{lang === 'my' ? '🔤 အမည် Z→A' : '🔤 Name Z→A'}</option>
                   <option value="helpful">{lang === 'my' ? '👍 မဲအများဆုံး' : '👍 Most Helpful'}</option>
-                  <option value="group-category">{lang === 'my' ? '📁 အုပ်စုခွဲ (အမျိုးအစား)' : '📁 Group by Category'}</option>
                 </select>
                 <ChevronDown className="w-3 h-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -724,6 +738,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     {selectedTownshipFilter !== 'all' ? selectedTownshipFilter : selectedStateRegionFilter.replace('တိုင်းဒေသကြီး', '').replace('ပြည်နယ်', '').trim()}
                   </span>
                 )}
+              </button>
+
+              {/* Unknown Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowUnknown(!showUnknown)}
+                className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all cursor-pointer shrink-0 ${showUnknown ? 'bg-slate-800 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                title={lang === 'my' ? 'အမည်မသိ ဆိုင်များ ပြ/မပြ' : 'Toggle Unknown Shops'}
+              >
+                <span className="text-xs">
+                  {showUnknown ? '👁️' : '🫣'}
+                </span>
               </button>
 
               {/* Reset (icon only) */}

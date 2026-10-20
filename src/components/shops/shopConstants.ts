@@ -93,6 +93,16 @@ export const PRESET_TAGS: PresetTag[] = [
     textColor: 'text-purple-800',
     borderColor: 'border-purple-200/80'
   },
+  { 
+    value: 'unknown', 
+    labelMy: 'အမည်မသိ / Import လုပ်ထားသော', 
+    labelEn: 'Unknown / Imported', 
+    iconName: 'other',
+    color: 'slate',
+    bgColor: 'bg-slate-200',
+    textColor: 'text-slate-600',
+    borderColor: 'border-slate-300'
+  },
 ];
 
 export const MYANMAR_REGIONS: RegionData[] = [

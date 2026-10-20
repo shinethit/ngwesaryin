@@ -23,6 +23,7 @@ interface ShopModalProps {
     ward: string;
     kpayNumber: string;
     generalNotes: string;
+    subCategory: string;
     targetDirectory: 'public' | 'private';
   }) => Promise<boolean>;
   existingShops: (ShopContact | PublicShop)[];
@@ -43,6 +44,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [formDirectoryType, setFormDirectoryType] = useState<'public' | 'private'>(directoryType);
   const [formName, setFormName] = useState('');
   const [formCategory, setFormCategory] = useState('grocery');
+  const [formSubCategory, setFormSubCategory] = useState('');
   const [formCustomCategory, setFormCustomCategory] = useState('');
   const [formPhones, setFormPhones] = useState<string[]>(['']);
   const [formAddresses, setFormAddresses] = useState<string[]>(['']);
@@ -116,6 +118,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       setFormName('');
       setFormCategory('grocery');
       setFormCustomCategory('');
+      setFormSubCategory('');
       setFormPhones(['']);
       setFormAddresses(['']);
       setFormStateRegion('ရန်ကုန်တိုင်းဒေသကြီး');
@@ -224,6 +227,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     const success = await onSave({
       name: formName.trim(),
       note: finalCategory,
+      subCategory: formSubCategory.trim(),
       phones: cleanedPhones,
       addresses: cleanedAddresses,
       stateRegion: formStateRegion,
@@ -436,6 +440,20 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   />
                 </div>
               )}
+
+            {/* Sub Category (Optional) */}
+            <div className="mt-3">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {lang === 'my' ? 'အောက်ထပ် အမျိုးအစား (ဥပမာ - bank, atm, clinic)' : 'Sub Category (e.g. bank, atm, clinic)'}
+              </label>
+              <input
+                type="text"
+                value={formSubCategory}
+                onChange={(e) => setFormSubCategory(e.target.value)}
+                placeholder={lang === 'my' ? 'ရွေးချယ်ရန် သို့မဟုတ် ရိုက်ထည့်ရန်' : 'Select or type'}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all"
+              />
+            </div>
             </div>
           </div>
 

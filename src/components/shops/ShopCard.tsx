@@ -40,11 +40,12 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   const votesCount = pub ? (pub as any).helpfulCount || 0 : 0;
 
   // Resolve Tag
-  const tagMeta = PRESET_TAGS.find((t) => t.value === shop.note);
-  const tagLabel = tagMeta
-    ? lang === 'my'
-      ? tagMeta.labelMy
-      : tagMeta.labelEn
+  const isUnknown = shop.name.startsWith('Unknown ');
+  const tagMeta = PRESET_TAGS.find((t) => t.value === (isUnknown ? 'unknown' : shop.note));
+  const tagLabel = isUnknown
+    ? (lang === 'my' ? 'အမည်မသိ' : 'Unknown')
+    : tagMeta
+    ? (lang === 'my' ? tagMeta.labelMy : tagMeta.labelEn)
     : shop.note || (lang === 'my' ? 'ဆိုင်' : 'Store');
 
   const phonesList = shop.phones && shop.phones.length > 0 ? shop.phones : (shop.phone ? [shop.phone] : []);
@@ -127,6 +128,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 <h4 className="font-bold text-slate-900 text-sm truncate">{shop.name}</h4>
                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
                   {tagLabel}
+                  {shop.subCategory && <span className="opacity-70 ml-1">({shop.subCategory})</span>}
                 </span>
                 {shop.kpayNumber && (
                   <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-md flex items-center gap-1 border border-indigo-100">
@@ -267,6 +269,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             >
               {renderCategoryIcon()}
               <span>{tagLabel}</span>
+              {shop.subCategory && (
+                <span className="px-1.5 py-0.2 bg-white/50 rounded text-[10px] ml-0.5 border border-black/5">
+                  {shop.subCategory}
+                </span>
+              )}
             </span>
 
             {/* Public vs Private indicator badge */}

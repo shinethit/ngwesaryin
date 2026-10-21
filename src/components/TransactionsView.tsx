@@ -718,20 +718,22 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                                 {t.items && t.items.length > 0 && (
                                   <div className="flex items-center gap-1.5 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); setExpandedShoppingTxIds((p) => ({ ...p, [t.id]: !p[t.id] })); }}
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 cursor-pointer shadow-2xs"
-                                    >
-                                      <ShoppingCart className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                      <span>{lang === 'my' ? 'စျေးဝယ်စာရင်း' : 'Shopping'}</span>
-                                      <span className="text-[8px] opacity-60">{expandedShoppingTxIds[t.id] ? '▲' : '▼'}</span>
-                                    </button>
-                                    
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
-                                      <Package className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                      {t.items.length} {lang === 'my' ? 'မျိုး' : 'items'}
-                                    </span>
+                                    {(!t.unitPrice) ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setExpandedShoppingTxIds((p) => ({ ...p, [t.id]: !p[t.id] })); }}
+                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 cursor-pointer shadow-2xs"
+                                      >
+                                        <ShoppingCart className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                        <span>{lang === 'my' ? 'စျေးဝယ်စာရင်း' : 'Shopping'}</span>
+                                        <span className="text-[8px] opacity-60">{expandedShoppingTxIds[t.id] ? '▲' : '▼'}</span>
+                                      </button>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
+                                        <Package className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                        {t.items[0]?.quantity || t.quantity || 1} {lang === 'my' ? 'မျိုး' : 'items'}
+                                      </span>
+                                    )}
                                   </div>
                                 )}
                               </div>

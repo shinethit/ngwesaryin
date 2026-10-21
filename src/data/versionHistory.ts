@@ -14,10 +14,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.46';
-export const CURRENT_BUILD_NUMBER = 261;
+export const CURRENT_APP_VERSION = 'v7.5.47';
+export const CURRENT_BUILD_NUMBER = 262;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.47',
+    buildNumber: 262,
+    releaseDate: '2026-10-21',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Shopping နှင့် Package Icon များ သီးသန့်ခွဲခြားခြင်း',
+    titleEn: 'Separated Shopping and Package Icons based on Entry Mode',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'ဈေးဝယ်စာရင်း (Shopping List) နှင့် ဈေး x အရေအတွက် (Unit Qty) တို့ကို တစ်ခုတည်းသော items array ထဲတွင် ရောနှောသိမ်းဆည်းထားရာမှ unitPrice ရှိ/မရှိ စစ်ဆေးပြီး သက်ဆိုင်ရာ Icon များကိုသာ သီးသန့်ပြသစေရန် ပြင်ဆင်ခြင်း။',
+    descriptionEn: 'Separated the display of Shopping Cart and Package icons by checking the unitPrice field, ensuring only the correct icon appears for Shopping Lists vs Unit Qty entries.',
+    changesMy: [
+      '🛒 ဈေးဝယ်စာရင်း (Shopping List) တွင်သာ Shopping Cart Icon ပြသခြင်း',
+      '📦 ဈေး x အရေအတွက် (Unit Qty) တွင်သာ Package Icon ပြသခြင်း',
+    ],
+    changesEn: [
+      '🛒 Show Shopping Cart icon only for Shopping List entries',
+      '📦 Show Package icon only for Unit Qty entries',
+    ],
+  },
   {
     version: 'v7.5.46',
     buildNumber: 261,

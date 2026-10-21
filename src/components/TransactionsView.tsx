@@ -673,68 +673,67 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             </div>
 
                             <div className="min-w-0 flex-1 space-y-1">
-                              {/* Line 1: Important Info (Category & Date) */}
-                              <div className="flex items-center justify-between gap-2 min-w-0">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="font-bold text-sm sm:text-base text-slate-900 truncate">
-                                    {getCategoryDisplayName(t.category, categories, lang)}
+                              {/* Line 1: Category & Subcategory */}
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-bold text-sm sm:text-base text-slate-900 truncate">
+                                  {getCategoryDisplayName(t.category, categories, lang)}
+                                </span>
+                                {subCat && (
+                                  <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200">
+                                    <Tag className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                                    <span className="truncate">{lang === 'my' ? subCat.name : subCat.nameEn}</span>
                                   </span>
-                                  {subCat && (
-                                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200">
-                                      <Tag className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                                      <span className="truncate">{lang === 'my' ? subCat.name : subCat.nameEn}</span>
-                                    </span>
-                                  )}
-                                </div>
-                                
+                                )}
                               </div>
 
-                              {/* Line 2: Amount & Note / Details */}
-                              <div className="flex items-center justify-between gap-2 min-w-0">
-                                <div className="flex items-center gap-1.5 min-w-0 flex-1 text-xs text-slate-500">
-                                  <span className={`font-mono font-bold text-xs sm:text-sm shrink-0 ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`}>
-                                    {isIncome ? `+${formatCurrency(t.amount, wallet?.currency)}` : `-${formatCurrency(t.amount, wallet?.currency)}`}
-                                  </span>
-                                  {/* [v7.5.2] Native + MMK conversion for foreign wallets (Q4b=B) */}
-                                  {wallet && wallet.currency && wallet.currency !== 'MMK' && (
-                                    <span
-                                      className="hidden sm:inline text-slate-400 text-[10px] font-mono shrink-0"
-                                      title={formatMMK(convertToMMK(t.amount, wallet.currency, wallet.exchangeRate))}
-                                    >
-                                      ≈ {formatMMK(convertToMMK(t.amount, wallet.currency, wallet.exchangeRate))}
-                                    </span>
-                                  )}
-                                  {t.note && (
-                                    <>
-                                      <span className="text-slate-300 shrink-0">•</span>
-                                      <span className="truncate text-slate-600 italic text-[11px]">
-                                        "{t.note}"
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-
-                                {/* Shopping List Badge */}
-                                {t.items && t.items.length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); setExpandedShoppingTxIds((p) => ({ ...p, [t.id]: !p[t.id] })); }}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 shrink-0 cursor-pointer"
+                              {/* Line 2: Amount & Wallet */}
+                              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                <span className={`font-mono font-bold text-xs sm:text-sm shrink-0 ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`}>
+                                  {isIncome ? `+${formatCurrency(t.amount, wallet?.currency)}` : `-${formatCurrency(t.amount, wallet?.currency)}`}
+                                </span>
+                                {wallet && wallet.currency && wallet.currency !== 'MMK' && (
+                                  <span
+                                    className="hidden sm:inline text-slate-400 text-[10px] font-mono shrink-0"
+                                    title={formatMMK(convertToMMK(t.amount, wallet.currency, wallet.exchangeRate))}
                                   >
-                                    <Package className="w-3.5 h-3.5 text-amber-700 shrink-0" /> {t.items.length} {lang === 'my' ? 'မျိုး' : 'items'}
-                                    <span className="text-[8px] opacity-60">{expandedShoppingTxIds[t.id] ? '▲' : '▼'}</span>
-                                  </button>
-                                )}
-                                {/* Wallet / Status Badges */}
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
-                                    wallet?.isSharedFromOther || (wallet?.sharedWith && wallet.sharedWith.length > 0)
-                                      ? 'bg-amber-50 text-amber-900 border-amber-300'
-                                      : 'bg-indigo-50 text-indigo-900 border-indigo-200'
-                                  }`}>
-                                    <span className="truncate max-w-[80px] sm:max-w-[120px]">{lang === 'my' ? wallet?.name : wallet?.nameEn || t.walletId}</span>
+                                    ≈ {formatMMK(convertToMMK(t.amount, wallet.currency, wallet.exchangeRate))}
                                   </span>
-                                </div>
+                                )}
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                                  wallet?.isSharedFromOther || (wallet?.sharedWith && wallet.sharedWith.length > 0)
+                                    ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                    : 'bg-indigo-50 text-indigo-900 border-indigo-200'
+                                }`}>
+                                  <span className="truncate max-w-[100px] sm:max-w-[150px]">{lang === 'my' ? wallet?.name : wallet?.nameEn || t.walletId}</span>
+                                </span>
+                              </div>
+
+                              {/* Line 3: Note / Shopping / Package */}
+                              <div className="flex items-center gap-2 min-w-0 flex-wrap text-xs text-slate-500 pt-0.5">
+                                {t.note && (
+                                  <span className="truncate text-slate-600 italic text-[11px] max-w-[200px]">
+                                    "{t.note}"
+                                  </span>
+                                )}
+
+                                {t.items && t.items.length > 0 && (
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setExpandedShoppingTxIds((p) => ({ ...p, [t.id]: !p[t.id] })); }}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 cursor-pointer shadow-2xs"
+                                    >
+                                      <ShoppingCart className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                      <span>{lang === 'my' ? 'စျေးဝယ်စာရင်း' : 'Shopping'}</span>
+                                      <span className="text-[8px] opacity-60">{expandedShoppingTxIds[t.id] ? '▲' : '▼'}</span>
+                                    </button>
+                                    
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
+                                      <Package className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                      {t.items.length} {lang === 'my' ? 'မျိုး' : 'items'}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Expandable Shopping List Table */}

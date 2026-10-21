@@ -447,191 +447,83 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
       )}
 
-      {/* Compact Unified Filter & Summary Control Box */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-        {/* Row 1: Unified Wallet Dropdown Selector & Search & Type Segment */}
-        <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center justify-between">
-          
-          {/* Multi-Wallet Checkbox Selector */}
-          <div className="flex-1 min-w-[220px]">
-            <MultiWalletSelector
-              wallets={wallets}
-              selectedWalletIds={selectedWalletIds}
-              onChangeSelectedWalletIds={(ids) => {
-                setSelectedWalletIds(ids);
-                setSelectedWallet('all');
-              }}
-              lang={lang}
-            />
+            {/* Compact Unified Filter & Summary Control Box */}
+      <div className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+        {/* Row 1: Wallet, Search, Type */}
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
+          <div className="flex-1 min-w-[200px]">
+            <MultiWalletSelector wallets={wallets} selectedWalletIds={selectedWalletIds} onChangeSelectedWalletIds={(ids) => { setSelectedWalletIds(ids); setSelectedWallet('all'); }} lang={lang} />
           </div>
-
-          {/* Search bar */}
-          <div className="relative w-full md:w-60">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              id="tx-search-input"
-              type="text"
-              placeholder={lang === 'my' ? 'ခေါင်းစဉ်၊ မှတ်ချက်ဖြင့် ရှာရန်...' : 'Search category or note...'}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+          <div className="relative w-full sm:w-48">
+            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input id="tx-search-input" type="text" placeholder={lang === 'my' ? 'ရှာရန်...' : 'Search...'} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
           </div>
-
-          {/* Type Segment Control */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0 justify-center">
-            <button
-              type="button"
-              onClick={() => setTypeFilter('all')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                typeFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {lang === 'my' ? 'အားလုံး' : 'All'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('income')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
-                typeFilter === 'income' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-50'
-              }`}
-            >
-              <ArrowDownLeft className="w-3.5 h-3.5" />
-              <span>{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('expense')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
-                typeFilter === 'expense' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'
-              }`}
-            >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</span>
-            </button>
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg shrink-0 justify-center">
+            <button type="button" onClick={() => setTypeFilter('all')} className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${typeFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>{lang === 'my' ? 'အားလုံး' : 'All'}</button>
+            <button type="button" onClick={() => setTypeFilter('income')} className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'income' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-50'}`}><ArrowDownLeft className="w-3 h-3" />{lang === 'my' ? 'ဝင်' : 'In'}</button>
+            <button type="button" onClick={() => setTypeFilter('expense')} className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'expense' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'}`}><ArrowUpRight className="w-3 h-3" />{lang === 'my' ? 'ထွက်' : 'Out'}</button>
           </div>
         </div>
-
-        {/* Compact Unified Filter & Summary Control Box */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 mt-2">
-          {/* Summary Toggles */}
-          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200/70 shrink-0">
-            <button
-              type="button"
-              onClick={() => setFinancialSystem('opening_closing')}
-              className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
-            >
-              Opening / Closing
-            </button>
-            <button
-              type="button"
-              onClick={() => setFinancialSystem('inflow_outflow')}
-              className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
-            >
-              Inflow / Outflow
-            </button>
+        {/* Row 2: Summary Toggle + Time + Category + Table Toggle */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200/70 shrink-0">
+            <button type="button" onClick={() => setFinancialSystem('opening_closing')} className={'px-1.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>Opening / Closing</button>
+            <button type="button" onClick={() => setFinancialSystem('inflow_outflow')} className={'px-1.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>Inflow / Outflow</button>
           </div>
-
-          {/* Time & Category Filters */}
-          <select
-            id="tx-time-filter"
-            value={timeFilter}
-            onChange={(e: any) => setTimeFilter(e.target.value)}
-            className="flex-1 min-w-[110px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none cursor-pointer"
-          >
-            <option value="all">🌟 {lang === 'my' ? 'ရက်စွဲအားလုံး' : 'All Time'}</option>
-            <option value="this_month">📅 {lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
-            <option value="last_month">🗓️ {lang === 'my' ? 'ပြီးခဲ့သောလ' : 'Last Month'}</option>
-            <option value="this_week">📊 {lang === 'my' ? 'ဒီအပတ်' : 'This Week'}</option>
-            <option value="today">☀️ {lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
-            <option value="yesterday">🌙 {lang === 'my' ? 'မနေ့က' : 'Yesterday'}</option>
-            <option value="specific_date">🎯 {lang === 'my' ? 'သတ်မှတ်ရက်' : 'Specific Date'}</option>
-            <option value="custom_range">📆 {lang === 'my' ? 'ရက်အပိုင်းအခြား' : 'Custom Range'}</option>
-          </select>
-
-          <select
-            id="tx-cat-filter"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="flex-1 min-w-[110px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer truncate"
-          >
-            <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး' : 'All Categories'}</option>
-            {sortedCategoriesForFilter.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.type === 'income' ? '🟢' : '🔴'} {lang === 'my' ? c.name : c.nameEn}
-              </option>
-            ))}
-          </select>
-
-          {/* Actions */}
+          <div className="flex-1 flex gap-1.5 min-w-[200px]">
+            <select id="tx-time-filter" value={timeFilter} onChange={(e: any) => setTimeFilter(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none cursor-pointer">
+              <option value="all">🌟 {lang === 'my' ? 'ရက်စွဲအားလုံး' : 'All Time'}</option>
+              <option value="this_month">📅 {lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
+              <option value="last_month">🗓️ {lang === 'my' ? 'ပြီးခဲ့သောလ' : 'Last Month'}</option>
+              <option value="this_week">📊 {lang === 'my' ? 'ဒီအပတ်' : 'This Week'}</option>
+              <option value="today">☀️ {lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
+              <option value="yesterday">🌙 {lang === 'my' ? 'မနေ့က' : 'Yesterday'}</option>
+              <option value="specific_date">🎯 {lang === 'my' ? 'သတ်မှတ်ရက်' : 'Specific Date'}</option>
+              <option value="custom_range">📆 {lang === 'my' ? 'ရက်အပိုင်းအခြား' : 'Custom Range'}</option>
+            </select>
+            <select id="tx-cat-filter" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer truncate">
+              <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး' : 'All Categories'}</option>
+              {sortedCategoriesForFilter.map((c) => (
+                <option key={c.id} value={c.id}>{c.type === 'income' ? '🟢' : '🔴'} {lang === 'my' ? c.name : c.nameEn}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || dataScope !== 'all') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setTypeFilter('all');
-                  setTimeFilter('all');
-                  setSpecificDate(todayStr);
-                  setSelectedCategory('all');
-                  setSelectedWallet('all');
-                  onSetDataScope?.('all');
-                }}
-                className="text-[10px] text-rose-600 hover:underline font-bold px-1.5 py-1 cursor-pointer bg-rose-50 rounded-lg"
-                title={lang === 'my' ? 'ပြန်လည်သတ်မှတ်' : 'Reset'}
-              >
-                ↺ Reset
-              </button>
+              <button type="button" onClick={() => { setSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); onSetDataScope?.('all'); }} className="text-[10px] text-rose-600 hover:underline font-bold px-1.5 py-1 cursor-pointer bg-rose-50 rounded-lg">↺</button>
             )}
-            <button
-              type="button"
-              onClick={() => setShowSummaryTable(!showSummaryTable)}
-              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0"
-            >
-              {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းကြည့်' : '➖ Compact') : (lang === 'my' ? '📊 Table View' : '📊 Table View')}
+            <button type="button" onClick={() => setShowSummaryTable(!showSummaryTable)} className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0">
+              {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းမည်' : '➖ Compact') : (lang === 'my' ? '📊 Table' : '📊 Table')}
             </button>
           </div>
         </div>
-
         {/* Row 2 Sub: Financial Table View or Compact Bar */}
         {showSummaryTable ? (
-          <FinancialSummaryTable
-            financialSystem={financialSystem}
-            onChangeFinancialSystem={setFinancialSystem}
-            income={filteredIncome}
-            expense={filteredExpense}
-            incomeCount={filtered.filter((t) => t.type === 'income' && (!isTransferTransaction(t) || isSingleWalletFilter)).length}
-            expenseCount={filtered.filter((t) => t.type === 'expense' && (!isTransferTransaction(t) || isSingleWalletFilter)).length}
-            selectedWallets={selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length ? wallets.filter((w) => selectedWalletIds.includes(w.id)) : selectedWallet !== 'all' ? wallets.filter((w) => isWalletMatch(w, selectedWallet)) : wallets}
-            transactions={filtered}
-            lang={lang}
-          />
+          <FinancialSummaryTable financialSystem={financialSystem} onChangeFinancialSystem={setFinancialSystem} income={filteredIncome} expense={filteredExpense} incomeCount={filtered.filter((t) => t.type === 'income' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} expenseCount={filtered.filter((t) => t.type === 'expense' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} selectedWallets={selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length ? wallets.filter((w) => selectedWalletIds.includes(w.id)) : selectedWallet !== 'all' ? wallets.filter((w) => isWalletMatch(w, selectedWallet)) : wallets} transactions={filtered} lang={lang} />
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs mt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-xs mt-1">
             <div className="flex items-center gap-3 flex-wrap font-mono font-bold">
               <div className="flex items-center gap-1 text-emerald-700">
-                <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ဝင်ငွေ:' : 'In:'}</span>
+                <ArrowDownLeft className="w-3 h-3 stroke-[2.5]" />
+                <span className="font-sans text-[10px] font-medium text-slate-500">{lang === 'my' ? 'ဝင်ငွေ:' : 'In:'}</span>
                 <span title={formatMMK(filteredIncome)}>+{formatLakhs(filteredIncome, lang)}</span>
               </div>
               <span className="text-slate-300">•</span>
               <div className="flex items-center gap-1 text-rose-700">
-                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ထွက်ငွေ:' : 'Out:'}</span>
+                <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
+                <span className="font-sans text-[10px] font-medium text-slate-500">{lang === 'my' ? 'ထွက်ငွေ:' : 'Out:'}</span>
                 <span title={formatMMK(filteredExpense)}>-{formatLakhs(filteredExpense, lang)}</span>
               </div>
               <span className="text-slate-300">•</span>
               <div className={`flex items-center gap-1 ${filteredIncome - filteredExpense >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
-                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
+                <span className="font-sans text-[10px] font-medium text-slate-500">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
                 <span title={formatMMK(filteredIncome - filteredExpense)}>{filteredIncome - filteredExpense >= 0 ? '+' : ''}{formatLakhs(filteredIncome - filteredExpense, lang)}</span>
               </div>
             </div>
-            <div className="text-[11px] font-semibold text-slate-500 font-sans">
-              ({filtered.length} {lang === 'my' ? 'မှတ်တမ်း' : 'records'})
-            </div>
+            <div className="text-[10px] font-semibold text-slate-500 font-sans">({filtered.length} {lang === 'my' ? 'မှတ်တမ်း' : 'records'})</div>
           </div>
         )}
-      {/* Dynamic Specific Date Toolbar */}
+        {/* Dynamic Specific Date Toolbar */}
         {timeFilter === 'specific_date' && (
           <div className="pt-3 border-t border-indigo-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-gradient-to-r from-indigo-50/90 via-blue-50/70 to-purple-50/90 rounded-xl border border-indigo-200/90 shadow-2xs">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -652,61 +544,25 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 </div>
               </div>
             </div>
-
             <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Date Input with Previous/Next Day navigation */}
               <div className="flex items-center bg-white rounded-xl border border-indigo-300 p-0.5 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => shiftSpecificDate(-1)}
-                  className="p-1.5 hover:bg-indigo-50 text-indigo-700 rounded-lg transition-colors cursor-pointer"
-                  title={lang === 'my' ? 'ရှေ့ ၁ ရက်သို့' : 'Previous Day'}
-                >
+                <button type="button" onClick={() => shiftSpecificDate(-1)} className="p-1.5 hover:bg-indigo-50 text-indigo-700 rounded-lg transition-colors cursor-pointer" title={lang === 'my' ? 'ရှေ့ ၁ ရက်သို့' : 'Previous Day'}>
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <input
-                  type="date"
-                  value={specificDate}
-                  onChange={(e) => setSpecificDate(e.target.value)}
-                  className="px-2 py-1 text-xs font-bold text-slate-800 bg-transparent border-0 focus:outline-none cursor-pointer"
-                />
-                <button
-                  type="button"
-                  onClick={() => shiftSpecificDate(1)}
-                  className="p-1.5 hover:bg-indigo-50 text-indigo-700 rounded-lg transition-colors cursor-pointer"
-                  title={lang === 'my' ? 'နောက် ၁ ရက်သို့' : 'Next Day'}
-                >
+                <input type="date" value={specificDate} onChange={(e) => setSpecificDate(e.target.value)} className="px-2 py-1 text-xs font-bold text-slate-800 bg-transparent border-0 focus:outline-none cursor-pointer" />
+                <button type="button" onClick={() => shiftSpecificDate(1)} className="p-1.5 hover:bg-indigo-50 text-indigo-700 rounded-lg transition-colors cursor-pointer" title={lang === 'my' ? 'နောက် ၁ ရက်သို့' : 'Next Day'}>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-
-              {/* Quick Jump Buttons */}
-              <button
-                type="button"
-                onClick={() => setSpecificDate(todayStr)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
-                  specificDate === todayStr
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200'
-                }`}
-              >
+              <button type="button" onClick={() => setSpecificDate(todayStr)} className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${specificDate === todayStr ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200'}`}>
                 {lang === 'my' ? 'ဒီနေ့' : 'Today'}
               </button>
-              <button
-                type="button"
-                onClick={() => setSpecificDate(yesterdayStr)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
-                  specificDate === yesterdayStr
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200'
-                }`}
-              >
+              <button type="button" onClick={() => setSpecificDate(yesterdayStr)} className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${specificDate === yesterdayStr ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200'}`}>
                 {lang === 'my' ? 'မနေ့က' : 'Yesterday'}
               </button>
             </div>
           </div>
         )}
-
         {/* Dynamic Custom Date Range Toolbar */}
         {timeFilter === 'custom_range' && (
           <div className="pt-3 border-t border-emerald-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-cyan-50/90 rounded-xl border border-emerald-200/90 shadow-2xs">
@@ -723,61 +579,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 </div>
               </div>
             </div>
-
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-emerald-300 shadow-2xs">
                 <span className="text-[11px] font-semibold text-slate-500 pl-1.5">{lang === 'my' ? 'မှ:' : 'From:'}</span>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="px-1.5 py-1 text-xs font-bold text-slate-800 bg-transparent border-0 focus:outline-none cursor-pointer"
-                />
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-1.5 py-1 text-xs font-bold text-slate-800 bg-transparent border-0 focus:outline-none cursor-pointer" />
                 <span className="text-[11px] font-semibold text-slate-500">{lang === 'my' ? 'ထိ:' : 'To:'}</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="px-1.5 py-1 text-xs font-bold text-slate-800 bg-transparent border-0 focus:outline-none cursor-pointer"
-                />
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-1.5 py-1 text-xs font-bold text-slate-800 bg-transparent border-0 focus:outline-none cursor-pointer" />
               </div>
-
-              {/* Quick Preset Range Chips */}
               <div className="flex items-center gap-1 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const d = new Date();
-                    d.setDate(d.getDate() - 6);
-                    setStartDate(getLocalDateString(d));
-                    setEndDate(todayStr);
-                  }}
-                  className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold cursor-pointer shadow-2xs"
-                >
+                <button type="button" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 6); setStartDate(getLocalDateString(d)); setEndDate(todayStr); }} className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold cursor-pointer shadow-2xs">
                   {lang === 'my' ? '၇ ရက်' : '7 Days'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const d = new Date();
-                    d.setDate(d.getDate() - 29);
-                    setStartDate(getLocalDateString(d));
-                    setEndDate(todayStr);
-                  }}
-                  className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold cursor-pointer shadow-2xs"
-                >
+                <button type="button" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 29); setStartDate(getLocalDateString(d)); setEndDate(todayStr); }} className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold cursor-pointer shadow-2xs">
                   {lang === 'my' ? '၃၀ ရက်' : '30 Days'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const d = new Date();
-                    const firstDayOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
-                    setStartDate(getLocalDateString(firstDayOfMonth));
-                    setEndDate(todayStr);
-                  }}
-                  className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold cursor-pointer shadow-2xs"
-                >
+                <button type="button" onClick={() => { const d = new Date(); const firstDayOfMonth = new Date(d.getFullYear(), d.getMonth(), 1); setStartDate(getLocalDateString(firstDayOfMonth)); setEndDate(todayStr); }} className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold cursor-pointer shadow-2xs">
                   {lang === 'my' ? 'ယခုလ' : 'This Month'}
                 </button>
               </div>
@@ -785,7 +601,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
         )}
       </div>
-
       {/* Active Filter Notice Bar if filtered is less than total */}
       {transactions.length > 0 && filtered.length < transactions.length && (
         <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
@@ -895,14 +710,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                           <span>-{formatMMK(group.totalExpense)}</span>
                         </span>
                       )}
-                      {group.totalIncome > 0 && group.totalExpense > 0 && (<span className={`px-2 py-0.5 rounded-md text-[11px] border flex items-center gap-1 ${
-                        group.net >= 0
-                          ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300'
-                          : 'bg-rose-100/90 text-rose-900 border-rose-300'
-                      }`}>
-                        <span className="font-sans text-[10px] opacity-85">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
-                        <span>{group.net >= 0 ? '+' : ''}{formatMMK(group.net)}</span>
-                      </span>)}
+                      {group.totalIncome > 0 && group.totalExpense > 0 && (
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] border flex items-center gap-1 ${
+                          group.net >= 0
+                            ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300'
+                            : 'bg-rose-100/90 text-rose-900 border-rose-300'
+                        }`}>
+                          <span className="font-sans text-[10px] opacity-85">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
+                          <span>{group.net >= 0 ? '+' : ''}{formatMMK(group.net)}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
 

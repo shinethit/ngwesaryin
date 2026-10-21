@@ -14,10 +14,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.38';
-export const CURRENT_BUILD_NUMBER = 253;
+export const CURRENT_APP_VERSION = 'v7.5.39';
+export const CURRENT_BUILD_NUMBER = 254;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.39',
+    buildNumber: 254,
+    releaseDate: '2026-10-21',
+    releaseTime: '05:00 AM (MMT)',
+    titleMy: 'UI ရှင်းလင်းရေး အပြီးသတ် ပြင်ဆင်ခြင်း',
+    titleEn: 'Finalized UI Cleanup & Compaction',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'စာရင်းသွင်းမှု မျက်နှာပြင်ရှိ Filter များကို အပြီးသတ် ကျဉ်းမြောင်းစေခြင်း၊ ထပ်နေသော ရက်စွဲများနှင့် ပမာဏများကို လုံးဝ ဖယ်ရှားခြင်းနှင့် Premium Banner အား ဖြုတ်ခြင်း။',
+    descriptionEn: 'Aggressively compacted the filter UI in Transactions view, completely removed redundant dates and net amounts on single-type days, and removed the Plan Banner.',
+    changesMy: [
+      '🎨 Filter UI ကို အပြီးသတ် ကျဉ်းမြောင်းစေခြင်း',
+      '🧹 ထပ်နေသော ရက်စွဲများနှင့် ပမာဏများကို လုံးဝ ဖယ်ရှားခြင်း',
+      '🚫 Premium Plan Banner အား ဖြုတ်ခြင်း',
+    ],
+    changesEn: [
+      '🎨 Aggressively compacted Filter UI',
+      '🧹 Completely removed redundant dates and net amounts',
+      '🚫 Removed Premium Plan Banner',
+    ],
+  },
   {
     version: 'v7.5.38',
     buildNumber: 253,

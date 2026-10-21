@@ -14,10 +14,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.47';
-export const CURRENT_BUILD_NUMBER = 262;
+export const CURRENT_APP_VERSION = 'v7.5.48';
+export const CURRENT_BUILD_NUMBER = 263;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.48',
+    buildNumber: 263,
+    releaseDate: '2026-10-21',
+    releaseTime: '01:00 PM (MMT)',
+    titleMy: 'Package Icon တွင် အရေအတွက်သာ ပြသစေခြင်း',
+    titleEn: 'Display only Quantity in Package Icon',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'ဈေး x အရေအတွက် (Unit Qty) ၏ Package Icon တွင် "မျိုး" ဟူသော စာသားများ မပါဝင်တော့ဘဲ "x အရေအတွက်" ပုံစံဖြင့်သာ ရှင်းလင်းစွာ ပြသစေရန် ပြင်ဆင်ခြင်း။',
+    descriptionEn: 'Removed the word "items" from the Package icon label and changed it to show only "x Quantity" for clearer UI.',
+    changesMy: [
+      '📦 Package Icon တွင် "x အရေအတွက်" ပုံစံဖြင့်သာ ပြသခြင်း',
+    ],
+    changesEn: [
+      '📦 Updated Package icon to show only "x Quantity"',
+    ],
+  },
   {
     version: 'v7.5.47',
     buildNumber: 262,

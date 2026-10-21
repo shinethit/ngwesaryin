@@ -731,7 +731,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     ) : (
                                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
                                         <Package className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                        {t.items[0]?.quantity || t.quantity || 1} {lang === 'my' ? 'မျိုး' : 'items'}
+                                        x {t.items[0]?.quantity || t.quantity || 1}
                                       </span>
                                     )}
                                   </div>

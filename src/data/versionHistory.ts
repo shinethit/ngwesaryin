@@ -14,10 +14,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.43';
-export const CURRENT_BUILD_NUMBER = 258;
+export const CURRENT_APP_VERSION = 'v7.5.44';
+export const CURRENT_BUILD_NUMBER = 259;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.44',
+    buildNumber: 259,
+    releaseDate: '2026-10-21',
+    releaseTime: '09:00 AM (MMT)',
+    titleMy: 'UI ရှင်းလင်းရေး အပြီးသတ် ပြင်ဆင်ခြင်း (၃ လိုင်းစနစ်)',
+    titleEn: 'Finalized UI Cleanup (3-Line Layout)',
+    tag: 'fix',
+    tagLabelMy: 'UI Fix',
+    tagLabelEn: 'UI Fix',
+    descriptionMy: 'စာရင်းသွင်းမှု မျက်နှာပြင်ရှိ Filter များကို ကျဉ်းမြောင်းစေခြင်း၊ ထပ်နေသော ရက်စွဲများနှင့် ပမာဏများကို ဖယ်ရှားခြင်း၊ ၃ လိုင်းစနစ်ဖြင့် Overflow မဖြစ်စေရန် ပြင်ဆင်ခြင်းနှင့် Shopping နှင့် Package Icon များကို သီးသန့်ခွဲခြားခြင်း။',
+    descriptionEn: 'Compacted filter UI, removed redundant UI elements, implemented a 3-line layout to prevent overflow, and separated Shopping and Package icons for clarity.',
+    changesMy: [
+      '🎨 Filter UI ကို ကျဉ်းမြောင်းစေခြင်း',
+      '🧹 ထပ်နေသော ရက်စွဲများနှင့် ပမာဏများကို ဖယ်ရှားခြင်း',
+      '📱 ၃ လိုင်းစနစ်ဖြင့် Overflow မဖြစ်စေရန် ပြင်ဆင်ခြင်း',
+      '🛒 Shopping နှင့် 📦 Package Icon များကို သီးသန့်ခွဲခြားခြင်း',
+    ],
+    changesEn: [
+      '🎨 Compacted Filter UI',
+      '🧹 Removed redundant dates and net amounts',
+      '📱 Implemented 3-line layout to prevent overflow',
+      '🛒 Separated Shopping and Package icons',
+    ],
+  },
   {
     version: 'v7.5.43',
     buildNumber: 258,

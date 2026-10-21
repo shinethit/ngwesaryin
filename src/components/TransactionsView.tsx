@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock } from 'lucide-react';
+import { Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock, Package } from 'lucide-react';
 import { Category, PlanType, Transaction, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
@@ -512,109 +512,32 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
         </div>
 
-        {/* Row 2: Financial Summary Header with Table View Toggle */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <span className="text-[11px] font-bold text-slate-600 shrink-0">
-              {lang === 'my' ? 'အနှစ်ချုပ်' : 'Summary'}
-            </span>
-            <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200/70">
-              <button
-                type="button"
-                onClick={() => setFinancialSystem('opening_closing')}
-                className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
-              >
-                {lang === 'my' ? 'Opening / Closing' : 'Opening / Closing'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setFinancialSystem('inflow_outflow')}
-                className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
-              >
-                {lang === 'my' ? 'Inflow / Outflow' : 'Inflow / Outflow'}
-              </button>
-            </div>
+        {/* Compact Unified Filter & Summary Control Box */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 mt-2">
+          {/* Summary Toggles */}
+          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200/70 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFinancialSystem('opening_closing')}
+              className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
+            >
+              Opening / Closing
+            </button>
+            <button
+              type="button"
+              onClick={() => setFinancialSystem('inflow_outflow')}
+              className={'px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}
+            >
+              Inflow / Outflow
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowSummaryTable(!showSummaryTable)}
-            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0"
-          >
-            {showSummaryTable
-              ? lang === 'my' ? '➖ ကျဉ်းကြည့်' : '➖ Compact'
-              : lang === 'my' ? '📊 Table View' : '📊 Table View'}
-          </button>
-        </div>
 
-        {/* Row 2 Sub: Financial Table View or Compact Bar */}
-        {showSummaryTable ? (
-          <FinancialSummaryTable
-            financialSystem={financialSystem}
-            onChangeFinancialSystem={setFinancialSystem}
-            income={filteredIncome}
-            expense={filteredExpense}
-            incomeCount={
-              filtered.filter((t) => {
-                if (t.type !== 'income') return false;
-                if (isTransferTransaction(t)) return isSingleWalletFilter;
-                return true;
-              }).length
-            }
-            expenseCount={
-              filtered.filter((t) => {
-                if (t.type !== 'expense') return false;
-                if (isTransferTransaction(t)) return isSingleWalletFilter;
-                return true;
-              }).length
-            }
-            selectedWallets={
-              selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length
-                ? wallets.filter((w) => selectedWalletIds.includes(w.id))
-                : selectedWallet !== 'all'
-                ? wallets.filter((w) => isWalletMatch(w, selectedWallet))
-                : wallets
-            }
-            transactions={filtered}
-            lang={lang}
-          />
-        ) : (
-          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-            <div className="flex items-center gap-3 flex-wrap font-mono font-bold">
-              <div className="flex items-center gap-1 text-emerald-700">
-                <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ဝင်ငွေ:' : 'In:'}</span>
-                <span title={formatMMK(filteredIncome)}>+{formatLakhs(filteredIncome, lang)}</span>
-              </div>
-
-              <span className="text-slate-300">•</span>
-
-              <div className="flex items-center gap-1 text-rose-700">
-                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ထွက်ငွေ:' : 'Out:'}</span>
-                <span title={formatMMK(filteredExpense)}>-{formatLakhs(filteredExpense, lang)}</span>
-              </div>
-
-              <span className="text-slate-300">•</span>
-
-              <div className={`flex items-center gap-1 ${filteredIncome - filteredExpense >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
-                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
-                <span title={formatMMK(filteredIncome - filteredExpense)}>{filteredIncome - filteredExpense >= 0 ? '+' : ''}{formatLakhs(filteredIncome - filteredExpense, lang)}</span>
-              </div>
-            </div>
-
-            <div className="text-[11px] font-semibold text-slate-500 font-sans">
-              ({filtered.length} {lang === 'my' ? 'မှတ်တမ်း' : 'records'})
-            </div>
-          </div>
-        )}
-
-        {/* Row 3: Secondary Filters (Time & Category) — single line compact */}
-        <div className="flex items-center gap-1 pt-1 border-t border-slate-100">
+          {/* Time & Category Filters */}
           <select
             id="tx-time-filter"
             value={timeFilter}
             onChange={(e: any) => setTimeFilter(e.target.value)}
-            className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 focus:outline-none cursor-pointer"
+            className="flex-1 min-w-[110px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none cursor-pointer"
           >
             <option value="all">🌟 {lang === 'my' ? 'ရက်စွဲအားလုံး' : 'All Time'}</option>
             <option value="this_month">📅 {lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
@@ -630,7 +553,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             id="tx-cat-filter"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-700 focus:outline-none cursor-pointer truncate"
+            className="flex-1 min-w-[110px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer truncate"
           >
             <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး' : 'All Categories'}</option>
             {sortedCategoriesForFilter.map((c) => (
@@ -640,27 +563,75 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             ))}
           </select>
 
-          {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || dataScope !== 'all') && (
+          {/* Actions */}
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || dataScope !== 'all') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setTypeFilter('all');
+                  setTimeFilter('all');
+                  setSpecificDate(todayStr);
+                  setSelectedCategory('all');
+                  setSelectedWallet('all');
+                  onSetDataScope?.('all');
+                }}
+                className="text-[10px] text-rose-600 hover:underline font-bold px-1.5 py-1 cursor-pointer bg-rose-50 rounded-lg"
+                title={lang === 'my' ? 'ပြန်လည်သတ်မှတ်' : 'Reset'}
+              >
+                ↺ Reset
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => {
-                setSearchTerm('');
-                setTypeFilter('all');
-                setTimeFilter('all');
-                setSpecificDate(todayStr);
-                setSelectedCategory('all');
-                setSelectedWallet('all');
-                onSetDataScope?.('all');
-              }}
-              className="text-[10px] text-rose-600 hover:underline font-bold shrink-0 cursor-pointer px-1"
-              title={lang === 'my' ? 'ပြန်လည်သတ်မှတ်' : 'Reset'}
+              onClick={() => setShowSummaryTable(!showSummaryTable)}
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0"
             >
-              ↺
+              {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းကြည့်' : '➖ Compact') : (lang === 'my' ? '📊 Table View' : '📊 Table View')}
             </button>
-          )}
+          </div>
         </div>
 
-        {/* Dynamic Specific Date Toolbar */}
+        {/* Row 2 Sub: Financial Table View or Compact Bar */}
+        {showSummaryTable ? (
+          <FinancialSummaryTable
+            financialSystem={financialSystem}
+            onChangeFinancialSystem={setFinancialSystem}
+            income={filteredIncome}
+            expense={filteredExpense}
+            incomeCount={filtered.filter((t) => t.type === 'income' && (!isTransferTransaction(t) || isSingleWalletFilter)).length}
+            expenseCount={filtered.filter((t) => t.type === 'expense' && (!isTransferTransaction(t) || isSingleWalletFilter)).length}
+            selectedWallets={selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length ? wallets.filter((w) => selectedWalletIds.includes(w.id)) : selectedWallet !== 'all' ? wallets.filter((w) => isWalletMatch(w, selectedWallet)) : wallets}
+            transactions={filtered}
+            lang={lang}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs mt-2">
+            <div className="flex items-center gap-3 flex-wrap font-mono font-bold">
+              <div className="flex items-center gap-1 text-emerald-700">
+                <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ဝင်ငွေ:' : 'In:'}</span>
+                <span title={formatMMK(filteredIncome)}>+{formatLakhs(filteredIncome, lang)}</span>
+              </div>
+              <span className="text-slate-300">•</span>
+              <div className="flex items-center gap-1 text-rose-700">
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'ထွက်ငွေ:' : 'Out:'}</span>
+                <span title={formatMMK(filteredExpense)}>-{formatLakhs(filteredExpense, lang)}</span>
+              </div>
+              <span className="text-slate-300">•</span>
+              <div className={`flex items-center gap-1 ${filteredIncome - filteredExpense >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
+                <span className="font-sans text-[11px] font-medium text-slate-500">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
+                <span title={formatMMK(filteredIncome - filteredExpense)}>{filteredIncome - filteredExpense >= 0 ? '+' : ''}{formatLakhs(filteredIncome - filteredExpense, lang)}</span>
+              </div>
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 font-sans">
+              ({filtered.length} {lang === 'my' ? 'မှတ်တမ်း' : 'records'})
+            </div>
+          </div>
+        )}
+      {/* Dynamic Specific Date Toolbar */}
         {timeFilter === 'specific_date' && (
           <div className="pt-3 border-t border-indigo-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-gradient-to-r from-indigo-50/90 via-blue-50/70 to-purple-50/90 rounded-xl border border-indigo-200/90 shadow-2xs">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -924,14 +895,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                           <span>-{formatMMK(group.totalExpense)}</span>
                         </span>
                       )}
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] border flex items-center gap-1 ${
+                      {group.totalIncome > 0 && group.totalExpense > 0 && (<span className={`px-2 py-0.5 rounded-md text-[11px] border flex items-center gap-1 ${
                         group.net >= 0
                           ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300'
                           : 'bg-rose-100/90 text-rose-900 border-rose-300'
                       }`}>
                         <span className="font-sans text-[10px] opacity-85">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
                         <span>{group.net >= 0 ? '+' : ''}{formatMMK(group.net)}</span>
-                      </span>
+                      </span>)}
                     </div>
                   </div>
 
@@ -970,9 +941,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-[11px] font-medium text-slate-400 shrink-0 font-mono">
-                                  {t.date}
-                                </span>
+                                
                               </div>
 
                               {/* Line 2: Amount & Note / Details */}
@@ -1007,7 +976,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     onClick={(e) => { e.stopPropagation(); setExpandedShoppingTxIds((p) => ({ ...p, [t.id]: !p[t.id] })); }}
                                     className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 shrink-0 cursor-pointer"
                                   >
-                                    🛒 {t.items.length} {lang === 'my' ? 'မျိုး' : 'items'}
+                                    <Package className="w-3.5 h-3.5 text-amber-700 shrink-0" /> {t.items.length} {lang === 'my' ? 'မျိုး' : 'items'}
                                     <span className="text-[8px] opacity-60">{expandedShoppingTxIds[t.id] ? '▲' : '▼'}</span>
                                   </button>
                                 )}

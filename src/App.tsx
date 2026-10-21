@@ -1648,15 +1648,7 @@ export default function App() {
         onManualSync={handleFullManualSync}
       />
 
-      <PlanBanner
-        plan={plan}
-        transactionsCount={transactions.length}
-        maxTransactions={limits.maxTransactions}
-        debtsCount={debts.filter((d) => d.status === 'active').length}
-        maxDebts={limits.maxDebts}
-        onOpenUpgrade={() => setIsPremiumModalOpen(true)}
-        lang={lang}
-      />
+      {/* <PlanBanner /> Removed to save space as per user request */}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <React.Suspense fallback={

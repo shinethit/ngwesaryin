@@ -379,10 +379,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           </button>
           <button
             onClick={() => { setEditingTireLog(null); setIsTireModalOpen(true); }}
-            className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-semibold rounded-lg border border-teal-200 transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
           >
             <Disc className="w-3 h-3" />
-            <span>{lang === 'my' ? 'တာယာ' : 'Tire'}</span>
+            <span>{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span>
           </button>
           <button
             type="button"

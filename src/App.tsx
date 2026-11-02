@@ -2210,27 +2210,27 @@ export default function App() {
         <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl px-3 sm:px-4 py-2 shadow-lg shadow-slate-900/5 flex items-center justify-between">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
               activeTab === 'dashboard'
                 ? 'text-emerald-700 font-semibold'
                 : 'text-slate-400 hover:text-slate-700'
             }`}
             title="Dashboard"
           >
-            <LayoutDashboard className="w-5 h-5" />
+            <LayoutDashboard className="w-6 h-6" />
             <span className="text-[10px]">{lang === 'my' ? 'ပင်မ' : 'Home'}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
               activeTab === 'transactions'
                 ? 'text-emerald-700 font-semibold'
                 : 'text-slate-400 hover:text-slate-700'
             }`}
             title="Transactions"
           >
-            <ArrowLeftRight className="w-5 h-5" />
+            <ArrowLeftRight className="w-6 h-6" />
             <span className="text-[10px]">{lang === 'my' ? 'စာရင်း' : 'Records'}</span>
           </button>
 
@@ -2243,23 +2243,23 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('debts')}
-            className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
               activeTab === 'debts'
                 ? 'text-emerald-700 font-semibold'
                 : 'text-slate-400 hover:text-slate-700'
             }`}
             title="Debts"
           >
-            <HandCoins className="w-5 h-5" />
+            <HandCoins className="w-6 h-6" />
             <span className="text-[10px]">{lang === 'my' ? 'အကြွေး' : 'Debts'}</span>
           </button>
 
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="flex flex-col items-center gap-0.5 p-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition-all cursor-pointer active:scale-95"
+            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-slate-500 hover:text-slate-900 transition-all cursor-pointer active:scale-95"
             title="Menu & All Tabs"
           >
-            <Menu className="w-5 h-5 text-slate-700" />
+            <Menu className="w-6 h-6 text-slate-700" />
             <span className="text-[10px] font-bold text-slate-700">{lang === 'my' ? 'မီနူး' : 'Menu'}</span>
           </button>
         </div>

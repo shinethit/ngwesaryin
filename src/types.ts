@@ -23,6 +23,7 @@ export interface Transaction {
   walletId: string;
   date: string; // YYYY-MM-DD
   note?: string;
+  shopName?: string; // [v7.5.54] Shop where the item was bought (for shop price comparison)
   items?: TransactionItem[]; // Shopping list items breakdown
   unitPrice?: number;
   quantity?: number;

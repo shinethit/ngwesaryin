@@ -350,7 +350,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                         )}
                       </div>
                       <span className="text-[10px] text-slate-400 font-medium">
-                        {new Date(item.createdAt).toLocaleDateString('en-US', {
+                        {new Date(item.createdAt).toLocaleDateString('en-GB', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
@@ -399,7 +399,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                       </span>
                       {item.adminRepliedAt && (
                         <span className="text-[10px] text-indigo-400 font-mono">
-                          {new Date(item.adminRepliedAt).toLocaleDateString()}
+                          {new Date(item.adminRepliedAt).toLocaleDateString('en-GB')}
                         </span>
                       )}
                     </div>

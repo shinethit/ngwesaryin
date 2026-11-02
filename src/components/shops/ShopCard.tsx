@@ -510,7 +510,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                       <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
                         <span>👤 {item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
                         <span>•</span>
-                        <span>{new Date(item.updatedAt).toLocaleDateString()}</span>
+                        <span>{new Date(item.updatedAt).toLocaleDateString('en-GB')}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">

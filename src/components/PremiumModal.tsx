@@ -430,7 +430,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                             <span>
                               {lang === 'my' ? 'သက်တမ်းကုန်ဆုံးမည့်ရက်:' : 'Expires on:'}{' '}
                               <strong className="text-slate-700 font-semibold">
-                                {new Date(expiryIso).toLocaleDateString()}
+                                {new Date(expiryIso).toLocaleDateString('en-GB')}
                               </strong>
                             </span>
                           </div>

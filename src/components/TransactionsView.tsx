@@ -473,7 +473,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
           
           <div className="flex-1 flex gap-1.5 min-w-[200px]">
-            <select id="tx-time-filter" value={timeFilter} onChange={(e: any) => setTimeFilter(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none cursor-pointer">
+            <select id="tx-time-filter" value={timeFilter} onChange={(e: any) => setTimeFilter(e.target.value)} className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none cursor-pointer">
               <option value="all">🌟 {lang === 'my' ? 'ရက်စွဲအားလုံး' : 'All Time'}</option>
               <option value="this_month">📅 {lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
               <option value="last_month">🗓️ {lang === 'my' ? 'ပြီးခဲ့သောလ' : 'Last Month'}</option>
@@ -483,7 +483,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <option value="specific_date">🎯 {lang === 'my' ? 'သတ်မှတ်ရက်' : 'Specific Date'}</option>
               <option value="custom_range">📆 {lang === 'my' ? 'ရက်အပိုင်းအခြား' : 'Custom Range'}</option>
             </select>
-            <select id="tx-cat-filter" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer truncate">
+            <select id="tx-cat-filter" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer truncate">
               <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး' : 'All Categories'}</option>
               {sortedCategoriesForFilter.map((c) => (
                 <option key={c.id} value={c.id}>{c.type === 'income' ? '🟢' : '🔴'} {lang === 'my' ? c.name : c.nameEn}</option>

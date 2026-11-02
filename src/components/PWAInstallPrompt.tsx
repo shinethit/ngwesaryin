@@ -14,7 +14,12 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
   // State to control auto-popup modal
   const [showAutoModal, setShowAutoModal] = useState<boolean>(false);
   // State to control floating bottom banner
-  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(false);
+  // [v7.5.52] Remember banner dismissal for 7 days. It used to be plain
+  // React state, so the banner came back on every fresh launch.
+  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(() => {
+    const t = safeGetItem('ngwe_pwa_banner_dismissed_time');
+    return !!t && Date.now() - Number(t) < 7 * 24 * 60 * 60 * 1000;
+  });
   // iOS guide modal state
   const [showIOSModal, setShowIOSModal] = useState<boolean>(false);
 
@@ -24,12 +29,12 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
       return;
     }
 
-    // Check if user dismissed today
+    // [v7.5.52] Full-screen modal shows only on the very first launch, before
+    // the user has ever dismissed it. It used to come back every 24h and pop
+    // up 1.5s after load, on top of the entry form.
     const dismissedTime = safeGetItem('ngwe_pwa_install_dismissed_time');
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000;
 
-    if (!dismissedTime || now - Number(dismissedTime) > oneDay) {
+    if (!dismissedTime) {
       // Show auto modal shortly after loading (1.5s) to allow page to settle
       const timer = setTimeout(() => {
         setShowAutoModal(true);
@@ -50,6 +55,16 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
     setShowAutoModal(false);
     setIsBannerDismissed(true);
     safeSetItem('ngwe_pwa_install_dismissed_time', Date.now().toString());
+    // [v7.5.52] Dismissing the modal also snoozes the banner, otherwise it
+    // pops back on the next launch even though the modal stays away.
+    safeSetItem('ngwe_pwa_banner_dismissed_time', Date.now().toString());
+  };
+
+  // [v7.5.52] Banner X: remember the dismissal, otherwise the banner
+  // returns on the next launch.
+  const handleBannerDismiss = () => {
+    setIsBannerDismissed(true);
+    safeSetItem('ngwe_pwa_banner_dismissed_time', Date.now().toString());
   };
 
   const handleInstallClick = async () => {
@@ -221,11 +236,11 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
                 className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-sm"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>{lang === 'my' ? 'Install' : 'Install'}</span>
+                <span>{isIOS ? (lang === 'my' ? 'သွင်းနည်း' : 'How to install') : (lang === 'my' ? 'Install' : 'Install')}</span>
               </button>
               <button
                 type="button"
-                onClick={() => setIsBannerDismissed(true)}
+                onClick={handleBannerDismiss}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Dismiss"
               >

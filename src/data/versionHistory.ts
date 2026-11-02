@@ -14,10 +14,93 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.51';
-export const CURRENT_BUILD_NUMBER = 266;
+export const CURRENT_APP_VERSION = 'v7.5.54';
+export const CURRENT_BUILD_NUMBER = 269;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.54',
+    buildNumber: 269,
+    releaseDate: '2026-11-02',
+    releaseTime: '08:45 PM (MMT)',
+    titleMy: 'ရက်စွဲ DD/MM/YYYY ပုံစံ၊ ဆိုင်အလိုက် ဈေးနှိုင်းယှဉ်ခြင်းနှင့် ဖုန်း UI ပြင်ဆင်ခြင်း',
+    titleEn: 'DD/MM/YYYY Dates, Shop Price Comparison and Phone UI Fixes',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ရက်စွဲတွေကို မြန်မာမှာ သုံးနေကျ DD/MM/YYYY ပုံစံ (ဥပမာ 02/11/2026) ဖြစ်အောင် ပြင်လိုက်ပါသည်။ Dashboard မှာ ဒီနေ့ရက်စွဲကို မြန်မာလိုပြပြီး \"Plan\" ကတ်ကိုလည်း \"အစီအစဉ်\" လို့ ပြင်ထားပါသည်။ ဈေးနှိုင်းယှဉ်မှုမှာ ဆိုင်အမည်ကို သိမ်းထားတော့မည်ဖြစ်ပြီး ပစ္စည်းတခုချင်းစီအတွက် အတန်ဆုံးဆိုင်ကို ပြပေးတော့မည်ဖြစ်သည်။ အောက်က မီနူးခလုတ်တွေနဲ့ ပိတ်ခလုတ်တွေကို လက်နဲ့ နှိပ်ရလွယ်အောင် ကြီးထားပြီး၊ မီနူးစာတွေ ဖြတ်မသွားတော့ပါ။ Admin Panel မှာ tab ၆ ခု ဆွဲလို့ရမှန်း သိသာအောင် အရိပ်ပြထားပြီး filter အကွက်တွေ ဖုန်းမှာ ကျဉ်းသွားအောင် ပြင်ထားပါသည်။',
+    descriptionEn: 'Dates now use the DD/MM/YYYY format (e.g. 02/11/2026). The Dashboard shows today in Myanmar, and the "Plan" card is now "အစီအစဉ်". Price comparison now saves the shop name and shows the cheapest shop for each item. Bottom menu buttons and close buttons are bigger for easier tapping, menu labels no longer cut off, and the Admin Panel tab strip now shows a fade cue that more tabs can be swiped to, with filter fields that shrink on phones.',
+    changesMy: [
+      '📅 ရက်စွဲတွေကို DD/MM/YYYY ပုံစံ ဖြစ်အောင် ပြင်ခြင်း (Admin၊ ဆိုင်များ၊ Premium စတဲ့ နေရာများ)',
+      '📅 Dashboard မှာ ဒီနေ့ရက်စွဲကို မြန်မာလိုပြခြင်း',
+      '🛍️ ဈေးနှိုင်းယှဉ်မှု: ဝယ်တဲ့ဆိုင်အမည်ကို သိမ်းထားပြီး ပစ္စည်းတခုချင်းစီအတွက် အတန်ဆုံးဆိုင်ကို ပြပေးခြင်း',
+      '👆 အောက်မီနူးနဲ့ ပိတ်ခလုတ်တွေကို လက်နဲ့ နှိပ်ရလွယ်အောင် ကြီးထားခြင်း (44px)',
+      '📋 မီနူးစာတွေ ဖြတ်မသွားတော့ဘဲ အပြည့်ပြခြင်း',
+      '🛠️ Admin Panel: tab ၆ ခု ဆွဲလို့ရမှန်း အရိပ်နဲ့ ပြခြင်း၊ filter အကွက်တွေ ဖုန်းမှာ ကျဉ်းသွားခြင်း',
+      '📊 Dashboard \"Plan\" ကတ်ကို \"အစီအစဉ်\" လို့ ပြင်ခြင်း',
+    ],
+    changesEn: [
+      '📅 Dates now use the DD/MM/YYYY format (Admin, shops, Premium and more)',
+      '📅 Dashboard shows today\'s date in Myanmar',
+      '🛍️ Price comparison: shop names are saved and each item shows its cheapest shop',
+      '👆 Bottom menu and close buttons enlarged for easier tapping (44px)',
+      '📋 Menu labels no longer cut off',
+      '🛠️ Admin Panel: fade cue shows the 6 tabs can be swiped, filter fields shrink on phones',
+      '📊 Dashboard "Plan" card is now "အစီအစဉ်"',
+    ],
+  },
+  {
+    version: 'v7.5.53',
+    buildNumber: 268,
+    releaseDate: '2026-11-02',
+    releaseTime: '06:04 PM (MMT)',
+    titleMy: 'လေချိန် (+) ကနေ တိုက်ရိုက် ထည့်နိုင်ခြင်း နှင့် ဈေးနှိုင်းယှဉ်မှု ပိုတိကျခြင်း',
+    titleEn: 'Tire Pressure from the + Form and More Accurate Price Comparison',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: '+ ခလုတ်ကနေ လေချိန် (PSI) ထည့်လို့ မရခဲ့တဲ့ ပြဿနာကို ပြင်ဆင်လိုက်ပါသည်။ လေချိန်သိမ်းတဲ့ code ရှိပေမဲ့ ရောက်စေမယ့် ခလုတ် မရှိခဲ့ဘဲ၊ ယခုအခါ + form ထဲမှာ "လေချိန်" ရွေးစရာ ပါလာပြီး ဘီး ၄ လုံးရဲ့ PSI ဖြည့်လို့ရပါပြီ။ ယာဉ်စီမံခန့်ခွဲမှုက "တာယာ" ခလုတ်ကိုလည်း အရောင်ပြည့် "လေချိန်" ခလုတ် ဖြစ်အောင် ပြင်ထားပါသည်။ ဈေးနှိုင်းယှဉ်မှု (Compare Price) ကိုလည်း ပိုတိကျအောင် ပြင်ထားပါသည် — "ဆန်", "ဆန် ၁ပြည်", "ဆန် 1 ပြည်" တို့ကို ပစ္စည်းတခုတည်းလို့ မှတ်တော့မည်ဖြစ်ပြီး၊ ကီလိုနဲ့ ပြည်လို ယူနစ်မတူတဲ့ ဈေးတွေကို ရောပြီး ပျမ်းမျှ မတွက်တော့ပါ။',
+    descriptionEn: 'Tire pressure (PSI) can now be added directly from the + form: the save code existed but no button ever reached it, so the option was unreachable. The + form now has a "လေချိန်" choice with 4-wheel PSI fields, and the Vehicles screen button is now a solid "လေချိန်" button instead of a pale "တာယာ" one. Price comparison is more accurate too: "ဆန်", "ဆန် ၁ပြည်" and "ဆန် 1 ပြည်" now count as one item, while prices in different units (kg vs ပြည်) are never averaged together.',
+    changesMy: [
+      '🛞 + form ကနေ လေချိန် (PSI) တိုက်ရိုက် ထည့်နိုင်ခြင်း (ဘီး ၄ လုံး)',
+      '🛞 ယာဉ်စီမံခန့်ခွဲမှုက တာယာခလုတ်ကို အရောင်ပြည့် "လေချိန်" ခလုတ် ဖြစ်အောင် ပြင်ခြင်း',
+      '💰 ဈေးနှိုင်းယှဉ်မှု: အမည်ကွဲပေမဲ့ ပစ္စည်းတူတာကို တခုတည်းလို့ မှတ်ခြင်း (မြန်မာဂဏန်း + အရေအတွက် ခွာခြင်း)',
+      '💰 ဈေးနှိုင်းယှဉ်မှု: ယူနစ်မတူတဲ့ ဈေးတွေ ရောပြီး ပျမ်းမျှ မတွက်တော့ခြင်း',
+    ],
+    changesEn: [
+      '🛞 Tire pressure (PSI) can now be added directly from the + form (4 wheels)',
+      '🛞 Vehicles screen tire button is now a solid "လေချိန်" button',
+      '💰 Price comparison: same item under different spellings now counts as one item (Myanmar digits + quantities normalized)',
+      '💰 Price comparison: prices in different units are no longer averaged together',
+    ],
+  },
+  {
+    version: 'v7.5.52',
+    buildNumber: 267,
+    releaseDate: '2026-11-02',
+    releaseTime: '04:50 PM (MMT)',
+    titleMy: 'ဖုန်းမှာ Transactions ရွေ့ခြင်း နှင့် PWA Install Prompt နှောင့်ယှက်ခြင်း ပြင်ဆင်ခြင်း',
+    titleEn: 'Fixed Transactions Horizontal Scroll and PWA Install Nagging on Phones',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဖုန်း (390px) မှာ Transactions စာမျက်နှာက 467px ဖြစ်ပြီး ဘေးကို 77px ရွေ့နေသည့် ပြဿနာကို ပြင်ဆင်လိုက်ပါသည်။ အကြောင်းရင်းမှာ ကဏ္ဍရွေးတဲ့ အကွက် (dropdown) က ရွေးချယ်စရာ စာအရှည်ဆုံး အတိုင်း 260px အထိ ကျယ်သွားခြင်းကြောင့် ဖြစ်ပြီး၊ ယခုအခါ အကွက်နှစ်ခုလုံး ဖုန်းအကျယ်အတိုင်း ကျဉ်းသွားအောင် ပြင်ထားပါသည်။ PWA Install အကြောင်းကြားစာကိုလည်း လျှော့ချလိုက်ပါသည် — မျက်နှာပြင်အပြည့် modal ကို ပထမအကြိမ် ဖွင့်ခြင်းတစ်ခါပဲ ပြတော့မည်ဖြစ်ပြီး၊ အောက်က banner ကို ပိတ်လိုက်လျှင် ၇ ရက် မှတ်ထားတော့မည် ဖြစ်သောကြောင့် app အသစ်ဖွင့်တိုင်း ပြန်ပေါ်တော့မည် မဟုတ်ပါ။ Admin Panel ရှိ Transactions ဇယားကိုလည်း ဖုန်းမှာ ဘေးဆွဲပြီး ကြည့်နိုင်အောင် ပြင်ထားပါသည်။',
+    descriptionEn: 'Fixed the Transactions page scrolling 77px sideways on phones (390px screen measured 467px wide) — the category dropdown forced itself to 260px because a select will not shrink below its longest option text; both filter selects can now shrink to fit. The PWA install nagging is reduced too: the full-screen modal now appears only on the very first launch, and dismissing the bottom banner is remembered for 7 days instead of coming back on every launch. The Admin Panel Transactions table can now be scrolled sideways on phones.',
+    changesMy: [
+      '🐛 Transactions စာမျက်နှာ ဖုန်းမှာ ဘေးကို 77px ရွေ့ခြင်း ပြင်ဆင်ခြင်း (ကဏ္ဍရွေးတဲ့ အကွက် ဖုန်းအကျယ်အတိုင်း ကျဉ်းသွားခြင်း)',
+      '📲 Install အကြောင်းကြားစာ မျက်နှာပြင်အပြည့် modal ကို ပထမအကြိမ်တစ်ခါပဲ ပြတော့ခြင်း',
+      '📲 အောက်က Install banner ပိတ်ထားတာကို ၇ ရက် မှတ်ထားခြင်း (အသစ်ဖွင့်တိုင်း ပြန်မပေါ်တော့ပါ)',
+      '🛠️ Admin Panel Transactions ဇယားကို ဖုန်းမှာ ဘေးဆွဲပြီး ကြည့်နိုင်ခြင်း',
+      '🍎 iPhone မှာ banner ခလုတ်စာကို "သွင်းနည်း" လို့ ပြင်ထားခြင်း (ခလုတ်က လမ်းညွှန်ပဲ ပြတာမို့)',
+    ],
+    changesEn: [
+      '🐛 Fixed the Transactions page scrolling 77px sideways on phones (category filter now shrinks to fit)',
+      '📲 Full-screen install modal now appears only on the very first launch',
+      '📲 Dismissing the bottom install banner is now remembered for 7 days',
+      '🛠️ Admin Panel Transactions table can now be scrolled sideways on phones',
+      '🍎 iPhone banner button now says "How to install" (it only opens the guide)',
+    ],
+  },
   {
     version: 'v7.5.51',
     buildNumber: 266,

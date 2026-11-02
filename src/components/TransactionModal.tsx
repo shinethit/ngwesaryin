@@ -32,7 +32,7 @@ import { doc } from 'firebase/firestore';
 
 const GAS_STATIONS = ['Denko', 'BOC', 'Other'];
 
-export type EntryModel = 'general' | 'fuel' | 'vehicle_service';
+export type EntryModel = 'general' | 'fuel' | 'vehicle_service' | 'tire_pressure';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -106,12 +106,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   );
   const [itemName, setItemName] = useState(editTransaction?.note || '');
   const [extraNote, setExtraNote] = useState('');
-  const [shopName, setShopName] = useState('');
-  const [shopInput, setShopInput] = useState('');
+  const [shopName, setShopName] = useState(editTransaction?.shopName || '');
+  const [shopInput, setShopInput] = useState(editTransaction?.shopName || '');
   const [itemInput, setItemInput] = useState('');
 
   const getResolvedModel = (): EntryModel => {
     if (editTransaction) {
+      // [v7.5.53] A linked tire-pressure log wins over the subcategory:
+      // sub_veh_tire is also used by tire REPLACEMENT (maintenance), so the
+      // subcategory alone cannot tell a pressure check from a replacement.
+      if (tirePressureLogs.some((t) => t.transactionId === editTransaction.id)) {
+        return 'tire_pressure';
+      }
       if (
         editTransaction.isFuelLog ||
         editTransaction.fuelLiters ||
@@ -285,6 +291,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           if (resolvedModel === 'fuel') {
             setIsVehicleLinkEnabled(true);
             setVehicleLogType('fuel');
+          } else if (resolvedModel === 'tire_pressure') {
+            // [v7.5.53] Editing a tire-pressure log: PSI values are prefilled
+            // from the linked log below (linkedTire).
+            setIsVehicleLinkEnabled(true);
+            setVehicleLogType('tire');
           } else if (resolvedModel === 'vehicle_service') {
             setIsVehicleLinkEnabled(true);
             setVehicleLogType('maintenance');
@@ -405,6 +416,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           );
           if (vehCat) setCategoryId(vehCat.id);
           setSubCategoryId('sub_veh_maintenance');
+          if (vehicles && vehicles.length > 0) {
+            setVehicleId(vehicles[0].id);
+            if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
+            if (vehicles[0].walletId && wallets.some((w) => w.id === vehicles[0].walletId)) {
+              chosenWalletId = vehicles[0].walletId;
+              setWalletId(vehicles[0].walletId);
+            }
+          }
+        } else if (resolvedModel === 'tire_pressure') {
+          // [v7.5.53] Tire-pressure entry opened with an initial model.
+          resolvedType = 'expense';
+          setIsVehicleLinkEnabled(true);
+          setVehicleLogType('tire');
+          const vehCat = categories.find(
+            (c) =>
+              c.id === 'cat_vehicle' ||
+              c.id === 'cat_vehicle_management' ||
+              c.name.includes('ယာဉ်') ||
+              (c.nameEn && c.nameEn.toLowerCase().includes('vehicle'))
+          );
+          if (vehCat) setCategoryId(vehCat.id);
+          setSubCategoryId('sub_veh_tire');
           if (vehicles && vehicles.length > 0) {
             setVehicleId(vehicles[0].id);
             if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
@@ -762,6 +795,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const vehCat = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle')));
       if (vehCat) setCategoryId(vehCat.id);
       if (!subCategoryId || subCategoryId === 'sub_veh_fuel') setSubCategoryId('sub_veh_maintenance');
+      if (vehicles && vehicles.length > 0) {
+        if (!vehicleId) {
+          setVehicleId(vehicles[0].id);
+          if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
+        } else {
+          const target = vehicles.find((x) => x.id === vehicleId);
+          if (target && target.currentOdometer && !vehicleOdometer) setVehicleOdometer(String(target.currentOdometer));
+        }
+      }
+    } else if (newModel === 'tire_pressure') {
+      // [v7.5.53] Tire-pressure check from the + form: the PSI fields and
+      // the tire save branch (vehicleLogType 'tire') were already in the
+      // code, but no button ever selected this model — it was unreachable.
+      setType('expense');
+      setIsVehicleLinkEnabled(true);
+      setVehicleLogType('tire');
+      const vehCat = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle')));
+      if (vehCat) setCategoryId(vehCat.id);
+      setSubCategoryId('sub_veh_tire');
       if (vehicles && vehicles.length > 0) {
         if (!vehicleId) {
           setVehicleId(vehicles[0].id);
@@ -1138,7 +1190,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
 
       let targetCategory = effectiveCategoryId;
-      if (entryModel === 'fuel' || entryModel === 'vehicle_service' || (type === 'expense' && isVehicleLinkEnabled)) {
+      if (entryModel === 'fuel' || entryModel === 'vehicle_service' || entryModel === 'tire_pressure' || (type === 'expense' && isVehicleLinkEnabled)) {
         const vehicleCategory = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်စီမံ') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management')));
         if (vehicleCategory) targetCategory = vehicleCategory.id;
       }
@@ -1146,6 +1198,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       let targetSubCategory = subCategoryId || undefined;
       if (entryModel === 'fuel') {
         targetSubCategory = 'sub_veh_fuel';
+      } else if (entryModel === 'tire_pressure') {
+        // [v7.5.53] Tire-pressure check goes under the tire subcategory.
+        targetSubCategory = 'sub_veh_tire';
       } else if (entryModel === 'vehicle_service') {
         if (!targetSubCategory || targetSubCategory === 'sub_veh_fuel') {
           if (maintServiceType === 'tires') targetSubCategory = 'sub_veh_tire';
@@ -1157,7 +1212,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       let finalNote: string | undefined = undefined;
       let txItems: TransactionItem[] | undefined = undefined;
 
-      if (entryModel === 'fuel' || entryModel === 'vehicle_service') {
+      if (entryModel === 'fuel' || entryModel === 'vehicle_service' || entryModel === 'tire_pressure') {
         finalNote = extraNote.trim() || undefined;
       } else if (entryMode === 'shopping_list') {
         finalNote = extraNote.trim() || undefined;
@@ -1226,6 +1281,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         walletId: walletId,
         date,
         note: finalNote,
+        shopName: shopName.trim() || undefined,
         isTransfer: isTransferTx,
         transferType: isTransferTx ? (type === 'expense' ? 'transfer_out' : 'transfer_in') : undefined,
         transferToWalletId: isTransferTx && transferToWalletId && transferToWalletId !== walletId ? transferToWalletId : undefined,
@@ -1261,7 +1317,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <span className="flex items-center gap-2">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                   <span>
-                    {entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : entryMode === 'unit_qty' ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty') : entryMode === 'shopping_list' ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List') : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
+                    {entryModel === 'tire_pressure' ? (lang === 'my' ? '🛞 လေချိန်' : '🛞 Tire Pressure') : entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : entryMode === 'unit_qty' ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty') : entryMode === 'shopping_list' ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List') : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
                   </span>
                 </span>
                 {moreOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -1286,6 +1342,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType === "tires" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}>
                       <Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာ လဲလှယ်' : 'Tire Replacement'}</span>{entryModel === "vehicle_service" && maintServiceType === "tires" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
                     </button>
+                    <button type="button" onClick={() => { handleSwitchModel("tire_pressure"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "tire_pressure" ? "bg-teal-50 text-teal-800" : "text-slate-700 hover:bg-slate-50")}>
+                      <Gauge className="w-4 h-4" /><span>{lang === 'my' ? 'လေချိန် (PSI)' : 'Tire Pressure (PSI)'}</span>{entryModel === "tire_pressure" && <Check className="w-3.5 h-3.5 ml-auto text-teal-600" strokeWidth={3} />}
+                    </button>
                     <div className="h-px bg-slate-100 my-0.5" />
                   </>
                 )}
@@ -1308,6 +1367,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
                   <span className="text-xs font-bold text-emerald-800">
                     {entryModel === 'fuel' && (lang === 'my' ? '⛽ ဆီဖိုး Mode' : '⛽ Fuel Mode')}
+                    {entryModel === 'tire_pressure' && (lang === 'my' ? '🛞 လေချိန် Mode' : '🛞 Tire Pressure Mode')}
                     {entryModel === 'vehicle_service' && maintServiceType === 'tires' && (lang === 'my' ? '🛞 တာယာ Mode' : '🛞 Tire Mode')}
                     {entryModel === 'vehicle_service' && maintServiceType !== 'tires' && (lang === 'my' ? '🔧 ဝန်ဆောင်မှု Mode' : '🔧 Service Mode')}
                   </span>
@@ -1372,10 +1432,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <Car className="w-3.5 h-3.5 text-blue-600" />
                   <span>{lang === 'my' ? 'ယာဉ် မှတ်တမ်း အမျိုးအစား ရွေးပါ:' : 'Select vehicle entry type:'}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   <button type="button" onClick={() => handleSwitchModel("fuel")} className="py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Fuel className="w-4 h-4" /><span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
                   <button type="button" onClick={() => handleSwitchModel("vehicle_service")} className="py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Wrench className="w-4 h-4" /><span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
-                  <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); }} className="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာ' : 'Tire'}</span></button>
+                  <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); }} className="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာလဲလှယ်' : 'Tire Replace'}</span></button>
+                  <button type="button" onClick={() => handleSwitchModel("tire_pressure")} className="py-2 px-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Gauge className="w-4 h-4" /><span>{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span></button>
                 </div>
               </div>
             )}
@@ -1481,6 +1542,50 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <div className="text-sm font-bold text-slate-900 mt-0.5">{fuelIsFullTank ? (lang === 'my' ? 'အပြည့်' : 'Yes') : (lang === 'my' ? 'တစ်စိတ်တပိုင်း' : 'Partial')}</div>
                   </div>
                   <button type="button" onClick={() => setFuelIsFullTank(!fuelIsFullTank)} className={"w-10 h-6 rounded-full transition-colors relative shrink-0 " + (fuelIsFullTank ? "bg-emerald-600" : "bg-slate-300")}><span className={"absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all " + (fuelIsFullTank ? "left-[18px]" : "left-0.5")} /></button>
+                </div>
+              </>
+            )}
+
+            {entryModel === "tire_pressure" && (
+              <>
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ယာဉ်' : 'Vehicle'}</div>
+                  <select value={vehicleId} onChange={(e) => {
+                    setVehicleId(e.target.value);
+                    const v = vehicles.find((x) => x.id === e.target.value);
+                    if (v?.currentOdometer) setVehicleOdometer(String(v.currentOdometer));
+                    if (v?.walletId && wallets.some((w) => w.id === v.walletId)) setWalletId(v.walletId);
+                  }} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
+                    {vehicles.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicles.map((v) => (<option key={v.id} value={v.id}>{v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}</option>))}
+                  </select>
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'တာယာ လေပေါင်ချိန် (PSI)' : 'Tire Pressure (PSI)'}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ဘယ် (FL)' : 'Front Left (FL)'}</div>
+                      <input type="number" value={tireFL} onChange={(e) => setTireFL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ညာ (FR)' : 'Front Right (FR)'}</div>
+                      <input type="number" value={tireFR} onChange={(e) => setTireFR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ဘယ် (RL)' : 'Rear Left (RL)'}</div>
+                      <input type="number" value={tireRL} onChange={(e) => setTireRL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ညာ (RR)' : 'Rear Right (RR)'}</div>
+                      <input type="number" value={tireRR} onChange={(e) => setTireRR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}</div>
+                    <input type="number" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                  </div>
                 </div>
               </>
             )}

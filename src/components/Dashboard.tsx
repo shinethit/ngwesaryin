@@ -246,7 +246,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
     .slice(0, 3);
 
-  const todayStr = new Date().toLocaleDateString(lang === 'my' ? 'en-GB' : 'en-US', {
+  const todayStr = new Date().toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-GB', {
     weekday: 'long', month: 'short', day: 'numeric',
   });
 
@@ -419,7 +419,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Crown className="w-4 h-4" />
             </div>
             <span className="text-[10px] font-bold text-amber-900 leading-tight text-center">
-              {lang === 'my' ? 'Plan' : 'Plans'}
+              {lang === 'my' ? 'အစီအစဉ်' : 'Plans'}
             </span>
           </button>
 

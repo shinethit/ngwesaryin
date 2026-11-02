@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { History, TrendingUp, TrendingDown, Minus, Search, Calendar, Tag, Info, X } from 'lucide-react';
 import { Category, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { normalizeItemName } from '../utils/itemIntelligence';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
 
@@ -14,6 +15,7 @@ interface PriceRecord {
   categoryId: string;
   subCategoryId?: string;
   note?: string;
+  shopName?: string; // [v7.5.54] Shop where this purchase was made
   isShoppingItem?: boolean;
 }
 
@@ -85,8 +87,11 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
       if (tx.items && tx.items.length > 0) {
         tx.items.forEach((item) => {
           if (item.name && item.name.trim().length >= 1) {
-            const cleanName = item.name.trim().toLowerCase();
-            const key = `shop_${cleanName}`;
+            // [v7.5.53] Same normalizer as the comparison view, so
+            // "ဆန် ၁ပြည်" and "ဆန်" share one history (split by unit).
+            const norm = normalizeItemName(item.name);
+            if (!norm.key) return;
+            const key = `shop_${norm.key}|${norm.unit}`;
             const unitPrice =
               item.price > 0
                 ? item.price
@@ -98,8 +103,8 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
               if (!grouped.has(key)) {
                 grouped.set(key, {
                   key,
-                  displayName: item.name.trim(),
-                  displayNameEn: item.name.trim(),
+                  displayName: norm.display + (norm.unit ? ' · ' + norm.unit : ''),
+                  displayNameEn: norm.display + (norm.unit ? ' · ' + norm.unit : ''),
                   categoryId: tx.category,
                   subCategoryId: tx.subCategoryId,
                   isShoppingItem: true,
@@ -115,6 +120,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                 categoryId: tx.category,
                 subCategoryId: tx.subCategoryId,
                 note: item.quantity && item.quantity > 1 ? `x${item.quantity} ခု (စုစုပေါင်း ${formatMMK(item.amount || unitPrice * item.quantity)})` : undefined,
+                shopName: tx.shopName,
                 isShoppingItem: true,
               });
             }
@@ -145,17 +151,19 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
             categoryId: tx.category,
             subCategoryId: tx.subCategoryId,
             note: tx.note,
+            shopName: tx.shopName,
           });
         }
       } else if ((!tx.items || tx.items.length === 0) && tx.note && tx.note.trim().length >= 1) {
         // 3. Process note if no items and no subcategory
-        const cleanNote = tx.note.trim().toLowerCase();
-        const key = `note_${cleanNote}`;
+        const norm = normalizeItemName(tx.note);
+        if (!norm.key) return;
+        const key = `note_${norm.key}|${norm.unit}`;
         if (!grouped.has(key)) {
           grouped.set(key, {
             key,
-            displayName: tx.note.trim(),
-            displayNameEn: tx.note.trim(),
+            displayName: norm.display + (norm.unit ? ' · ' + norm.unit : ''),
+            displayNameEn: norm.display + (norm.unit ? ' · ' + norm.unit : ''),
             categoryId: tx.category,
             records: [],
           });
@@ -167,6 +175,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
           walletId: tx.walletId,
           categoryId: tx.category,
           note: tx.note,
+          shopName: tx.shopName,
         });
       }
     });
@@ -419,6 +428,9 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                             "{item.latest.note}"
                           </p>
                         )}
+                        {item.latest.shopName && (
+                          <p className="text-[11px] text-emerald-700 font-bold truncate">🛍️ {item.latest.shopName}</p>
+                        )}
                       </div>
 
                       {/* Previous Purchase */}
@@ -446,6 +458,9 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                             <p className="text-[11px] text-slate-400 truncate italic">
                               "{item.previous.note}"
                             </p>
+                          )}
+                          {item.previous.shopName && (
+                            <p className="text-[11px] text-emerald-700 font-bold truncate">🛍️ {item.previous.shopName}</p>
                           )}
                         </div>
                       ) : (

@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { Category, PlanType, Transaction, Wallet } from '../types';
 import { formatMMK, formatDateDisplay } from '../utils/formatters';
+import { normalizeItemName } from '../utils/itemIntelligence';
 
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 
@@ -36,12 +37,17 @@ interface ItemPurchaseRecord {
   walletId: string;
   categoryId: string;
   note?: string;
+  shopName?: string; // [v7.5.54] Shop where this purchase was made
   isShoppingList?: boolean;
 }
 
 interface ItemSummary {
   name: string;
   normalizedName: string;
+  // [v7.5.53] Unit derived from the name ("" when unknown); chartKey is the
+  // unique identity (name + unit) so "ဆန်" per kg and per ပြည် never merge.
+  unit?: string;
+  chartKey: string;
   categoryId: string;
   records: ItemPurchaseRecord[];
   totalPurchases: number;
@@ -52,6 +58,8 @@ interface ItemSummary {
   minPrice: number;
   maxPrice: number;
   avgPrice: number;
+  cheapestShop?: string; // [v7.5.54] Shop with the lowest unit price
+  cheapestPrice?: number;
   priceDelta: number;
   priceDeltaPercent: number;
   lastDate: string;
@@ -121,6 +129,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       {
         name: string;
         normalizedName: string;
+        unit: string;
+        chartKey: string;
         categoryId: string;
         records: ItemPurchaseRecord[];
       }
@@ -133,8 +143,12 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       if (tx.items && tx.items.length > 0) {
         tx.items.forEach((item) => {
           if (!item.name || item.name.trim().length === 0) return;
-          const cleanName = item.name.trim();
-          const normalized = cleanName.toLowerCase();
+          // [v7.5.53] Normalize so "ဆန်", "ဆန် ၁ပြည်", "ဆန် 1 ပြည်" group
+          // as one item; different units stay separate (never averaged together).
+          const norm = normalizeItemName(item.name);
+          const cleanName = norm.display;
+          const normalized = norm.key;
+          const mapKey = normalized + '|' + norm.unit;
           const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
           const unitPrice =
             item.price > 0
@@ -145,16 +159,18 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
           if (unitPrice <= 0) return;
 
-          if (!itemMap.has(normalized)) {
-            itemMap.set(normalized, {
+          if (!itemMap.has(mapKey)) {
+            itemMap.set(mapKey, {
               name: cleanName,
               normalizedName: normalized,
+              unit: norm.unit,
+              chartKey: mapKey,
               categoryId: tx.category,
               records: [],
             });
           }
 
-          itemMap.get(normalized)!.records.push({
+          itemMap.get(mapKey)!.records.push({
             id: `${tx.id}_${item.id || item.name}`,
             txId: tx.id,
             date: tx.date,
@@ -164,6 +180,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             walletId: tx.walletId,
             categoryId: tx.category,
             note: tx.note,
+            shopName: tx.shopName,
             isShoppingList: true,
           });
         });
@@ -173,17 +190,21 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       if (tx.subCategoryId) {
         const sub = subCategoryMap.get(tx.subCategoryId);
         if (sub) {
-          const cleanName = lang === 'my' ? sub.name : sub.nameEn || sub.name;
-          const normalized = cleanName.toLowerCase();
-          if (!itemMap.has(normalized)) {
-            itemMap.set(normalized, {
+          const norm = normalizeItemName(lang === 'my' ? sub.name : sub.nameEn || sub.name);
+          const cleanName = norm.display;
+          const normalized = norm.key;
+          const mapKey = normalized + '|' + norm.unit;
+          if (!itemMap.has(mapKey)) {
+            itemMap.set(mapKey, {
               name: cleanName,
               normalizedName: normalized,
+              unit: norm.unit,
+              chartKey: mapKey,
               categoryId: sub.categoryId,
               records: [],
             });
           }
-          itemMap.get(normalized)!.records.push({
+          itemMap.get(mapKey)!.records.push({
             id: tx.id,
             txId: tx.id,
             date: tx.date,
@@ -193,20 +214,25 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             walletId: tx.walletId,
             categoryId: tx.category,
             note: tx.note,
+            shopName: tx.shopName,
           });
         }
       } else if ((!tx.items || tx.items.length === 0) && tx.note && tx.note.trim().length >= 2) {
-        const cleanName = tx.note.trim();
-        const normalized = cleanName.toLowerCase();
-        if (!itemMap.has(normalized)) {
-          itemMap.set(normalized, {
+        const norm = normalizeItemName(tx.note);
+        const cleanName = norm.display;
+        const normalized = norm.key;
+        const mapKey = normalized + '|' + norm.unit;
+        if (!itemMap.has(mapKey)) {
+          itemMap.set(mapKey, {
             name: cleanName,
             normalizedName: normalized,
+            unit: norm.unit,
+            chartKey: mapKey,
             categoryId: tx.category,
             records: [],
           });
         }
-        itemMap.get(normalized)!.records.push({
+        itemMap.get(mapKey)!.records.push({
           id: tx.id,
           txId: tx.id,
           date: tx.date,
@@ -216,6 +242,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
           walletId: tx.walletId,
           categoryId: tx.category,
           note: tx.note,
+          shopName: tx.shopName,
         });
       }
     });
@@ -239,10 +266,16 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       const priceDelta = latestPrice - firstPrice;
       const priceDeltaPercent = firstPrice > 0 ? (priceDelta / firstPrice) * 100 : 0;
       const lastDate = sortedRecords[sortedRecords.length - 1]?.date || '';
+      const withShop = sortedRecords.filter((r) => r.shopName);
+      const cheapestRecord = withShop.length > 0 ? withShop.reduce((a, b) => (b.unitPrice < a.unitPrice ? b : a)) : undefined;
+      const cheapestShop = cheapestRecord?.shopName;
+      const cheapestPrice = cheapestRecord?.unitPrice;
 
       return {
         name: item.name,
         normalizedName: item.normalizedName,
+        unit: item.unit || undefined,
+        chartKey: item.chartKey,
         categoryId: item.categoryId,
         records: sortedRecords,
         totalPurchases,
@@ -256,6 +289,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         priceDelta,
         priceDeltaPercent,
         lastDate,
+        cheapestShop,
+        cheapestPrice,
       };
     });
 
@@ -286,7 +321,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   const activeSelectedItems = useMemo(() => {
     if (selectedItemNames.length > 0) {
       return selectedItemNames
-        .map((name) => allItemSummaries.find((it) => it.normalizedName === name))
+        .map((name) => allItemSummaries.find((it) => it.chartKey === name || it.normalizedName === name))
         .filter((it): it is ItemSummary => it !== undefined);
     }
     // Default top 2
@@ -294,25 +329,25 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   }, [selectedItemNames, allItemSummaries]);
 
   // Toggle item selection
-  const handleToggleItem = (normalizedName: string) => {
+  const handleToggleItem = (chartKey: string) => {
     setSelectedItemNames((prev) => {
       // If currently using default (empty array), initialize with top item + new item
-      const currentList = prev.length === 0 ? activeSelectedItems.map((it) => it.normalizedName) : prev;
-      if (currentList.includes(normalizedName)) {
-        const next = currentList.filter((n) => n !== normalizedName);
+      const currentList = prev.length === 0 ? activeSelectedItems.map((it) => it.chartKey) : prev;
+      if (currentList.includes(chartKey)) {
+        const next = currentList.filter((n) => n !== chartKey);
         return next;
       } else {
         if (currentList.length >= 5) {
           // Replace the last item to keep max 5 items
-          return [...currentList.slice(0, 4), normalizedName];
+          return [...currentList.slice(0, 4), chartKey];
         }
-        return [...currentList, normalizedName];
+        return [...currentList, chartKey];
       }
     });
   };
 
   const handleSelectAllTop = () => {
-    const topNames = allItemSummaries.slice(0, 3).map((it) => it.normalizedName);
+    const topNames = allItemSummaries.slice(0, 3).map((it) => it.chartKey);
     setSelectedItemNames(topNames);
   };
 
@@ -346,9 +381,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         const matchingRecords = item.records.filter((r) => r.date === dateStr);
         if (matchingRecords.length > 0) {
           const lastRecord = matchingRecords[matchingRecords.length - 1];
-          point[item.normalizedName] = lastRecord.unitPrice;
-          point[`${item.normalizedName}_qty`] = lastRecord.quantity;
-          point[`${item.normalizedName}_total`] = lastRecord.totalAmount;
+          point[item.chartKey] = lastRecord.unitPrice;
+          point[`${item.chartKey}_qty`] = lastRecord.quantity;
+          point[`${item.chartKey}_total`] = lastRecord.totalAmount;
         }
       });
 
@@ -360,7 +395,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   const frequencyChartData = useMemo(() => {
     const itemsToChart = activeSelectedItems.length > 0 ? activeSelectedItems : allItemSummaries.slice(0, 5);
     return itemsToChart.map((it, idx) => ({
-      name: it.name,
+      name: it.unit ? it.name + ' · ' + it.unit : it.name,
       normalizedName: it.normalizedName,
       purchases: it.totalPurchases,
       totalSpent: it.totalSpent,
@@ -543,9 +578,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                 const colorObj = ITEM_COLORS[idx % ITEM_COLORS.length];
                 return (
                   <button
-                    key={it.normalizedName}
+                    key={it.chartKey}
                     type="button"
-                    onClick={() => handleToggleItem(it.normalizedName)}
+                    onClick={() => handleToggleItem(it.chartKey)}
                     style={{ borderColor: colorObj.stroke, color: colorObj.stroke }}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-white border shadow-2xs hover:opacity-80 transition-all cursor-pointer"
                     title={lang === 'my' ? 'Chart မှ ဖယ်ထုတ်ရန် နှိပ်ပါ' : 'Click to remove from chart'}
@@ -572,18 +607,18 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             ) : (
               displayedItems.map((item) => {
                 const isSelected = activeSelectedItems.some(
-                  (s) => s.normalizedName === item.normalizedName
+                  (s) => s.chartKey === item.chartKey
                 );
                 const selectedIdx = activeSelectedItems.findIndex(
-                  (s) => s.normalizedName === item.normalizedName
+                  (s) => s.chartKey === item.chartKey
                 );
                 const colorObj =
                   selectedIdx !== -1 ? ITEM_COLORS[selectedIdx % ITEM_COLORS.length] : null;
 
                 return (
                   <div
-                    key={item.normalizedName}
-                    onClick={() => handleToggleItem(item.normalizedName)}
+                    key={item.chartKey}
+                    onClick={() => handleToggleItem(item.chartKey)}
                     className={`pt-2 pb-2 px-2.5 rounded-2xl flex items-center justify-between gap-2 cursor-pointer transition-all ${
                       isSelected
                         ? 'bg-indigo-50/70 border border-indigo-200/80 shadow-2xs'
@@ -605,6 +640,11 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-xs text-slate-900 truncate">
                             {item.name}
+                            {item.unit && (
+                              <span className="ml-1 px-1 py-px rounded bg-slate-100 text-slate-500 text-[10px] font-bold">
+                                {item.unit}
+                              </span>
+                            )}
                           </span>
                           {colorObj && (
                             <span
@@ -657,13 +697,18 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               const colorObj = ITEM_COLORS[idx % ITEM_COLORS.length];
               return (
                 <div
-                  key={item.normalizedName}
+                  key={item.chartKey}
                   style={{ borderLeftColor: colorObj.stroke }}
                   className="bg-white p-4 rounded-2xl border border-slate-200/90 border-l-4 shadow-2xs space-y-2 relative overflow-hidden"
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="font-bold text-xs text-slate-900 truncate">
                       {item.name}
+                      {item.unit && (
+                        <span className="ml-1 px-1 py-px rounded bg-slate-100 text-slate-500 text-[10px] font-bold">
+                          {item.unit}
+                        </span>
+                      )}
                     </span>
                     <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-700">
                       {item.totalPurchases} {lang === 'my' ? 'ကြိမ်' : 'times'}
@@ -707,6 +752,15 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       </span>
                     </div>
                   </div>
+                  {item.cheapestShop && (
+                    <div className="pt-2 border-t border-slate-100 text-xs">
+                      <span className="text-[10px] text-slate-400 block">
+                        {lang === 'my' ? 'အတန်ဆုံးဆိုင်' : 'Cheapest Shop'}
+                      </span>
+                      <span className="font-bold text-emerald-700">{item.cheapestShop}</span>
+                      <span className="font-mono text-slate-600"> · {formatMMK(item.cheapestPrice || 0)}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -750,7 +804,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                 {activeSelectedItems.map((item, idx) => {
                   const colorObj = ITEM_COLORS[idx % ITEM_COLORS.length];
                   return (
-                    <div key={item.normalizedName} className="flex items-center gap-1.5 text-xs">
+                    <div key={item.chartKey} className="flex items-center gap-1.5 text-xs">
                       <span
                         className="w-2.5 h-2.5 rounded-full"
                         style={{ backgroundColor: colorObj.stroke }}
@@ -804,7 +858,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                               </div>
                               {payload.map((entry: any, i: number) => {
                                 const matchedItem = activeSelectedItems.find(
-                                  (it) => it.normalizedName === entry.dataKey
+                                  (it) => it.chartKey === entry.dataKey
                                 );
                                 if (!matchedItem || entry.value === undefined) return null;
                                 return (
@@ -832,9 +886,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         const colorObj = ITEM_COLORS[idx % ITEM_COLORS.length];
                         return (
                           <Line
-                            key={item.normalizedName}
+                            key={item.chartKey}
                             type="monotone"
-                            dataKey={item.normalizedName}
+                            dataKey={item.chartKey}
                             name={item.name}
                             stroke={colorObj.stroke}
                             strokeWidth={3}

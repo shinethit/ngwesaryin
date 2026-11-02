@@ -1455,13 +1455,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors self-end sm:self-auto cursor-pointer"
+            className="p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors self-end sm:self-auto cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Unified 6 Tabs Navigation */}
+        <div className="relative">
         <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 sm:pt-3 pb-2 shrink-0 border-b border-slate-100 overflow-x-auto sm:overflow-visible -mx-1 px-1">
           <button
             type="button"
@@ -1560,6 +1561,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 : 'Visitor Logs'}
             </span>
           </button>
+        </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/70 to-transparent sm:hidden" aria-hidden="true" />
         </div>
 
         {/* Diagnostic/Bootstrap banner if codes or users is empty but we are on the users_codes tab */}
@@ -2354,7 +2357,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* Live Search */}
-              <div className="relative min-w-[220px]">
+              <div className="relative flex-1 min-w-[180px]">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -2495,7 +2498,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                       <Clock className="w-3 h-3 text-slate-400" />
                                       <span>
                                         {c.usedAt
-                                          ? new Date(c.usedAt).toLocaleDateString()
+                                          ? new Date(c.usedAt).toLocaleDateString('en-GB')
                                           : 'Activated'}
                                       </span>
                                     </div>
@@ -2509,7 +2512,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   </div>
                                 ) : (
                                   <div className="text-slate-400 text-[11px]">
-                                    Created {new Date(c.createdAt).toLocaleDateString()}
+                                    Created {new Date(c.createdAt).toLocaleDateString('en-GB')}
                                   </div>
                                 )}
                               </td>
@@ -2619,7 +2622,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 {u.premiumExpiresAt ? (
                                   <div className="space-y-0.5">
                                     <div className="font-semibold text-slate-700">
-                                      {new Date(u.premiumExpiresAt).toLocaleDateString()}
+                                      {new Date(u.premiumExpiresAt).toLocaleDateString('en-GB')}
                                     </div>
                                     <div className="text-[10px] text-indigo-600 font-bold">
                                       {daysLeft !== null && daysLeft > 0
@@ -2923,7 +2926,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </button>
 
                           <span className="text-[10px] text-slate-400">
-                            {new Date(m.createdAt).toLocaleDateString()}
+                            {new Date(m.createdAt).toLocaleDateString('en-GB')}
                           </span>
                         </div>
 
@@ -3330,7 +3333,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 {/* Search & Filter Bar */}
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  <div className="relative flex-1 min-w-[140px] sm:w-48">
+                  <div className="relative flex-1 min-w-[120px] sm:w-48">
                     <input
                       type="text"
                       value={visitorSearch}
@@ -3479,14 +3482,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             </td>
 
                             <td className="p-3 font-mono text-[11px] text-slate-600">
-                              <div>{firstSeen.toLocaleDateString()}</div>
+                              <div>{firstSeen.toLocaleDateString('en-GB')}</div>
                               <div className="text-[10px] text-slate-400">
                                 {firstSeen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </td>
 
                             <td className="p-3 text-right font-mono text-[11px] text-slate-600">
-                              <div>{lastActive.toLocaleDateString()}</div>
+                              <div>{lastActive.toLocaleDateString('en-GB')}</div>
                               <div className="text-[10px] text-slate-400">
                                 {lastActive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </div>
@@ -3810,7 +3813,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             )}
 
             {/* Transactions Table List */}
-            <div className="overflow-y-auto flex-1 border border-slate-200 rounded-2xl">
+            <div className="overflow-y-auto overflow-x-auto flex-1 border border-slate-200 rounded-2xl">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 uppercase tracking-wider font-extrabold sticky top-0 bg-slate-50 z-10">
@@ -4017,7 +4020,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       return (
                         <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
                           <td className="py-2.5 px-3 font-mono text-slate-600 text-[11px] whitespace-nowrap">
-                            {tx.date || (tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—')}
+                            {tx.date || (tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('en-GB') : '—')}
                           </td>
                           <td className="py-1.5 px-2 sm:py-2.5 sm:px-3">
                             <div className="font-semibold text-slate-800 truncate max-w-[160px]" title={userDisplay}>

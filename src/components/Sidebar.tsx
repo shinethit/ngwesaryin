@@ -353,10 +353,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-200/70 hover:bg-slate-300/80 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-11 h-11 rounded-full bg-slate-200/70 hover:bg-slate-300/80 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
               title="Close Menu"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -539,7 +539,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   >
                     <Icon className="w-4 h-4" />
                   </div>
-                  <span className="truncate">{lang === 'my' ? item.labelMy : item.labelEn}</span>
+                  <span className="leading-snug">{lang === 'my' ? item.labelMy : item.labelEn}</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">

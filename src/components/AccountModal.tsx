@@ -410,7 +410,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     ? expiryIso
                       ? daysLeft && daysLeft > 3650
                         ? lang === 'my' ? 'သက်တမ်း: တစ်သက်တာ (Lifetime Access)' : 'Duration: Lifetime Access'
-                        : `${lang === 'my' ? 'သက်တမ်းကုန်မည့်ရက်: ' : 'Expires: '}${new Date(expiryIso).toLocaleDateString()}`
+                        : `${lang === 'my' ? 'သက်တမ်းကုန်မည့်ရက်: ' : 'Expires: '}${new Date(expiryIso).toLocaleDateString('en-GB')}`
                       : lang === 'my' ? 'အကန့်အသတ်မရှိ အင်္ဂါရပ်အားလုံး သုံးနိုင်ပါသည်' : 'Unlimited features and ad-free experience'
                     : lang === 'my'
                     ? 'အကန့်အသတ်မရှိ သုံးစွဲရန် Premium သို့ မြှင့်တင်ပါ'

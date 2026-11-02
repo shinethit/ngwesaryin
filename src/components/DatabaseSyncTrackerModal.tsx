@@ -89,7 +89,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
     if (isToday) {
       return timeStr;
     }
-    const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const dateStr = d.toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-GB', { month: 'short', day: 'numeric' });
     return `${dateStr}, ${timeStr}`;
   };
 

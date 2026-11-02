@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { doc } from 'firebase/firestore';
 import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
+import { markVehicleLogDeleted, markTxDeleted } from '../utils/deletedMarkers';
 import type {
   Category,
   FuelLog,
@@ -87,6 +88,22 @@ export function useVehicleHandlers({
     showToast(lang === 'my' ? 'ယာဉ်အချက်အလက် သိမ်းဆည်းပြီးပါပြီ ✓' : 'Vehicle saved successfully ✓');
   };
 
+  const recalculateVehicleOdometer = (vehicleId: string, fLogs: FuelLog[], mLogs: VehicleMaintenance[], tLogs: TirePressureLog[]) => {
+    const targetVehicle = vehicles.find((v) => v.id === vehicleId);
+    if (!targetVehicle) return;
+    const odos = [
+      ...fLogs.filter((f) => f.vehicleId === vehicleId).map((f) => f.odometer || 0),
+      ...mLogs.filter((m) => m.vehicleId === vehicleId).map((m) => m.odometer || 0),
+      ...tLogs.filter((t) => t.vehicleId === vehicleId).map((t) => t.odometer || 0),
+    ];
+    // No logs left: keep the current odometer instead of resetting it to 0.
+    if (odos.length === 0) return;
+    const newOdo = Math.max(...odos);
+    if (newOdo !== targetVehicle.currentOdometer) {
+      handleSaveVehicle({ ...targetVehicle, currentOdometer: newOdo });
+    }
+  };
+
   const handleDeleteVehicle = (vehicleId: string) => {
     setVehicles((prev) => {
       const next = prev.filter((v) => v.id !== vehicleId);
@@ -159,12 +176,10 @@ export function useVehicleHandlers({
       }
     }
 
-    setFuelLogs((prev) => {
-      const exists = prev.some((f) => f.id === log.id);
-      const next = exists ? prev.map((f) => (f.id === log.id ? log : f)) : [log, ...prev];
-      safeSetItem('ngwe_fuel_logs', JSON.stringify(next));
-      return next;
-    });
+    const existsFuel = fuelLogs.some((f) => f.id === log.id);
+    const nextFuelLogs = existsFuel ? fuelLogs.map((f) => (f.id === log.id ? log : f)) : [log, ...fuelLogs];
+    setFuelLogs(nextFuelLogs);
+    safeSetItem('ngwe_fuel_logs', JSON.stringify(nextFuelLogs));
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -174,9 +189,7 @@ export function useVehicleHandlers({
       }, { merge: true });
     }
 
-    if (targetVehicle && log.odometer > (targetVehicle.currentOdometer || 0)) {
-      handleSaveVehicle({ ...targetVehicle, currentOdometer: log.odometer });
-    }
+    recalculateVehicleOdometer(log.vehicleId, nextFuelLogs, vehicleMaintenance, tirePressureLogs);
 
     showToast(lang === 'my' ? 'ဆီထည့်မှတ်တမ်းနှင့် ထွက်ငွေစာရင်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Fuel log & expense recorded ✓');
   };
@@ -185,8 +198,12 @@ export function useVehicleHandlers({
     const logToDelete = fuelLogs.find((f) => f.id === logId);
     const txId = logToDelete?.transactionId || `tx_fuel_${logId}`;
 
+    // Mark deleted so a cloud snapshot cannot bring this log back.
+    markVehicleLogDeleted('fuelLogs', logId);
+
     const linkedTx = transactions.find((t) => t.id === txId);
     if (linkedTx) {
+      markTxDeleted(txId);
       setTransactions((prev) => {
         const next = prev.filter((t) => t.id !== txId);
         safeSetItem('ngwe_transactions', JSON.stringify(next));
@@ -198,11 +215,10 @@ export function useVehicleHandlers({
       }
     }
 
-    setFuelLogs((prev) => {
-      const next = prev.filter((f) => f.id !== logId);
-      safeSetItem('ngwe_fuel_logs', JSON.stringify(next));
-      return next;
-    });
+    const nextFuelLogs = fuelLogs.filter((f) => f.id !== logId);
+    setFuelLogs(nextFuelLogs);
+    safeSetItem('ngwe_fuel_logs', JSON.stringify(nextFuelLogs));
+    if (logToDelete) recalculateVehicleOdometer(logToDelete.vehicleId, nextFuelLogs, vehicleMaintenance, tirePressureLogs);
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -269,12 +285,10 @@ export function useVehicleHandlers({
       }
     }
 
-    setVehicleMaintenance((prev) => {
-      const exists = prev.some((m) => m.id === maint.id);
-      const next = exists ? prev.map((m) => (m.id === maint.id ? maint : m)) : [maint, ...prev];
-      safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
-      return next;
-    });
+    const existsMaint = vehicleMaintenance.some((m) => m.id === maint.id);
+    const nextMaint = existsMaint ? vehicleMaintenance.map((m) => (m.id === maint.id ? maint : m)) : [maint, ...vehicleMaintenance];
+    setVehicleMaintenance(nextMaint);
+    safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(nextMaint));
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -284,9 +298,7 @@ export function useVehicleHandlers({
       }, { merge: true });
     }
 
-    if (targetVehicle && maint.odometer > (targetVehicle.currentOdometer || 0)) {
-      handleSaveVehicle({ ...targetVehicle, currentOdometer: maint.odometer });
-    }
+    recalculateVehicleOdometer(maint.vehicleId, fuelLogs, nextMaint, tirePressureLogs);
 
     showToast(lang === 'my' ? 'ပြုပြင်ထိန်းသိမ်းမှု မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Maintenance record saved ✓');
   };
@@ -295,8 +307,11 @@ export function useVehicleHandlers({
     const maintToDelete = vehicleMaintenance.find((m) => m.id === maintId);
     const txId = maintToDelete?.transactionId || `tx_maint_${maintId}`;
 
+    markVehicleLogDeleted('vehicleMaintenance', maintId);
+
     const linkedTx = transactions.find((t) => t.id === txId);
     if (linkedTx) {
+      markTxDeleted(txId);
       setTransactions((prev) => {
         const next = prev.filter((t) => t.id !== txId);
         safeSetItem('ngwe_transactions', JSON.stringify(next));
@@ -308,11 +323,10 @@ export function useVehicleHandlers({
       }
     }
 
-    setVehicleMaintenance((prev) => {
-      const next = prev.filter((m) => m.id !== maintId);
-      safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
-      return next;
-    });
+    const nextMaint = vehicleMaintenance.filter((m) => m.id !== maintId);
+    setVehicleMaintenance(nextMaint);
+    safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(nextMaint));
+    if (maintToDelete) recalculateVehicleOdometer(maintToDelete.vehicleId, fuelLogs, nextMaint, tirePressureLogs);
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -374,12 +388,10 @@ export function useVehicleHandlers({
       }
     }
 
-    setTirePressureLogs((prev) => {
-      const exists = prev.some((t) => t.id === log.id);
-      const next = exists ? prev.map((t) => (t.id === log.id ? log : t)) : [log, ...prev];
-      safeSetItem('ngwe_tire_logs', JSON.stringify(next));
-      return next;
-    });
+    const existsTire = tirePressureLogs.some((t) => t.id === log.id);
+    const nextTire = existsTire ? tirePressureLogs.map((t) => (t.id === log.id ? log : t)) : [log, ...tirePressureLogs];
+    setTirePressureLogs(nextTire);
+    safeSetItem('ngwe_tire_logs', JSON.stringify(nextTire));
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -389,6 +401,9 @@ export function useVehicleHandlers({
       }, { merge: true });
     }
 
+    // Tire save also recalculates the odometer (fuel / maintenance already did).
+    recalculateVehicleOdometer(log.vehicleId, fuelLogs, vehicleMaintenance, nextTire);
+
     showToast(lang === 'my' ? 'တာယာလေဖိအား မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Tire pressure log saved ✓');
   };
 
@@ -396,8 +411,11 @@ export function useVehicleHandlers({
     const logToDelete = tirePressureLogs.find((t) => t.id === logId);
     const txId = logToDelete?.transactionId || `tx_tire_${logId}`;
 
+    markVehicleLogDeleted('tirePressureLogs', logId);
+
     const linkedTx = transactions.find((t) => t.id === txId);
     if (linkedTx) {
+      markTxDeleted(txId);
       setTransactions((prev) => {
         const next = prev.filter((t) => t.id !== txId);
         safeSetItem('ngwe_transactions', JSON.stringify(next));
@@ -409,11 +427,10 @@ export function useVehicleHandlers({
       }
     }
 
-    setTirePressureLogs((prev) => {
-      const next = prev.filter((t) => t.id !== logId);
-      safeSetItem('ngwe_tire_logs', JSON.stringify(next));
-      return next;
-    });
+    const nextTire = tirePressureLogs.filter((t) => t.id !== logId);
+    setTirePressureLogs(nextTire);
+    safeSetItem('ngwe_tire_logs', JSON.stringify(nextTire));
+    if (logToDelete) recalculateVehicleOdometer(logToDelete.vehicleId, fuelLogs, vehicleMaintenance, nextTire);
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;

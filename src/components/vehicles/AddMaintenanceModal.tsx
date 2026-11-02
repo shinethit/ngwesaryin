@@ -142,9 +142,22 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       return;
     }
 
-    if (!isLicenseRenewal && currentVehicle && Number(odometer) <= (currentVehicle.currentOdometer || 0)) {
-      alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်။' : 'Odometer must be greater than the current vehicle odometer.');
-      return;
+    // Editing the same vehicle: odometer may stay the same (the log itself
+    // is often the current odometer). Only validate for a new log / new vehicle.
+    const isEditingSameVehicle = !!editingMaintenance && editingMaintenance.vehicleId === vehicleId;
+    // [v7.5.50] New logs may use the current odometer (equal is allowed).
+    // Only a LOWER odometer is blocked. Exact duplicates are still caught
+    // by the double-entry check below.
+    if (!isLicenseRenewal && !isEditingSameVehicle && currentVehicle && Number(odometer) < (currentVehicle.currentOdometer || 0)) {
+      // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
+      // odometer. Ask instead of blocking — the vehicle odometer itself stays
+      // at the highest reading (recalculation uses max), so this cannot lower it.
+      const okBackfill = window.confirm(
+        lang === 'my'
+          ? `မိုင်တာ (${Number(odometer).toLocaleString()}) သည် လက်ရှိ မိုင်တာ (${(currentVehicle.currentOdometer || 0).toLocaleString()}) ထက် နည်းနေပါသည်။ အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?`
+          : `Odometer (${Number(odometer).toLocaleString()}) is lower than the current odometer (${(currentVehicle.currentOdometer || 0).toLocaleString()}). Is this a missed older entry?`
+      );
+      if (!okBackfill) return;
     }
     if (!isLicenseRenewal && lastMaintLogForComparison && Number(odometer) === lastMaintLogForComparison.odometer) {
       alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry. (Prevent Double Entry)');

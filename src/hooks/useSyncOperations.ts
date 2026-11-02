@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { isQuotaExhausted } from '../lib/firebase';
 import { syncQueue } from '../lib/syncQueue';
 import { recordSyncOperationStart, finishSyncOperation } from '../lib/syncOperationLogger';
-import { isTxDeleted, unmarkTxDeleted, isWalletDeleted } from '../utils/deletedMarkers';
+import { isTxDeleted, unmarkTxDeleted, isWalletDeleted, isVehicleLogDeleted } from '../utils/deletedMarkers';
 import { safeSetItem } from '../utils/storage';
 import type {
   BudgetConfig,
@@ -453,7 +453,7 @@ export function useSyncOperations({
             const map = new Map<string, FuelLog>();
             prevLocal.forEach((f) => { if (f && f.id) map.set(f.id, f); });
             cloudData.fuelLogs?.forEach((f: any) => {
-              if (f && f.id) {
+              if (f && f.id && !isVehicleLogDeleted('fuelLogs', f.id)) {
                 const existing = map.get(f.id);
                 map.set(f.id, { ...(existing as any), ...(f as any) } as FuelLog);
               }
@@ -468,7 +468,7 @@ export function useSyncOperations({
             const map = new Map<string, VehicleMaintenance>();
             prevLocal.forEach((m) => { if (m && m.id) map.set(m.id, m); });
             cloudData.maintenanceLogs?.forEach((m: any) => {
-              if (m && m.id) {
+              if (m && m.id && !isVehicleLogDeleted('vehicleMaintenance', m.id)) {
                 const existing = map.get(m.id);
                 map.set(m.id, { ...(existing as any), ...(m as any) } as VehicleMaintenance);
               }
@@ -483,7 +483,7 @@ export function useSyncOperations({
             const map = new Map<string, TirePressureLog>();
             prevLocal.forEach((t) => { if (t && t.id) map.set(t.id, t); });
             cloudData.tireLogs?.forEach((t: any) => {
-              if (t && t.id) {
+              if (t && t.id && !isVehicleLogDeleted('tirePressureLogs', t.id)) {
                 const existing = map.get(t.id);
                 map.set(t.id, { ...(existing as any), ...(t as any) } as TirePressureLog);
               }

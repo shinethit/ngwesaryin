@@ -20,6 +20,10 @@ import {
   isTxDeleted,
   markWalletDeleted,
   isWalletDeleted,
+  markVehicleLogDeleted,
+  unmarkVehicleLogDeleted,
+  isVehicleLogDeleted,
+  type VehicleLogKind,
 } from '../utils/deletedMarkers';
 import type {
   BudgetConfig,
@@ -76,6 +80,66 @@ interface UseCloudListenersParams {
  * Cloud listeners — extracted from App.tsx (Phase 8 refactor).
  * Subscribes to 10 Firestore collections (staggered by 200ms).
  */
+
+/**
+ * Reconcile a local list with a cloud snapshot for vehicles / vehicle logs.
+ *
+ * The old code only ever *added* cloud docs to the local list, so a log
+ * deleted on another device — or a log whose cloud delete had failed —
+ * stayed local forever, and its odometer came back with it.
+ *
+ * Rules:
+ * - Cloud docs marked deleted on this device are never re-merged.
+ * - A local doc that was previously seen in cloud (confirmed) and is now
+ *   missing from a *server* snapshot was deleted elsewhere → drop it.
+ * - Local docs never seen in cloud (e.g. guest / offline logs) and docs
+ *   with a pending sync-queue upsert are always kept, so an empty or
+ *   cached snapshot can never wipe unsynced data.
+ */
+function reconcileCloudList<T extends { id: string }>(
+  prevLocal: T[],
+  cloudDocs: T[],
+  kind: VehicleLogKind | 'vehicles',
+  confirmed: Set<string>,
+  isFromCache: boolean
+): T[] {
+  const cloudIds = new Set<string>();
+  cloudDocs.forEach((d) => {
+    if (d && d.id) {
+      cloudIds.add(d.id);
+      confirmed.add(d.id);
+    }
+  });
+
+  const isLogKind = kind !== 'vehicles';
+  const filteredCloud = cloudDocs.filter((d) => {
+    if (!d || !d.id) return false;
+    if (isLogKind && isVehicleLogDeleted(kind as VehicleLogKind, d.id)) return false;
+    return true;
+  });
+
+  const map = new Map<string, T>();
+  prevLocal.forEach((item) => {
+    if (!item || !item.id) return;
+    const inCloud = cloudIds.has(item.id);
+    const wasConfirmed = confirmed.has(item.id) && !inCloud;
+    const pending = syncQueue.isEntityPending(kind as any, item.id);
+    if (inCloud || !wasConfirmed || pending) {
+      map.set(item.id, item);
+    } else if (!isFromCache && isLogKind) {
+      // Confirmed before, gone from the server snapshot → deleted elsewhere.
+      markVehicleLogDeleted(kind as VehicleLogKind, item.id);
+    }
+    if (!inCloud && wasConfirmed && isFromCache) {
+      map.set(item.id, item);
+    }
+  });
+  filteredCloud.forEach((d) => {
+    if (d && d.id) map.set(d.id, { ...map.get(d.id), ...d } as T);
+  });
+  return Array.from(map.values());
+}
+
 export function useCloudListeners({
   user,
   activeWorkspaceId,
@@ -115,6 +179,15 @@ export function useCloudListeners({
   const [isCloudLoaded, setIsCloudLoaded] = useState(false);
   const hasInitialSyncedRef = useRef(false);
   const isRemoteUpdateRef = useRef(false);
+  // Ids ever seen in a cloud snapshot, per collection — used by
+  // reconcileCloudList to tell "deleted elsewhere" apart from
+  // "never synced yet" (guest / offline logs must never be dropped).
+  const confirmedIdsRef = useRef<Record<string, Set<string>>>({
+    vehicles: new Set<string>(),
+    fuelLogs: new Set<string>(),
+    vehicleMaintenance: new Set<string>(),
+    tirePressureLogs: new Set<string>(),
+  });
   // [v7.0.5] Vehicle listeners are always active — lazy gate removed.
   // Previously, vehicles only loaded when user visited the Vehicles tab,
   // which broke fuel/service entry forms that need the vehicle list upfront.
@@ -370,15 +443,12 @@ export function useCloudListeners({
 
       // 7. Vehicles
       timers.push(setTimeout(() => {
-        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'vehicles'), (snap) => {
+        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'vehicles'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
           const cloudVehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Vehicle));
           setVehicles((prevLocal) => {
             detectConflicts('vehicles', prevLocal, cloudVehicles, user?.uid);
-            const map = new Map<string, Vehicle>();
-            prevLocal.forEach((v) => { if (v && v.id) map.set(v.id, v); });
-            cloudVehicles.forEach((v) => { if (v && v.id) map.set(v.id, { ...map.get(v.id), ...v }); });
-            const merged = Array.from(map.values());
+            const merged = reconcileCloudList(prevLocal, cloudVehicles, 'vehicles', confirmedIdsRef.current.vehicles, snap.metadata.fromCache);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_vehicles', JSON.stringify(merged));
             return merged;
@@ -388,15 +458,12 @@ export function useCloudListeners({
 
       // 8. Fuel Logs
       timers.push(setTimeout(() => {
-        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'fuelLogs'), (snap) => {
+        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'fuelLogs'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
           const cloudLogs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FuelLog));
           setFuelLogs((prevLocal) => {
             detectConflicts('fuelLogs', prevLocal, cloudLogs, user?.uid);
-            const map = new Map<string, FuelLog>();
-            prevLocal.forEach((f) => { if (f && f.id) map.set(f.id, f); });
-            cloudLogs.forEach((f) => { if (f && f.id) map.set(f.id, { ...map.get(f.id), ...f }); });
-            const merged = Array.from(map.values());
+            const merged = reconcileCloudList(prevLocal, cloudLogs, 'fuelLogs', confirmedIdsRef.current.fuelLogs, snap.metadata.fromCache);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_fuel_logs', JSON.stringify(merged));
             return merged;
@@ -406,15 +473,12 @@ export function useCloudListeners({
 
       // 9. Maintenance
       timers.push(setTimeout(() => {
-        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'vehicleMaintenance'), (snap) => {
+        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'vehicleMaintenance'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
           const cloudMaint = snap.docs.map((d) => ({ id: d.id, ...d.data() } as VehicleMaintenance));
           setVehicleMaintenance((prevLocal) => {
             detectConflicts('vehicleMaintenance', prevLocal, cloudMaint, user?.uid);
-            const map = new Map<string, VehicleMaintenance>();
-            prevLocal.forEach((m) => { if (m && m.id) map.set(m.id, m); });
-            cloudMaint.forEach((m) => { if (m && m.id) map.set(m.id, { ...map.get(m.id), ...m }); });
-            const merged = Array.from(map.values());
+            const merged = reconcileCloudList(prevLocal, cloudMaint, 'vehicleMaintenance', confirmedIdsRef.current.vehicleMaintenance, snap.metadata.fromCache);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(merged));
             return merged;
@@ -424,15 +488,12 @@ export function useCloudListeners({
 
       // 10. Tires
       timers.push(setTimeout(() => {
-        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'tirePressureLogs'), (snap) => {
+        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'tirePressureLogs'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
           const cloudTires = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TirePressureLog));
           setTirePressureLogs((prevLocal) => {
             detectConflicts('tirePressureLogs', prevLocal, cloudTires, user?.uid);
-            const map = new Map<string, TirePressureLog>();
-            prevLocal.forEach((t) => { if (t && t.id) map.set(t.id, t); });
-            cloudTires.forEach((t) => { if (t && t.id) map.set(t.id, { ...map.get(t.id), ...t }); });
-            const merged = Array.from(map.values());
+            const merged = reconcileCloudList(prevLocal, cloudTires, 'tirePressureLogs', confirmedIdsRef.current.tirePressureLogs, snap.metadata.fromCache);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_tire_logs', JSON.stringify(merged));
             return merged;

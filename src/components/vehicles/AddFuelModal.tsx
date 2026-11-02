@@ -129,7 +129,7 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       const v = vehicles.find((item) => item.id === vId) || vehicles[0];
       setVehicleId(vId);
       setDate(new Date().toISOString().split('T')[0]);
-      setOdometer(v?.currentOdometer ? v.currentOdometer + 100 : '');
+      setOdometer(v?.currentOdometer ?? '');
       setLiters('');
       setPricePerLiter(3100);
       setTotalCost('');
@@ -169,10 +169,22 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       return;
     }
 
-    // Odometer Validation
-    if (currentVehicle && Number(odometer) <= (currentVehicle.currentOdometer || 0)) {
-      alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်။' : 'Odometer must be greater than the current vehicle odometer.');
-      return;
+    // Odometer Validation — editing the same vehicle: odometer may stay the same
+    const isEditingSameVehicle = !!editingLog && editingLog.vehicleId === vehicleId;
+    // [v7.5.50] New logs may use the current odometer (equal is allowed —
+    // e.g. a fill-up right after a service at the same reading). Only a
+    // LOWER odometer is blocked. Exact duplicates are still caught by the
+    // double-entry check below.
+    if (!isEditingSameVehicle && currentVehicle && Number(odometer) < (currentVehicle.currentOdometer || 0)) {
+      // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
+      // odometer. Ask instead of blocking — the vehicle odometer itself stays
+      // at the highest reading (recalculation uses max), so this cannot lower it.
+      const okBackfill = window.confirm(
+        lang === 'my'
+          ? `မိုင်တာ (${Number(odometer).toLocaleString()}) သည် လက်ရှိ မိုင်တာ (${(currentVehicle.currentOdometer || 0).toLocaleString()}) ထက် နည်းနေပါသည်။ အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?`
+          : `Odometer (${Number(odometer).toLocaleString()}) is lower than the current odometer (${(currentVehicle.currentOdometer || 0).toLocaleString()}). Is this a missed older entry?`
+      );
+      if (!okBackfill) return;
     }
     if (lastLogForComparison && Number(odometer) === lastLogForComparison.odometer) {
       alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry. (Prevent Double Entry)');

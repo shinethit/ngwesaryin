@@ -14,10 +14,81 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.48';
-export const CURRENT_BUILD_NUMBER = 263;
+export const CURRENT_APP_VERSION = 'v7.5.51';
+export const CURRENT_BUILD_NUMBER = 266;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.51',
+    buildNumber: 266,
+    releaseDate: '2026-11-02',
+    releaseTime: '12:55 PM (MMT)',
+    titleMy: 'အဟောင်းမှတ်တမ်း ပြန်ဖြည့်ခြင်း (Backfill) ရနိုင်ခြင်း',
+    titleEn: 'Backfill Support for Older Vehicle Logs',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'လွန်ခဲ့သော ရက်က မေ့ပြီး မထည့်ခဲ့သော ဆီမှတ်တမ်း သို့မဟုတ် ပြုပြင်မှတ်တမ်းများကို နောက်မှ ပြန်ဖြည့်နိုင်စေရန် ပြင်ဆင်လိုက်ပါသည်။ ယခင်က မိုင်တာ လက်ရှိထက် နည်းနေလျှင် လုံးဝ ပိတ်ထားခဲ့သော်လည်း၊ ယခုအခါ "အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?" ဟု မေးပြီး အတည်ပြုလိုက်လျှင် သိမ်းဆည်းနိုင်ပါသည်။ ယာဉ်၏ လက်ရှိမိုင်တာကိုတော့ အမြင့်ဆုံးမှတ်တမ်းအတိုင်း ဆက်ထားမည်ဖြစ်သောကြောင့် အဟောင်းမှတ်တမ်း ထည့်လိုက်ရုံနှင့် လက်ရှိမိုင်တာ လျော့သွားမည် မဟုတ်ပါ။ တာယာမှတ်တမ်းနှင့် ရက်စွဲအဟောင်း ထည့်သွင်းခြင်းတို့မှာ အရင်ကတည်းက ပိတ်ထားခြင်း မရှိပါ။',
+    descriptionEn: 'Missed older fuel or maintenance logs can now be added later (backfill). Previously a lower odometer was always blocked; now the app asks "Is this a missed older entry?" and saves it once confirmed. The vehicle\'s current odometer stays at the highest reading, so a backfilled log can never lower it. Tire logs and old dates were never blocked.',
+    changesMy: [
+      '🕒 မိုင်တာ လက်ရှိထက် နည်းနေသော အဟောင်းမှတ်တမ်း (ဆီ/ပြုပြင်) ကို အတည်ပြုချက်ဖြင့် ပြန်ဖြည့်နိုင်ခြင်း',
+      '🛡️ ယာဉ်၏ လက်ရှိမိုင်တာကို အမြင့်ဆုံးမှတ်တမ်းအတိုင်း ဆက်ထားခြင်း (အဟောင်းထည့်ရုံနှင့် မလျော့ပါ)',
+      '🛞 တာယာမှတ်တမ်းနှင့် ရက်စွဲအဟောင်း ထည့်သွင်းခြင်းတို့က အရင်ကတည်းက ရပါသည်',
+    ],
+    changesEn: [
+      '🕒 Backfill support: older fuel/maintenance logs with a lower odometer can now be added after confirmation',
+      '🛡️ Vehicle current odometer stays at the highest reading (backfill cannot lower it)',
+      '🛞 Tire logs and old dates were never blocked',
+    ],
+  },
+  {
+    version: 'v7.5.50',
+    buildNumber: 265,
+    releaseDate: '2026-11-02',
+    releaseTime: '11:00 AM (MMT)',
+    titleMy: 'အသစ်ထည့်သည့် ယာဉ်မှတ်တမ်း မိုင်တာ လက်ရှိအတိုင်း ထည့်နိုင်ခြင်း',
+    titleEn: 'New Vehicle Logs Can Use the Current Odometer',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆီထည့်မှတ်တမ်း အသစ်ထည့်သည့်အခါ မိုင်တာအကွက်တွင် လက်ရှိမိုင်တာ အလိုအလျောက် ဖြည့်ထားပြီး၊ ထိုမိုင်တာအတိုင်း သိမ်းလိုက်လျှင် "မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်" ဟူ၍ ပေါ်ပြီး သိမ်းလို့မရသည့် ပြဿနာကို ပြင်ဆင်လိုက်ပါသည်။ ယခုအခါ အသစ်ထည့်သည့်မှတ်တမ်းအတွက် မိုင်တာသည် လက်ရှိထက် နည်းနေမှသာ တားမည်ဖြစ်ပြီး၊ တူနေလျှင် ရပါသည်။ (ဥပမာ- ပြုပြင်ပြီး တူညီသောမိုင်တာမှာ ဆီဖြည့်ခြင်း) အတိအကျ ထပ်နေသော မှတ်တမ်းကိုတော့ Double Entry ကာကွယ်မှုက ဆက်လက် တားဆီးထားပါသည်။',
+    descriptionEn: 'Fixed the issue where adding a new fuel log was blocked even though the form pre-fills the current odometer: the "must be greater" rule rejected saving the pre-filled value itself. New logs now only need an odometer that is not less than the current one — equal is allowed (e.g. a fill-up right after a service at the same reading). Exact duplicates of the last log of the same type are still blocked by the double-entry check.',
+    changesMy: [
+      '🐛 အသစ်ထည့်သည့် ဆီ/ပြုပြင်မှတ်တမ်း မိုင်တာ လက်ရှိအတိုင်း ထည့်နိုင်ခြင်း (နည်းနေမှသာ တားမည်)',
+      '🛡️ အတိအကျ ထပ်နေသော မှတ်တမ်းကို Double Entry ကာကွယ်မှုက ဆက်လက် တားဆီးခြင်း',
+    ],
+    changesEn: [
+      '🐛 New fuel/maintenance logs can now use the current odometer (only a lower reading is blocked)',
+      '🛡️ Exact duplicates of the last log are still blocked by the double-entry check',
+    ],
+  },
+  {
+    version: 'v7.5.49',
+    buildNumber: 264,
+    releaseDate: '2026-11-02',
+    releaseTime: '08:25 AM (MMT)',
+    titleMy: 'ယာဉ်မှတ်တမ်း ပြင်ဆင်ရာတွင် မိုင်တာ Warning ပေါ်နေခြင်း ပြင်ဆင်ခြင်း',
+    titleEn: 'Fixed Odometer Warning Blocking Vehicle Log Edits',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆီထည့်မှတ်တမ်း သို့မဟုတ် ပြုပြင်မှတ်တမ်းကို ပြင်ဆင်သည့်အခါ မိုင်တာသည် လက်ရှိယာဉ်၏ မိုင်တာနှင့် တူနေသောကြောင့် "မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်" ဟူသော Warning ပေါ်ပြီး ပြင်လို့မရသည့် ပြဿနာကို ပြင်ဆင်လိုက်ပါသည်။ ယခုအခါ ပြင်ဆင်နေသည့် မှတ်တမ်းကိုယ်တိုင်က လက်ရှိမိုင်တာ ဖြစ်နေလျှင် Warning မပေါ်တော့ဘဲ၊ အသစ်ထည့်သည့်မှတ်တမ်းများအတွက်သာ စစ်ဆေးသွားမည်ဖြစ်ပါသည်။ ဖျက်ပြီးသား မိုင်တာ ပြန်ပေါ်လာခြင်းကိုလည်း ဖျက်မှတ်တမ်း (deleted marker) ဖြင့် ကာကွယ်ထားပြီး၊ ဆီဖြည့်ဖောင်တွင် မိုင်တာကို လက်ရှိမိုင်တာအတိုင်း ဖြည့်ပေးတော့မည်ဖြစ်ပါသည်။',
+    descriptionEn: 'Fixed the issue where editing a fuel or maintenance log was blocked by the "Odometer must be greater than the current vehicle odometer" warning, because the log being edited itself is the current odometer. The warning now only applies to new entries. Deleted odometer values can no longer come back via cloud sync (deleted markers), and the Add Fuel form now pre-fills the current odometer instead of current + 100.',
+    changesMy: [
+      '🐛 ဆီ/ပြုပြင်မှတ်တမ်း ပြင်ဆင်ရာတွင် မိုင်တာ Warning မပေါ်တော့ခြင်း (စာရင်းသွင်းသည့် Form နှင့် ယာဉ်မှတ်တမ်း Modal နှစ်ခုလုံး)',
+      '🐛 ဖျက်ပြီးသား မိုင်တာ cloud sync ကြောင့် ပြန်ပေါ်လာခြင်းကို ဖျက်မှတ်တမ်းဖြင့် ကာကွယ်ခြင်း',
+      '⛽ ဆီဖြည့်ဖောင်တွင် မိုင်တာကို လက်ရှိမိုင်တာအတိုင်း ဖြည့်ပေးခြင်း (+100 မဖြည့်တော့ပါ)',
+      '🐛 မှတ်တမ်းအားလုံးဖျက်လိုက်လျှင် မိုင်တာ 0 ပြန်မဖြစ်တော့ခြင်း',
+      '🛞 တာယာမှတ်တမ်း သိမ်းသည့်အခါလည်း မိုင်တာ ပြန်တွက်ပေးခြင်း',
+    ],
+    changesEn: [
+      '🐛 Editing a fuel/maintenance log no longer triggers the odometer warning (main entry form and vehicle modals)',
+      '🐛 Deleted odometer values can no longer come back via cloud sync (deleted markers)',
+      '⛽ Add Fuel form now pre-fills the current odometer (no more +100)',
+      '🐛 Deleting all logs no longer resets the odometer to 0',
+      '🛞 Tire-pressure saves now recalculate the odometer too',
+    ],
+  },
   {
     version: 'v7.5.48',
     buildNumber: 263,

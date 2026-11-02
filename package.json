@@ -1,7 +1,7 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "7.5.48",
+  "version": "7.5.51",
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -30,6 +30,7 @@
     "tailwindcss": "^4.1.14"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.10",
     "@firebase/rules-unit-testing": "^6.0.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.14.0",

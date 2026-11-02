@@ -796,7 +796,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const lastFuelLogForComparison = useMemo(() => {
     if (!fuelLogs || fuelLogs.length === 0) return null;
     const sorted = fuelLogs
-      .filter(l => l.vehicleId === vehicleId)
+      .filter(l => l.vehicleId === vehicleId && l.transactionId !== editTransaction?.id)
       .sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
@@ -816,7 +816,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const lastMaintLogForComparison = useMemo(() => {
     if (!vehicleMaintenance || vehicleMaintenance.length === 0) return null;
     const sorted = vehicleMaintenance
-      .filter(m => m.vehicleId === vehicleId)
+      .filter(m => m.vehicleId === vehicleId && m.transactionId !== editTransaction?.id)
       .sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
@@ -988,15 +988,43 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       let vehicleLinkPayload: VehicleLinkData | undefined = undefined;
       const targetVehicleId = vehicleId || (vehicles && vehicles[0]?.id) || '';
 
+      // [v7.5.49] Edit-mode odometer rules: the odometer shown while editing is
+      // the existing record's own value, so "must be greater" / "double entry"
+      // must never block an edit — otherwise the record becomes uneditable.
+      // The old code only skipped the check when a linked log was found by
+      // transactionId, but older records may not carry that link at all.
+      // The checks still apply to NEW logs, and to an edit that switches the
+      // log to a DIFFERENT vehicle (checked against that new vehicle).
+      // [v7.5.50] For NEW logs the rule is now "must not be LESS than the
+      // current odometer" (equal is allowed): the form pre-fills the current
+      // odometer, and a same-day service + fill-up can legitimately share it.
+      // An exact duplicate of the last log of the same type is still blocked
+      // by the double-entry check below.
+      const linkedVehicleLog = fuelLogs.find((f) => f.transactionId === editTransaction?.id)
+        || vehicleMaintenance.find((m) => m.transactionId === editTransaction?.id)
+        || tirePressureLogs.find((t) => t.transactionId === editTransaction?.id);
+      const editingVehicleSwitched = isEditing && !!linkedVehicleLog && linkedVehicleLog.vehicleId !== targetVehicleId;
+      const editingOwnOdometer = isEditing && !!linkedVehicleLog && (parseFloat(vehicleOdometer) || 0) === linkedVehicleLog.odometer;
+      const editingUnlinkedLog = isEditing && !linkedVehicleLog;
+
       if (entryModel === 'fuel' && targetVehicleId) {
         const odoNum = parseFloat(vehicleOdometer) || 0;
         const currVeh = vehicles.find(v => v.id === targetVehicleId);
-        if (currVeh && odoNum <= (currVeh.currentOdometer || 0)) {
-          alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်။' : 'Odometer must be greater than the current vehicle odometer.');
-          setIsSubmitting(false);
-          return;
+        if ((!isEditing || editingVehicleSwitched) && currVeh && odoNum < (currVeh.currentOdometer || 0)) {
+          // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
+          // odometer. Ask instead of blocking — the vehicle odometer itself stays
+          // at the highest reading (recalculation uses max), so this cannot lower it.
+          const okBackfill = window.confirm(
+            lang === 'my'
+              ? `မိုင်တာ (${odoNum.toLocaleString()}) သည် လက်ရှိ မိုင်တာ (${(currVeh.currentOdometer || 0).toLocaleString()}) ထက် နည်းနေပါသည်။ အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?`
+              : `Odometer (${odoNum.toLocaleString()}) is lower than the current odometer (${(currVeh.currentOdometer || 0).toLocaleString()}). Is this a missed older entry?`
+          );
+          if (!okBackfill) {
+            setIsSubmitting(false);
+            return;
+          }
         }
-        if (lastFuelLogForComparison && odoNum === lastFuelLogForComparison.odometer) {
+        if (!editingOwnOdometer && !editingUnlinkedLog && lastFuelLogForComparison && odoNum === lastFuelLogForComparison.odometer) {
           alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry.');
           setIsSubmitting(false);
           return;
@@ -1023,12 +1051,21 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       } else if (entryModel === 'vehicle_service' && targetVehicleId && maintServiceType !== 'license_renewal') {
         const odoNum = parseFloat(vehicleOdometer) || 0;
         const currVeh = vehicles.find(v => v.id === targetVehicleId);
-        if (currVeh && odoNum <= (currVeh.currentOdometer || 0)) {
-          alert(lang === 'my' ? 'မိုင်တာသည် လက်ရှိ ယာဉ်၏ မိုင်တာထက် ကြီးရပါမည်။' : 'Odometer must be greater than the current vehicle odometer.');
-          setIsSubmitting(false);
-          return;
+        if ((!isEditing || editingVehicleSwitched) && currVeh && odoNum < (currVeh.currentOdometer || 0)) {
+          // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
+          // odometer. Ask instead of blocking — the vehicle odometer itself stays
+          // at the highest reading (recalculation uses max), so this cannot lower it.
+          const okBackfill = window.confirm(
+            lang === 'my'
+              ? `မိုင်တာ (${odoNum.toLocaleString()}) သည် လက်ရှိ မိုင်တာ (${(currVeh.currentOdometer || 0).toLocaleString()}) ထက် နည်းနေပါသည်။ အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?`
+              : `Odometer (${odoNum.toLocaleString()}) is lower than the current odometer (${(currVeh.currentOdometer || 0).toLocaleString()}). Is this a missed older entry?`
+          );
+          if (!okBackfill) {
+            setIsSubmitting(false);
+            return;
+          }
         }
-        if (lastMaintLogForComparison && odoNum === lastMaintLogForComparison.odometer) {
+        if (!editingOwnOdometer && !editingUnlinkedLog && lastMaintLogForComparison && odoNum === lastMaintLogForComparison.odometer) {
           alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြီးရန်)' : 'Odometer is the same as the last entry.');
           setIsSubmitting(false);
           return;

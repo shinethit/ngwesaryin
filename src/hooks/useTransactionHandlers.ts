@@ -3,7 +3,7 @@ import { doc } from 'firebase/firestore';
 import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
-import { markTxDeleted, unmarkTxDeleted } from '../utils/deletedMarkers';
+import { markTxDeleted, unmarkTxDeleted, markVehicleLogDeleted } from '../utils/deletedMarkers';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { isWalletMatch } from '../utils/walletBalance';
 import {
@@ -316,10 +316,24 @@ export function useTransactionHandlers({
           }
         }
 
-        // Update vehicle's odometer if new reading is higher
+        // Recalculate vehicle's odometer on edit
         const targetVehicle = vehicles.find((v) => v.id === vehicleLinkData.vehicleId);
-        if (vehicleLinkData.odometer && targetVehicle && vehicleLinkData.odometer > (targetVehicle.currentOdometer || 0)) {
-          handleSaveVehicle({ ...targetVehicle, currentOdometer: vehicleLinkData.odometer });
+        if (targetVehicle) {
+          const fLogs = linkedFuel ? fuelLogs.map(f => f.id === linkedFuel.id ? {...f, odometer: vehicleLinkData.odometer || f.odometer} : f) : fuelLogs;
+          const mLogs = linkedMaint ? vehicleMaintenance.map(m => m.id === linkedMaint.id ? {...m, odometer: vehicleLinkData.odometer || m.odometer} : m) : vehicleMaintenance;
+          const tLogs = linkedTire ? tirePressureLogs.map(t => t.id === linkedTire.id ? {...t, odometer: vehicleLinkData.odometer || t.odometer} : t) : tirePressureLogs;
+          const odos = [
+            ...fLogs.filter(f => f.vehicleId === vehicleLinkData.vehicleId).map(f => f.odometer || 0),
+            ...mLogs.filter(m => m.vehicleId === vehicleLinkData.vehicleId).map(m => m.odometer || 0),
+            ...tLogs.filter(t => t.vehicleId === vehicleLinkData.vehicleId).map(t => t.odometer || 0)
+          ];
+          // No logs left: keep the current odometer instead of resetting it to 0.
+          if (odos.length > 0) {
+            const newMax = Math.max(...odos);
+            if (newMax !== targetVehicle.currentOdometer) {
+              handleSaveVehicle({ ...targetVehicle, currentOdometer: newMax });
+            }
+          }
         }
       }
 
@@ -723,6 +737,52 @@ export function useTransactionHandlers({
           console.warn('[delete] REST verify notice:', e);
         }
       })();
+    }
+
+    // Recalculate vehicle odometer if linked logs are deleted
+    const linkedFuelDel = fuelLogs.find(f => f.transactionId === id);
+    const linkedMaintDel = vehicleMaintenance.find(m => m.transactionId === id);
+    const linkedTireDel = tirePressureLogs.find(t => t.transactionId === id);
+    const affectedVehicleId = linkedFuelDel?.vehicleId || linkedMaintDel?.vehicleId || linkedTireDel?.vehicleId;
+
+    let nextFuel = fuelLogs;
+    let nextMaint = vehicleMaintenance;
+    let nextTire = tirePressureLogs;
+
+    if (linkedFuelDel) {
+      nextFuel = fuelLogs.filter(f => f.id !== linkedFuelDel.id);
+      setFuelLogs(nextFuel);
+      markVehicleLogDeleted('fuelLogs', linkedFuelDel.id);
+      if (user?.uid) safeDeleteDoc(doc(db, 'users', activeWorkspaceId || user.uid, 'fuelLogs', linkedFuelDel.id));
+    }
+    if (linkedMaintDel) {
+      nextMaint = vehicleMaintenance.filter(m => m.id !== linkedMaintDel.id);
+      setVehicleMaintenance(nextMaint);
+      markVehicleLogDeleted('vehicleMaintenance', linkedMaintDel.id);
+      if (user?.uid) safeDeleteDoc(doc(db, 'users', activeWorkspaceId || user.uid, 'vehicleMaintenance', linkedMaintDel.id));
+    }
+    if (linkedTireDel) {
+      nextTire = tirePressureLogs.filter(t => t.id !== linkedTireDel.id);
+      setTirePressureLogs(nextTire);
+      markVehicleLogDeleted('tirePressureLogs', linkedTireDel.id);
+      if (user?.uid) safeDeleteDoc(doc(db, 'users', activeWorkspaceId || user.uid, 'tirePressureLogs', linkedTireDel.id));
+    }
+    if (affectedVehicleId) {
+      const targetVeh = vehicles.find(v => v.id === affectedVehicleId);
+      if (targetVeh) {
+        const odos = [
+          ...nextFuel.filter(f => f.vehicleId === affectedVehicleId).map(f => f.odometer || 0),
+          ...nextMaint.filter(m => m.vehicleId === affectedVehicleId).map(m => m.odometer || 0),
+          ...nextTire.filter(t => t.vehicleId === affectedVehicleId).map(t => t.odometer || 0)
+        ];
+        // No logs left: keep the current odometer instead of resetting it to 0.
+        if (odos.length > 0) {
+          const newMax = Math.max(...odos);
+          if (newMax !== targetVeh.currentOdometer) {
+            handleSaveVehicle({ ...targetVeh, currentOdometer: newMax });
+          }
+        }
+      }
     }
 
     showToast(lang === 'my' ? 'မှတ်တမ်းကို ဖျက်လိုက်ပါပြီ' : 'Transaction deleted');

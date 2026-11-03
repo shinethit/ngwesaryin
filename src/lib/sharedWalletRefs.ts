@@ -16,14 +16,14 @@
  *
  * The ref does NOT contain balance or transaction data.
  *
- * Legacy fallback: subscribeIncomingSharedWallets() still issues the
- * old where('sharedWith','array-contains') query in parallel so that
- * wallets shared before v6.18.0 continue to appear. Once refs are
- * populated everywhere, that query can be removed and
- * sharedWallets list disabled (planned v6.19.0).
+ * Legacy fallback: REMOVED in v7.5.56 — subscribeIncomingSharedWallets()
+ * no longer issues the old where('sharedWith','array-contains') query
+ * (it was removed in v7.0.8 and sharedWallets list is disabled in rules),
+ * so refs are the only discovery path. A ref is written only for a
+ * recipient who is currently in the shared doc's sharedWith list.
  */
 
-import { doc, setDoc, collection, onSnapshot, Unsubscribe, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, onSnapshot, Unsubscribe, getDocs } from 'firebase/firestore';
 import { db, cleanForFirestore, safeSetDoc, safeDeleteDoc } from './firebase';
 
 export interface SharedWalletRef {
@@ -32,6 +32,10 @@ export interface SharedWalletRef {
   ownerEmail: string;
   walletName: string;
   addedAt: number;
+  // [v7.5.56] Invite lifecycle: new refs are 'pending'; the invitee
+  // flips it to 'accepted' via acceptSharedWalletInvite(). Declining
+  // deletes the ref entirely, so there is no 'declined' status.
+  status?: 'pending' | 'accepted';
 }
 
 function normalizeEmail(email: string): string {
@@ -41,6 +45,9 @@ function normalizeEmail(email: string): string {
 /**
  * Write a pointer ref so the recipient can discover the shared wallet.
  * Idempotent — safe to call repeatedly (setDoc merge).
+ * [v7.5.56] New refs are written with status 'pending'. An existing
+ * ref keeps its status (an 'accepted' invite must not flip back to
+ * 'pending' when the owner re-syncs the wallet).
  */
 export async function writeSharedWalletRef(
   recipientEmail: string,
@@ -52,12 +59,25 @@ export async function writeSharedWalletRef(
 
   try {
     const refRef = doc(db, 'sharedWalletRefs', email, 'wallets', ref.docId);
+    // Preserve an existing status (e.g. 'accepted'); only new refs
+    // start as 'pending'.
+    let status: 'pending' | 'accepted' = ref.status ?? 'pending';
+    try {
+      const existing = await getDoc(refRef);
+      if (existing.exists()) {
+        const prev = (existing.data() as any)?.status;
+        if (prev === 'pending' || prev === 'accepted') status = prev;
+      }
+    } catch {
+      // If the read fails, fall through with the requested/default status.
+    }
     await safeSetDoc(refRef, cleanForFirestore({
       docId: ref.docId,
       ownerUid: ref.ownerUid,
       ownerEmail: ref.ownerEmail || '',
       walletName: ref.walletName || '',
       addedAt: ref.addedAt || Date.now(),
+      status,
     }), { merge: true });
     return true;
   } catch (err) {
@@ -76,8 +96,8 @@ export async function deleteSharedWalletRef(
   const email = normalizeEmail(recipientEmail);
   if (!email || !docId) return false;
   try {
-    await safeDeleteDoc(doc(db, 'sharedWalletRefs', email, 'wallets', docId));
-    return true;
+    // [v7.5.56] safeDeleteDoc returns a boolean — check it, don't assume.
+    return await safeDeleteDoc(doc(db, 'sharedWalletRefs', email, 'wallets', docId));
   } catch (err) {
     console.warn('[sharedWalletRefs] delete failed', err);
     return false;
@@ -114,6 +134,7 @@ export async function fetchMyRefs(myEmail: string): Promise<SharedWalletRef[]> {
           ownerEmail: data.ownerEmail || '',
           walletName: data.walletName || '',
           addedAt: Number(data.addedAt) || 0,
+          status: data.status === 'accepted' ? 'accepted' : 'pending',
         });
       }
     });
@@ -151,6 +172,7 @@ export function subscribeMyRefs(
             ownerEmail: data.ownerEmail || '',
             walletName: data.walletName || '',
             addedAt: Number(data.addedAt) || 0,
+            status: data.status === 'accepted' ? 'accepted' : 'pending',
           });
         }
       });

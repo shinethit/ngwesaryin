@@ -86,6 +86,14 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
     );
   };
 
+  // [v7.5.56] Shared-wallet helpers (finding 25): 🤝 + owner name.
+  const isSharedWallet = (w: Wallet | undefined | null): boolean =>
+    !!w && (!!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0));
+  const getWalletOwnerName = (w: Wallet | undefined | null): string =>
+    w?.ownerName || w?.ownerEmail || '';
+  const findWalletForTx = (walletId: string | undefined): Wallet | undefined =>
+    walletId ? wallets.find((w) => isWalletMatch(w, walletId)) : undefined;
+
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth(); // 0-indexed
 
@@ -133,17 +141,24 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
 
   // Aggregate daily totals map
   const dailyMap = useMemo(() => {
-    const map = new Map<string, { income: number; expense: number; count: number; net: number }>();
+    const map = new Map<string, { income: number; expense: number; count: number; net: number; sharedIncome: number; sharedExpense: number }>();
 
     transactions.forEach((t) => {
       if (!t || !t.date || isTransferTransaction(t)) return;
       if (!t.date.startsWith(monthKey)) return;
       if (!matchesWalletFilter(t.walletId)) return;
 
-      const existing = map.get(t.date) || { income: 0, expense: 0, count: 0, net: 0 };
+      const existing = map.get(t.date) || { income: 0, expense: 0, count: 0, net: 0, sharedIncome: 0, sharedExpense: 0 };
       const amt = Number(t.amount) || 0;
-      if (t.type === 'income') existing.income += amt;
-      else if (t.type === 'expense') existing.expense += amt;
+      // [v7.5.56] Shared/own split for the month summary (finding 24).
+      const shared = isSharedWallet(findWalletForTx(t.walletId));
+      if (t.type === 'income') {
+        existing.income += amt;
+        if (shared) existing.sharedIncome += amt;
+      } else if (t.type === 'expense') {
+        existing.expense += amt;
+        if (shared) existing.sharedExpense += amt;
+      }
       existing.net = existing.income - existing.expense;
       existing.count += 1;
       map.set(t.date, existing);
@@ -151,6 +166,17 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
 
     return map;
   }, [transactions, monthKey, selectedWalletIds, wallets]);
+
+  // [v7.5.56] Month shared totals, for the split line under the header.
+  const monthSharedSummary = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    dailyMap.forEach((d) => {
+      income += d.sharedIncome;
+      expense += d.sharedExpense;
+    });
+    return { income, expense, net: income - expense };
+  }, [dailyMap]);
 
   // Selected day transactions
   const selectedDayTxs = useMemo(() => {
@@ -174,6 +200,19 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
     });
     return { income, expense, net: income - expense };
   }, [selectedDayTxs]);
+
+  // [v7.5.56] Selected-day shared/own split (finding 24).
+  const selectedDaySharedSummary = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    selectedDayTxs.forEach((t) => {
+      if (!isSharedWallet(findWalletForTx(t.walletId))) return;
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'income') income += amt;
+      else if (t.type === 'expense') expense += amt;
+    });
+    return { income, expense, net: income - expense };
+  }, [selectedDayTxs, wallets]);
 
   const weekDays = lang === 'my'
     ? ['တနင်္ဂနွေ', 'တနင်္လာ', 'အင်္ဂါ', 'ဗုဒ္ဓဟူး', 'ကြာသပတေး', 'သောကြာ', 'စနေ']
@@ -209,6 +248,14 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             <p className="text-[11px] text-slate-500 font-medium">
               {lang === 'my' ? 'ရက်စွဲအလိုက် ဝင်၊ ထွက်၊ ကျန် — သိန်းဂဏန်းဖြင့် (×100,000)' : 'Daily In, Out, Net — in lakhs (×100,000)'}
             </p>
+            {/* [v7.5.56] Month shared split (finding 24). */}
+            {(monthSharedSummary.income > 0 || monthSharedSummary.expense > 0) && (
+              <p className="text-[11px] text-amber-700 font-semibold" title={`🤝 Shared in: ${formatMMK(monthSharedSummary.income)} · out: ${formatMMK(monthSharedSummary.expense)}`}>
+                {lang === 'my'
+                  ? `🤝 ဒီလ မျှဝေထား — ဝင် +${formatShortLakhs(monthSharedSummary.income)} · ထွက် -${formatShortLakhs(monthSharedSummary.expense)} · ကျန် ${monthSharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(monthSharedSummary.net)}`
+                  : `🤝 Shared this month — in +${formatShortLakhs(monthSharedSummary.income)} · out -${formatShortLakhs(monthSharedSummary.expense)} · net ${monthSharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(monthSharedSummary.net)}`}
+              </p>
+            )}
           </div>
         </div>
 
@@ -284,6 +331,9 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                 <div className="max-h-64 overflow-y-auto py-1">
                   {wallets.map((w) => {
                     const isSelected = selectedWalletIds.includes(w.id);
+                    // [v7.5.56] Shared badge + owner name (finding 25).
+                    const shared = isSharedWallet(w);
+                    const owner = getWalletOwnerName(w);
                     return (
                       <button
                         key={w.id}
@@ -302,8 +352,15 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                           </span>
                           <div className="min-w-0">
                             <div className="text-xs font-bold text-slate-800 truncate">
-                              {lang === 'my' ? w.name : w.nameEn || w.name}
+                              {shared ? '🤝 ' : ''}{lang === 'my' ? w.name : w.nameEn || w.name}
                             </div>
+                            {shared && (
+                              <div className="text-[10px] text-amber-700 font-semibold truncate">
+                                {owner
+                                  ? (lang === 'my' ? `ပိုင်ရှင်: ${owner}` : `Owner: ${owner}`)
+                                  : (lang === 'my' ? 'မျှဝေထားသော အိတ်' : 'Shared wallet')}
+                              </div>
+                            )}
                             <div className="text-[10px] text-slate-400 font-mono truncate">
                               {formatMMK(w.balance)}
                             </div>
@@ -451,6 +508,15 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             </div>
           </div>
 
+          {/* [v7.5.56] Selected-day shared split (finding 24). */}
+          {(selectedDaySharedSummary.income > 0 || selectedDaySharedSummary.expense > 0) && (
+            <div className="text-[11px] text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5" title={`🤝 Shared in: ${formatMMK(selectedDaySharedSummary.income)} · out: ${formatMMK(selectedDaySharedSummary.expense)}`}>
+              {lang === 'my'
+                ? `🤝 မျှဝေထား — ဝင် +${formatShortLakhs(selectedDaySharedSummary.income)} · ထွက် -${formatShortLakhs(selectedDaySharedSummary.expense)} · ကျန် ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(selectedDaySharedSummary.net)}`
+                : `🤝 Shared — in +${formatShortLakhs(selectedDaySharedSummary.income)} · out -${formatShortLakhs(selectedDaySharedSummary.expense)} · net ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(selectedDaySharedSummary.net)}`}
+            </div>
+          )}
+
           {/* Transactions Structured Table for Selected Day */}
           {selectedDayTxs.length === 0 ? (
             <div className="py-6 text-center text-slate-400 text-xs">
@@ -472,6 +538,10 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                     const catName = getCategoryDisplayName(t.category, categories, lang);
                     const catColor = cat?.color || (isInc ? '#10B981' : '#EF4444');
                     const catIcon = cat?.icon || 'Tag';
+                    // [v7.5.56] Shared badge on the row's wallet (finding 25).
+                    const txWallet = findWalletForTx(t.walletId);
+                    const txShared = isSharedWallet(txWallet);
+                    const txOwner = getWalletOwnerName(txWallet);
 
                     return (
                       <tr key={t.id} className="hover:bg-slate-50 transition-colors">
@@ -484,7 +554,14 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                               <CategoryIcon name={catIcon} className="w-3.5 h-3.5" />
                             </div>
                             <div className="min-w-0">
-                              <div className="font-bold text-slate-900 truncate">{catName}</div>
+                              <div className="font-bold text-slate-900 truncate">
+                                {catName}
+                                {txShared && (
+                                  <span className="ml-1.5 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 whitespace-nowrap" title={txOwner ? `${lang === 'my' ? 'ပိုင်ရှင်' : 'Owner'}: ${txOwner}` : undefined}>
+                                    🤝 {txOwner || (lang === 'my' ? 'မျှဝေထား' : 'Shared')}
+                                  </span>
+                                )}
+                              </div>
                               {t.note && (
                                 <div className="text-[11px] text-slate-500 truncate italic">"{t.note}"</div>
                               )}

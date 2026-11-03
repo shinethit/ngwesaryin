@@ -14,20 +14,21 @@ export const OWNER_PERMISSIONS: WalletPermissions = {
 };
 
 /**
- * [v6.23.3] Deny-by-default — matches Firestore rules.
- * Used for: unmatched collaborator, missing email, null wallet,
- * or any fallback where we cannot verify the user's permission.
- *
- * Kept the name DEFAULT_WALLET_PERMISSIONS for backwards compat,
- * but its value is now all-false (was all-true before v6.23.3).
+ * [v7.5.56] "Full" preset default — all-true.
+ * Used ONLY as the preset applied when the owner shares a wallet with a
+ * new collaborator (ShareWalletModal / useWalletHandlers): a new invitee
+ * starts with full access. This is NOT a fallback: every fallback in
+ * getCollaboratorPermissions() below returns READ_ONLY_PERMISSIONS
+ * (all-false) so an unmatched collaborator, a missing email, or a null
+ * wallet can never silently gain full access.
  */
 export const DEFAULT_WALLET_PERMISSIONS: WalletPermissions = {
-  canAddIncome: false,
-  canEditIncome: false,
-  canDeleteIncome: false,
-  canAddExpense: false,
-  canEditExpense: false,
-  canDeleteExpense: false,
+  canAddIncome: true,
+  canEditIncome: true,
+  canDeleteIncome: true,
+  canAddExpense: true,
+  canEditExpense: true,
+  canDeleteExpense: true,
 };
 
 export const READ_ONLY_PERMISSIONS: WalletPermissions = {
@@ -51,19 +52,22 @@ export const ADD_ONLY_PERMISSIONS: WalletPermissions = {
 /**
  * Resolves permissions for a given user email on a specific wallet.
  *
- * [v6.23.3] All fallbacks now DENY to match Firestore rules:
+ * [v7.5.56] All fallbacks now DENY to match Firestore rules, and they
+ * return READ_ONLY_PERMISSIONS (all-false) — NOT DEFAULT_WALLET_PERMISSIONS,
+ * which is the all-true "Full" preset for new invitees only:
  *   - Owner → OWNER_PERMISSIONS (full)
  *   - Collaborator with explicit entry → entry, missing sub-key = false
- *   - Collaborator without entry → DEFAULT_WALLET_PERMISSIONS (deny)
- *   - Null wallet / no email → DEFAULT_WALLET_PERMISSIONS (deny)
+ *   - Collaborator without entry → READ_ONLY_PERMISSIONS (deny)
+ *   - Null wallet / no email → READ_ONLY_PERMISSIONS (deny)
  */
 export function getCollaboratorPermissions(
   wallet: Wallet | null | undefined,
   userEmail: string | null | undefined,
   currentUid?: string | null
 ): WalletPermissions {
-  // [v6.23.3] No wallet context → deny (was: full)
-  if (!wallet) return DEFAULT_WALLET_PERMISSIONS;
+  // [v7.5.56] No wallet context → deny via READ_ONLY (never DEFAULT,
+  // which is the all-true "Full" preset for new invitees).
+  if (!wallet) return READ_ONLY_PERMISSIONS;
 
   // Owner short-circuit — only place that gets full perms
   const isOwner =
@@ -74,8 +78,8 @@ export function getCollaboratorPermissions(
     return OWNER_PERMISSIONS;
   }
 
-  // [v6.23.3] No email on a shared wallet → deny (was: full)
-  if (!userEmail) return DEFAULT_WALLET_PERMISSIONS;
+  // [v7.5.56] No email on a shared wallet → deny via READ_ONLY.
+  if (!userEmail) return READ_ONLY_PERMISSIONS;
 
   const targetEmail = userEmail.trim().toLowerCase();
   const permsMap = wallet.collaboratorPermissions;
@@ -97,11 +101,6 @@ export function getCollaboratorPermissions(
     }
   }
 
-  // [v6.23.3] Unmatched collaborator → deny (was: full)
-  return DEFAULT_WALLET_PERMISSIONS;
+  // [v7.5.56] Unmatched collaborator → deny via READ_ONLY (never DEFAULT).
+  return READ_ONLY_PERMISSIONS;
 }
-
-/**
- * Check if an action on an income or expense transaction is permitted
- * for the current user. Matches Firestore rules exactly.
- */

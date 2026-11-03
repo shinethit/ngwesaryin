@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider, GoogleAuthProvider } from 'firebase/auth';
 import {
   doc,
   getDoc,
@@ -12,12 +12,15 @@ import {
   query,
   where,
   onSnapshot,
+  arrayRemove,
+  updateDoc,
 } from 'firebase/firestore';
 import { auth, db, defaultDb, googleProvider, handleFirestoreError, OperationType, cleanForFirestore, isQuotaExhausted, resumeNetworkFromQuota, safeSetDoc, safeDeleteDoc, withTimeout } from '../lib/firebase';
 import { syncQueue } from '../lib/syncQueue';
 import { Transaction, Debt, Wallet, Category, Budget, PlanType, InvitedWorkspace, ShopContact, Vehicle, FuelLog, VehicleMaintenance, TirePressureLog } from '../types';
 import { safeGetItem, safeSetItem, safeRemoveItem, setStorageScope } from '../utils/storage';
-import { getSharedWalletDocId } from '../lib/sharedWalletService';
+import { getSharedWalletDocId, recomputeSharedWalletBalance } from '../lib/sharedWalletService';
+import { fetchMyRefs, deleteSharedWalletRef, subscribeMyRefs } from '../lib/sharedWalletRefs';
 import { computeSyncSignature, computeContentFingerprint } from '../utils/syncGuards';
 import { isWalletMatch } from '../utils/walletBalance';
 
@@ -91,6 +94,18 @@ interface AuthContextType {
   collaborators: string[];
   addCollaborator: (email: string) => Promise<{ success: boolean; error?: string }>;
   removeCollaborator: (email: string) => Promise<boolean>;
+  // [v7.5.56] Per-viewer Separate choice for shared wallets (key = shared
+  // wallet doc id, value = include in THIS viewer's totals). Loaded from
+  // the viewer's own user doc; the WalletsView toggle writes via
+  // updateSharedWalletScopeOverride.
+  sharedWalletScopeOverrides: Record<string, boolean>;
+  updateSharedWalletScopeOverride: (sharedDocId: string, includeInTotals: boolean) => Promise<boolean>;
+  // [v7.5.56] Delete the signed-in account: re-authenticates, deletes the
+  // user's Firestore data, then deletes the Auth user. BLOCKS when the
+  // user owns shared wallets (lists them — ownership must be transferred
+  // first). Password users must pass their password; Google users are
+  // re-authenticated with a popup.
+  deleteAccount: (password?: string) => Promise<{ success: boolean; error?: string; ownedSharedWallets?: string[] }>;
 }
 
 // Cross-platform safe date parser (Safari/iOS compatible)
@@ -142,6 +157,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAdminState, setIsAdminState] = useState(false);
   const [collaborators, setCollaborators] = useState<string[]>([]);
   const [invitedWorkspaces, setInvitedWorkspaces] = useState<InvitedWorkspace[]>([]);
+  // [v7.5.56] Per-viewer shared-wallet scope overrides, loaded from the
+  // viewer's own user doc (sharedWalletScopeOverrides).
+  const [sharedWalletScopeOverrides, setSharedWalletScopeOverrides] = useState<Record<string, boolean>>({});
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(() => {
     return safeGetItem('ngwe_active_workspace');
   });
@@ -175,7 +193,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return true;
   };
 
-  // Real-time listener to discover workspaces where the current user is invited as a collaborator
+  // [v7.5.56] Real-time discovery of workspaces shared with the current
+  // user, derived from the user's OWN sharedWalletRefs. The old
+  // root-users `collaborators` array-contains query is gone: under the
+  // new rules that array grants nothing and a collaborator can no
+  // longer read the owner's root user doc, so the old query returned
+  // nothing and new invitees never appeared here. Refs carry
+  // ownerUid/ownerEmail (no owner display name, no plan), so
+  // displayName falls back to the owner-email prefix — the same
+  // fallback the shared-wallet hydration in sharedWalletService uses.
+  // `plan` is 'free': no consumer reads InvitedWorkspace.plan
+  // (Dashboard / AccountModal / WalletsView only use uid, email and
+  // displayName for switching + owner attribution) and the owner's real
+  // plan is unreadable to the invitee, so the most restrictive honest
+  // value is used — never claim premium. `collaborators` is [] for the
+  // same reason (unknown and unreadable). Several shared wallets from
+  // the same owner collapse to one workspace entry. The owner's root
+  // user doc is never read. All refs are included regardless of
+  // pending/accepted status, matching the wallet list (which hydrates
+  // every ref) and the old behaviour (no pending concept).
   useEffect(() => {
     if (!user || !user.email) {
       setInvitedWorkspaces([]);
@@ -183,63 +219,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     const cleanEmail = user.email.trim().toLowerCase();
-    const rawEmail = user.email.trim();
-
-    const processUserDocs = (docs: any[]) => {
-      const map = new Map<string, InvitedWorkspace>();
-      docs.forEach((docSnap) => {
-        if (docSnap.id !== user.uid) {
-          const data = docSnap.data();
-          map.set(docSnap.id, {
-            uid: docSnap.id,
-            email: data.email || 'Partner',
-            displayName: data.displayName || data.userName || (data.email ? data.email.split('@')[0] : 'Partner'),
-            plan: (data.plan as PlanType) || 'free',
-            collaborators: data.collaborators || [],
+    const unsub = subscribeMyRefs(
+      cleanEmail,
+      (refs) => {
+        const map = new Map<string, InvitedWorkspace>();
+        refs.forEach((ref) => {
+          if (!ref.ownerUid || map.has(ref.ownerUid)) return;
+          const ownerEmail = ref.ownerEmail || '';
+          map.set(ref.ownerUid, {
+            uid: ref.ownerUid,
+            email: ownerEmail,
+            displayName: ownerEmail ? ownerEmail.split('@')[0] : '',
+            plan: 'free',
+            collaborators: [],
           });
-        }
-      });
-      setInvitedWorkspaces(Array.from(map.values()));
-    };
-
-    let q1Docs: any[] = [];
-    let q2Docs: any[] = [];
-
-    const updateMerged = () => {
-      const combined = [...q1Docs, ...q2Docs];
-      processUserDocs(combined);
-    };
-
-    const q1 = query(collection(db, 'users'), where('collaborators', 'array-contains', cleanEmail));
-    const unsub1 = onSnapshot(
-      q1,
-      (snap) => {
-        q1Docs = snap.docs;
-        updateMerged();
+        });
+        setInvitedWorkspaces(Array.from(map.values()));
       },
       (err) => {
-        handleFirestoreError(err, OperationType.LIST, 'users (collaborators clean)');
+        handleFirestoreError(err, OperationType.LIST, 'sharedWalletRefs (invited workspaces)');
       }
     );
 
-    let unsub2: (() => void) | null = null;
-    if (rawEmail !== cleanEmail) {
-      const q2 = query(collection(db, 'users'), where('collaborators', 'array-contains', rawEmail));
-      unsub2 = onSnapshot(
-        q2,
-        (snap) => {
-          q2Docs = snap.docs;
-          updateMerged();
-        },
-        (err) => {
-          handleFirestoreError(err, OperationType.LIST, 'users (collaborators raw)');
-        }
-      );
-    }
-
     return () => {
-      unsub1();
-      if (unsub2) unsub2();
+      unsub();
     };
   }, [user]);
 
@@ -276,6 +279,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
         setUserProfile(profile);
         setCollaborators(Array.isArray(data.collaborators) ? data.collaborators : []);
+        // [v7.5.56] Load the viewer's per-wallet scope overrides.
+        setSharedWalletScopeOverrides(
+          data.sharedWalletScopeOverrides && typeof data.sharedWalletScopeOverrides === 'object'
+            ? data.sharedWalletScopeOverrides
+            : {}
+        );
         safeSetItem('ngwe_user_profile', JSON.stringify(profile));
         safeSetItem('ngwe_plan', effectivePlan);
         if (data.premiumExpiresAt) {
@@ -301,6 +310,96 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // [v7.5.56] Owner-boot reconcile for shared wallets (finding 5 + prune).
+  // Runs fire-and-forget on boot/sync — never blocks sign-in:
+  //  (a) Prune stale collaborators: the root users/{uid}.collaborators
+  //      array is vestigial (it grants nothing under the new rules), but
+  //      anyone sharing no wallet must not linger in it. Keep only emails
+  //      sharing >= 1 wallet with the owner (from wallets' sharedWith).
+  //  (b) Recompute the stored balance of each owned shared wallet so the
+  //      shared doc never goes stale after member writes.
+  const reconcileOwnedSharedWallets = async (): Promise<void> => {
+    const cu = auth.currentUser;
+    if (!cu) return;
+    try {
+      const walletsSnap = await getDocs(collection(db, 'users', cu.uid, 'wallets'));
+      const ownedShared: Wallet[] = [];
+      const sharingEmails = new Set<string>();
+      walletsSnap.docs.forEach((d) => {
+        const w = { id: d.id, ...d.data() } as Wallet;
+        if (Array.isArray(w.sharedWith) && w.sharedWith.length > 0) {
+          ownedShared.push(w);
+          w.sharedWith.forEach((e) => {
+            if (typeof e === 'string' && e.includes('@')) sharingEmails.add(e.trim().toLowerCase());
+          });
+        }
+      });
+
+      // (a) Prune stale entries from the root collaborators array.
+      try {
+        const userSnap = await getDoc(doc(db, 'users', cu.uid));
+        if (userSnap.exists()) {
+          const stored: string[] = Array.isArray(userSnap.data().collaborators)
+            ? userSnap.data().collaborators
+            : [];
+          const stale = stored.filter(
+            (c) => typeof c === 'string' && c.includes('@') && !sharingEmails.has(c.trim().toLowerCase())
+          );
+          if (stale.length > 0) {
+            // NOTE: updateDoc directly, NOT safeUpdateDoc — safeUpdateDoc
+            // runs cleanForFirestore(), which would mangle the
+            // arrayRemove() FieldValue sentinel into a plain object.
+            await withTimeout(
+              updateDoc(doc(db, 'users', cu.uid), { collaborators: arrayRemove(...stale) }),
+              8000
+            ).catch(() => {});
+            setCollaborators(stored.filter((c) => !stale.includes(c)));
+          }
+        }
+      } catch (pruneErr) {
+        console.warn('[v7.5.56] prune stale collaborators notice:', pruneErr);
+      }
+
+      // (b) Recompute each owned shared wallet's stored balance.
+      for (const w of ownedShared) {
+        try {
+          await recomputeSharedWalletBalance(getSharedWalletDocId(w, cu.uid));
+        } catch (reErr) {
+          console.warn('[v7.5.56] recompute shared wallet notice:', w.id, reErr);
+        }
+      }
+    } catch (err) {
+      console.warn('[v7.5.56] reconcileOwnedSharedWallets notice:', err);
+    }
+  };
+
+  // [v7.5.56] Write a per-viewer scope override for one shared wallet
+  // (called by the WalletsView Separate toggle). Stored in the viewer's
+  // OWN user doc only — never on the shared doc — so one member's choice
+  // never changes another member's totals.
+  const updateSharedWalletScopeOverride = async (
+    sharedDocId: string,
+    includeInTotals: boolean
+  ): Promise<boolean> => {
+    if (!auth.currentUser || !sharedDocId) return false;
+    // Read the doc first so a rapid double-toggle cannot lose an update
+    // to a stale local copy of the overrides map.
+    const userSnap = await getDoc(doc(db, 'users', auth.currentUser.uid)).catch(() => null);
+    const stored = userSnap && userSnap.exists() && userSnap.data().sharedWalletScopeOverrides
+      && typeof userSnap.data().sharedWalletScopeOverrides === 'object'
+      ? userSnap.data().sharedWalletScopeOverrides
+      : sharedWalletScopeOverrides;
+    const next = { ...stored, [sharedDocId]: includeInTotals };
+    const ok = await safeSetDoc(
+      doc(db, 'users', auth.currentUser.uid),
+      { sharedWalletScopeOverrides: next, updatedAt: new Date().toISOString() },
+      { merge: true }
+    );
+    if (!ok) return false;
+    setSharedWalletScopeOverrides(next);
+    return true;
+  };
 
   const claimFreeTrial = async (): Promise<{ success: boolean; error?: string }> => {
     if (!auth.currentUser) {
@@ -550,6 +649,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               };
               setUserProfile(profile);
               setCollaborators(Array.isArray(uData?.collaborators) ? uData.collaborators : []);
+              // [v7.5.56] Load the viewer's per-wallet scope overrides.
+              setSharedWalletScopeOverrides(
+                uData?.sharedWalletScopeOverrides && typeof uData.sharedWalletScopeOverrides === 'object'
+                  ? uData.sharedWalletScopeOverrides
+                  : {}
+              );
               safeSetItem('ngwe_user_profile', JSON.stringify(profile));
               safeSetItem('ngwe_plan', effectivePlan);
               if (expAt) {
@@ -568,6 +673,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               };
               setUserProfile(defaultProfile);
               setCollaborators([]);
+              setSharedWalletScopeOverrides({});
               safeSetItem('ngwe_user_profile', JSON.stringify(defaultProfile));
               safeSetItem('ngwe_plan', defaultProfile.plan);
               if (expAt) {
@@ -589,11 +695,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } catch (e) {
             console.warn('Failed to load user profile doc on auth change', e);
           }
+
+          // [v7.5.56] Owner boot: prune stale collaborators + recompute
+          // owned shared wallet balances (fire-and-forget, never blocks).
+          void reconcileOwnedSharedWallets();
         } else {
           console.log('AuthContext: No user authenticated');
           setIsAdminState(false);
           setUserProfile(null);
           setCollaborators([]);
+          setSharedWalletScopeOverrides({});
           safeRemoveItem('ngwe_user_profile');
           safeRemoveItem('ngwe_plan');
           safeRemoveItem('ngwe_premium_expires_at');
@@ -923,9 +1034,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const sharedDocId = getSharedWalletDocId(sw, uid);
         const txsForSw = transactions.filter((t) => isWalletMatch(sw, t.walletId));
         for (const tx of txsForSw) {
+          // [v7.5.56] Write the SHARED DOC ID as walletId: the rules
+          // require request.resource.data.walletId == path walletId, so
+          // the raw local walletId was always denied.
           sharedOperations.push({
             ref: doc(db, 'sharedWallets', sharedDocId, 'transactions', tx.id),
-            data: { ...tx },
+            data: { ...tx, walletId: sharedDocId },
           });
         }
       }
@@ -1091,22 +1205,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      // Commit sharedOperations in an isolated batch so shared permissions never block personal sync
+      // Commit sharedOperations in an isolated batch so shared permissions never block personal sync.
+      // [v7.5.56] Honest result: a failed/skipped shared batch used to be
+      // swallowed ("skipped") while syncDataToCloud still returned true.
+      // Now a failed shared write falls back to per-document writes, the
+      // still-failing ones are queued to syncQueue ('sharedWallets' entity,
+      // bounded retry), and the sync reports false with an honest error —
+      // personal data synced, shared data did NOT.
+      let sharedFailed = 0;
+      const sharedFailedPaths: string[] = [];
       if (sharedOperations.length > 0) {
-        try {
-          for (let i = 0; i < sharedOperations.length; i += CHUNK_SIZE) {
-            const chunk = sharedOperations.slice(i, i + CHUNK_SIZE);
+        for (let i = 0; i < sharedOperations.length; i += CHUNK_SIZE) {
+          const chunk = sharedOperations.slice(i, i + CHUNK_SIZE);
+          try {
             const swBatch = writeBatch(db);
             for (const op of chunk) {
               swBatch.set(op.ref, cleanForFirestore(op.data), { merge: true });
             }
-            await withTimeout(swBatch.commit(), 10000).catch((err) => {
-              console.warn('Shared wallet batch notice (skipped):', err);
-            });
+            await withTimeout(swBatch.commit(), 10000);
+          } catch (batchErr) {
+            console.warn('Shared wallet batch failed, falling back to per-document writes:', batchErr);
+            const results = await Promise.allSettled(
+              chunk.map(async (op) => {
+                await setDoc(op.ref, cleanForFirestore(op.data), { merge: true });
+                return op.ref.path;
+              })
+            );
+            for (let k = 0; k < results.length; k++) {
+              if (results[k].status === 'rejected') {
+                const op = chunk[k];
+                sharedFailed++;
+                sharedFailedPaths.push(op.ref.path);
+                // Queue for bounded retry via syncQueue (permission-denied
+                // gives up after 2 attempts and surfaces via dead letter).
+                const parts = String(op.ref.path || '').split('/');
+                if (parts.length >= 2 && parts[0] === 'sharedWallets') {
+                  const entityId = parts.slice(1).join('/');
+                  syncQueue.enqueue('sharedWallets', entityId, 'upsert', uid, op.data);
+                }
+              }
+            }
           }
-        } catch (swErr) {
-          console.warn('Shared operations non-blocking catch:', swErr);
         }
+      }
+
+      if (sharedFailed > 0) {
+        console.error('[syncDataToCloud] ' + sharedFailed + ' shared write(s) failed:', sharedFailedPaths.slice(0, 20));
+        setSyncError(
+          'Shared Wallet ' + sharedFailed + ' ခု Cloud သို့ မရောက်ပါ — ပြန်ကြိုးစားနေပါသည်။ ကိုယ်ပိုင်ဒေတာများ Cloud သို့ ရောက်ပြီးပါပြီ။'
+        );
+        return false;
       }
 
       lastSyncedSignatureRef.current = currentSig;
@@ -1168,7 +1316,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fuelLogsSnap,
         maintSnap,
         tiresSnap,
-        sharedWalletsSnap,
+        sharedDocs,
       ] = await Promise.all([
         safeFetch(
           () => getDocFromServer(doc(db, 'users', targetUid)),
@@ -1225,47 +1373,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           () => getDocs(collection(db, 'users', targetUid, 'tirePressureLogs')),
           12000
         ),
-        // [QUOTA-GUARD v6.1.1] Scoped sharedWallets query.
-        // BEFORE: read the ENTIRE sharedWallets collection (all users' shared wallets).
-        // AFTER: only fetch (a) wallets I own + (b) wallets shared with me.
-        // Saves potentially hundreds of reads per pull on a multi-user system.
+        // [v7.5.56] sharedWallets list is DISABLED in the rules
+        // (allow list: if false), so the old ownerUid / sharedWith list
+        // queries were always denied. Discover shared wallets via the
+        // per-user refs collection, then get() each shared doc (get is
+        // allowed for members). Owned shared wallets are fetched by their
+        // canonical doc id — also a get(), never a list.
+        // Returns docs shaped like { id, data(): SharedWalletPayload } so
+        // the merge block below is unchanged.
         (async () => {
-          try {
-            const me = (auth.currentUser?.email || '').trim().toLowerCase();
-            const ownQ = query(
-              collection(db, 'sharedWallets'),
-              where('ownerUid', '==', uid)
-            );
-            const sharedQ = me
-              ? query(
-                  collection(db, 'sharedWallets'),
-                  where('sharedWith', 'array-contains', me)
-                )
-              : null;
-
-            const [ownSnap, sharedSnap] = await Promise.all([
-              withTimeout(getDocsFromServer(ownQ), 15000).catch(() => null),
-              sharedQ
-                ? withTimeout(getDocsFromServer(sharedQ), 15000).catch(() => null)
-                : Promise.resolve(null),
-            ]);
-
-            const mergedDocs: any[] = [];
-            if (ownSnap) ownSnap.docs.forEach((d) => mergedDocs.push(d));
-            if (sharedSnap) {
-              sharedSnap.docs.forEach((d) => {
-                if (!mergedDocs.some((m) => m.id === d.id)) mergedDocs.push(d);
-              });
+          const docs: { id: string; data: () => any }[] = [];
+          const seen = new Set<string>();
+          const pushDoc = (snap: any) => {
+            if (snap && snap.exists() && !seen.has(snap.id)) {
+              seen.add(snap.id);
+              docs.push({ id: snap.id, data: () => snap.data() });
             }
-
-            return {
-              docs: mergedDocs,
-              empty: mergedDocs.length === 0,
-              size: mergedDocs.length,
-            };
+          };
+          try {
+            // (a) Incoming shares via my refs.
+            const me = (auth.currentUser?.email || '').trim().toLowerCase();
+            if (me) {
+              const refs = await fetchMyRefs(me).catch(() => []);
+              for (const r of refs) {
+                const snap = await getDoc(doc(db, 'sharedWallets', r.docId)).catch(() => null);
+                pushDoc(snap);
+              }
+            }
+            // (b) Owned shared wallets: my own wallets subcollection is
+            // fetched above (walletsSnap), so their shared docs are known
+            // by canonical id. They are fetched here, after walletsSnap
+            // resolves — see the post-fetch loop below; this IIFE only
+            // covers refs. Owned docs are appended in the merge section.
           } catch {
-            return { docs: [], empty: true, size: 0 };
+            // Discovery failure must not fail the whole pull.
           }
+          return docs;
         })(),
       ]);
 
@@ -1310,9 +1453,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const txMap = new Map<string, Transaction>();
       allTransactions.forEach((t) => txMap.set(t.id, t));
 
+      // [v7.5.56] Owned shared wallets: fetch each shared doc by its
+      // canonical id (a get(), never a list) so the owner's own shared
+      // wallets still get their balance/metadata refreshed on cold pull.
+      const allSharedDocs = [...(sharedDocs || [])];
+      {
+        const seenIds = new Set(allSharedDocs.map((d) => d.id));
+        for (const w of allWallets) {
+          if (Array.isArray(w.sharedWith) && w.sharedWith.length > 0 && !w.isSharedFromOther) {
+            const docId = getSharedWalletDocId(w, uid);
+            if (seenIds.has(docId)) continue;
+            seenIds.add(docId);
+            const snap = await getDoc(doc(db, 'sharedWallets', docId)).catch(() => null);
+            if (snap && snap.exists()) {
+              allSharedDocs.push({ id: snap.id, data: () => snap.data() });
+            }
+          }
+        }
+      }
+
       // Query & merge top-level sharedWallets subcollections
-      if (sharedWalletsSnap && !sharedWalletsSnap.empty) {
-        for (const sDoc of sharedWalletsSnap.docs) {
+      // (wallets discovered via refs above, plus owned docs just fetched)
+      if (allSharedDocs.length > 0) {
+        for (const sDoc of allSharedDocs) {
           const sData = sDoc.data();
           if (!sData) continue;
 
@@ -1340,8 +1503,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     : existingWallet.balance,
                 sharedWith: sharedList.length > 0 ? sharedList : existingWallet.sharedWith,
                 sharedDocId: sDoc.id,
+                // [v7.5.56] Cold pull MUST set the same fields the live
+                // listener sets, or the wallet counts differently on cold
+                // start vs after the listener fires (finding 14).
+                ...(sData.includeInTotals !== undefined
+                  ? { includeInTotals: sData.includeInTotals !== false }
+                  : {}),
+                ...(sData.exchangeRate !== undefined
+                  ? { exchangeRate: Number(sData.exchangeRate) || 1 }
+                  : {}),
+                ...(sData.initialBalance !== undefined
+                  ? { initialBalance: Number(sData.initialBalance) }
+                  : {}),
               });
             } else if (isSharedToMe) {
+              // [v7.5.56] Mirror subscribeIncomingSharedWallets exactly:
+              // includeInTotals, exchangeRate, initialBalance included.
+              // Never fall back to the literal 'Partner' (finding 35) —
+              // use the owner email / its prefix, or '' when unknown.
               const sharedWalletObj: Wallet = {
                 id: `shared_${sDoc.id}`,
                 originalId: rawWalletId,
@@ -1349,16 +1528,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 name: sData.name || 'Shared Wallet',
                 nameEn: sData.nameEn || sData.name || 'Shared Wallet',
                 balance: Number(sData.balance) || 0,
+                initialBalance: sData.initialBalance !== undefined ? Number(sData.initialBalance) : undefined,
+                includeInTotals: sData.includeInTotals !== false,
                 color: sData.color || '#6366F1',
                 icon: sData.icon || 'Wallet',
                 currency: sData.currency || 'MMK',
+                exchangeRate: sData.exchangeRate || 1,
                 sharedWith: sharedList,
                 ownerUid: sData.ownerUid || '',
-                ownerEmail: sData.ownerEmail || 'Partner',
-                ownerName: sData.ownerName || 'Partner',
+                ownerEmail: sData.ownerEmail || '',
+                ownerName: sData.ownerName || (sData.ownerEmail ? sData.ownerEmail.split('@')[0] : ''),
                 isSharedFromOther: true,
               };
               walletMap.set(sharedWalletObj.id, sharedWalletObj);
+            } else if (isMine) {
+              // [v7.5.56] Transferred-ownership case: the viewer now OWNS
+              // this shared doc but has no local copy — create it as an
+              // owned wallet (not shared-from-other), or a later cold
+              // pull drops it from state entirely.
+              const ownedWalletObj: Wallet = {
+                id: rawWalletId,
+                originalId: rawWalletId,
+                sharedDocId: sDoc.id,
+                name: sData.name || 'Shared Wallet',
+                nameEn: sData.nameEn || sData.name || 'Shared Wallet',
+                balance: Number(sData.balance) || 0,
+                initialBalance: sData.initialBalance !== undefined ? Number(sData.initialBalance) : undefined,
+                includeInTotals: sData.includeInTotals !== false,
+                color: sData.color || '#6366F1',
+                icon: sData.icon || 'Wallet',
+                currency: sData.currency || 'MMK',
+                exchangeRate: sData.exchangeRate || 1,
+                sharedWith: sharedList,
+                ownerUid: sData.ownerUid || '',
+                ownerEmail: sData.ownerEmail || '',
+                ownerName: sData.ownerName || (sData.ownerEmail ? sData.ownerEmail.split('@')[0] : ''),
+                isSharedFromOther: false,
+              };
+              walletMap.set(ownedWalletObj.id, ownedWalletObj);
             }
 
             // Fetch shared transactions subcollection
@@ -1395,6 +1602,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLastSyncedAt(now);
       safeSetItem('ngwe_last_synced', now.toISOString());
 
+      // [v7.5.56] Sync-time reconcile: prune stale collaborators +
+      // recompute owned shared wallet balances (fire-and-forget).
+      void reconcileOwnedSharedWallets();
+
       return {
         transactions: visibleTransactions,
         debts: debts,
@@ -1426,6 +1637,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // [v7.5.56] STOP writing users/{uid}.collaborators on share: the root
+  // array grants NOTHING under the new rules (sharing lives on the wallet
+  // doc's sharedWith + the per-recipient refs). This function now only
+  // VALIDATES and returns the same codes callers check
+  // (true / 'CANNOT_ADD_SELF' / 'ALREADY_EXISTS' / 'FREE_LIMIT_REACHED' /
+  // 'INVALID_EMAIL' / 'NOT_LOGGED_IN') — the actual share write happens
+  // in the wallet-share flow. Limits/duplicates are checked against the
+  // distinct emails actually sharing >= 1 wallet with the owner.
   const addCollaborator = async (rawEmail: string): Promise<{ success: boolean; error?: string }> => {
     if (!auth.currentUser) return { success: false, error: 'NOT_LOGGED_IN' };
     const email = rawEmail.trim().toLowerCase();
@@ -1439,41 +1658,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const userRef = doc(db, 'users', auth.currentUser.uid);
       const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        const currentCollaborators: string[] = Array.isArray(data.collaborators) ? data.collaborators : [];
-        const currentPlan = (data.plan as PlanType) || userProfile?.plan || 'free';
+      const currentPlan = (userSnap.exists() ? (userSnap.data().plan as PlanType) : undefined)
+        || userProfile?.plan
+        || 'free';
 
-        if (currentCollaborators.map((c) => c.toLowerCase()).includes(email)) {
-          return { success: false, error: 'ALREADY_EXISTS' };
+      // Distinct emails sharing >= 1 wallet with the owner.
+      const walletsSnap = await getDocs(collection(db, 'users', auth.currentUser.uid, 'wallets'));
+      const sharing = new Set<string>();
+      walletsSnap.docs.forEach((d) => {
+        const w = d.data() as Wallet;
+        if (Array.isArray(w.sharedWith)) {
+          w.sharedWith.forEach((e) => {
+            if (typeof e === 'string' && e.includes('@')) sharing.add(e.trim().toLowerCase());
+          });
         }
+      });
 
-        // Free plan limit: max 2 collaborators
-        if (currentPlan === 'free' && currentCollaborators.length >= 2) {
-          return { success: false, error: 'FREE_LIMIT_REACHED' };
-        }
-
-        const set = new Set<string>(currentCollaborators);
-        set.add(email.toLowerCase());
-        if (rawEmail.trim()) set.add(rawEmail.trim());
-        const updated = Array.from(set);
-        await safeSetDoc(userRef, { collaborators: updated }, { merge: true });
-        setCollaborators(updated);
-        return { success: true };
-      } else {
-        const updated = [email.toLowerCase(), rawEmail.trim()].filter(Boolean);
-        await safeSetDoc(userRef, {
-          userId: auth.currentUser.uid,
-          email: auth.currentUser.email || '',
-          displayName: auth.currentUser.displayName || 'User',
-          plan: userProfile?.plan || 'free',
-          collaborators: updated,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-        setCollaborators(updated);
-        return { success: true };
+      if (sharing.has(email)) {
+        return { success: false, error: 'ALREADY_EXISTS' };
       }
+
+      // Free plan limit: max 2 collaborators
+      if (currentPlan === 'free' && sharing.size >= 2) {
+        return { success: false, error: 'FREE_LIMIT_REACHED' };
+      }
+
+      // No root-array write: the caller persists the share on the wallet
+      // (sharedWith + refs). Returning success keeps the share flow moving.
+      return { success: true };
     } catch (err: any) {
       console.error('Failed to add collaborator', err);
       return { success: false, error: err?.message || 'FAILED' };
@@ -1550,6 +1762,103 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // [v7.5.56] Delete the signed-in account (decision 24). No delete-account
+  // handler existed anywhere in src, so this is new.
+  // Flow: (1) BLOCK if the user owns shared wallets — they must transfer
+  // ownership first (transfer UI is another worker's job); the returned
+  // ownedSharedWallets list names them. (2) Re-authenticate — Firebase
+  // requires a recent login to delete a user (password users pass their
+  // password; Google users get a re-auth popup). (3) Delete the user's
+  // Firestore data (all personal subcollections + user doc + admin doc +
+  // the user's own discovery refs). Wallets the user only JOINS are NOT
+  // deleted — they belong to their owners; the user's refs to them are
+  // removed and the user stays listed in sharedWith until the owner
+  // removes them (members cannot edit the shared doc). (4) Delete the
+  // Auth user and clear local state.
+  const deleteAccount = async (
+    password?: string
+  ): Promise<{ success: boolean; error?: string; ownedSharedWallets?: string[] }> => {
+    const cu = auth.currentUser;
+    if (!cu) return { success: false, error: 'NOT_LOGGED_IN' };
+    const uid = cu.uid;
+
+    try {
+      // (1) Owned shared wallets block deletion — no silent orphans.
+      const walletsSnap = await getDocs(collection(db, 'users', uid, 'wallets'));
+      const ownedShared: string[] = [];
+      walletsSnap.docs.forEach((d) => {
+        const w = d.data() as Wallet;
+        if (Array.isArray(w.sharedWith) && w.sharedWith.length > 0) {
+          ownedShared.push(w.name || d.id);
+        }
+      });
+      if (ownedShared.length > 0) {
+        return { success: false, error: 'OWNED_SHARED_WALLETS', ownedSharedWallets: ownedShared };
+      }
+
+      // (2) Re-authenticate (Firebase requires a recent login).
+      const providerIds = (cu.providerData || []).map((p) => p.providerId);
+      if (providerIds.includes('password')) {
+        if (!password) return { success: false, error: 'PASSWORD_REQUIRED' };
+        const cred = EmailAuthProvider.credential(cu.email || '', password);
+        await reauthenticateWithCredential(cu, cred);
+      } else {
+        await reauthenticateWithPopup(cu, new GoogleAuthProvider());
+      }
+
+      // (3) Delete Firestore data.
+      const subcollections = ['transactions', 'debts', 'wallets', 'categories', 'budgets', 'shops', 'vehicles', 'fuelLogs', 'vehicleMaintenance', 'tirePressureLogs'];
+      for (const subcol of subcollections) {
+        try {
+          const snap = await getDocs(collection(db, 'users', uid, subcol)).catch(() => null);
+          if (snap && !snap.empty) {
+            for (const docItem of snap.docs) {
+              await safeDeleteDoc(docItem.ref);
+            }
+          }
+        } catch (subErr) {
+          console.warn('deleteAccount: could not clear subcollection ' + subcol + ':', subErr);
+        }
+      }
+      // Remove my own discovery refs so joined shared wallets stop
+      // appearing for this (deleted) identity.
+      const me = (cu.email || '').trim().toLowerCase();
+      if (me) {
+        const refs = await fetchMyRefs(me).catch(() => []);
+        for (const r of refs) {
+          await deleteSharedWalletRef(me, r.docId).catch(() => {});
+        }
+      }
+      await safeDeleteDoc(doc(db, 'users', uid));
+      await safeDeleteDoc(doc(db, 'admins', uid));
+
+      // (4) Delete the Auth user, then clear local state.
+      await deleteUser(cu);
+      setUser(null);
+      setUserProfile(null);
+      setCollaborators([]);
+      setSharedWalletScopeOverrides({});
+      setInvitedWorkspaces([]);
+      safeRemoveItem('ngwe_user_profile');
+      safeRemoveItem('ngwe_plan');
+      safeRemoveItem('ngwe_premium_expires_at');
+      return { success: true };
+    } catch (err: any) {
+      console.error('Failed to delete account:', err);
+      const code = String(err?.code || err?.message || '');
+      if (code.includes('requires-recent-login')) {
+        return { success: false, error: 'REQUIRES_RECENT_LOGIN' };
+      }
+      if (code.includes('wrong-password') || code.includes('invalid-credential') || code.includes('invalid-password')) {
+        return { success: false, error: 'WRONG_PASSWORD' };
+      }
+      if (code.includes('popup-closed-by-user') || code.includes('cancelled-popup-request')) {
+        return { success: false, error: 'REAUTH_CANCELLED' };
+      }
+      return { success: false, error: err?.message || 'FAILED' };
+    }
+  };
+
   const removeCollaborator = async (emailToRemove: string): Promise<boolean> => {
     if (!auth.currentUser) return false;
     try {
@@ -1605,6 +1914,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         collaborators,
         addCollaborator,
         removeCollaborator,
+        sharedWalletScopeOverrides,
+        updateSharedWalletScopeOverride,
+        deleteAccount,
       }}
     >
       {children}

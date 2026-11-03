@@ -60,12 +60,9 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     setActiveWorkspaceId,
     switchWorkspace,
     invitedWorkspaces = [],
-    collaborators = [],
-    addCollaborator,
-    removeCollaborator,
+    deleteAccount,
   } = useAuth();
   const [syncingAction, setSyncingAction] = useState<string | null>(null);
-  const [collabEmail, setCollabEmail] = useState('');
   const [workspaceInput, setWorkspaceInput] = useState('');
   const [workspaceMsg, setWorkspaceMsg] = useState({ type: '', text: '' });
   const [reconnectingVpn, setReconnectingVpn] = useState(false);
@@ -78,6 +75,15 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   // change/disable first verify the CURRENT PIN via PinLockScreen.
   const [isPinSetupOpen, setIsPinSetupOpen] = useState(false);
   const [pinVerifyFor, setPinVerifyFor] = useState<'change' | 'disable' | null>(null);
+  // [v7.5.56] Delete-account flow state. Password users type their
+  // password into the inline field below (never window.prompt — the
+  // password would echo in plain text); Google users are re-authed
+  // with a popup inside deleteAccount().
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState({ type: '', text: '' });
+  const isPasswordUser = (user?.providerData || []).some((p) => p.providerId === 'password');
 
   const handleResetVpnConnection = async () => {
     setReconnectingVpn(true);
@@ -139,52 +145,100 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }
 
-  const handleAddCollaborator = async () => {
-    if (!collabEmail.trim()) return;
-    const res = await addCollaborator(collabEmail.trim());
-    if (res.success) {
-      setWorkspaceMsg({ type: 'success', text: lang === 'my' ? '✓ Collaborator အသစ် ထည့်သွင်းပြီးပါပြီ' : '✓ Collaborator added successfully' });
-      setCollabEmail('');
-    } else {
-      if (res.error === 'FREE_LIMIT_REACHED') {
-        setWorkspaceMsg({
+  // [v7.5.56] Delete account: confirm first, then (password users)
+  // ask for the password inline, then call deleteAccount() and report
+  // its result honestly — success is shown only when it returns
+  // success, and every error code gets its own message.
+  const handleDeleteAccount = async (password?: string) => {
+    setDeletingAccount(true);
+    setDeleteMsg({ type: '', text: '' });
+    try {
+      const res = await deleteAccount(password);
+      if (res.success) {
+        setShowDeletePassword(false);
+        setDeletePassword('');
+        setDeleteMsg({
+          type: 'success',
+          text: lang === 'my'
+            ? '✓ အကောင့်ဖျက်ပြီးပါပြီ။ သင့်ဒေတာအားလုံး ဖျက်သိမ်းလိုက်ပါပြီ။'
+            : '✓ Account deleted. All of your data has been removed.',
+        });
+        return;
+      }
+      if (res.error === 'OWNED_SHARED_WALLETS') {
+        const names = (res.ownedSharedWallets || []).join(', ');
+        setDeleteMsg({
           type: 'error',
           text: lang === 'my'
-            ? 'Free Plan တွင် Collaborator ၂ ယောက်သာ ထည့်သွင်းခွင့်ရှိပါသည်။ ၂ ယောက်ထက် ပိုမိုထည့်သွင်းရန် Premium ဝယ်ယူပါ'
-            : 'Free plan allows up to 2 collaborators. Upgrade to Premium for unlimited collaborators'
+            ? `⛔ အကောင့်မဖျက်နိုင်သေးပါ — သင်ပိုင်ဆိုင်ပြီး မျှဝေထားသော Wallet များ ရှိနေပါသည် (${names})။ အရင် ပိုင်ဆိုင်မှု လွှဲပြောင်းပေးပြီးမှ အကောင့်ဖျက်နိုင်ပါမည်။`
+            : `⛔ Cannot delete your account yet — you still own shared wallets (${names}). Transfer ownership of them first, then delete your account.`,
         });
-      } else if (res.error === 'ALREADY_EXISTS') {
-        setWorkspaceMsg({
+      } else if (res.error === 'WRONG_PASSWORD') {
+        setDeleteMsg({
           type: 'error',
-          text: lang === 'my' ? 'ဤ Email ကို Collaborator အဖြစ် ထည့်သွင်းထားပြီး ဖြစ်ပါသည်' : 'This email is already added'
+          text: lang === 'my'
+            ? '⚠️ စကားဝှက် မှားနေပါသည်။ မှန်ကန်သော စကားဝှက်ကို ပြန်ရိုက်ထည့်ပါ။'
+            : '⚠️ Wrong password. Please enter your correct password.',
         });
-      } else if (res.error === 'CANNOT_ADD_SELF') {
-        setWorkspaceMsg({
+      } else if (res.error === 'PASSWORD_REQUIRED') {
+        setDeleteMsg({
           type: 'error',
-          text: lang === 'my' ? 'မိမိကိုယ်ပိုင် Email ကို Collaborator အဖြစ် ထည့်သွင်း၍မရပါ' : 'Cannot add your own email'
+          text: lang === 'my'
+            ? '⚠️ အကောင့်ဖျက်ရန် သင့်စကားဝှက် လိုအပ်ပါသည်။'
+            : '⚠️ Your password is required to delete your account.',
         });
-      } else if (res.error === 'INVALID_EMAIL') {
-        setWorkspaceMsg({
+      } else if (res.error === 'REAUTH_CANCELLED') {
+        setDeleteMsg({
           type: 'error',
-          text: lang === 'my' ? 'မှန်ကန်သော Email လိပ်စာကို ရိုက်ထည့်ပါ' : 'Please enter a valid email address'
+          text: lang === 'my'
+            ? '⚠️ အတည်ပြုခြင်း ပြတင်းပေါက် ပိတ်သွားပါသည်။ အကောင့် မဖျက်ရသေးပါ။'
+            : '⚠️ The confirmation popup was closed. Your account was not deleted.',
+        });
+      } else if (res.error === 'REQUIRES_RECENT_LOGIN') {
+        setDeleteMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ အကောင့်ဖျက်ရန် မကြာသေးခင် အကောင့်ဝင်ထားဖို့ လိုပါသည်။ အရင် အကောင့်ထွက်ပြီး ပြန်ဝင်ပြီးမှ ထပ်ကြိုးစားပါ။'
+            : '⚠️ For security, please sign out and sign back in, then try deleting your account again.',
+        });
+      } else if (res.error === 'NOT_LOGGED_IN') {
+        setDeleteMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ အကောင့် ဝင်ထားခြင်း မရှိပါ။'
+            : '⚠️ You are not signed in.',
         });
       } else {
-        setWorkspaceMsg({
+        setDeleteMsg({
           type: 'error',
-          text: lang === 'my' ? 'ထည့်သွင်း၍ မအောင်မြင်ပါ' : 'Failed to add collaborator'
+          text: lang === 'my'
+            ? `⚠️ အကောင့်ဖျက်ခြင်း မအောင်မြင်ပါ${res.error ? ` (${res.error})` : ''}။ အင်တာနက် စစ်ပြီး ပြန်ကြိုးစားပါ။`
+            : `⚠️ Could not delete your account${res.error ? ` (${res.error})` : ''}. Check your connection and try again.`,
         });
       }
+    } finally {
+      setDeletingAccount(false);
     }
   };
 
-  const handleRemoveCollaborator = async (email: string) => {
-    const success = await removeCollaborator(email);
-    if (success) {
-      setWorkspaceMsg({
-        type: 'success',
-        text: lang === 'my' ? 'Collaborator ဖယ်ရှားပြီးပါပြီ' : 'Collaborator removed'
-      });
+  const handleDeleteAccountClick = () => {
+    setDeleteMsg({ type: '', text: '' });
+    if (
+      !window.confirm(
+        lang === 'my'
+          ? 'အကောင့်ကို အပြီးတိုင် ဖျက်မည်လား?\n\nသင့်စာရင်းမှတ်တမ်းများ၊ အကြွေးများ၊ ပိုက်ဆံအိတ်များ၊ ဘတ်ဂျက်များနှင့် Cloud ဒေတာအားလုံး အပြီးတိုင် ပျောက်ကွယ်သွားပါမည်။ ပြန်လည်ရယူ၍ မရပါ။\n\nမျှဝေထားသော Wallet များကို သင်ပိုင်ဆိုင်နေသေးပါက အကောင့် ဖျက်၍မရပါ — အရင် ပိုင်ဆိုင်မှု လွှဲပြောင်းပေးရပါမည်။'
+          : 'Permanently delete your account?\n\nAll of your transactions, debts, wallets, budgets and Cloud data will be permanently removed and cannot be recovered.\n\nIf you still own any shared wallets, the account cannot be deleted until you transfer their ownership first.'
+      )
+    ) {
+      return;
     }
+    // Password users confirm with their password (inline field below);
+    // Google users are re-authed with a popup inside deleteAccount().
+    if (isPasswordUser) {
+      setShowDeletePassword(true);
+      return;
+    }
+    void handleDeleteAccount();
   };
 
   const handleSwitchWorkspace = async () => {
@@ -488,85 +542,25 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                    <span>{lang === 'my' ? 'လက်ရှိ ပူးပေါင်းထားသူများ' : 'Current Collaborators'}</span>
-                    <span className="font-mono text-slate-600">
-                      {collaborators.length} {plan === 'free' ? '/ 2' : '(Unlimited)'}
-                    </span>
-                  </div>
-
-                  {collaborators.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-1">
-                      {lang === 'my' ? 'ပူးပေါင်းအသုံးပြုသူ မရှိသေးပါ' : 'No collaborators added yet'}
-                    </p>
-                  ) : (
-                    <div className="space-y-1">
-                      {collaborators.map((cEmail) => (
-                        <div
-                          key={cEmail}
-                          className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs"
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="text-slate-700 truncate font-mono">{cEmail}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCollaborator(cEmail)}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                            title={lang === 'my' ? 'ဖယ်ရှားမည်' : 'Remove'}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {plan === 'free' && collaborators.length >= 2 && (
-                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start justify-between gap-2 mt-2">
-                      <div className="text-[11px] text-amber-900 leading-tight">
-                        <span className="font-bold">⚠️ {lang === 'my' ? 'Free ကန့်သတ်ချက် (၂ ယောက်) ပြည့်ပါပြီ' : 'Free limit (2 members) reached'}</span>
-                        <p className="text-amber-700 mt-0.5">
-                          {lang === 'my' ? '၂ ယောက်ထက် ပိုသုံးရန် Premium ဝယ်ယူပါ' : 'Upgrade to Premium for more than 2 members'}
-                        </p>
-                      </div>
-                      {onOpenPremium && (
-                        <button
-                          type="button"
-                          onClick={onOpenPremium}
-                          className="shrink-0 px-2 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg text-[10px] font-bold hover:brightness-105 cursor-pointer flex items-center gap-1 shadow-xs"
-                        >
-                          <Crown className="w-2.5 h-2.5" />
-                          <span>{lang === 'my' ? 'Premium ရယူပါ' : 'Upgrade'}</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                                {/* [v7.5.56] The legacy root-collaborators list is gone:
+                    sharing is per-wallet now — collaborators are listed on
+                    each wallet card (Wallets page, Share button). The old
+                    root array is no longer written and grants nothing. */}
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
+                  {lang === 'my'
+                    ? '💡 ပူးပေါင်းအသုံးပြုသူများကို Wallet တစ်ခုချင်းစီတွင် ကြည့်နိုင်ပါသည် — "ပိုက်ဆံအိတ်များ" စာမျက်နှာရှိ Share ခလုတ်မှ ဖိတ်ခေါ်ထားသူများကို စစ်ဆေးပါ။'
+                    : '💡 Collaborators are listed per wallet — check the Share button on each wallet card on the "Wallets" page.'}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                    {lang === 'my' ? 'ပူးပေါင်းမည့်သူ၏ Email အသစ်ထည့်ရန်' : 'Add Collaborator Email'}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      value={collabEmail}
-                      onChange={(e) => setCollabEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCollaborator}
-                      disabled={!collabEmail.trim()}
-                      className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-200 disabled:opacity-50 cursor-pointer"
-                    >
-                      {lang === 'my' ? 'ထည့်မည်' : 'Add'}
-                    </button>
-                  </div>
+                {/* [v7.5.56] No add-collaborator box here any more: it
+                    only validated and never actually shared anything —
+                    sharing happens per-wallet (Share button on a wallet
+                    card in WalletsView). Direct users there instead of
+                    leaving a dead input that implies it adds someone. */}
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
+                  {lang === 'my'
+                    ? '💡 ပူးပေါင်းအသုံးပြုသူ ထည့်လိုပါက "ပိုက်ဆံအိတ်များ" စာမျက်နှာတွင် Wallet တစ်ခုချင်းစီ၏ Share ခလုတ်မှ ဖိတ်ခေါ်ပါ — ဤနေရာမှ တိုက်ရိုက် ထည့်၍မရပါ။'
+                    : '💡 To invite a collaborator, share a wallet from the "Wallets" page using its Share button — collaborators can no longer be added from here.'}
                 </div>
 
                 <hr className="border-slate-100" />
@@ -1199,6 +1193,74 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* [v7.5.56] Delete account (signed-in users only; guests have
+                no account to delete). Confirm step first; password users
+                then type their password inline; Google users are
+                re-authed with a popup. Success is shown only when
+                deleteAccount() returns success. */}
+            {!isGuest && user && (
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 mt-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                      <span>{lang === 'my' ? 'အကောင့် ဖျက်မည်' : 'Delete Account'}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200/80 text-rose-800">
+                        {lang === 'my' ? 'အပြီးတိုင်' : 'Permanent'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600 mt-1 leading-relaxed max-w-xs">
+                      {lang === 'my'
+                        ? 'အကောင့်နှင့် ဒေတာအားလုံး (စာရင်း၊ အကြွေး၊ ပိုက်ဆံအိတ်၊ Cloud ဒေတာ) အပြီးတိုင် ပျောက်ကွယ်သွားမည်။ မျှဝေထားသော Wallet ပိုင်ဆိုင်နေသေးပါက အရင် ပိုင်ဆိုင်မှု လွှဲပြောင်းပေးရပါမည်။'
+                        : 'Permanently removes your account and all data (transactions, debts, wallets, Cloud data). If you still own shared wallets, transfer their ownership first.'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    id="btn-account-delete-account"
+                    onClick={handleDeleteAccountClick}
+                    disabled={deletingAccount}
+                    className="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all shrink-0 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{deletingAccount ? (lang === 'my' ? 'ဖျက်နေသည်...' : 'Deleting...') : (lang === 'my' ? 'အကောင့်ဖျက်မည်' : 'Delete Account')}</span>
+                  </button>
+                </div>
+                {showDeletePassword && (
+                  <div className="mt-3 pt-3 border-t border-rose-200 space-y-2">
+                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                      {lang === 'my' ? 'အတည်ပြုရန် သင့်စကားဝှက် ရိုက်ထည့်ပါ' : 'Enter your password to confirm'}
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && deletePassword) void handleDeleteAccount(deletePassword);
+                        }}
+                        placeholder={lang === 'my' ? 'စကားဝှက်' : 'Password'}
+                        autoComplete="current-password"
+                        className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-rose-500 bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteAccount(deletePassword)}
+                        disabled={!deletePassword || deletingAccount}
+                        className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold rounded-lg disabled:opacity-50 cursor-pointer"
+                      >
+                        {lang === 'my' ? 'အတည်ပြုပြီး ဖျက်မည်' : 'Confirm Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {deleteMsg.text && (
+                  <div className={`mt-3 text-xs p-2 rounded-lg ${deleteMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-100 text-rose-800'}`}>
+                    {deleteMsg.text}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

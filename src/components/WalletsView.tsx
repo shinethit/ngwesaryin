@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { WalletCards, Plus, ArrowRightLeft, Lock, Edit2, Trash2, TrendingUp, Scale, UserPlus, Users, LogOut, Building2, CreditCard, Smartphone, Coins, PiggyBank, DollarSign, Globe, Landmark, ShieldCheck, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
+import { WalletCards, Plus, ArrowRightLeft, Lock, Edit2, Trash2, TrendingUp, Scale, UserPlus, Users, LogOut, Building2, CreditCard, Smartphone, Coins, PiggyBank, DollarSign, Globe, Landmark, ShieldCheck, ChevronDown, ChevronUp, Calculator, Crown } from 'lucide-react';
 import { PlanType, Wallet, WalletPermissions, Transaction } from '../types';
-import { formatMMK, formatLakhs } from '../utils/formatters';
+import { formatMMK } from '../utils/formatters';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyInfo,
   formatCurrency,
   convertToMMK,
 } from '../utils/currency';
+import { getSharedWalletDocId } from '../lib/sharedWalletService';
 import {
   bootstrapExchangeRates,
   subscribeRates,
@@ -15,7 +16,7 @@ import {
   refreshExchangeRates,
   type RateSnapshot,
 } from '../lib/exchangeRates';
-import { getCollaboratorPermissions } from '../utils/permissions';
+import { getCollaboratorPermissions, DEFAULT_WALLET_PERMISSIONS } from '../utils/permissions';
 import { isWalletMatch } from '../utils/walletBalance';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { ShareWalletModal } from './ShareWalletModal';
@@ -36,10 +37,19 @@ interface WalletsViewProps {
   onOpenUpgradeModal: () => void;
   onOpenReconcileModal: (walletId?: string) => void;
   onAddTransaction?: (type?: 'income' | 'expense', walletId?: string) => void;
-  onShareWallet?: (walletId: string, email: string) => void;
-  onUnshareWallet?: (walletId: string, email: string) => void;
+  // [v7.5.56] Return false when the share/unshare was refused or failed,
+  // so the modal never shows a success state for it (void = legacy).
+  onShareWallet?: (walletId: string, email: string) => Promise<boolean> | boolean | void;
+  onUnshareWallet?: (walletId: string, email: string) => Promise<boolean> | boolean | void;
   onUpdatePermissions?: (walletId: string, email: string, permissions: WalletPermissions) => void;
   onSyncRefresh?: (overrideWorkspaceId?: string) => Promise<void>;
+  // [v7.5.56] Coordinator wires these from App: onTransferOwnership =
+  // handleTransferOwnership, maxCollaborators = limits.maxCollaborators
+  // (limits table, single source of truth), onOpenSignIn = opens the
+  // auth modal for the ShareWalletModal guest gate.
+  onTransferOwnership?: (wallet: Wallet, newOwnerEmail: string) => void;
+  maxCollaborators?: number;
+  onOpenSignIn?: () => void;
 }
 
 const WALLET_ICONS_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -73,8 +83,15 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   onUnshareWallet,
   onUpdatePermissions,
   onSyncRefresh,
+  onTransferOwnership,
+  maxCollaborators,
+  onOpenSignIn,
 }) => {
-  const { user, activeWorkspaceId, invitedWorkspaces, switchWorkspace } = useAuth();
+  // [v7.5.56] Cross-worker contract: updateSharedWalletScopeOverride is
+  // exposed from AuthContext by another worker — the per-viewer Separate
+  // toggle for shared wallets (never writes includeInTotals to the
+  // shared doc).
+  const { user, activeWorkspaceId, invitedWorkspaces, switchWorkspace, updateSharedWalletScopeOverride } = useAuth();
   const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -151,15 +168,62 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     return wallets;
   }, [wallets, includedWallets, excludedWallets, walletFilter]);
 
-  const handleToggleIncludeInTotals = (wallet: Wallet, e?: React.MouseEvent) => {
+  // [v7.5.56] Separate toggle is PER-USER for a shared wallet: it calls
+  // updateSharedWalletScopeOverride and changes ONLY this viewer's scope.
+  // It must never write includeInTotals to the shared doc and never
+  // rewrite ownerUid. Only a personal (unshared) wallet goes through
+  // onUpdateWallet.
+  const handleToggleIncludeInTotals = async (wallet: Wallet, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const nextState = wallet.includeInTotals === false ? true : false;
+    const isSharedWallet = Boolean(wallet.isSharedFromOther || (wallet.sharedWith && wallet.sharedWith.length > 0));
+    if (isSharedWallet) {
+      if (typeof updateSharedWalletScopeOverride === 'function' && user?.uid) {
+        const sharedDocId = getSharedWalletDocId(wallet, user.uid);
+        const ok = await updateSharedWalletScopeOverride(sharedDocId, nextState);
+        if (!ok) {
+          console.warn('[v7.5.56] scope override did not land for', sharedDocId);
+        }
+      } else {
+        console.warn('[v7.5.56] updateSharedWalletScopeOverride is not available yet — Separate toggle skipped for shared wallet');
+      }
+      return;
+    }
     if (onUpdateWallet) {
       onUpdateWallet({
         ...wallet,
         includeInTotals: nextState,
       });
     }
+  };
+
+  // [v7.5.56] Owner-only ownership transfer entry point (wallet menu).
+  // The new owner must already be a member — the handler enforces it
+  // and confirms before writing anything.
+  const handleTransferOwnershipClick = (wallet: Wallet) => {
+    if (!onTransferOwnership) return;
+    const raw = window.prompt(
+      lang === 'my'
+        ? `ပိုင်ဆိုင်မှု လွှဲပြောင်းမည့် အဖွဲ့ဝင်၏ Email ကို ထည့်ပါ:\n(ဤ Wallet ၏ လက်ရှိ အဖွဲ့ဝင် ဖြစ်ရပါမည်)`
+        : 'Enter the email of the member to transfer ownership to:\n(They must already be a member of this wallet)'
+    );
+    if (raw === null) return;
+    const email = raw.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      window.alert(lang === 'my' ? 'မှန်ကန်သော Email လိပ်စာ ဖြစ်ရပါမည်' : 'Please enter a valid email address');
+      return;
+    }
+    onTransferOwnership(wallet, email);
+  };
+
+  // [v7.5.56] Display name of the person a wallet is shared by — never
+  // the literal 'Partner' placeholder the service used to fall back to.
+  const sharedByLabel = (wallet: Wallet): string => {
+    const name = (wallet.ownerName || '').trim();
+    if (name && name.toLowerCase() !== 'partner') return name;
+    const email = (wallet.ownerEmail || '').trim();
+    if (email && email.toLowerCase() !== 'partner') return email;
+    return lang === 'my' ? 'ပိုင်ရှင်' : 'the owner';
   };
 
   // Group balances by currency for breakdown pills
@@ -181,25 +245,40 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     return wallets.some((w) => w.currency && w.currency !== 'MMK');
   }, [wallets]);
 
-  // [v7.1.1] Simplified: this-month inflow/outflow per wallet.
-  // Removed car-wallet auto-routing (dead feature).
-  // Removed per-wallet Opening/Closing (moved to Analytics).
+  // [v7.5.56] This-month flow: amounts are converted with the wallet's
+  // currency/exchangeRate to MMK BEFORE summing, so a foreign-currency
+  // wallet's flow is no longer mixed up with raw MMK figures. The map
+  // stores MMK; the card converts back to the wallet's currency for
+  // display (see the month-flow render below).
   const thisMonthStatsMap = useMemo(() => {
     const now = new Date();
     const prefix = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0');
-    const map: Record<string, { inflow: number; outflow: number }> = {};
-    wallets.forEach((w) => { map[w.id] = { inflow: 0, outflow: 0 }; });
+    const map: Record<string, { inflowMMK: number; outflowMMK: number }> = {};
+    wallets.forEach((w) => { map[w.id] = { inflowMMK: 0, outflowMMK: 0 }; });
 
     transactions.forEach((t) => {
       if (!t.date || !t.date.startsWith(prefix)) return;
       const w = wallets.find((wal) => isWalletMatch(wal, t.walletId));
       if (!w) return;
-      if (t.type === 'income') map[w.id].inflow += t.amount;
-      else if (t.type === 'expense') map[w.id].outflow += t.amount;
+      const amountMMK = convertToMMK(t.amount, w.currency, w.exchangeRate);
+      if (t.type === 'income') map[w.id].inflowMMK += amountMMK;
+      else if (t.type === 'expense') map[w.id].outflowMMK += amountMMK;
     });
 
     return map;
   }, [wallets, transactions]);
+
+  // [v7.5.56] "Of which shared" — the included-total slice that belongs
+  // to shared wallets, for the banner line below.
+  const totalSharedIncludedMMK = useMemo(() => {
+    return includedWallets
+      .filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0))
+      .reduce((sum, w) => sum + convertToMMK(w.balance, w.currency, w.exchangeRate), 0);
+  }, [includedWallets, ratesSnapshot.updatedAt]);
+  const hasSharedWallets = useMemo(
+    () => wallets.some((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0)),
+    [wallets]
+  );
 
   // [v7.5.55] Wallet limit from the CURRENT plan's row (App passes
   // maxFreeWallets={limits.maxWallets}: guest 1, free 2). Guest is
@@ -217,6 +296,18 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     setShowTransferModal(false);
     setTransferAmount('');
     setTransferNote('');
+  };
+
+  // [v7.5.56] Transfer dropdown label — shared wallets are marked so
+  // the user can tell them apart (finding 36).
+  const transferOptionLabel = (w: Wallet): string => {
+    const sharedTag = lang === 'my' ? 'မျှဝေထား' : 'Shared';
+    const marker = w.isSharedFromOther
+      ? `🤝 ${sharedTag} — `
+      : w.sharedWith && w.sharedWith.length > 0
+      ? `👥 ${sharedTag} — `
+      : '';
+    return `${marker}${w.name} (${formatCurrency(w.balance, w.currency)})`;
   };
 
   const handleOpenAddWallet = () => {
@@ -368,6 +459,16 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             <div className="text-3xl sm:text-4xl font-black mt-1 tracking-tight">
               {formatMMK(totalIncludedMMK)}
             </div>
+
+            {/* [v7.5.56] "Of which shared" line on the banner total. */}
+            {hasSharedWallets && (
+              <div className="mt-1.5 text-xs font-semibold text-indigo-300">
+                🤝{' '}
+                {lang === 'my'
+                  ? `ယင်းအထဲက မျှဝေထားသော အကောင့်: ${formatMMK(totalSharedIncludedMMK)}`
+                  : `of which shared: ${formatMMK(totalSharedIncludedMMK)}`}
+              </div>
+            )}
 
             {/* If some wallets are excluded, show separate breakdown badge */}
             {excludedWallets.length > 0 && (
@@ -654,6 +755,16 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             const isForeign = wallet.currency && wallet.currency !== 'MMK';
             const effectiveRate = wallet.exchangeRate || currInfo.defaultRateToMMK;
             const convertedBalance = convertToMMK(wallet.balance, wallet.currency, wallet.exchangeRate);
+            // [v7.5.56] Collaborator rights on this wallet (owners get
+            // full rights from the helper). Reconcile needs both add
+            // rights (the adjustment can go either way); transfer-out
+            // needs the expense add right. The include-in-totals toggle
+            // is NOT gated here — since v7.5.56 it changes only the
+            // viewer's own scope (per-user override), never the shared
+            // doc, so every viewer may use it on their own view.
+            const myPerms = getCollaboratorPermissions(wallet, user?.email, user?.uid);
+            const canReconcile = myPerms.canAddIncome && myPerms.canAddExpense;
+            const canTransferFrom = myPerms.canAddExpense;
 
             return (
               <div
@@ -736,6 +847,18 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                           >
                             <Trash2 className="w-4 h-4 text-rose-500" />
                           </button>
+
+                          {/* [v7.5.56] Transfer ownership — owner only, and
+                              only for wallets shared with someone. */}
+                          {wallet.sharedWith && wallet.sharedWith.length > 0 && onTransferOwnership && (
+                            <button
+                              onClick={() => handleTransferOwnershipClick(wallet)}
+                              className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors"
+                              title={lang === 'my' ? 'ပိုင်ဆိုင်မှု လွှဲပြောင်းမည်' : 'Transfer ownership'}
+                            >
+                              <Crown className="w-4 h-4 text-amber-600" />
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -783,11 +906,11 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
                       {wallet.isSharedFromOther && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                          <Users className="w-3 h-3 text-indigo-600" />
+                          <span>🤝</span>
                           <span>
                             {lang === 'my'
-                              ? `${wallet.ownerName || wallet.ownerEmail} မှ မျှဝေထားသည်`
-                              : `Shared by ${wallet.ownerName || wallet.ownerEmail}`}
+                              ? `${sharedByLabel(wallet)} မှ မျှဝေထားသည်`
+                              : `Shared by ${sharedByLabel(wallet)}`}
                           </span>
                         </span>
                       )}
@@ -851,15 +974,19 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
                     {lang === 'my' ? 'လက်ကျန်ငွေ' : 'Balance'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => onOpenReconcileModal(wallet.id)}
-                    className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer hover:underline"
-                    title="Reconcile this wallet balance"
-                  >
-                    <Scale className="w-3 h-3 text-indigo-600" />
-                    <span>{lang === 'my' ? 'စာရင်းညှိမည်' : 'Reconcile'}</span>
-                  </button>
+                  {/* [v7.5.56] Reconcile is hidden for collaborators
+                      without both add rights (finding 28). */}
+                  {canReconcile && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenReconcileModal(wallet.id)}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer hover:underline"
+                      title="Reconcile this wallet balance"
+                    >
+                      <Scale className="w-3 h-3 text-indigo-600" />
+                      <span>{lang === 'my' ? 'စာရင်းညှိမည်' : 'Reconcile'}</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Primary Balance in Wallet's Native Currency */}
@@ -867,24 +994,32 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   {formatCurrency(wallet.balance, wallet.currency)}
                 </div>
 
-                {/* [v7.1.1] This-month flow (compact single line) */}
+                {/* [v7.5.56] This-month flow (compact single line) —
+                    stats are stored in MMK (converted before summing),
+                    so convert back to the wallet's currency and render
+                    in that currency, never MMK lakhs. */}
                 {(() => {
                   const stats = thisMonthStatsMap[wallet.id];
-                  if (!stats || (stats.inflow === 0 && stats.outflow === 0)) return null;
-                  const net = stats.inflow - stats.outflow;
+                  if (!stats || (stats.inflowMMK === 0 && stats.outflowMMK === 0)) return null;
+                  const code = (wallet.currency || 'MMK').toUpperCase();
+                  const rate = code === 'MMK' ? 1 : (wallet.exchangeRate || getCurrencyInfo(code).defaultRateToMMK);
+                  const toWalletCurrency = (mmk: number) => (code === 'MMK' ? mmk : mmk / rate);
+                  const inflow = toWalletCurrency(stats.inflowMMK);
+                  const outflow = toWalletCurrency(stats.outflowMMK);
+                  const net = inflow - outflow;
                   return (
                     <div className="flex items-center gap-2 text-[11px] font-mono flex-wrap">
                       <span className="text-slate-400 font-sans text-[10px]">
                         {lang === 'my' ? 'ဒီလ' : 'This month'}
                       </span>
-                      {stats.inflow > 0 && (
-                        <span className="text-emerald-600 font-bold">↗ +{formatLakhs(stats.inflow, lang)}</span>
+                      {inflow > 0 && (
+                        <span className="text-emerald-600 font-bold">↗ +{formatCurrency(inflow, code)}</span>
                       )}
-                      {stats.outflow > 0 && (
-                        <span className="text-rose-600 font-bold">↘ -{formatLakhs(stats.outflow, lang)}</span>
+                      {outflow > 0 && (
+                        <span className="text-rose-600 font-bold">↘ -{formatCurrency(outflow, code)}</span>
                       )}
                       <span className={'font-bold ' + (net >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
-                        = {net >= 0 ? '+' : ''}{formatLakhs(net, lang)}
+                        = {net >= 0 ? '+' : '-'}{formatCurrency(Math.abs(net), code)}
                       </span>
                     </div>
                   );
@@ -931,11 +1066,21 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                               {lang === 'my' ? 'မှတ်တမ်းသွင်း' : 'Record'}
                             </span>
                           </button>
+                          {/* [v7.5.56] Transfer-from is disabled for
+                              collaborators without the expense add right
+                              (finding 28); the handler enforces it too. */}
                           <button
                             type="button"
                             onClick={() => handleOpenTransferModal(wallet.id)}
-                            className="col-span-2 py-2 px-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98 shadow-2xs truncate"
-                            title={lang === 'my' ? 'ဤအကောင့်မှ ငွေလွှဲမည်' : 'Transfer from this wallet'}
+                            disabled={!canTransferFrom}
+                            className={`col-span-2 py-2 px-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all flex items-center justify-center gap-1 active:scale-98 shadow-2xs truncate ${
+                              canTransferFrom ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'
+                            }`}
+                            title={
+                              canTransferFrom
+                                ? (lang === 'my' ? 'ဤအကောင့်မှ ငွေလွှဲမည်' : 'Transfer from this wallet')
+                                : (lang === 'my' ? 'ငွေလွှဲထွက်ခွင့် မရှိပါ' : 'No permission to transfer out')
+                            }
                           >
                             <ArrowRightLeft className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                             <span className="truncate">{lang === 'my' ? 'ငွေလွှဲ' : 'Transfer'}</span>
@@ -987,7 +1132,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                 >
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} ({formatCurrency(w.balance, w.currency)})
+                      {transferOptionLabel(w)}
                     </option>
                   ))}
                 </select>
@@ -1006,7 +1151,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     .filter((w) => w.id !== transferFrom)
                     .map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.name} ({formatCurrency(w.balance, w.currency)})
+                        {transferOptionLabel(w)}
                       </option>
                     ))}
                 </select>
@@ -1077,23 +1222,37 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
         wallet={selectedWalletForShare}
         isOpen={Boolean(selectedWalletForShare)}
         onClose={() => setSelectedWalletForShare(null)}
-        onShareWallet={(walletId, email) => {
-          if (onShareWallet) {
-            onShareWallet(walletId, email);
-          }
+        // [v7.5.56] Result-aware wrappers — the modal's local snapshot is
+        // only updated when the handler reports success, so a refused or
+        // failed invite/unshare never shows up as done here.
+        onShareWallet={async (walletId, email) => {
+          const result = onShareWallet ? await onShareWallet(walletId, email) : undefined;
+          if (result === false) return false;
           if (selectedWalletForShare) {
             const updatedList = [...(selectedWalletForShare.sharedWith || []), email];
-            setSelectedWalletForShare({ ...selectedWalletForShare, sharedWith: updatedList });
+            setSelectedWalletForShare({
+              ...selectedWalletForShare,
+              sharedWith: updatedList,
+              collaboratorPermissions: {
+                ...(selectedWalletForShare.collaboratorPermissions || {}),
+                [email.toLowerCase()]: DEFAULT_WALLET_PERMISSIONS,
+              },
+            });
           }
+          return true;
         }}
-        onUnshareWallet={(walletId, email) => {
-          if (onUnshareWallet) {
-            onUnshareWallet(walletId, email);
-          }
+        onUnshareWallet={async (walletId, email) => {
+          const result = onUnshareWallet ? await onUnshareWallet(walletId, email) : undefined;
+          if (result === false) return false;
           if (selectedWalletForShare) {
-            const updatedList = (selectedWalletForShare.sharedWith || []).filter((e) => e !== email);
-            setSelectedWalletForShare({ ...selectedWalletForShare, sharedWith: updatedList });
+            const updatedList = (selectedWalletForShare.sharedWith || []).filter((e) => e.toLowerCase() !== email.toLowerCase());
+            const updatedPerms = { ...(selectedWalletForShare.collaboratorPermissions || {}) };
+            for (const key of Object.keys(updatedPerms)) {
+              if (key.trim().toLowerCase() === email.toLowerCase()) delete updatedPerms[key];
+            }
+            setSelectedWalletForShare({ ...selectedWalletForShare, sharedWith: updatedList, collaboratorPermissions: updatedPerms });
           }
+          return true;
         }}
         onUpdatePermissions={(walletId, email, permissions) => {
           if (onUpdatePermissions) {
@@ -1111,6 +1270,9 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
         }}
         plan={plan}
         lang={lang}
+        currentUserEmail={user?.email ?? null}
+        maxCollaborators={maxCollaborators}
+        onOpenSignIn={onOpenSignIn}
       />
     </div>
   );

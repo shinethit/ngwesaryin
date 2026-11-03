@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { doc } from 'firebase/firestore';
-import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
+import { db, safeSetDoc, safeDeleteDoc, isQuotaExhausted } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { markTxDeleted } from '../utils/deletedMarkers';
@@ -8,12 +8,16 @@ import { getLocalDateString } from '../utils/dateUtils';
 import { isWalletMatch } from '../utils/walletBalance';
 import {
   getSharedWalletDocId,
+  saveSharedWalletTransaction,
   deleteSharedWalletTransaction,
+  // [v7.5.56] Provided by the shared-wallet service worker — recomputes
+  // a shared wallet's stored balance from its cloud transactions.
+  recomputeSharedWalletBalance,
 } from '../lib/sharedWalletService';
 import type { Debt, PlanLimits, PlanType, Transaction, Wallet } from '../types';
 
 interface UseDebtHandlersParams {
-  user: { uid: string } | null;
+  user: { uid: string; email?: string | null; displayName?: string | null } | null;
   activeWorkspaceId: string | null | undefined;
   plan: PlanType;
   limits: PlanLimits;
@@ -64,10 +68,112 @@ export function useDebtHandlers({
     });
   };
 
+  // [v7.5.56] Shared-wallet debt helpers (B).
+  // DECISION — debts on a SHARED wallet are shared-visible: the debt
+  // lives in users/{uid}/debts (owner canonical) AND in
+  // sharedWallets/{docId}/debts (member-visible mirror, same id), and
+  // its linked wallet transaction goes through the shared path.
+  const creatorName = user?.displayName || user?.email?.split('@')[0] || '';
+  const isSharedWallet = (w?: Wallet | null): boolean =>
+    !!w && (!!w.isSharedFromOther || (w.sharedWith?.length || 0) > 0);
+  const isWalletOwner = (w?: Wallet | null): boolean =>
+    !w || !w.isSharedFromOther || !w.ownerUid || w.ownerUid === user?.uid;
+  const randomSuffix = () => Math.random().toString(36).slice(2, 8);
+  const txEffect = (t: Transaction): number => (t.type === 'income' ? t.amount : -t.amount);
+  const sharedFailMsg =
+    lang === 'my'
+      ? '⚠️ မျှဝေထားသော ပိုက်ဆံအိတ်သို့ Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်ရလျှင် အလိုအလျောက် ထပ်တင်ပါမည်'
+      : '⚠️ Could not save to the shared wallet cloud — it will retry automatically when you are back online';
+  const sharedDebtFailMsg =
+    lang === 'my'
+      ? '⚠️ မျှဝေထားသော အကြွေးကို အခြားအဖွဲ့ဝင်ထံ ပြသ၍ မရပါ — သင့်စာရင်းထဲတွင် သိမ်းထားပြီးဖြစ်ပါသည်'
+      : '⚠️ Could not share this debt with the other member — it is saved in your own records';
+
+  // [v7.5.56 A9] Same shared-write retry as the transaction handlers,
+  // via the queue worker's helpers (src/lib/syncQueue.ts):
+  //   syncQueue.enqueueSharedWalletTx(sharedDocId, tx, user.uid)
+  //     → enqueue('sharedWallets', `${sharedDocId}/transactions/${tx.id}`,
+  //         'upsert', ownerUid, { ...tx, walletId: sharedDocId })
+  //   syncQueue.enqueueSharedWalletTxDelete(sharedDocId, tx.id, user.uid)
+  //     → enqueue('sharedWallets', `${sharedDocId}/transactions/${tx.id}`,
+  //         'delete', ownerUid)
+  const enqueueSharedTxRetry = (tx: Transaction, sharedDocId: string, operation: 'upsert' | 'delete') => {
+    if (!user?.uid || !sharedDocId || !tx?.id) return;
+    if (operation === 'delete') {
+      syncQueue.enqueueSharedWalletTxDelete(sharedDocId, tx.id, user.uid);
+    } else {
+      syncQueue.enqueueSharedWalletTx(sharedDocId, { ...tx, sharedDocId, walletId: sharedDocId }, user.uid);
+    }
+  };
+  // Checked shared write for a debt-linked tx: post-change balance,
+  // recompute after. Returns false when the cloud write did not land.
+  const saveLinkedTxSharedChecked = async (tx: Transaction, wallet: Wallet, postBalance: number): Promise<boolean> => {
+    if (!user?.uid) return false;
+    const sharedDocId = getSharedWalletDocId(wallet, user.uid);
+    const ok = await saveSharedWalletTransaction(wallet.id, tx, postBalance, sharedDocId, user.uid);
+    if (!ok) {
+      enqueueSharedTxRetry(tx, sharedDocId, 'upsert');
+      return false;
+    }
+    return recomputeSharedWalletBalance(sharedDocId);
+  };
+  const deleteLinkedTxSharedChecked = async (txId: string, wallet: Wallet, postBalance: number): Promise<boolean> => {
+    if (!user?.uid) return false;
+    const sharedDocId = getSharedWalletDocId(wallet, user.uid);
+    const ok = await deleteSharedWalletTransaction(wallet.id, txId, postBalance, sharedDocId, user.uid);
+    if (!ok) {
+      enqueueSharedTxRetry({ id: txId } as Transaction, sharedDocId, 'delete');
+      return false;
+    }
+    return recomputeSharedWalletBalance(sharedDocId);
+  };
+  // Mirror a shared-wallet debt (or its deletion) to the member-visible
+  // copy. Checked: a false result toasts — the personal copy is the
+  // canonical one and is always written first.
+  const mirrorSharedDebtChecked = async (debt: Debt, sharedDocId: string): Promise<boolean> => {
+    if (!user?.uid) return false;
+    const ok = await safeSetDoc(doc(db, 'sharedWallets', sharedDocId, 'debts', debt.id), {
+      ...debt,
+      userId: user.uid,
+    }, { merge: true });
+    if (!ok) {
+      syncQueue.enqueueSharedWalletDebt(sharedDocId, debt, user.uid);
+    }
+    return ok;
+  };
+  const deleteSharedDebtMirrorChecked = async (debtId: string, sharedDocId: string): Promise<boolean> => {
+    if (!user?.uid) return false;
+    const ok = await safeDeleteDoc(doc(db, 'sharedWallets', sharedDocId, 'debts', debtId));
+    if (!ok) {
+      syncQueue.enqueueSharedWalletDebtDelete(sharedDocId, debtId, user.uid);
+    }
+    return ok;
+  };
+  const walletOfDebt = (debt: Debt): Wallet | undefined =>
+    wallets.find((w) => isWalletMatch(w, debt.walletId));
+  // A collaborator may only delete a shared debt they created (or one
+  // on a wallet they own); legacy debts with no createdBy fall back to
+  // the owner check.
+  const canDeleteSharedDebt = (debt: Debt): boolean => {
+    const w = walletOfDebt(debt);
+    if (!isSharedWallet(w)) return true;
+    if (isWalletOwner(w)) return true;
+    if (debt.createdBy && user?.uid && debt.createdBy !== user.uid) return false;
+    return true;
+  };
+  // [v7.5.56] Shared debts are read-only for collaborators (decision 17):
+  // only the creator or the wallet owner may mutate one (toggle/settle,
+  // edit, repayments). Same rule as delete.
+  const canMutateSharedDebt = (debt: Debt): boolean => canDeleteSharedDebt(debt);
+
   const handleAddDebt = (newDebt: Omit<Debt, 'id' | 'paidAmount' | 'repayments' | 'status' | 'createdAt'>) => {
-    const id = `debt_${Date.now()}`;
+    const id = `debt_${Date.now()}_${randomSuffix()}`;
     // [v7.5.55 D12] The debt amount is denominated in its wallet's currency.
     const debtWallet = wallets.find((w) => w.id === newDebt.walletId);
+    // [v7.5.56 B] Shared-wallet debt: mirror it for the other member.
+    const sharedDocId = debtWallet && isSharedWallet(debtWallet) && user?.uid
+      ? getSharedWalletDocId(debtWallet, user.uid)
+      : undefined;
     const debt: Debt = {
       ...newDebt,
       currency: newDebt.currency || debtWallet?.currency || 'MMK',
@@ -79,6 +185,11 @@ export function useDebtHandlers({
       updatedAt: Date.now(),
       version: 1,
       lastEditedBy: user?.uid || 'guest',
+      // [v7.5.56 B] Shared debts carry their wallet + author so the
+      // other member can see them read-only.
+      sharedWalletId: sharedDocId,
+      createdBy: user?.uid || undefined,
+      createdByName: creatorName || undefined,
     };
 
     setDebts((prev) => [debt, ...prev]);
@@ -97,6 +208,9 @@ export function useDebtHandlers({
         ? `[အကြွေးထုတ်ပေးခြင်း] ➔ ${newDebt.personName}${newDebt.note ? ` (${newDebt.note})` : ''}`
         : `[အကြွေးရယူခြင်း] ⬅ ${newDebt.personName}${newDebt.note ? ` (${newDebt.note})` : ''}`,
       createdAt: Date.now(),
+      // [v7.5.56 A1] Stamp the creator on the linked transaction too.
+      createdBy: user?.uid || undefined,
+      createdByName: creatorName || undefined,
     };
 
     setTransactions((prev) => {
@@ -116,13 +230,45 @@ export function useDebtHandlers({
         ...debtTx,
         userId: targetUid,
       }, { merge: true }));
+
+      // [v7.5.56 B] Shared-wallet debt: mirror the debt + send the linked
+      // transaction through the shared path so both sides see the
+      // balance move (checked; failures toast honestly).
+      if (sharedDocId && debtWallet) {
+        mirrorSharedDebtChecked(debt, sharedDocId).then((ok) => {
+          if (!ok) showToast(sharedDebtFailMsg);
+        });
+        saveLinkedTxSharedChecked(
+          debtTx,
+          debtWallet,
+          (Number(debtWallet.balance) || 0) + txEffect(debtTx)
+        ).then((ok) => {
+          if (!ok) showToast(sharedFailMsg);
+        });
+      }
     }
 
     showToast(lang === 'my' ? 'အကြွေးစာရင်းနှင့် Wallet ဝင်ငွေ/ထွက်ငွေ စာရင်း ချိတ်ဆက်ပြီးပါပြီ ✓' : 'Debt record & wallet transaction synced ✓');
   };
 
-  const handleDeleteDebt = (id: string) => {
+  // [v7.5.56 B] Debt delete is cloud-first (like transaction delete):
+  // the debt docs (personal + shared mirror) and every linked tx must
+  // confirm in the cloud before anything is removed locally. A live
+  // failure keeps the record and toasts; only failures already queued
+  // for retry (offline / quota) proceed locally.
+  const handleDeleteDebt = async (id: string) => {
     const targetDebtForDel = debts.find((d) => d.id === id);
+    if (!targetDebtForDel) return;
+    // [v7.5.56 B] A collaborator may only delete a shared debt they
+    // created (owners may delete any debt on their wallet).
+    if (!canDeleteSharedDebt(targetDebtForDel)) {
+      showToast(
+        lang === 'my'
+          ? '⚠️ ဤအကြွေးကို ဖျက်၍ မရပါ — ပိုင်ရှင် (သို့မဟုတ် ဖန်တီးသူ) သာ ဖျက်နိုင်ပါသည်'
+          : 'Permission denied: only the wallet owner (or the debt creator) can delete this shared debt'
+      );
+      return;
+    }
 
     // [v6.1.11] Collect ALL linked transaction ids (main + every repayment)
     const txIdsToDelete = new Set<string>();
@@ -151,38 +297,83 @@ export function useDebtHandlers({
       });
     }
 
+    // Cloud deletes first (debt docs, then linked txs). Anything that
+    // fails live stays local so the user can retry it.
+    const failedTxIds = new Set<string>();
+    if (user?.uid) {
+      const targetUid = activeWorkspaceId || user.uid;
+      const debtWallet = walletOfDebt(targetDebtForDel);
+      const sharedDocId =
+        targetDebtForDel.sharedWalletId ||
+        (debtWallet && isSharedWallet(debtWallet) ? getSharedWalletDocId(debtWallet, user.uid) : undefined);
+      const queuedForRetry =
+        (typeof navigator !== 'undefined' && !navigator.onLine) || isQuotaExhausted();
+
+      const debtDocOk = await safeDeleteDoc(doc(db, 'users', targetUid, 'debts', id));
+      let mirrorOk = true;
+      if (sharedDocId) {
+        mirrorOk = await deleteSharedDebtMirrorChecked(id, sharedDocId);
+      }
+      if ((!debtDocOk || !mirrorOk) && !queuedForRetry) {
+        showToast(
+          lang === 'my'
+            ? '⚠️ Cloud မှ အကြွေးကို ဖျက်၍ မရပါ — စာရင်းကို ထားရှိထားပါသည်။ အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ'
+            : '⚠️ Could not delete the debt from cloud — the record was kept. Check your connection and retry'
+        );
+        return;
+      }
+
+      // Linked txs (personal + shared path where the wallet is shared).
+      const runningBalances = new Map<string, number>();
+      for (const tid of txIdsToDelete) {
+        const tx = transactions.find((t) => t.id === tid);
+        const personalOk = await safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid));
+        let ok = personalOk;
+        if (tx) {
+          const txWallet = wallets.find((w) => isWalletMatch(w, tx.walletId));
+          if (txWallet && isSharedWallet(txWallet)) {
+            const running = runningBalances.has(txWallet.id)
+              ? runningBalances.get(txWallet.id)!
+              : (Number(txWallet.balance) || 0);
+            const postBal = running - txEffect(tx);
+            runningBalances.set(txWallet.id, postBal);
+            const sharedOk = await deleteLinkedTxSharedChecked(tid, txWallet, postBal);
+            if (!sharedOk) ok = false;
+          }
+        }
+        if (!ok && !queuedForRetry) failedTxIds.add(tid);
+      }
+    }
+
+    const removedTxIds = new Set(Array.from(txIdsToDelete).filter((tid) => !failedTxIds.has(tid)));
+
     setDebts((prev) => {
       const next = prev.filter((d) => d.id !== id);
       safeSetItem('ngwe_debts', JSON.stringify(next));
       return next;
     });
 
-    txIdsToDelete.forEach((tid) => markTxDeleted(tid));
+    removedTxIds.forEach((tid) => markTxDeleted(tid));
     setTransactions((prev) => {
-      const next = prev.filter((t) => !txIdsToDelete.has(t.id));
+      const next = prev.filter((t) => !removedTxIds.has(t.id));
       safeSetItem('ngwe_transactions', JSON.stringify(next));
       return next;
     });
 
     setCloudTxIds((prev) => {
       const next = new Set(prev);
-      txIdsToDelete.forEach((tid) => next.delete(tid));
+      removedTxIds.forEach((tid) => next.delete(tid));
       safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
       return next;
     });
-    txIdsToDelete.forEach((tid) => syncQueue.remove('transactions', tid));
+    removedTxIds.forEach((tid) => syncQueue.remove('transactions', tid));
 
-    if (user?.uid) {
+    if (user?.uid && removedTxIds.size > 0) {
       const targetUid = activeWorkspaceId || user.uid;
-      reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'debts', id)));
-      txIdsToDelete.forEach((tid) => {
-        reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid)));
-      });
-
       (async () => {
         try {
           const { deleteTransactionDirectHttp } = await import('../lib/directFirestoreHttp');
-          await Promise.allSettled(Array.from(txIdsToDelete).map((tid) => deleteTransactionDirectHttp(tid, targetUid)));
+          await Promise.allSettled(Array.from(removedTxIds).map((tid) => deleteTransactionDirectHttp(tid, targetUid)));
         } catch (e) {
           console.warn('[deleteDebt] REST verify notice:', e);
         }
@@ -190,9 +381,13 @@ export function useDebtHandlers({
     }
 
     showToast(
-      lang === 'my'
-        ? `အကြွေးစာရင်းနှင့် တွဲဖက်ငွေစာရင်း (${txIdsToDelete.size}) ခု ဖျက်လိုက်ပါပြီ`
-        : `Debt record & ${txIdsToDelete.size} linked transactions deleted`
+      failedTxIds.size > 0
+        ? (lang === 'my'
+          ? `⚠️ အကြွေးစာရင်း ဖျက်ပြီးပါပြီ — တွဲဖက် ငွေစာရင်း ${failedTxIds.size} ခု Cloud မှ ဖျက်၍ မရသဖြင့် ထားရှိထားပါသည်`
+          : `Debt deleted — ${failedTxIds.size} linked transaction(s) could not be deleted from cloud and were kept`)
+        : (lang === 'my'
+          ? `အကြွေးစာရင်းနှင့် တွဲဖက်ငွေစာရင်း (${removedTxIds.size}) ခု ဖျက်လိုက်ပါပြီ`
+          : `Debt record & ${removedTxIds.size} linked transactions deleted`)
     );
   };
 
@@ -200,6 +395,15 @@ export function useDebtHandlers({
     // [v6.3.2] auto-settle creates linked transaction; reopen deletes it
     const targetDebt = debts.find((d) => d.id === id);
     if (!targetDebt) return;
+    // [v7.5.56] Shared debts are read-only for collaborators (decision 17).
+    if (!canMutateSharedDebt(targetDebt)) {
+      showToast(
+        lang === 'my'
+          ? '⚠️ ဤအကြွေးကို ပြင်၍ မရပါ — ပိုင်ရှင် (သို့မဟုတ် ဖန်တီးသူ) သာ ပြင်နိုင်ပါသည်'
+          : 'Permission denied: only the wallet owner (or the debt creator) can change this shared debt'
+      );
+      return;
+    }
     // [v7.5.55 D4] A debt whose total is 0 cannot be meaningfully reopened.
     if (targetDebt.status === 'settled' && targetDebt.totalAmount <= 0) {
       showToast(lang === 'my' ? 'ဤအကြွေး၏ စုစုပေါင်းပမာဏမှာ ၀ ဖြစ်နေသဖြင့် ပြန်ဖွင့်၍ မရပါ' : 'Cannot reopen a debt with a total of 0');
@@ -219,7 +423,7 @@ export function useDebtHandlers({
       const currentPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
       const remaining = targetDebt.totalAmount - currentPaid;
       if (remaining > 0) {
-        const settlementTxId = `tx_rep_${id}_settle_${Date.now()}`;
+        const settlementTxId = `tx_rep_${id}_settle_${Date.now()}_${randomSuffix()}`;
         updatedRepayments = [{
           id: `rep_settle_${Date.now()}`,
           amount: remaining,
@@ -241,6 +445,9 @@ export function useDebtHandlers({
             ? `[အကြွေးပြန်ရငွေ] ⬅ ${targetDebt.personName} (အကြွေးကျေဇယား)`
             : `[အကြွေးပြန်ဆပ်ငွေ] ➔ ${targetDebt.personName} (အကြွေးကျေဇယား)`,
           createdAt: Date.now(),
+          // [v7.5.56 A1] Stamp the creator on the settlement transaction.
+          createdBy: user?.uid || undefined,
+          createdByName: creatorName || undefined,
         };
       }
     } else {
@@ -343,16 +550,47 @@ export function useDebtHandlers({
         userId: targetUid,
       }, { merge: true }));
 
+      // [v7.5.56 B] Shared-wallet debt: mirror the new status to the
+      // member-visible copy and route its linked txs through the
+      // shared path (checked; failures toast honestly).
+      const toggleWallet = walletOfDebt(targetDebt);
+      const toggleSharedDocId =
+        targetDebt.sharedWalletId ||
+        (toggleWallet && isSharedWallet(toggleWallet) ? getSharedWalletDocId(toggleWallet, user.uid) : undefined);
+      if (toggleSharedDocId) {
+        mirrorSharedDebtChecked(updatedDebt, toggleSharedDocId).then((ok) => {
+          if (!ok) showToast(sharedDebtFailMsg);
+        });
+      }
+
       if (newSettlementTx) {
         reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', newSettlementTx.id), {
           ...newSettlementTx,
           userId: targetUid,
         }, { merge: true }));
+        if (toggleWallet && isSharedWallet(toggleWallet)) {
+          saveLinkedTxSharedChecked(
+            newSettlementTx,
+            toggleWallet,
+            (Number(toggleWallet.balance) || 0) + txEffect(newSettlementTx)
+          ).then((ok) => {
+            if (!ok) showToast(sharedFailMsg);
+          });
+        }
       }
 
       if (deletedSettlementTxIds.length > 0) {
         deletedSettlementTxIds.forEach((tid) => {
           reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid)));
+          const delTx = transactions.find((t) => t.id === tid);
+          if (delTx) {
+            const delWallet = wallets.find((w) => isWalletMatch(w, delTx.walletId));
+            if (delWallet && isSharedWallet(delWallet)) {
+              deleteLinkedTxSharedChecked(tid, delWallet, (Number(delWallet.balance) || 0) - txEffect(delTx)).then((ok) => {
+                if (!ok) showToast(sharedFailMsg);
+              });
+            }
+          }
         });
         (async () => {
           try {
@@ -389,6 +627,15 @@ export function useDebtHandlers({
   const handleUpdateDebt = (updated: Debt) => {
     const prev = debts.find((d) => d.id === updated.id);
     if (!prev) return;
+    // [v7.5.56] Shared debts are read-only for collaborators (decision 17).
+    if (!canMutateSharedDebt(prev)) {
+      showToast(
+        lang === 'my'
+          ? '⚠️ ဤအကြွေးကို ပြင်၍ မရပါ — ပိုင်ရှင် (သို့မဟုတ် ဖန်တီးသူ) သာ ပြင်နိုင်ပါသည်'
+          : 'Permission denied: only the wallet owner (or the debt creator) can change this shared debt'
+      );
+      return;
+    }
     const txId = `tx_debt_${updated.id}`;
     const isReceivable = updated.type === 'receivable';
     const paidFromRepayments = (updated.repayments || []).reduce(
@@ -403,6 +650,11 @@ export function useDebtHandlers({
       paidAmount: newPaid,
       status: newStatus,
       currency: updated.currency || prev.currency || wallets.find((w) => w.id === updated.walletId)?.currency || 'MMK',
+      // [v7.5.56 B] A shared debt keeps its mirror pointer + author
+      // across edits — never drop them when the form re-submits.
+      sharedWalletId: updated.sharedWalletId ?? prev.sharedWalletId,
+      createdBy: prev.createdBy ?? user?.uid,
+      createdByName: prev.createdByName ?? creatorName,
       updatedAt: Date.now(),
       version: (prev.version || 0) + 1,
       lastEditedBy: user?.uid || 'guest',
@@ -441,7 +693,12 @@ export function useDebtHandlers({
         ...updatedDebt,
         userId: targetUid,
       }, { merge: true }));
-      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', txId), {
+      // [v7.5.56 B] Keep the linked main tx's author; route it through
+      // the shared path when the (new) wallet is shared, and remove it
+      // from the old wallet's shared doc when the wallet changed.
+      const prevMainTx = transactions.find((t) => t.id === txId);
+      const mainTxForCloud: Transaction = {
+        id: txId,
         type: isReceivable ? 'expense' : 'income',
         amount: updated.totalAmount,
         category: isReceivable ? 'cat_debt_issued' : 'cat_debt_received',
@@ -450,8 +707,45 @@ export function useDebtHandlers({
         note: isReceivable
           ? `[အကြွေးထုတ်ပေးခြင်း] ➔ ${updated.personName}${updated.note ? ` (${updated.note})` : ''}`
           : `[အကြွေးရယူခြင်း] ⬅ ${updated.personName}${updated.note ? ` (${updated.note})` : ''}`,
+        createdAt: prevMainTx?.createdAt || Date.now(),
+        createdBy: prevMainTx?.createdBy,
+        createdByName: prevMainTx?.createdByName,
+      };
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', txId), {
+        ...mainTxForCloud,
         userId: targetUid,
       }, { merge: true }));
+      const newDebtWallet = wallets.find((w) => isWalletMatch(w, updated.walletId));
+      const oldDebtWallet = wallets.find((w) => isWalletMatch(w, prev.walletId));
+      if (newDebtWallet && isSharedWallet(newDebtWallet)) {
+        const oldEffect = prevMainTx ? txEffect(prevMainTx) : 0;
+        const sameWallet = oldDebtWallet ? isWalletMatch(oldDebtWallet, updated.walletId) : false;
+        saveLinkedTxSharedChecked(
+          mainTxForCloud,
+          newDebtWallet,
+          (Number(newDebtWallet.balance) || 0) - (sameWallet ? oldEffect : 0) + txEffect(mainTxForCloud)
+        ).then((ok) => {
+          if (!ok) showToast(sharedFailMsg);
+        });
+      }
+      if (oldDebtWallet && !isWalletMatch(oldDebtWallet, updated.walletId) && isSharedWallet(oldDebtWallet)) {
+        deleteLinkedTxSharedChecked(
+          txId,
+          oldDebtWallet,
+          (Number(oldDebtWallet.balance) || 0) - (prevMainTx ? txEffect(prevMainTx) : 0)
+        ).then((ok) => {
+          if (!ok) showToast(sharedFailMsg);
+        });
+      }
+      // [v7.5.56 B] Mirror the edited debt for the other member.
+      const updateSharedDocId =
+        updatedDebt.sharedWalletId ||
+        (newDebtWallet && isSharedWallet(newDebtWallet) ? getSharedWalletDocId(newDebtWallet, user.uid) : undefined);
+      if (updateSharedDocId) {
+        mirrorSharedDebtChecked(updatedDebt, updateSharedDocId).then((ok) => {
+          if (!ok) showToast(sharedDebtFailMsg);
+        });
+      }
     }
 
     showToast(
@@ -475,6 +769,15 @@ export function useDebtHandlers({
     let repTxId = '';  // [FIX v6.3.1] scope fix — declared before if block
     let finalAmount = 0;  // [v6.9-phase2a-v2] function scope for cap
     const targetDebt = debts.find((d) => d.id === debtId);
+    // [v7.5.56] Shared debts are read-only for collaborators (decision 17).
+    if (targetDebt && !canMutateSharedDebt(targetDebt)) {
+      showToast(
+        lang === 'my'
+          ? '⚠️ ဤအကြွေးကို ပြင်၍ မရပါ — ပိုင်ရှင် (သို့မဟုတ် ဖန်တီးသူ) သာ ပြင်နိုင်ပါသည်'
+          : 'Permission denied: only the wallet owner (or the debt creator) can change this shared debt'
+      );
+      return;
+    }
     if (targetDebt) {
       const currentPaid = (targetDebt.repayments && targetDebt.repayments.length > 0)
         ? targetDebt.repayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
@@ -501,7 +804,7 @@ export function useDebtHandlers({
       }
 
       const isReceivable = targetDebt.type === 'receivable';
-      repTxId = `tx_rep_${debtId}_${Date.now()}`;  // [FIX v6.3.1] assigned, not declared
+      repTxId = `tx_rep_${debtId}_${Date.now()}_${randomSuffix()}`;  // [FIX v6.3.1] assigned, not declared
       const repTx: Transaction = {
         id: repTxId,
         type: isReceivable ? 'income' : 'expense',
@@ -513,6 +816,9 @@ export function useDebtHandlers({
           ? `[အကြွေးပြန်ရငွေ] ⬅ ${targetDebt.personName}${note ? ` (${note})` : ''}`
           : `[အကြွေးပြန်ဆပ်ငွေ] ➔ ${targetDebt.personName}${note ? ` (${note})` : ''}`,
         createdAt: Date.now(),
+        // [v7.5.56 A1] Stamp the creator on the repayment transaction.
+        createdBy: user?.uid || undefined,
+        createdByName: creatorName || undefined,
       };
 
       setTransactions((prev) => {
@@ -527,6 +833,18 @@ export function useDebtHandlers({
           ...repTx,
           userId: targetUid,
         }, { merge: true }));
+        // [v7.5.56 B] Repayment into a shared wallet goes through the
+        // shared path so both sides see the balance move (checked).
+        const repWallet = wallets.find((w) => isWalletMatch(w, walletId));
+        if (repWallet && isSharedWallet(repWallet)) {
+          saveLinkedTxSharedChecked(
+            repTx,
+            repWallet,
+            (Number(repWallet.balance) || 0) + txEffect(repTx)
+          ).then((ok) => {
+            if (!ok) showToast(sharedFailMsg);
+          });
+        }
       }
     }
 
@@ -563,6 +881,12 @@ export function useDebtHandlers({
               ...updatedDebt,
               userId: targetUid,
             }, { merge: true }));
+            // [v7.5.56 B] Mirror the repayment onto the shared copy.
+            if (d.sharedWalletId) {
+              mirrorSharedDebtChecked(updatedDebt, d.sharedWalletId).then((ok) => {
+                if (!ok) showToast(sharedDebtFailMsg);
+              });
+            }
           }
 
           return updatedDebt;
@@ -586,11 +910,21 @@ export function useDebtHandlers({
   ) => {
     // [v6.1.11] Update the linked transaction so wallet & summary stay in sync
     const targetDebtForEdit = debts.find((d) => d.id === debtId);
+    // [v7.5.56] Shared debts are read-only for collaborators (decision 17).
+    if (targetDebtForEdit && !canMutateSharedDebt(targetDebtForEdit)) {
+      showToast(
+        lang === 'my'
+          ? '⚠️ ဤအကြွေးကို ပြင်၍ မရပါ — ပိုင်ရှင် (သို့မဟုတ် ဖန်တီးသူ) သာ ပြင်နိုင်ပါသည်'
+          : 'Permission denied: only the wallet owner (or the debt creator) can change this shared debt'
+      );
+      return;
+    }
     const targetRepForEdit = targetDebtForEdit?.repayments?.find((r) => r.id === repaymentId);
     const linkedTxIdForEdit = targetRepForEdit?.transactionId;
 
     if (linkedTxIdForEdit && targetDebtForEdit) {
       const isReceivable = targetDebtForEdit.type === 'receivable';
+      const prevLinkedTx = transactions.find((t) => t.id === linkedTxIdForEdit);
       const updatedLinkedTx: Transaction = {
         id: linkedTxIdForEdit,
         type: isReceivable ? 'income' : 'expense',
@@ -602,6 +936,9 @@ export function useDebtHandlers({
           ? `[အကြွေးပြန်ရငွေ] ⬅ ${targetDebtForEdit.personName}${note ? ` (${note})` : ''}`
           : `[အကြွေးပြန်ဆပ်ငွေ] ➔ ${targetDebtForEdit.personName}${note ? ` (${note})` : ''}`,
         createdAt: Date.now(),
+        // [v7.5.56 A1] Never overwrite the author on edit.
+        createdBy: prevLinkedTx?.createdBy,
+        createdByName: prevLinkedTx?.createdByName,
       };
 
       setTransactions((prev) => {
@@ -618,6 +955,19 @@ export function useDebtHandlers({
           ...updatedLinkedTx,
           userId: targetUid,
         }, { merge: true }));
+        // [v7.5.56 B] Edited repayment tx goes through the shared path
+        // when its wallet is shared (checked; post-edit balance).
+        const editRepWallet = wallets.find((w) => isWalletMatch(w, walletId));
+        if (editRepWallet && isSharedWallet(editRepWallet)) {
+          const oldEffect = prevLinkedTx ? txEffect(prevLinkedTx) : 0;
+          saveLinkedTxSharedChecked(
+            updatedLinkedTx,
+            editRepWallet,
+            (Number(editRepWallet.balance) || 0) - oldEffect + txEffect(updatedLinkedTx)
+          ).then((ok) => {
+            if (!ok) showToast(sharedFailMsg);
+          });
+        }
       }
     }
 
@@ -646,6 +996,12 @@ export function useDebtHandlers({
               ...updatedDebt,
               userId: targetUid,
             }, { merge: true }));
+            // [v7.5.56 B] Mirror the edited repayment onto the shared copy.
+            if (d.sharedWalletId) {
+              mirrorSharedDebtChecked(updatedDebt, d.sharedWalletId).then((ok) => {
+                if (!ok) showToast(sharedDebtFailMsg);
+              });
+            }
           }
 
           return updatedDebt;
@@ -662,6 +1018,15 @@ export function useDebtHandlers({
   const handleDeleteRepayment = (debtId: string, repaymentId: string) => {
     // [v6.1.11] Delete the linked transaction so wallet & summary revert.
     const targetDebtForDel = debts.find((d) => d.id === debtId);
+    // [v7.5.56] Shared debts are read-only for collaborators (decision 17).
+    if (targetDebtForDel && !canMutateSharedDebt(targetDebtForDel)) {
+      showToast(
+        lang === 'my'
+          ? '⚠️ ဤအကြွေးကို ပြင်၍ မရပါ — ပိုင်ရှင် (သို့မဟုတ် ဖန်တီးသူ) သာ ပြင်နိုင်ပါသည်'
+          : 'Permission denied: only the wallet owner (or the debt creator) can change this shared debt'
+      );
+      return;
+    }
     const targetRepForDel = targetDebtForDel?.repayments?.find((r) => r.id === repaymentId);
     let linkedTxIdToDel = targetRepForDel?.transactionId;
 
@@ -705,9 +1070,16 @@ export function useDebtHandlers({
         const targetUid = activeWorkspaceId || user.uid;
         reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', linkedTxIdToDel)));
 
-        if (linkedWallet && (linkedWallet.isSharedFromOther || (linkedWallet.sharedWith && linkedWallet.sharedWith.length > 0))) {
-          const sharedDocId = getSharedWalletDocId(linkedWallet, user.uid);
-          deleteSharedWalletTransaction(linkedWallet.id, linkedTxIdToDel, linkedWallet.balance, sharedDocId, user.uid);
+        // [v7.5.56 B] Repayment tx in a shared wallet: delete through the
+        // shared path (post-delete balance, recompute after; checked).
+        if (linkedWallet && isSharedWallet(linkedWallet)) {
+          deleteLinkedTxSharedChecked(
+            linkedTxIdToDel,
+            linkedWallet,
+            (Number(linkedWallet.balance) || 0) - (linkedTx ? txEffect(linkedTx) : 0)
+          ).then((ok) => {
+            if (!ok) showToast(sharedFailMsg);
+          });
         }
 
         (async () => {
@@ -742,6 +1114,12 @@ export function useDebtHandlers({
               ...updatedDebt,
               userId: targetUid,
             }, { merge: true }));
+            // [v7.5.56 B] Mirror the repayment removal onto the shared copy.
+            if (d.sharedWalletId) {
+              mirrorSharedDebtChecked(updatedDebt, d.sharedWalletId).then((ok) => {
+                if (!ok) showToast(sharedDebtFailMsg);
+              });
+            }
           }
 
           return updatedDebt;

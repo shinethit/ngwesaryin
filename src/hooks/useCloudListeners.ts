@@ -195,6 +195,18 @@ export function useCloudListeners({
     vehicleMaintenance: new Set<string>(),
     tirePressureLogs: new Set<string>(),
   });
+  // [v7.5.56 C] Personal-transactions listener must NOT drop
+  // shared-only transactions (finding 6). Same confirmed-ids idea as
+  // reconcileCloudList, plus a separate shared set unioned into the
+  // rebuild below: a tx is dropped only when it was confirmed in a
+  // SERVER personal snapshot before and is now missing from one.
+  const confirmedTxIdsRef = useRef<Set<string>>(new Set<string>());
+  const sharedTxsRef = useRef<Map<string, Transaction>>(new Map());
+  // The snapshot callback closes over mount-time props — keep a fresh
+  // wallet list for the shared-wallet check (same pattern as App's
+  // walletsLatestRef).
+  const computedWalletsRef = useRef<Wallet[]>(computedWallets);
+  computedWalletsRef.current = computedWallets;
   // [v7.0.5] Vehicle listeners are always active — lazy gate removed.
   // Previously, vehicles only loaded when user visited the Vehicles tab,
   // which broke fuel/service entry forms that need the vehicle list upfront.
@@ -235,6 +247,10 @@ export function useCloudListeners({
 
           snap.forEach((d) => {
             const t = { id: d.id, ...d.data() } as Transaction;
+            // [v7.5.56 C] Record every id seen in a SERVER snapshot so
+            // the merge below can tell "deleted elsewhere" from "never
+            // in the personal collection" (shared-only / unsynced txs).
+            if (!snap.metadata.fromCache && t && t.id) confirmedTxIdsRef.current.add(t.id);
             // [v7.0.6 SAFE] remap deprecated custom category on read
             if (t && t.category === 'cat_custom_1789797767607') t.category = 'cat_vehicle';
             if (t && t.id && !deletedIds.includes(t.id) && !isTxDeleted(t.id)) {
@@ -256,6 +272,37 @@ export function useCloudListeners({
 
           setTransactions((prevLocal) => {
             detectConflicts('transactions', prevLocal, confirmedServerTxs, user?.uid);
+            // [v7.5.56 C] Refresh the separate shared set from local
+            // state: txs whose wallet is shared live outside the
+            // personal collection, so the personal snapshot never
+            // contains them — they must be unioned back in, not dropped.
+            const sharedWalletIds = new Set<string>();
+            computedWalletsRef.current.forEach((w) => {
+              if (w.isSharedFromOther || (w.sharedWith?.length || 0) > 0) {
+                sharedWalletIds.add(w.id);
+                if (w.sharedDocId) {
+                  sharedWalletIds.add(w.sharedDocId);
+                  sharedWalletIds.add(`shared_${w.sharedDocId}`);
+                }
+                if (w.originalId) sharedWalletIds.add(w.originalId);
+              }
+            });
+            const prevIds = new Set(prevLocal.map((t) => t.id));
+            prevLocal.forEach((t) => {
+              if (!t || !t.id) return;
+              if (deletedIds.includes(t.id) || isTxDeleted(t.id)) {
+                sharedTxsRef.current.delete(t.id);
+                return;
+              }
+              if (sharedWalletIds.has(t.walletId)) sharedTxsRef.current.set(t.id, t);
+            });
+            // Prune shared-set entries that left local state (deleted
+            // elsewhere via the App shared listener) — otherwise the
+            // union below would resurrect them.
+            Array.from(sharedTxsRef.current.keys()).forEach((sid) => {
+              if (!prevIds.has(sid)) sharedTxsRef.current.delete(sid);
+            });
+
             const map = new Map<string, Transaction>();
             confirmedServerTxs.forEach((cloudTx) => {
               if (cloudTx && cloudTx.id && !deletedIds.includes(cloudTx.id)) {
@@ -285,6 +332,26 @@ export function useCloudListeners({
                 .some((q) => q.entityType === 'transactions' && q.entityId === t.id && q.operation === 'upsert');
               if (isPendingUpsert) {
                 map.set(t.id, t);
+                return;
+              }
+              // [v7.5.56 C] Drop a local tx ONLY when it was confirmed
+              // in a server snapshot before and is now missing from a
+              // server snapshot (deleted elsewhere). A tx never seen in
+              // the personal collection — a shared-only tx (finding 6)
+              // or an unsynced local tx — is always kept. A cached
+              // snapshot never drops anything.
+              const wasConfirmed = confirmedTxIdsRef.current.has(t.id);
+              const confirmedMissing =
+                wasConfirmed && !confirmedServerTxIds.has(t.id) && !snap.metadata.fromCache;
+              if (!confirmedMissing) map.set(t.id, t);
+            });
+
+            // [v7.5.56 C] Union the separate shared set with the
+            // personal set (cloud wins on id collision — confirmed txs
+            // were already put in the map above).
+            sharedTxsRef.current.forEach((t, sid) => {
+              if (t && t.id && !map.has(sid) && !isTxDeleted(sid) && !deletedIds.includes(sid)) {
+                map.set(sid, t);
               }
             });
 

@@ -76,11 +76,16 @@ import {
   deleteUserWalletFromCloud,
   subscribeIncomingSharedWallets,
   subscribeSharedWalletTransactions,
+  subscribeSharedWalletDebts,
   saveSharedWalletTransaction,
   deleteSharedWalletTransaction,
   leaveSharedWallet,
   getSharedWalletDocId,
+  // [v7.5.56] Provided by the shared-wallet service worker.
+  acceptSharedWalletInvite,
+  declineSharedWalletInvite,
 } from './lib/sharedWalletService';
+import { subscribeMyRefs } from './lib/sharedWalletRefs';
 import { areArraysEqual, deduplicateById } from './utils/syncGuards';
 import { mergeById, mergeByKey } from './utils/mergeById';
 import { usePersistedState } from './hooks/usePersistedState';
@@ -180,7 +185,6 @@ export default function App() {
     showLoginModal,
     setShowLoginModal,
     isAdmin,
-    collaborators,
     addCollaborator,
     removeCollaborator,
     activeWorkspaceId,
@@ -332,6 +336,15 @@ export default function App() {
 
   const walletsLatestRef = useRef(wallets);
   walletsLatestRef.current = wallets;
+
+  // [v7.5.56 D1] Shared-tx reconcile: per shared-wallet-doc ids ever
+  // confirmed in a shared snapshot. A tx absent from the current
+  // snapshot that was previously confirmed was deleted elsewhere
+  // (finding 11a) — pruned in the shared-tx listener below, like the
+  // vehicle-log reconcile in useCloudListeners.
+  const confirmedSharedTxIdsRef = useRef<Map<string, Set<string>>>(new Map());
+  // [v7.5.56 D3] Ghost pruning: shared-wallet keys seen on the last run.
+  const prevSharedWalletKeysRef = useRef<Set<string>>(new Set());
 
   const isRemoteUpdateRef = useRef(false);
   const lastResumeSyncAtRef = useRef<number>(0);
@@ -763,49 +776,13 @@ export default function App() {
     trackVisitorSession(user);
   }, [user, loading]);
 
-  // Self-healing: Ensure all wallet collaborators are authorized in the user's
-  // root document's collaborators array for Firestore security rules.
-  //
-  // FIX (v5.3.34): Guard with a ref so each email is healed at most once per
-  // session. Previously the effect re-ran on every wallets/collaborators tick,
-  // and if the write failed (rules/permission), addCollaborator re-fired in a
-  // tight loop, burning Firestore quota and blocking the sync queue.
-  const healedCollaboratorsRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!user || wallets.length === 0 || !addCollaborator) return;
-    const ownWallets = wallets.filter((w) => !w.isSharedFromOther);
-    const walletCollaborators = new Set<string>();
-    ownWallets.forEach((w) => {
-      if (w.sharedWith) {
-        w.sharedWith.forEach((email) => {
-          if (email && email.trim()) {
-            walletCollaborators.add(email.trim().toLowerCase());
-          }
-        });
-      }
-    });
-
-    const rootCollaborators = new Set((collaborators || []).map((c) => c.toLowerCase()));
-    const missing = Array.from(walletCollaborators).filter(
-      (email) => !rootCollaborators.has(email) && !healedCollaboratorsRef.current.has(email)
-    );
-
-    if (missing.length === 0) return;
-
-    // Mark as attempted BEFORE the async call so re-renders don't retry.
-    missing.forEach((email) => healedCollaboratorsRef.current.add(email));
-
-    (async () => {
-      for (const email of missing) {
-        try {
-          await addCollaborator(email);
-          console.log(`Auto-healed root collaborator permission for ${email}`);
-        } catch (err) {
-          console.warn(`Failed to auto-heal collaborator permission for ${email}:`, err);
-        }
-      }
-    })();
-  }, [user?.uid, wallets, collaborators, addCollaborator]);
+  // [v7.5.56] REMOVED: the old self-healing effect that called
+  // addCollaborator() to backfill the root collaborators array.
+  // addCollaborator no longer writes that array (AuthContext worker),
+  // so the effect was a harmless no-op — removed rather than left as
+  // dead code implying a backfill still happens. Wallet sharing now
+  // relies on per-wallet sharedWith + sharedWalletRefs, not the root
+  // collaborators array.
 
   // Global search shortcut (⌘K / Ctrl+K)
   useEffect(() => {
@@ -1006,6 +983,59 @@ export default function App() {
     return () => unsubscribe();
   }, [user?.uid, user?.email]);
 
+  // [v7.5.56 D2] Share-invite banner: when a shared wallet first
+  // appears via my ref with status 'pending', offer Accept / Decline.
+  // NOTE: `status` on SharedWalletRef is owned by the refs worker —
+  // until it lands, no ref carries 'pending' and the banner stays
+  // hidden. The owner label is the ownerEmail prefix, never the
+  // literal 'Partner' (D5).
+  const [pendingInvites, setPendingInvites] = useState<Array<{ docId: string; ownerEmail: string; walletName: string }>>([]);
+  const [inviteBusyDocId, setInviteBusyDocId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.email) {
+      setPendingInvites([]);
+      return;
+    }
+    const unsub = subscribeMyRefs(
+      user.email,
+      (refs) => {
+        const pending = refs
+          .filter((r) => (r as unknown as { status?: string }).status === 'pending')
+          .map((r) => ({ docId: r.docId, ownerEmail: r.ownerEmail || '', walletName: r.walletName || '' }));
+        setPendingInvites(pending);
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, [user?.email]);
+
+  const handleAcceptInvite = async (docId: string) => {
+    setInviteBusyDocId(docId);
+    try {
+      const ok = await acceptSharedWalletInvite(docId);
+      showToast(ok
+        ? (lang === 'my' ? 'မျှဝေထားသော ပိုက်ဆံအိတ်ကို လက်ခံပြီးပါပြီ ✓' : 'Shared wallet accepted ✓')
+        : (lang === 'my' ? '⚠️ လက်ခံ၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not accept the invite — check your connection and retry'));
+    } catch {
+      showToast(lang === 'my' ? '⚠️ လက်ခံ၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not accept the invite — check your connection and retry');
+    } finally {
+      setInviteBusyDocId(null);
+    }
+  };
+  const handleDeclineInvite = async (docId: string) => {
+    setInviteBusyDocId(docId);
+    try {
+      const ok = await declineSharedWalletInvite(docId);
+      showToast(ok
+        ? (lang === 'my' ? 'မျှဝေမှုကို ငြင်းပယ်ပြီးပါပြီ' : 'Share invite declined')
+        : (lang === 'my' ? '⚠️ ငြင်းပယ်၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not decline the invite — check your connection and retry'));
+    } catch {
+      showToast(lang === 'my' ? '⚠️ ငြင်းပယ်၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not decline the invite — check your connection and retry');
+    } finally {
+      setInviteBusyDocId(null);
+    }
+  };
+
   // Real-time listener for transactions of shared wallets
   useEffect(() => {
     if (!user) return;
@@ -1024,9 +1054,23 @@ export default function App() {
           if (!sharedTxs) return;
           isRemoteUpdateRef.current = true;
 
+          // [v7.5.56 D1] Confirmed-ids prune (finding 11a): a tx that
+          // was confirmed in an earlier snapshot of THIS wallet and is
+          // now absent was deleted elsewhere — treat it like an
+          // explicit removal. Only on a non-empty snapshot: an empty
+          // first snapshot (cache) must never wipe confirmed txs; true
+          // deletions of the last tx arrive via deletedTxIds.
+          const prevConfirmed = confirmedSharedTxIdsRef.current.get(docIdToUse) ?? new Set<string>();
+          const nowIds = new Set(sharedTxs.filter((t) => t && t.id).map((t) => t.id));
+          const vanishedIds = sharedTxs.length > 0
+            ? Array.from(prevConfirmed).filter((id) => !nowIds.has(id))
+            : [];
+          confirmedSharedTxIdsRef.current.set(docIdToUse, nowIds);
+          const allRemovedIds = Array.from(new Set([...(deletedTxIds || []), ...vanishedIds]));
+
           // Prune any explicitly removed doc IDs from this snapshot
-          if (deletedTxIds && deletedTxIds.length > 0) {
-            deletedTxIds.forEach((id) => {
+          if (allRemovedIds.length > 0) {
+            allRemovedIds.forEach((id) => {
               markTxDeleted(id);
               if (user?.uid) {
                 safeDeleteDoc(doc(db, 'users', user.uid, 'transactions', id))
@@ -1042,7 +1086,7 @@ export default function App() {
             prev.forEach((t) => {
               if (!t || !t.id) return;
               if (isTxDeleted(t.id)) return;
-              if (deletedTxIds && deletedTxIds.includes(t.id)) return;
+              if (allRemovedIds.includes(t.id)) return;
               map.set(t.id, t);
             });
 
@@ -1053,7 +1097,7 @@ export default function App() {
             sharedTxs.forEach((t) => {
               if (t && t.id) {
                 if (isTxDeleted(t.id)) return;
-                if (deletedTxIds && deletedTxIds.includes(t.id)) return;
+                if (allRemovedIds.includes(t.id)) return;
                 const existing = map.get(t.id);
                 map.set(t.id, { ...(existing as any), ...(t as any) } as Transaction);
               }
@@ -1079,6 +1123,104 @@ export default function App() {
       unsubs.forEach((unsub) => unsub());
     };
   }, [wallets.map((w) => `${w.id}:${w.sharedWith?.length || 0}:${w.isSharedFromOther}:${w.sharedDocId || ''}`).join(','), user?.uid]);
+
+  // [v7.5.56] Real-time listener for debts of shared wallets (finding 21,
+  // decision 17): the member-visible mirror lives in
+  // sharedWallets/{docId}/debts. Merge it into local debts, deduped by
+  // id; when both copies exist the newer updatedAt wins. A mirror
+  // deletion removes the local copy unless it is my own canonical copy
+  // on a wallet I own (the owner deletes those via handleDeleteDebt).
+  useEffect(() => {
+    if (!user) return;
+
+    const activeSharedWallets = wallets.filter(
+      (w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0)
+    );
+
+    if (activeSharedWallets.length === 0) return;
+
+    const unsubs = activeSharedWallets.map((sw) => {
+      const docIdToUse = getSharedWalletDocId(sw, user.uid);
+      return subscribeSharedWalletDebts(
+        sw.id,
+        (mirrorDebts, deletedDebtIds) => {
+          if (!mirrorDebts) return;
+          setDebts((prev) => {
+            const map = new Map<string, Debt>();
+            prev.forEach((d) => {
+              if (d && d.id) map.set(d.id, d);
+            });
+            (deletedDebtIds || []).forEach((id) => {
+              const local = map.get(id);
+              if (!local) return;
+              const w = wallets.find((x) => isWalletMatch(x, local.walletId));
+              const myCanonical = local.createdBy === user.uid && w && !w.isSharedFromOther;
+              if (!myCanonical) map.delete(id);
+            });
+            mirrorDebts.forEach((md) => {
+              if (!md || !md.id) return;
+              const existing = map.get(md.id);
+              if (!existing) {
+                map.set(md.id, md);
+                return;
+              }
+              const exAt = existing.updatedAt || existing.createdAt || 0;
+              const mdAt = md.updatedAt || md.createdAt || 0;
+              if (mdAt > exAt) map.set(md.id, { ...existing, ...md });
+            });
+            const merged = Array.from(map.values());
+            if (areArraysEqual(prev, merged)) {
+              return prev;
+            }
+            safeSetItem('ngwe_debts', JSON.stringify(merged));
+            return merged;
+          });
+        },
+        undefined,
+        docIdToUse,
+        user.uid
+      );
+    });
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [wallets.map((w) => `${w.id}:${w.sharedWith?.length || 0}:${w.isSharedFromOther}:${w.sharedDocId || ''}`).join(','), user?.uid]);
+
+  // [v7.5.56 D3] Ghost pruning (findings 27/31): when a shared wallet
+  // disappears from the user's list (unshared / left / declined), drop
+  // its transactions from local state + localStorage on next sync.
+  // The first run only records the current set — nothing is pruned
+  // until a wallet actually disappears. The wallets.length guard avoids
+  // pruning during a transient empty-list state.
+  // NOTE: txs the user themself added to that wallet were also
+  // persisted to their own users/{uid}/transactions, so the personal
+  // listener may re-merge those copies — clearing those personal
+  // copies is a follow-up, not done here.
+  useEffect(() => {
+    const sharedKeys = new Set<string>();
+    wallets.forEach((w) => {
+      if (!w.isSharedFromOther && !(w.sharedWith && w.sharedWith.length > 0)) return;
+      sharedKeys.add(w.sharedDocId || w.id);
+    });
+    const removedKeys = Array.from(prevSharedWalletKeysRef.current).filter((k) => !sharedKeys.has(k));
+    prevSharedWalletKeysRef.current = sharedKeys;
+    if (removedKeys.length === 0 || wallets.length === 0) return;
+    // Local tx walletIds for a shared wallet use the shared doc id, the
+    // local `shared_<docId>` id, or the plain doc id — match all forms.
+    const removedWalletIds = new Set<string>();
+    removedKeys.forEach((k) => {
+      removedWalletIds.add(k);
+      removedWalletIds.add(`shared_${k}`);
+      removedWalletIds.add(k.replace(/^shared_/, ''));
+    });
+    setTransactions((prev) => {
+      const next = prev.filter((t) => t && t.id && !removedWalletIds.has(t.walletId));
+      if (next.length === prev.length) return prev;
+      safeSetItem('ngwe_transactions', JSON.stringify(next));
+      return next;
+    });
+  }, [wallets]);
 
   const limits = DEFAULT_PLAN_LIMITS[plan];
   const guestLimits = DEFAULT_PLAN_LIMITS.guest;
@@ -1575,6 +1717,8 @@ export default function App() {
     handleUnshareWallet,
     handleUpdateWalletPermissions,
     handleReconcileBalance,
+    // [v7.5.56] Wired to WalletsView as onTransferOwnership below.
+    handleTransferOwnership,
   } = useWalletHandlers({
     user,
     activeWorkspaceId,
@@ -1782,6 +1926,41 @@ export default function App() {
       />
 
       <AdminBroadcastBanner lang={lang} />
+      {/* [v7.5.56 D2] Pending share invites — owner label is the
+          ownerEmail prefix, never the literal 'Partner' (D5). */}
+      {pendingInvites.map((inv) => {
+        const ownerLabel = inv.ownerEmail ? inv.ownerEmail.split('@')[0] : '';
+        const busy = inviteBusyDocId === inv.docId;
+        return (
+          <div key={inv.docId} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
+            <div className="bg-indigo-50 border border-indigo-300 rounded-2xl px-4 py-2.5 text-xs font-bold text-indigo-900 flex items-center justify-between gap-3">
+              <span>
+                {lang === 'my'
+                  ? `${ownerLabel} မှ ${inv.walletName ? `“${inv.walletName}” ` : ''}မျှဝေထားသည် — လက်ခံမည် / ငြင်းပယ်မည်`
+                  : `${ownerLabel} shared ${inv.walletName ? `“${inv.walletName}” ` : ''}with you — Accept / Decline`}
+              </span>
+              <span className="flex gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleAcceptInvite(inv.docId)}
+                  className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {lang === 'my' ? 'လက်ခံမည်' : 'Accept'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleDeclineInvite(inv.docId)}
+                  className="px-3 py-1 rounded-lg bg-white border border-indigo-300 text-indigo-800 text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {lang === 'my' ? 'ငြင်းပယ်မည်' : 'Decline'}
+                </button>
+              </span>
+            </div>
+          </div>
+        );
+      })}
       {plan === 'premium' && userProfile?.premiumExpiresAt && (() => {
         const daysLeft = Math.ceil((new Date(userProfile.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
         if (daysLeft > 3 || daysLeft < 0) return null;
@@ -1994,6 +2173,15 @@ export default function App() {
               onUnshareWallet={handleUnshareWallet}
               onUpdatePermissions={handleUpdateWalletPermissions}
               onSyncRefresh={handleManualSyncDown}
+              // [v7.5.56] Ownership transfer + ShareWalletModal wiring:
+              // without onTransferOwnership the transfer button stays
+              // hidden; maxCollaborators comes from the limits table
+              // (single source of truth); onOpenSignIn opens sign-in
+              // for guests. WalletsView forwards the latter two plus
+              // currentUserEmail to ShareWalletModal.
+              onTransferOwnership={handleTransferOwnership}
+              maxCollaborators={limits.maxCollaborators}
+              onOpenSignIn={() => setIsAuthModalOpen(true)}
             />
             <AdBanner
               plan={plan}

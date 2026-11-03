@@ -88,6 +88,10 @@ export const DebtModal: React.FC<DebtModalProps> = ({
   // label and stored on the debt (Debt.currency). Falls back to the stored
   // currency when the wallet was deleted.
   const selectedWallet = wallets.find((w) => w.id === walletId);
+  // [v7.5.56 B] The debt form must say so when the chosen wallet is shared.
+  const isSharedSelectedWallet =
+    !!selectedWallet &&
+    (!!selectedWallet.isSharedFromOther || (selectedWallet.sharedWith?.length || 0) > 0);
   const currencyCode = selectedWallet?.currency || editingDebt?.currency || 'MMK';
 
   const handleAmountChange = (v: string) => {
@@ -345,6 +349,14 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                 </option>
               ))}
             </select>
+            {/* [v7.5.56 B] Shared wallet: the other member sees this debt read-only. */}
+            {isSharedSelectedWallet && (
+              <p className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-2">
+                {lang === 'my'
+                  ? '⚠️ ဤပိုက်ဆံအိတ်ကို မျှဝေထားပါသည် — အခြားအဖွဲ့ဝင်က ဤအကြွေးကို မြင်ရပါမည် (ဖတ်ရန်သာ၊ ပြင်/ဖျက်၍ မရပါ)'
+                  : '⚠️ This wallet is shared — the other member will see this debt (read-only)'}
+              </p>
+            )}
           </div>
 
           {/* Note Input */}

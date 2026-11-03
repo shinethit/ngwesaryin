@@ -16,10 +16,51 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.55';
-export const CURRENT_BUILD_NUMBER = 270;
+export const CURRENT_APP_VERSION = 'v7.5.56';
+export const CURRENT_BUILD_NUMBER = 271;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.56',
+    buildNumber: 271,
+    releaseDate: '2026-11-03',
+    releaseTime: '09:35 AM (MMT)',
+    titleMy: 'Shared Wallet အပြည့်အဝ ပြင်ဆင်ခြင်း — ထွက်လို့ရခြင်း၊ လုံခြုံမှုနှင့် ခွင့်ပြုချက်များ',
+    titleEn: 'Shared Wallets Fully Fixed — Leaving, Privacy, Permissions and More',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'မျှဝေထားတဲ့ ပိုက်ဆံအိတ်တွေကို အစအဆုံး ပြန်စစ်ဆေးပြီး တွေ့ရှိခဲ့တဲ့ အမှားအားလုံးကို ပြင်လိုက်ပါသည်။ ထွက်လို့မရတဲ့ ပြဿနာ၊ အိတ် ၁ ခု မျှဝေလိုက်ရုံနဲ့ အကောင့်တစ်ခုလုံး မြင်ရသွားတဲ့ ပြဿနာ၊ "အပြည့်အဝ" ခွင့်ပြုချက်က ဘာခွင့်မှ မပေးတဲ့ ပြဿနာတွေ အပါအဝင် လက်ကျန်မှားခြင်း၊ မှတ်တမ်းပျောက်ခြင်း၊ ဘယ်သူ့မှတ်တမ်းလဲ မသိရခြင်းတွေပါ ပြင်ထားပါသည်။ "1 ပိုက်ဆံအိတ်" ကိုလည်း ရှင်းအောင် "1 ပိုက်ဆံအိတ် (စုစုပေါင်း 2 ခု)" လို့ ပြတော့မည်။ မှတ်ချက် — စည်းမျဉ်း (firestore.rules) အသစ်ကို Firebase Console မှာ Publish လုပ်ရမည်၊ မလုပ်ရင် ထွက်ခြင်းနဲ့ လုံခြုံမှု ပြင်ဆင်ချက်တွေ အလုပ်မလုပ်ပါ။',
+    descriptionEn: 'Fixed every issue found in a full review of shared wallets: leaving a shared wallet did not work, sharing one wallet exposed the whole account, and the "Full" permission preset granted no permissions — plus stale balances, vanishing records, missing authorship, and more. "1 ပိုက်ဆံအိတ်" now reads clearly as "1 ပိုက်ဆံအိတ် (စုစုပေါင်း 2 ခု)" when a Separate wallet is excluded. Note: the new firestore.rules must be published in Firebase Console, or the leave and privacy fixes will not take effect.',
+    changesMy: [
+      '🤝 Shared Wallet ကနေ တကယ် ထွက်လို့ရတော့မည် — ထွက်ပြီးလျှင် ပြန်ပေါ်မလာတော့ပါ',
+      '🔒 အိတ် ၁ ခု မျှဝေလိုက်ရုံနဲ့ အကောင့်တစ်ခုလုံး မြင်ရတဲ့ ပြဿနာ ပြင်ခြင်း — မျှဝေထားတဲ့ အိတ်တခုတည်းသာ မြင်ရတော့မည်',
+      '✅ "အပြည့်အဝ" ခွင့်ပြုချက်က တကယ် အပြည့်အဝ ဖြစ်တော့မည်; အသစ်ဖိတ်လိုက်တဲ့လူက ငွေထည့်လို့ရမည်',
+      '👛 "1 ပိုက်ဆံအိတ်" ကို ရှင်းအောင် ပြခြင်း — သီးသန့်အိတ်ရှိလျှင် စုစုပေါင်း အရေအတွက်ပါ ပြမည်',
+      '💰 မျှဝေထားတဲ့ အိတ်ရဲ့ လက်ကျန် ပြင်လိုက်/ဖျက်လိုက်/လွှဲလိုက်ရင် မှားသွားတဲ့ ပြဿနာ ပြင်ခြင်း',
+      '🔄 တဖက်လူ ထည့်တဲ့ မှတ်တမ်း ပျောက်သွားခြင်း၊ ဖျက်ထားတာ ပြန်ပေါ်လာခြင်း ပြင်ခြင်း',
+      '👤 ဘယ်သူ ထည့်တဲ့ မှတ်တမ်းလဲ ပြခြင်း; သူများထည့်တာကို ပြင်လို့/ဖျက်လို့ မရတော့ပါ',
+      '📩 မျှဝေခံရလျှင် လက်ခံမည်/ငြင်းပယ်မည် ရွေးနိုင်ခြင်း',
+      '💳 မျှဝေထားတဲ့ အိတ်နဲ့ အကြွေးကို တဖက်လူလည်း မြင်ရခြင်း (ကြည့်ရုံသာ)',
+      '🔑 အိတ် ပိုင်ရှင် လွှဲပေးနိုင်ခြင်း',
+      '📶 Offline မှာ ထည့်ထားတဲ့ မျှဝေမှတ်တမ်း ဆုံးရှုံးမသွားဘဲ ပြန်ပို့ခြင်း',
+      '⚠️ မျှဝေခြင်း/ဖိတ်ခေါ်ခြင်း မအောင်မြင်လျှင် "အောင်မြင်ပါသည်" လို့ လိမ်မပြတော့ပါ',
+    ],
+    changesEn: [
+      '🤝 Leaving a shared wallet now really works — it no longer reappears afterwards',
+      '🔒 Sharing one wallet no longer exposes the whole account — only the shared wallet is visible',
+      '✅ The "Full" permission preset now really grants full permissions; a newly invited member can add records',
+      '👛 "1 ပိုက်ဆံအိတ်" now reads clearly — the total count is shown when a Separate wallet is excluded',
+      '💰 Shared-wallet balance no longer goes stale on edit/delete/transfer',
+      '🔄 Records added by the other member no longer vanish; deleted records no longer reappear',
+      '👤 Transaction rows show who added them; nobody can edit or delete someone else’s record',
+      '📩 An invite can now be accepted or declined from an in-app notice',
+      '💳 Debts on a shared wallet are now visible to the other member (read-only)',
+      '🔑 A wallet owner can now transfer ownership to a member',
+      '📶 Shared records added offline are retried instead of being lost',
+      '⚠️ Sharing or inviting no longer claims success when the cloud write failed',
+    ],
+  },
   {
     version: 'v7.5.55',
     buildNumber: 270,

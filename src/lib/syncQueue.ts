@@ -6,7 +6,7 @@
  */
 
 import { doc, setDoc, deleteDoc, waitForPendingWrites, writeBatch } from 'firebase/firestore';
-import { db, cleanForFirestore, handleFirestoreError, OperationType, withTimeout, auth, isQuotaExhausted } from './firebase';
+import { db, cleanForFirestore, handleFirestoreError, OperationType, withTimeout, auth, isQuotaExhausted, isPermissionError } from './firebase';
 
 
 export type SyncEntityType =
@@ -20,7 +20,11 @@ export type SyncEntityType =
   | 'vehicles'
   | 'fuelLogs'
   | 'vehicleMaintenance'
-  | 'tirePressureLogs';
+  | 'tirePressureLogs'
+  // [v7.5.56] Top-level shared wallet writes: sharedWallets/{docId}
+  // (wallet doc) or sharedWallets/{docId}/transactions/{txId}.
+  // entityId carries the path segments after 'sharedWallets/'.
+  | 'sharedWallets';
 
 export type SyncOperationType = 'upsert' | 'delete';
 
@@ -50,10 +54,23 @@ const MAX_RETRIES = 10;
 const BASE_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
 
+// [v7.5.56] Permission-denied writes must NEVER retry forever: the rules
+// will keep denying them, so retrying burns quota and spins forever.
+// After this many attempts a permission-denied item is moved to the
+// dead-letter list (surfaced honestly via getFailedItems()) and dropped
+// from the queue.
+const PERMISSION_MAX_RETRIES = 2;
+const DEAD_LETTER_KEY = 'ngwe_sync_queue_dead_letter';
+
 type QueueListener = (items: SyncQueueItem[], isProcessing: boolean) => void;
 
 class SyncQueueManager {
   private queue: SyncQueueItem[] = [];
+  // [v7.5.56] Dead letter: items that gave up (permission-denied after
+  // PERMISSION_MAX_RETRIES, or exhausted MAX_RETRIES). They are NOT
+  // retried again — the UI surfaces them as "not synced" instead of
+  // pretending success. Persisted so the failure survives a reload.
+  private deadLetter: SyncQueueItem[] = [];
   private isProcessing: boolean = false;
   private processingPromise: Promise<ProcessQueueResult> | null = null;
   private listeners: Set<QueueListener> = new Set();
@@ -61,6 +78,7 @@ class SyncQueueManager {
 
   constructor() {
     this.loadQueue();
+    this.loadDeadLetter();
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => this.triggerImmediateProcess());
       window.addEventListener('focus', () => this.triggerImmediateProcess());
@@ -101,6 +119,60 @@ class SyncQueueManager {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
     } catch {}
     this.notifyListeners();
+  }
+
+  private loadDeadLetter() {
+    try {
+      const saved = localStorage.getItem(DEAD_LETTER_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) this.deadLetter = parsed;
+      }
+    } catch {
+      this.deadLetter = [];
+    }
+  }
+
+  private saveDeadLetter() {
+    try {
+      localStorage.setItem(DEAD_LETTER_KEY, JSON.stringify(this.deadLetter));
+    } catch {}
+    this.notifyListeners();
+  }
+
+  /**
+   * [v7.5.56] Items that gave up and will NOT be retried automatically
+   * (permission-denied after bounded retries, or exhausted retries).
+   * The UI must surface these as "not synced" — never as success.
+   */
+  public getFailedItems(): SyncQueueItem[] {
+    return [...this.deadLetter];
+  }
+
+  public getFailedCount(): number {
+    return this.deadLetter.length;
+  }
+
+  /** Drop dead-letter items (e.g. after the user acknowledged / fixed them). */
+  public clearFailedItems(entityType?: SyncEntityType) {
+    if (entityType) {
+      this.deadLetter = this.deadLetter.filter((i) => i.entityType !== entityType);
+    } else {
+      this.deadLetter = [];
+    }
+    this.saveDeadLetter();
+  }
+
+  /** Move an item to the dead-letter list and remove it from the queue. */
+  private moveToDeadLetter(task: SyncQueueItem) {
+    this.deadLetter = this.deadLetter.filter((i) => i.id !== task.id);
+    this.deadLetter.push({ ...task, status: 'failed' });
+    this.queue = this.queue.filter((q) => q.id !== task.id);
+    this.saveDeadLetter();
+    console.warn(
+      `[SyncQueue] Giving up on ${task.entityType}/${task.entityId} after ${task.retryCount} attempt(s) — moved to dead letter (not synced, will NOT auto-retry):`,
+      task.lastError
+    );
   }
 
   public subscribe(listener: QueueListener): () => void {
@@ -207,7 +279,11 @@ class SyncQueueManager {
       entityType,
       entityId,
       operation,
-      data: operation === 'upsert' ? { ...data, id: entityId, userId: targetUid } : undefined,
+      // [v7.5.56] sharedWallets payloads already carry the correct id and
+      // walletId (shared doc id) — do NOT stamp the composite entityId /
+      // userId onto them, or the rules (walletId == path walletId) deny
+      // the write.
+      data: operation === 'upsert' ? (entityType === 'sharedWallets' ? { ...data } : { ...data, id: entityId, userId: targetUid }) : undefined,
       targetUid,
       timestamp: Date.now(),
       retryCount: 0,
@@ -224,6 +300,60 @@ class SyncQueueManager {
     this.saveQueue();
     this.triggerImmediateProcess();
     return taskId;
+  }
+
+  /**
+   * [v7.5.56] Queue a shared-wallet transaction write:
+   * sharedWallets/{sharedDocId}/transactions/{tx.id} (set/merge).
+   * The payload's walletId is forced to the shared doc id so the
+   * Firestore rules (request.resource.data.walletId == path walletId) pass.
+   * `ownerUid` is kept for logging/dedup only — the path is top-level.
+   */
+  public enqueueSharedWalletTx(sharedDocId: string, tx: any, ownerUid: string): string {
+    if (!sharedDocId || !tx?.id) return '';
+    return this.enqueue(
+      'sharedWallets',
+      `${sharedDocId}/transactions/${tx.id}`,
+      'upsert',
+      ownerUid,
+      { ...tx, walletId: sharedDocId }
+    );
+  }
+
+  /** [v7.5.56] Queue a shared-wallet transaction delete. */
+  public enqueueSharedWalletTxDelete(sharedDocId: string, txId: string, ownerUid: string): string {
+    if (!sharedDocId || !txId) return '';
+    return this.enqueue('sharedWallets', `${sharedDocId}/transactions/${txId}`, 'delete', ownerUid);
+  }
+
+  /**
+   * [v7.5.56] Queue a shared-wallet debt-mirror write:
+   * sharedWallets/{sharedDocId}/debts/{debt.id} (set/merge). The debt
+   * is passed through unchanged — its walletId MUST stay the wallet's
+   * id (the debts read rule maps it to the shared doc); never force
+   * it to the doc id the way transaction payloads do.
+   */
+  public enqueueSharedWalletDebt(sharedDocId: string, debt: any, ownerUid: string): string {
+    if (!sharedDocId || !debt?.id) return '';
+    return this.enqueue(
+      'sharedWallets',
+      `${sharedDocId}/debts/${debt.id}`,
+      'upsert',
+      ownerUid,
+      { ...debt }
+    );
+  }
+
+  /** [v7.5.56] Queue a shared-wallet debt-mirror delete. */
+  public enqueueSharedWalletDebtDelete(sharedDocId: string, debtId: string, ownerUid: string): string {
+    if (!sharedDocId || !debtId) return '';
+    return this.enqueue('sharedWallets', `${sharedDocId}/debts/${debtId}`, 'delete', ownerUid);
+  }
+
+  /** [v7.5.56] Queue a shared wallet document write: sharedWallets/{sharedDocId}. */
+  public enqueueSharedWalletDoc(sharedDocId: string, data: any, ownerUid: string): string {
+    if (!sharedDocId) return '';
+    return this.enqueue('sharedWallets', sharedDocId, 'upsert', ownerUid, data);
   }
 
   /**
@@ -251,7 +381,9 @@ class SyncQueueManager {
         entityType,
         entityId,
         operation,
-        data: operation === 'upsert' ? { ...data, id: entityId, userId: targetUid } : undefined,
+        // [v7.5.56] See enqueue(): sharedWallets payloads keep their own
+        // id / walletId; never stamp the composite entityId onto them.
+        data: operation === 'upsert' ? (entityType === 'sharedWallets' ? { ...data } : { ...data, id: entityId, userId: targetUid }) : undefined,
         targetUid,
         timestamp: Date.now(),
         retryCount: 0,
@@ -349,7 +481,22 @@ class SyncQueueManager {
           batchItems.map(async (task) => {
             const effectiveUid = task.targetUid || auth.currentUser?.uid;
             if (!effectiveUid) throw new Error('User not authenticated');
-            const docRef = doc(db, 'users', effectiveUid, task.entityType, task.entityId);
+            // [v7.5.56] sharedWallets lives at the top level, NOT under
+            // users/{uid}/. entityId is '{docId}' (wallet doc),
+            // '{docId}/transactions/{txId}' or '{docId}/debts/{debtId}'.
+            let docRef;
+            if (task.entityType === 'sharedWallets') {
+              const parts = task.entityId.split('/');
+              if (parts.length === 1 && parts[0]) {
+                docRef = doc(db, 'sharedWallets', parts[0]);
+              } else if (parts.length === 3 && (parts[1] === 'transactions' || parts[1] === 'debts') && parts[0] && parts[2]) {
+                docRef = doc(db, 'sharedWallets', parts[0], parts[1], parts[2]);
+              } else {
+                throw new Error(`Invalid sharedWallets entityId: ${task.entityId}`);
+              }
+            } else {
+              docRef = doc(db, 'users', effectiveUid, task.entityType, task.entityId);
+            }
             if (task.operation === 'delete') {
               await withTimeout(deleteDoc(docRef), 12000);
             } else {
@@ -384,10 +531,20 @@ class SyncQueueManager {
             handleFirestoreError(
               err,
               task.operation === 'delete' ? OperationType.DELETE : OperationType.WRITE,
-              `users/${task.targetUid}/${task.entityType}/${task.entityId}`
+              task.entityType === 'sharedWallets'
+                ? `sharedWallets/${task.entityId}`
+                : `users/${task.targetUid}/${task.entityType}/${task.entityId}`
             );
 
-            if (task.retryCount >= MAX_RETRIES) {
+            // [v7.5.56] Bounded retry for permission-denied: the rules
+            // will keep denying this write, so retrying forever burns
+            // quota and lies about the sync state. Give up after
+            // PERMISSION_MAX_RETRIES attempts and surface the failure
+            // via the dead-letter list (getFailedItems) — honest
+            // "not synced", never a false success.
+            if (isPermissionError(err) && task.retryCount >= PERMISSION_MAX_RETRIES) {
+              this.moveToDeadLetter(task);
+            } else if (task.retryCount >= MAX_RETRIES) {
               console.warn(`[SyncQueue] Task ${task.id} reached maximum retries (${MAX_RETRIES}):`, task.lastError);
             }
           }
@@ -607,7 +764,10 @@ class SyncQueueManager {
   }
 
   /**
-   * Retries all failed items immediately
+   * Retries all failed items immediately.
+   * [v7.5.56] Also re-queues dead-letter items the user explicitly
+   * retries (e.g. after permissions were fixed) — they are NOT
+   * retried automatically.
    */
   public retryAllFailed() {
     this.queue.forEach((item) => {
@@ -615,6 +775,13 @@ class SyncQueueManager {
       item.lastAttemptAt = 0;
       item.retryCount = 0;
     });
+    if (this.deadLetter.length > 0) {
+      this.deadLetter.forEach((item) => {
+        this.queue.push({ ...item, status: 'pending', lastAttemptAt: 0, retryCount: 0, lastError: undefined });
+      });
+      this.deadLetter = [];
+      this.saveDeadLetter();
+    }
     this.saveQueue();
     this.triggerImmediateProcess();
   }

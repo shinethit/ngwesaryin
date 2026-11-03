@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { doc } from 'firebase/firestore';
-import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
+import { db, safeSetDoc, safeDeleteDoc, isQuotaExhausted } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { markTxDeleted, unmarkTxDeleted, markVehicleLogDeleted } from '../utils/deletedMarkers';
@@ -11,6 +11,10 @@ import {
   saveSharedWalletTransaction,
   deleteSharedWalletTransaction,
   getSharedWalletDocId,
+  // [v7.5.56] Provided by the shared-wallet service worker — recomputes
+  // a shared wallet's stored balance from its cloud transactions.
+  // Do NOT reimplement here; this import fails until that worker lands it.
+  recomputeSharedWalletBalance,
 } from '../lib/sharedWalletService';
 import type {
   Category,
@@ -112,15 +116,112 @@ export function useTransactionHandlers({
     }).catch(() => {});
   };
 
+  // [v7.5.56] Shared-wallet helpers (A1–A9).
+  const creatorName = user?.displayName || user?.email?.split('@')[0] || '';
+  const isSharedWallet = (w?: Wallet | null): boolean =>
+    !!w && (!!w.isSharedFromOther || (w.sharedWith?.length || 0) > 0);
+  // I own a wallet when it is not shared TO me (my own wallet, even one
+  // I shared out) — or when the shared doc names me as owner.
+  const isWalletOwner = (w?: Wallet | null): boolean =>
+    !w || !w.isSharedFromOther || !w.ownerUid || w.ownerUid === user?.uid;
+  const sharedFailMsg =
+    lang === 'my'
+      ? '⚠️ မျှဝေထားသော ပိုက်ဆံအိတ်သို့ Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်ရလျှင် အလိုအလျောက် ထပ်တင်ပါမည်'
+      : '⚠️ Could not save to the shared wallet cloud — it will retry automatically when you are back online';
+  const randomSuffix = () => Math.random().toString(36).slice(2, 8);
+
+  // [v7.5.56 A2] Creator-or-owner gate. Owners always pass. A collaborator
+  // passes only for their own txs (createdBy === uid); legacy txs with no
+  // createdBy fall back to the per-type permission check.
+  const canActOnTx = (
+    wallet: Wallet | null | undefined,
+    tx: Transaction,
+    type: TransactionType,
+    action: 'edit' | 'delete'
+  ): boolean => {
+    if (!isWalletOwner(wallet) && tx.createdBy && user?.uid && tx.createdBy !== user.uid) return false;
+    const perms = getCollaboratorPermissions(wallet, user?.email, user?.uid);
+    if (action === 'edit') return type === 'income' ? perms.canEditIncome : perms.canEditExpense;
+    return type === 'income' ? perms.canDeleteIncome : perms.canDeleteExpense;
+  };
+  const denyEditMsg = (type: TransactionType) =>
+    lang === 'my'
+      ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} ပြင်ဆင်ခွင့် ပိတ်ထားပါသည် (သို့မဟုတ် သင်ဖန်တီးထားသော မှတ်တမ်းမဟုတ်ပါ)`
+      : 'Permission denied: wallet owner has disabled transaction editing (or this is not a record you created)';
+
+  // [v7.5.56 A9] Shared-write retry via the queue worker's helpers
+  // (src/lib/syncQueue.ts), which call the sharedWallets entity type:
+  //   syncQueue.enqueueSharedWalletTx(sharedDocId, tx, user.uid)
+  //     → enqueue('sharedWallets', `${sharedDocId}/transactions/${tx.id}`,
+  //         'upsert', ownerUid, { ...tx, walletId: sharedDocId })
+  //   syncQueue.enqueueSharedWalletTxDelete(sharedDocId, tx.id, user.uid)
+  //     → enqueue('sharedWallets', `${sharedDocId}/transactions/${tx.id}`,
+  //         'delete', ownerUid)
+  // Do NOT hand-roll the entityId: the processor parses the
+  // `docId/transactions/txId` path form.
+  const enqueueSharedTxRetry = (tx: Transaction, sharedDocId: string, operation: 'upsert' | 'delete') => {
+    if (!user?.uid || !sharedDocId || !tx?.id) return;
+    if (operation === 'delete') {
+      syncQueue.enqueueSharedWalletTxDelete(sharedDocId, tx.id, user.uid);
+    } else {
+      syncQueue.enqueueSharedWalletTx(sharedDocId, { ...tx, sharedDocId, walletId: sharedDocId }, user.uid);
+    }
+  };
+
+  // [v7.5.56 A3/A6] Save one tx to its shared wallet, check the result,
+  // then recompute the stored shared balance from the cloud state.
+  // postBalance is the balance AFTER this tx's effect — never a
+  // pre-edit / pre-delete balance. Returns false when the cloud write
+  // did not land (caller toasts + the retry is already enqueued).
+  const saveSharedTxChecked = async (wallet: Wallet, tx: Transaction, postBalance: number): Promise<boolean> => {
+    if (!user?.uid) return false;
+    const sharedDocId = getSharedWalletDocId(wallet, user.uid);
+    const ok = await saveSharedWalletTransaction(wallet.id, tx, postBalance, sharedDocId, user.uid);
+    if (!ok) {
+      enqueueSharedTxRetry(tx, sharedDocId, 'upsert');
+      return false;
+    }
+    const recomputed = await recomputeSharedWalletBalance(sharedDocId);
+    if (!recomputed) return false;
+    return true;
+  };
+  const deleteSharedTxChecked = async (wallet: Wallet, txId: string, postBalance: number): Promise<boolean> => {
+    if (!user?.uid) return false;
+    const sharedDocId = getSharedWalletDocId(wallet, user.uid);
+    const ok = await deleteSharedWalletTransaction(wallet.id, txId, postBalance, sharedDocId, user.uid);
+    if (!ok) {
+      enqueueSharedTxRetry({ id: txId } as Transaction, sharedDocId, 'delete');
+      return false;
+    }
+    const recomputed = await recomputeSharedWalletBalance(sharedDocId);
+    if (!recomputed) return false;
+    return true;
+  };
+  // Signed effect of a tx on its wallet balance (+income, −expense).
+  const txEffect = (t: Transaction): number => (t.type === 'income' ? t.amount : -t.amount);
+
   // [v7.5.55] Decision 1 — transaction limit is per ROLLING 30 days:
   // count transactions dated within the last 30 days (local YYYY-MM-DD
   // compare). The count blocks the moment it reaches the CURRENT plan's
   // maxTransactions (guest 30, free 100), even if reached in 10 days.
+  // [v7.5.56 A8] A tx counts toward MY rolling limit iff I created it
+  // (legacy txs with no createdBy still count) AND its wallet is mine
+  // or a shared wallet I own. A collaborator's tx in someone else's
+  // shared wallet never counts toward my limit.
+  const countsTowardMyLimit = (t: Transaction): boolean => {
+    if (user?.uid && t.createdBy && t.createdBy !== user.uid) return false;
+    const w =
+      wallets.find((x) => isWalletMatch(x, t.walletId)) ||
+      computedWallets.find((x) => isWalletMatch(x, t.walletId));
+    if (!w) return true;
+    if (w.isSharedFromOther && w.ownerUid && user?.uid && w.ownerUid !== user.uid) return false;
+    return true;
+  };
   const countRolling30DayTransactions = (txs: Transaction[]) => {
     const d = new Date();
     d.setDate(d.getDate() - 29);
     const start = getLocalDateString(d);
-    return txs.filter((t) => t.date && t.date >= start).length;
+    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
   };
 
   // [v7.5.55] C8c — motorcycle logs store frontPsi/rearPsi; car logs store
@@ -185,14 +286,11 @@ export function useTransactionHandlers({
 
   const handleOpenEditTx = (tx: Transaction) => {
     const targetWallet = wallets.find((w) => isWalletMatch(w, tx.walletId));
-    const perms = getCollaboratorPermissions(targetWallet, user?.email, user?.uid);
-    const canEdit = tx.type === 'income' ? perms.canEditIncome : perms.canEditExpense;
-    if (!canEdit) {
-      showToast(
-        lang === 'my'
-          ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${tx.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} ပြင်ဆင်ခွင့် ပိတ်ထားပါသည်`
-          : 'Permission denied: wallet owner has disabled transaction editing'
-      );
+    // [v7.5.56 A2] Creator-or-owner gate: a collaborator may only open
+    // their own txs for editing (legacy txs with no createdBy fall back
+    // to the per-type permission check inside canActOnTx).
+    if (!canActOnTx(targetWallet, tx, tx.type, 'edit')) {
+      showToast(denyEditMsg(tx.type));
       return;
     }
     setEditingTransaction(tx);
@@ -231,18 +329,28 @@ export function useTransactionHandlers({
       setEditingTransaction(null);
       setTxModalInitialWalletId(undefined);
       const editWallet = wallets.find((w) => isWalletMatch(w, editingTransaction.walletId));
-      const perms = getCollaboratorPermissions(editWallet, user?.email, user?.uid);
-      const canEdit = editingTransaction.type === 'income' ? perms.canEditIncome : perms.canEditExpense;
-      if (!canEdit) {
+      const editTargetWallet =
+        computedWallets.find((w) => isWalletMatch(w, sanitizedTx.walletId)) ||
+        wallets.find((w) => isWalletMatch(w, sanitizedTx.walletId));
+      // [v7.5.56 A2] Edit must validate the OLD type as well as the NEW
+      // type — no income↔expense flip without the edit right for the old
+      // type, and a collaborator may only edit their own txs.
+      const canEditOld = canActOnTx(editWallet, editingTransaction, editingTransaction.type, 'edit');
+      const canEditNew = canActOnTx(editTargetWallet, editingTransaction, sanitizedTx.type, 'edit');
+      if (!canEditOld || !canEditNew) {
         showToast(
-          lang === 'my'
-            ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${editingTransaction.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} ပြင်ဆင်ခွင့် ပိတ်ထားပါသည်`
-            : 'Permission denied: wallet owner has disabled transaction editing'
+          editingTransaction.type !== sanitizedTx.type
+            ? (lang === 'my'
+              ? '⚠️ ဝင်ငွေ ↔ ထွက်ငွေ ပြောင်းလဲရန် ခွင့်ပြုချက်မရှိပါ — အမျိုးအစားဟောင်း/အသစ် နှစ်မျိုးလုံးအတွက် ပြင်ဆင်ခွင့် လိုအပ်ပါသည်'
+              : 'Permission denied: changing income ↔ expense needs edit permission for both the old and the new type')
+            : denyEditMsg(editingTransaction.type)
         );
         return;
       }
 
-      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt, updatedAt: Date.now(), version: (editingTransaction.version || 0) + 1, lastEditedBy: user?.uid || 'guest' } as Transaction;
+      // [v7.5.56 A1] createdBy/createdByName are stamped on add and NEVER
+      // overwritten on edit (a legacy tx with no author stays authorless).
+      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt, createdBy: editingTransaction.createdBy, createdByName: editingTransaction.createdByName, updatedAt: Date.now(), version: (editingTransaction.version || 0) + 1, lastEditedBy: user?.uid || 'guest' } as Transaction;
       setTransactions((prev) => {
         const next = prev.map((t) => (t.id === editingTransaction.id ? updatedTx : t));
         safeSetItem('ngwe_transactions', JSON.stringify(next));
@@ -285,14 +393,51 @@ export function useTransactionHandlers({
       }
 
       // Cloud sync for shared wallets
+      // [v7.5.56 A3/A4/A6] Shared writes are awaited + checked (never
+      // fire-and-forget), the balance passed is the POST-edit balance,
+      // the transfer pair leg is saved to ITS wallet's shared doc too,
+      // and the stored balance is recomputed after every shared write.
       const oldWallet = computedWallets.find((w) => isWalletMatch(w, editingTransaction.walletId));
       const newWallet = computedWallets.find((w) => isWalletMatch(w, sanitizedTx.walletId));
-      if (newWallet && (newWallet.isSharedFromOther || (newWallet.sharedWith && newWallet.sharedWith.length > 0))) {
-        const sharedDocId = getSharedWalletDocId(newWallet, user?.uid);
-        saveSharedWalletTransaction(newWallet.id, updatedTx, newWallet.balance, sharedDocId, user?.uid);
+      if (newWallet && isSharedWallet(newWallet)) {
+        const sameWallet = isWalletMatch(newWallet, editingTransaction.walletId);
+        const postBal =
+          (Number(newWallet.balance) || 0) -
+          (sameWallet ? txEffect(editingTransaction) : 0) +
+          txEffect(updatedTx);
+        saveSharedTxChecked(newWallet, updatedTx, postBal).then((ok) => {
+          if (!ok) showToast(sharedFailMsg);
+        });
       }
-      if (oldWallet && !isWalletMatch(oldWallet, sanitizedTx.walletId) && (oldWallet.isSharedFromOther || (oldWallet.sharedWith && oldWallet.sharedWith.length > 0))) {
-        deleteSharedWalletTransaction(oldWallet.id, editingTransaction.id, oldWallet.balance, getSharedWalletDocId(oldWallet, user?.uid), user?.uid);
+      if (oldWallet && !isWalletMatch(oldWallet, sanitizedTx.walletId) && isSharedWallet(oldWallet)) {
+        const postBal = (Number(oldWallet.balance) || 0) - txEffect(editingTransaction);
+        deleteSharedTxChecked(oldWallet, editingTransaction.id, postBal).then((ok) => {
+          if (!ok) showToast(sharedFailMsg);
+        });
+      }
+      // Transfer pair leg (A4): the pair lives in its own wallet — save
+      // it to that wallet's shared doc, not just the main leg's wallet.
+      if (editingTransaction.transferPairId) {
+        const pairTx = transactions.find((t) => t.id === editingTransaction.transferPairId);
+        if (pairTx) {
+          const pairWallet = computedWallets.find((w) => isWalletMatch(w, pairTx.walletId));
+          if (pairWallet && isSharedWallet(pairWallet)) {
+            const updatedPairForShared: Transaction = {
+              ...pairTx,
+              amount: cleanAmount,
+              date: sanitizedTx.date,
+              note: sanitizedTx.note || pairTx.note,
+              updatedAt: Date.now(),
+              version: (pairTx.version || 0) + 1,
+              lastEditedBy: user?.uid || 'guest',
+            };
+            const postBal =
+              (Number(pairWallet.balance) || 0) - txEffect(pairTx) + txEffect(updatedPairForShared);
+            saveSharedTxChecked(pairWallet, updatedPairForShared, postBal).then((ok) => {
+              if (!ok) showToast(sharedFailMsg);
+            });
+          }
+        }
       }
 
       // [v7.2.2] Update linked vehicle log (fuel/maintenance/tire) on edit
@@ -473,8 +618,10 @@ export function useTransactionHandlers({
       const fromName = fromW ? (lang === 'my' ? fromW.name : fromW.nameEn || fromW.name) : 'Wallet';
       const toName = toW ? (lang === 'my' ? toW.name : toW.nameEn || toW.name) : 'Wallet';
 
-      const outId = `tx_tf_out_${Date.now()}`;
-      const inId = `tx_tf_in_${Date.now() + 1}`;
+      // [v7.5.56 A7] Random suffix so two transfers in the same
+      // millisecond can never collide; [v7.5.56 A1] stamp the creator.
+      const outId = `tx_tf_out_${Date.now()}_${randomSuffix()}`;
+      const inId = `tx_tf_in_${Date.now()}_${randomSuffix()}`;
 
       const outTx: Transaction = {
         id: outId,
@@ -493,6 +640,8 @@ export function useTransactionHandlers({
         updatedAt: Date.now(),
         version: 1,
         lastEditedBy: user?.uid || 'guest',
+        createdBy: user?.uid || undefined,
+        createdByName: creatorName || undefined,
       };
 
       const inTx: Transaction = {
@@ -512,6 +661,8 @@ export function useTransactionHandlers({
         updatedAt: Date.now() + 1,
         version: 1,
         lastEditedBy: user?.uid || 'guest',
+        createdBy: user?.uid || undefined,
+        createdByName: creatorName || undefined,
       };
 
       setTransactions((prev) => {
@@ -531,11 +682,20 @@ export function useTransactionHandlers({
           userId: targetUid,
         }, { merge: true });
 
-        if (fromW && (fromW.isSharedFromOther || (fromW.sharedWith && fromW.sharedWith.length > 0))) {
-          saveSharedWalletTransaction(fromW.id, outTx, fromW.balance, getSharedWalletDocId(fromW, user.uid), user.uid);
+        // [v7.5.56 A3/A6] Both legs go through the checked shared path
+        // (post-transfer balances, recompute after). The success toast
+        // below fires first, but a failed shared write toasts the real
+        // error itself via the checked helper, so the user is never
+        // left with only a false success.
+        if (fromW && isSharedWallet(fromW)) {
+          saveSharedTxChecked(fromW, outTx, (Number(fromW.balance) || 0) - cleanAmount).then((ok) => {
+            if (!ok) showToast(sharedFailMsg);
+          });
         }
-        if (toW && (toW.isSharedFromOther || (toW.sharedWith && toW.sharedWith.length > 0))) {
-          saveSharedWalletTransaction(toW.id, inTx, toW.balance, getSharedWalletDocId(toW, user.uid), user.uid);
+        if (toW && isSharedWallet(toW)) {
+          saveSharedTxChecked(toW, inTx, (Number(toW.balance) || 0) + cleanAmount).then((ok) => {
+            if (!ok) showToast(sharedFailMsg);
+          });
         }
       }
 
@@ -586,7 +746,9 @@ export function useTransactionHandlers({
       return;
     }
 
-    const id = `tx_${Date.now()}`;
+    // [v7.5.56 A7] Random suffix so two adds in the same millisecond
+    // can never collide; [v7.5.56 A1] stamp the creator.
+    const id = `tx_${Date.now()}_${randomSuffix()}`;
     unmarkTxDeleted(id);
     const transaction: Transaction = {
       ...sanitizedTx,
@@ -595,6 +757,8 @@ export function useTransactionHandlers({
       updatedAt: Date.now(),
       version: 1,
       lastEditedBy: user?.uid || 'guest',
+      createdBy: user?.uid || undefined,
+      createdByName: creatorName || undefined,
     };
 
     setTransactions((prev) => {
@@ -612,13 +776,14 @@ export function useTransactionHandlers({
     }
 
     // Cloud sync if target wallet is shared
-    if (targetWallet && (targetWallet.isSharedFromOther || (targetWallet.sharedWith && targetWallet.sharedWith.length > 0))) {
+    // [v7.5.56 A3/A6] Checked shared write (post-add balance, recompute
+    // after); a failure toasts the real error via the helper.
+    if (targetWallet && isSharedWallet(targetWallet)) {
       const isIncome = transaction.type === 'income';
       const newBal = (Number(targetWallet.balance) || 0) + (isIncome ? transaction.amount : -transaction.amount);
-      const sharedDocId = getSharedWalletDocId(targetWallet, user?.uid);
-      saveSharedWalletTransaction(targetWallet.id, transaction, newBal, sharedDocId, user?.uid).catch((err) =>
-        console.error('Failed to sync shared wallet tx to cloud:', err)
-      );
+      saveSharedTxChecked(targetWallet, transaction, newBal).then((ok) => {
+        if (!ok) showToast(sharedFailMsg);
+      });
     }
 
     // ==========================================
@@ -789,18 +954,54 @@ export function useTransactionHandlers({
     if (!txToDelete) return;
 
     const targetWallet = wallets.find((w) => isWalletMatch(w, txToDelete.walletId));
-    const perms = getCollaboratorPermissions(targetWallet, user?.email, user?.uid);
-    const canDelete = txToDelete.type === 'income' ? perms.canDeleteIncome : perms.canDeleteExpense;
-    if (!canDelete) {
+    // [v7.5.56 A2] Creator-or-owner gate for delete (legacy txs with no
+    // createdBy fall back to the per-type permission check).
+    if (!canActOnTx(targetWallet, txToDelete, txToDelete.type, 'delete')) {
       showToast(
         lang === 'my'
-          ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${txToDelete.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} မှတ်တမ်းဖျက်ခွင့် ပိတ်ထားပါသည်`
-          : 'Permission denied: wallet owner has disabled deleting transactions'
+          ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${txToDelete.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} မှတ်တမ်းဖျက်ခွင့် ပိတ်ထားပါသည် (သို့မဟုတ် သင်ဖန်တီးထားသော မှတ်တမ်းမဟုတ်ပါ)`
+          : 'Permission denied: wallet owner has disabled deleting transactions (or this is not a record you created)'
       );
       return;
     }
 
-    // Permission OK — mark as deleted
+    // [v7.5.56 A5] Cloud deletes FIRST — only mark/remove locally once
+    // the cloud confirms. A failure that safeDeleteDoc already queued
+    // for retry (offline / quota-exhausted) still proceeds locally;
+    // a live failure does NOT mark, toasts the error, and keeps the tx.
+    const pairTxForDelete = txToDelete.transferPairId
+      ? transactions.find((t) => t.id === txToDelete.transferPairId)
+      : undefined;
+    const deleteOneTxFromCloud = async (tx: Transaction, wallet?: Wallet): Promise<boolean> => {
+      if (!user?.uid) return true;
+      const targetUid = activeWorkspaceId || user.uid;
+      const personalOk = await safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tx.id));
+      let ok = personalOk;
+      if (wallet && isSharedWallet(wallet)) {
+        const postBal = (Number(wallet.balance) || 0) - txEffect(tx);
+        const sharedOk = await deleteSharedTxChecked(wallet, tx.id, postBal);
+        if (!sharedOk) ok = false;
+      }
+      return ok;
+    };
+    const mainCloudOk = await deleteOneTxFromCloud(txToDelete, targetWallet);
+    let pairCloudOk = true;
+    if (pairTxForDelete) {
+      const pairWallet = wallets.find((w) => isWalletMatch(w, pairTxForDelete.walletId));
+      pairCloudOk = await deleteOneTxFromCloud(pairTxForDelete, pairWallet);
+    }
+    const deleteQueuedForRetry =
+      (typeof navigator !== 'undefined' && !navigator.onLine) || isQuotaExhausted();
+    if ((!mainCloudOk || !pairCloudOk) && !deleteQueuedForRetry) {
+      showToast(
+        lang === 'my'
+          ? '⚠️ Cloud မှ ဖျက်၍ မရပါ — မှတ်တမ်းကို ထားရှိထားပါသည်။ အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ'
+          : '⚠️ Could not delete from cloud — the record was kept. Check your connection and retry'
+      );
+      return;
+    }
+
+    // Cloud confirmed (or queued for retry) — mark as deleted
     markTxDeleted(id);
 
     // 1. Calculate next state synchronously (including paired transfer if any)
@@ -818,21 +1019,9 @@ export function useTransactionHandlers({
       return next;
     });
     syncQueue.remove('transactions', id);
-    if (pairId) syncQueue.remove('transactions', pairId);
-
-    // 3. Cloud deletion for deleted transaction (and pair if transfer)
-    if (user?.uid) {
-      const targetUid = activeWorkspaceId || user.uid;
-      deleteDocChecked(doc(db, 'users', targetUid, 'transactions', id));
-      if (pairId) {
-        markTxDeleted(pairId);
-        deleteDocChecked(doc(db, 'users', targetUid, 'transactions', pairId));
-      }
-
-      if (targetWallet && (targetWallet.isSharedFromOther || (targetWallet.sharedWith && targetWallet.sharedWith.length > 0))) {
-        const sharedDocId = getSharedWalletDocId(targetWallet, user?.uid);
-        deleteSharedWalletTransaction(targetWallet.id, txToDelete.id, targetWallet.balance, sharedDocId, user?.uid);
-      }
+    if (pairId) {
+      markTxDeleted(pairId);
+      syncQueue.remove('transactions', pairId);
     }
 
     // iOS Safari WebKit: force a direct REST DELETE on both collections

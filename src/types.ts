@@ -39,6 +39,10 @@ export interface Transaction {
   updatedAt?: number;
   version?: number;
   lastEditedBy?: string;
+  // [v7.5.56] Authorship for shared wallets — who added this record.
+  // Stamped on add, never overwritten on edit.
+  createdBy?: string; // uid of the user who added the transaction
+  createdByName?: string; // display name/email of the creator
   userId?: string;
   _userId?: string;
   _docPath?: string;
@@ -75,6 +79,11 @@ export interface Debt {
   updatedAt?: number;
   version?: number;
   lastEditedBy?: string;
+  // [v7.5.56] Shared-wallet debt: the shared wallet doc id this debt
+  // belongs to (if any). Collaborators can view it read-only.
+  sharedWalletId?: string;
+  createdBy?: string;
+  createdByName?: string;
 }
 
 export interface WalletPermissions {
@@ -118,6 +127,10 @@ export interface InvitedWorkspace {
   displayName: string;
   plan: PlanType;
   collaborators?: string[];
+  // [v7.5.56] Per-viewer Separate choice for shared wallets:
+  // shared wallet doc id -> include in THIS viewer's totals.
+  // Stored in the viewer's own user doc, never on the shared doc.
+  sharedWalletScopeOverrides?: Record<string, boolean>;
 }
 
 export interface SubCategory {

@@ -8,6 +8,10 @@ interface MultiWalletSelectorProps {
   wallets: Wallet[];
   selectedWalletIds: string[]; // empty array or all wallet ids = all selected
   onChangeSelectedWalletIds: (ids: string[]) => void;
+  // [v7.5.56] Called on any explicit user pick (Select All, preset,
+  // toggle) so the parent can mark the selection explicit — distinct
+  // from the untouched default (empty = included-only on Dashboard).
+  onExplicitSelection?: () => void;
   lang: 'my' | 'en';
   compact?: boolean;
 }
@@ -16,6 +20,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
   wallets,
   selectedWalletIds,
   onChangeSelectedWalletIds,
+  onExplicitSelection,
   lang,
   compact = false,
 }) => {
@@ -43,6 +48,24 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
   const allWalletIds = wallets.map((w) => w.id);
   const isAllSelected =
     selectedWalletIds.length === 0 || selectedWalletIds.length === wallets.length;
+  // [v7.5.56] Empty ids = untouched default (Dashboard: included-only);
+  // a full id list = the user explicitly chose Select All (all wallets).
+  const isExplicitAllSelected =
+    wallets.length > 0 && selectedWalletIds.length === wallets.length;
+
+  // [v7.5.56] Shared-wallet display helpers (finding 25).
+  const isSharedWallet = (w: Wallet) =>
+    !!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0);
+  const getOwnerName = (w: Wallet): string => w.ownerName || w.ownerEmail || '';
+  const getWalletDisplayName = (w: Wallet): string =>
+    lang === 'my' ? w.name : w.nameEn || w.name;
+  // "🤝 Name (Owner)" for shared wallets, plain name otherwise.
+  const getWalletLabelWithOwner = (w: Wallet): string => {
+    const name = getWalletDisplayName(w);
+    if (!isSharedWallet(w)) return name;
+    const owner = getOwnerName(w);
+    return `🤝 ${name}${owner ? ` (${owner})` : ''}`;
+  };
 
   // [v7.5.55] "Separate" wallets (includeInTotals === false) are excluded
   // from the Dashboard balance when all wallets are shown (A14).
@@ -56,6 +79,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
 
   const handleToggleWallet = (id: string) => {
     setPresetNotice(null);
+    onExplicitSelection?.();
     if (isAllSelected) {
       // [v7.5.55] All selected: tapping a checked wallet unchecks JUST that
       // one (was: selecting only the tapped wallet).
@@ -75,6 +99,10 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
 
   const handleSelectAll = () => {
     setPresetNotice(null);
+    // [v7.5.56] Select All selects ALL wallets (finding 15) — every id,
+    // Separate included — and reports the explicit choice so Dashboard
+    // stops applying the included-only default.
+    onExplicitSelection?.();
     onChangeSelectedWalletIds(allWalletIds);
   };
 
@@ -89,6 +117,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
       return;
     }
     setPresetNotice(null);
+    onExplicitSelection?.();
     onChangeSelectedWalletIds(personalIds);
   };
 
@@ -103,6 +132,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
       return;
     }
     setPresetNotice(null);
+    onExplicitSelection?.();
     onChangeSelectedWalletIds(sharedIds);
   };
 
@@ -115,6 +145,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
       return;
     }
     setPresetNotice(null);
+    onExplicitSelection?.();
     onChangeSelectedWalletIds(includedIds);
   };
 
@@ -129,19 +160,20 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
     const selectedWallets = wallets.filter((w) => selectedWalletIds.includes(w.id));
     if (selectedWallets.length === 1) {
       const w = selectedWallets[0];
-      const name = lang === 'my' ? w.name : w.nameEn;
-      return `${w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0) ? '🤝' : '💳'} ${name}`;
+      // [v7.5.56] Shared badge + owner name in the trigger (finding 25).
+      return isSharedWallet(w) ? getWalletLabelWithOwner(w) : `💳 ${getWalletDisplayName(w)}`;
     }
 
     if (selectedWallets.length > 1) {
       const names = selectedWallets
         .slice(0, 2)
-        .map((w) => (lang === 'my' ? w.name : w.nameEn))
+        .map((w) => getWalletLabelWithOwner(w))
         .join(', ');
       const remaining = selectedWallets.length - 2;
+      const sharedMark = selectedWallets.some((w) => isSharedWallet(w)) ? '🤝 ' : '💳 ';
       return lang === 'my'
-        ? `💳 ${names}${remaining > 0 ? ` +${remaining}` : ''} (${selectedWallets.length} ခု ရွေးထားသည်)`
-        : `💳 ${names}${remaining > 0 ? ` +${remaining}` : ''} (${selectedWallets.length} selected)`;
+        ? `${sharedMark}${names}${remaining > 0 ? ` +${remaining}` : ''} (${selectedWallets.length} ခု ရွေးထားသည်)`
+        : `${sharedMark}${names}${remaining > 0 ? ` +${remaining}` : ''} (${selectedWallets.length} selected)`;
     }
 
     return lang === 'my' ? 'Wallet ရွေးချယ်ရန်' : 'Select Wallets';
@@ -152,7 +184,9 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
     const q = searchQuery.toLowerCase();
     const name = (w.name || '').toLowerCase();
     const nameEn = (w.nameEn || '').toLowerCase();
-    return name.includes(q) || nameEn.includes(q);
+    // [v7.5.56] Search matches the owner name/email too (finding 25).
+    const owner = getOwnerName(w).toLowerCase();
+    return name.includes(q) || nameEn.includes(q) || owner.includes(q);
   });
 
   return (
@@ -196,7 +230,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
               type="button"
               onClick={handleSelectAll}
               className={`px-2.5 py-1 rounded-lg font-bold border transition-all cursor-pointer ${
-                isAllSelected
+                isExplicitAllSelected
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
               }`}
@@ -244,7 +278,8 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
           <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
             {filteredWallets.map((w) => {
               const checked = isSelected(w.id);
-              const isShared = w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0);
+              const isShared = isSharedWallet(w);
+              const owner = getOwnerName(w);
               const formattedBal = formatCurrency(w.balance, w.currency);
 
               return (
@@ -267,10 +302,23 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
                     >
                       {checked && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
-                    <span className="truncate">
-                      {isShared ? '🤝 ' : '💳 '}
-                      {lang === 'my' ? w.name : w.nameEn}
-                    </span>
+                    {/* [v7.5.56] Shared badge + owner name (finding 25). */}
+                    <div className="min-w-0">
+                      <span className="truncate block">
+                        {isShared ? '🤝 ' : '💳 '}
+                        {lang === 'my' ? w.name : w.nameEn}
+                      </span>
+                      {isShared && owner && (
+                        <span className="block truncate text-[10px] font-semibold text-amber-700">
+                          {lang === 'my' ? `ပိုင်ရှင်: ${owner}` : `Owner: ${owner}`}
+                        </span>
+                      )}
+                      {isShared && !owner && (
+                        <span className="block truncate text-[10px] font-semibold text-amber-700">
+                          {lang === 'my' ? 'မျှဝေထားသော အိတ်' : 'Shared wallet'}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="text-[11px] font-mono text-slate-500 shrink-0 ml-2">
@@ -284,7 +332,15 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
           {/* Footer Done Button */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
             <span className="text-[11px] font-medium text-slate-500">
-              {isAllSelected
+              {/* [v7.5.56] Distinguish the untouched default ([]) from an
+                  explicit Select All (full list): the default combines
+                  included wallets only, Select All combines ALL wallets
+                  including Separate ones (finding 15). */}
+              {isExplicitAllSelected
+                ? lang === 'my'
+                  ? 'အကောင့်အားလုံး စုပေါင်းပြထားသည် (ခွဲထားသည့် အကောင့်များပါ ပါဝင်သည်)'
+                  : 'All wallets combined (separate wallets included)'
+                : isAllSelected
                 ? lang === 'my'
                   ? (separateCount > 0
                       ? `ပါဝင်သည့် အကောင့် ${includedCount} ခု စုပေါင်းပြထားသည် (ခွဲထားသည့် ${separateCount} ခု မပါဝင်ပါ)`

@@ -157,6 +157,16 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // [v7.5.56] Shared-wallet guard — a shared wallet can never be
+    // renamed, re-balanced or flipped in/out of totals from this modal.
+    // Owner fields live on the shared doc, the balance is
+    // transaction-derived, and totals scope is per-viewer (card toggle).
+    if (walletToEdit && (walletToEdit.isSharedFromOther || (walletToEdit.sharedWith && walletToEdit.sharedWith.length > 0))) {
+      setFormError(lang === 'my'
+        ? 'မျှဝေထားသော Wallet ကို ဤနေရာမှ အမည်/လက်ကျန်ငွေ/စုစုပေါင်း ပြင်ဆင်၍ မရပါ — မျှဝေမှု ဖြုတ်ပြီးမှ ပြင်ဆင်နိုင်ပါသည်'
+        : 'A shared wallet cannot be renamed, re-balanced or flipped in/out of totals here — unshare it first, then edit');
+      return;
+    }
     // [v7.5.55] A whitespace-only name no longer returns silently.
     if (!name.trim()) {
       setFormError(lang === 'my' ? 'အကောင့် အမည် ထည့်ပေးပါ' : 'Please enter a wallet name');
@@ -240,6 +250,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs sm:text-sm overflow-y-auto flex-1 min-h-0 overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
+          {/* [v7.5.56] Shared-wallet guard notice — shown whenever this
+              modal is opened on a shared wallet; saving is refused. */}
+          {walletToEdit && (walletToEdit.isSharedFromOther || (walletToEdit.sharedWith && walletToEdit.sharedWith.length > 0)) && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold leading-relaxed">
+              {lang === 'my'
+                ? '⚠️ ဤ Wallet သည် မျှဝေထားသော Wallet ဖြစ်ပါသည် — အမည်၊ လက်ကျန်ငွေ၊ စုစုပေါင်းထဲ ရောမည်/မရောပါ တို့ကို ဤနေရာမှ ပြင်ဆင်၍ မရပါ။'
+                : '⚠️ This wallet is shared — its name, balance and totals setting cannot be changed here.'}
+            </div>
+          )}
           {/* Wallet Name (MM & EN) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

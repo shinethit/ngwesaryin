@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Wallet, PlanType, WalletPermissions } from '../types';
 import { Users, UserPlus, Trash2, X, Mail, AlertCircle, Sparkles, Sliders, ChevronDown, ChevronUp, Lock, CheckCircle2, TrendingUp, TrendingDown } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
@@ -12,11 +12,21 @@ interface ShareWalletModalProps {
   wallet: Wallet | null;
   isOpen: boolean;
   onClose: () => void;
-  onShareWallet: (walletId: string, email: string) => void;
-  onUnshareWallet: (walletId: string, email: string) => void;
+  // [v7.5.56] Returns false when the share/unshare was refused or failed,
+  // so the modal never shows a success state for it (void = legacy caller).
+  onShareWallet: (walletId: string, email: string) => Promise<boolean> | boolean | void;
+  onUnshareWallet: (walletId: string, email: string) => Promise<boolean> | boolean | void;
   onUpdatePermissions?: (walletId: string, email: string, permissions: WalletPermissions) => void;
   plan: PlanType;
   lang: 'my' | 'en';
+  // [v7.5.56] Coordinator wires these from App/WalletsView:
+  // currentUserEmail = signed-in user's email (self-invite block);
+  // maxCollaborators = limits.maxCollaborators from the limits table
+  // (single source of truth — never a hardcoded number here);
+  // onOpenSignIn = opens the auth modal for the guest gate.
+  currentUserEmail?: string | null;
+  maxCollaborators?: number;
+  onOpenSignIn?: () => void;
 }
 
 export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
@@ -28,34 +38,61 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
   onUpdatePermissions,
   plan,
   lang,
+  currentUserEmail,
+  maxCollaborators,
+  onOpenSignIn,
 }) => {
   const [emailInput, setEmailInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
+  // [v7.5.56] Invite confirmation step — the email awaiting confirmation.
+  const [pendingInvite, setPendingInvite] = useState<string | null>(null);
+  // [v7.5.56] Emails unshared during this modal session (for re-add UX).
+  const [unsharedEmails, setUnsharedEmails] = useState<string[]>([]);
+  // [v7.5.56] Email re-invited after being unshared — its previous
+  // permissions were removed, so the card auto-expands with a note.
+  const [reAddedEmail, setReAddedEmail] = useState<string | null>(null);
+
+  // Reset transient invite state whenever the modal opens for a wallet.
+  useEffect(() => {
+    if (isOpen && wallet) {
+      setPendingInvite(null);
+      setErrorMsg('');
+      setSuccessMsg('');
+      setReAddedEmail(null);
+    }
+  }, [isOpen, wallet?.id]);
 
   if (!isOpen || !wallet) return null;
 
   const sharedList = wallet.sharedWith || [];
   const permissionsMap = wallet.collaboratorPermissions || {};
 
+  // [v7.5.56] Missing permission keys default to FALSE (deny-by-default,
+  // matching the Firestore rules). An unmatched user also falls back to
+  // READ_ONLY_PERMISSIONS (deny), never to the Full preset.
   const getEmailPerms = (email: string): WalletPermissions => {
     const clean = email.trim().toLowerCase();
     for (const key of Object.keys(permissionsMap)) {
       if (key.trim().toLowerCase() === clean) {
+        const p = permissionsMap[key] || READ_ONLY_PERMISSIONS;
         return {
-          canAddIncome: permissionsMap[key].canAddIncome ?? true,
-          canEditIncome: permissionsMap[key].canEditIncome ?? true,
-          canDeleteIncome: permissionsMap[key].canDeleteIncome ?? true,
-          canAddExpense: permissionsMap[key].canAddExpense ?? true,
-          canEditExpense: permissionsMap[key].canEditExpense ?? true,
-          canDeleteExpense: permissionsMap[key].canDeleteExpense ?? true,
+          canAddIncome: p.canAddIncome === true,
+          canEditIncome: p.canEditIncome === true,
+          canDeleteIncome: p.canDeleteIncome === true,
+          canAddExpense: p.canAddExpense === true,
+          canEditExpense: p.canEditExpense === true,
+          canDeleteExpense: p.canDeleteExpense === true,
         };
       }
     }
-    return DEFAULT_WALLET_PERMISSIONS;
+    return READ_ONLY_PERMISSIONS;
   };
 
+  // [v7.5.56] Toggling one box flips ONLY that key. getEmailPerms now
+  // returns false defaults, so the spread below can no longer inflate
+  // the other keys to true.
   const handleTogglePerm = (email: string, permKey: keyof WalletPermissions) => {
     if (!onUpdatePermissions) return;
     const current = getEmailPerms(email);
@@ -71,6 +108,12 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
     onUpdatePermissions(wallet.id, email, { ...preset });
   };
 
+  // [v7.5.56] Proper email validation (regex, not just '@' and '.'),
+  // self-invite block, case-insensitive duplicate detection, and the
+  // collaborator cap from the limits table. Validation only opens the
+  // confirmation screen — the invite itself is sent from there.
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -82,34 +125,68 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
       return;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
-      setErrorMsg(lang === 'my' ? 'မှန်ကန်သော Email လိပ်စာ ဖြစ်ရပါမည်' : 'Please enter a valid email address');
+    if (!EMAIL_RE.test(email)) {
+      setErrorMsg(lang === 'my' ? 'မှန်ကန်သော Email လိပ်စာ ဖြစ်ရပါမည် (ဥပမာ - name@gmail.com)' : 'Please enter a valid email address (e.g. name@gmail.com)');
       return;
     }
 
-    if (sharedList.includes(email)) {
+    if (currentUserEmail && email === currentUserEmail.trim().toLowerCase()) {
+      setErrorMsg(lang === 'my' ? 'ကိုယ့်ကိုယ်ကို ဖိတ်ခေါ်၍ မရပါ' : 'You cannot invite yourself');
+      return;
+    }
+
+    if (sharedList.some((e) => e.trim().toLowerCase() === email)) {
       setErrorMsg(lang === 'my' ? 'ဤ Email သည် ထည့်သွင်းပြီးသား ဖြစ်ပါသည်' : 'This email is already added');
       return;
     }
 
-    if (plan === 'free' && sharedList.length >= 2) {
+    // [v7.5.56] Free limit text + enforcement come from the limits table
+    // (maxCollaborators prop). When the prop is not wired yet, the
+    // handler still enforces the table value — the modal just skips its
+    // own pre-check instead of hardcoding a number.
+    if (maxCollaborators !== undefined && sharedList.length >= maxCollaborators) {
       setErrorMsg(
         lang === 'my'
-          ? 'Free Plan တွင် ၁ ခါလျှင် Collaborator (၂) ယောက်အထိသာ မျှဝေနိုင်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ'
-          : 'Free plan allows up to 2 collaborators per wallet. Upgrade to Premium for unlimited'
+          ? `Free Plan တွင် ၁ ခါလျှင် Collaborator (${maxCollaborators}) ယောက်အထိသာ မျှဝေနိုင်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ`
+          : `Free plan allows up to ${maxCollaborators} collaborators per wallet. Upgrade to Premium for more`
       );
       return;
     }
 
-    onShareWallet(wallet.id, email);
+    setPendingInvite(email);
+  };
+
+  // [v7.5.56] Confirmation screen action — only now is the invite sent.
+  // Success is shown ONLY when the handler reports success (it returns
+  // false for guest/self/limit/cloud failures, after toasting the reason).
+  const handleConfirmInvite = async () => {
+    if (!pendingInvite) return;
+    const email = pendingInvite;
+    setPendingInvite(null);
+    const result = await onShareWallet(wallet.id, email);
+    if (result === false) return;
     setEmailInput('');
     setExpandedEmail(email);
+    if (unsharedEmails.includes(email)) {
+      // Re-add: previous permissions were removed when unshared —
+      // auto-expand the checkboxes and show the note.
+      setReAddedEmail(email);
+      setUnsharedEmails((prev) => prev.filter((e) => e !== email));
+    }
     setSuccessMsg(
       lang === 'my'
         ? `${email} အား ဤ Wallet သို့ အောင်မြင်စွာ ဖိတ်ခေါ်ပြီးပါပြီ`
         : `Successfully invited ${email} to this wallet`
     );
     setTimeout(() => setSuccessMsg(''), 3500);
+  };
+
+  // [v7.5.56] Record unshares so a later re-add can auto-expand the
+  // permission checkboxes with a "previous permissions removed" note.
+  const handleUnshare = (email: string) => {
+    const clean = email.trim().toLowerCase();
+    setUnsharedEmails((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
+    onUnshareWallet(wallet.id, email);
   };
 
   return (
@@ -174,7 +251,31 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
             </div>
           </div>
 
-          {/* Add Collaborator Form */}
+          {/* [v7.5.56] Guest gate — a guest never sees the invite form or
+              any invite success. Show the sign-in prompt instead. */}
+          {plan === 'guest' ? (
+            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-center space-y-2">
+              <p className="text-xs font-bold text-indigo-900">
+                {lang === 'my'
+                  ? 'Guest Mode တွင် Wallet မျှဝေခြင်း မရရှိနိုင်ပါ'
+                  : 'Wallet sharing is not available in Guest mode'}
+              </p>
+              <p className="text-[11px] text-indigo-800 leading-relaxed">
+                {lang === 'my'
+                  ? 'Wallet မျှဝေရန် Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
+                  : 'Please sign in with Google to share this wallet'}
+              </p>
+              {onOpenSignIn && (
+                <button
+                  type="button"
+                  onClick={onOpenSignIn}
+                  className="mt-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  {lang === 'my' ? 'Sign in ဝင်မည်' : 'Sign in'}
+                </button>
+              )}
+            </div>
+          ) : (
           <form onSubmit={handleInvite} className="space-y-2">
             <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
@@ -215,6 +316,49 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
               </p>
             )}
           </form>
+          )}
+
+          {/* [v7.5.56] Invite confirmation screen — exact email + wallet
+              name + what the invitee will see, before anything is sent.
+              The default preset for a new invite is Full access. */}
+          {pendingInvite && plan !== 'guest' && (
+            <div className="p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200 space-y-2.5">
+              <p className="text-xs font-bold text-indigo-950">
+                {lang === 'my' ? 'ဖိတ်ခေါ်မှု အတည်ပြုပါ' : 'Confirm invite'}
+              </p>
+              <div className="text-xs text-slate-700 space-y-1 leading-relaxed">
+                <p>
+                  <span className="font-semibold">{lang === 'my' ? 'Email: ' : 'Email: '}</span>
+                  <span className="font-bold text-slate-900 break-all">{pendingInvite}</span>
+                </p>
+                <p>
+                  <span className="font-semibold">{lang === 'my' ? 'Wallet: ' : 'Wallet: '}</span>
+                  <span className="font-bold text-slate-900">{lang === 'my' ? wallet.name : wallet.nameEn || wallet.name}</span>
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  {lang === 'my'
+                    ? 'ဖိတ်ခေါ်ခံရသူသည် ဤ Wallet ၏ လက်ကျန်ငွေ၊ ဝင်ငွေ/ထွက်ငွေ စာရင်းများကို မြင်ရမည်။ ခွင့်ပြုချက် (အပြည့်အဝ): ဝင်ငွေ/ထွက်ငွေ ထည့်၊ ပြင်၊ ဖျက်နိုင်သည်။ ခွင့်ပြုချက်များကို အောက်တွင် နောက်မှ ပြင်ဆင်နိုင်ပါသည်။'
+                    : 'The invitee will see this wallet\'s balance and income/expense records. Default access (Full): they can add, edit and delete income and expense. You can change the permissions below afterwards.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPendingInvite(null)}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200/70 font-semibold text-xs cursor-pointer transition-colors"
+                >
+                  {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmInvite}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer transition-colors"
+                >
+                  {lang === 'my' ? 'ဖိတ်ခေါ်မှု အတည်ပြုမည်' : 'Confirm Invite'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Shared List & Permissions Controls */}
           <div className="space-y-2.5 pt-2 border-t border-slate-100">
@@ -296,7 +440,7 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
 
                           <button
                             type="button"
-                            onClick={() => onUnshareWallet(wallet.id, email)}
+                            onClick={() => handleUnshare(email)}
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             title={lang === 'my' ? 'မျှဝေမှု ဖယ်ရှားမည်' : 'Remove sharing'}
                           >
@@ -308,12 +452,26 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
                       {/* Permissions Configuration Panel */}
                       {isExpanded && (
                         <div className="p-3.5 border-t border-slate-200 bg-slate-50/90 space-y-3 animate-in fade-in duration-150">
+                          {/* [v7.5.56] Re-add note — previous permissions
+                              were removed when unshared, so they start
+                              from the Full default and must be set again. */}
+                          {reAddedEmail === email.trim().toLowerCase() && (
+                            <p className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                              {lang === 'my'
+                                ? '⚠️ ယခင် မျှဝေမှု ဖယ်ရှားစဉ်က ခွင့်ပြုချက်များ ဖျက်လိုက်ပြီးဖြစ်ပါသည် — ခွင့်ပြုချက်များကို အသစ် ပြန်သတ်မှတ်ပေးပါ (ယခု အပြည့်အဝ ဖြစ်နေပါသည်)'
+                                : '⚠️ Previous permissions were removed when unshared — please set them again (currently Full access)'}
+                            </p>
+                          )}
                           {/* Presets */}
                           <div className="flex items-center justify-between gap-1 flex-wrap">
                             <span className="text-[11px] font-bold text-slate-600">
                               {lang === 'my' ? 'အမြန်သတ်မှတ်ရန်:' : 'Quick Presets:'}
                             </span>
                             <div className="flex items-center gap-1">
+                              {/* [v7.5.56] "Full" = DEFAULT_WALLET_PERMISSIONS,
+                                  which is all-true (cross-worker contract).
+                                  It is also the default preset for a new
+                                  invite (see handleShareWallet). */}
                               <button
                                 type="button"
                                 onClick={() => handleApplyPreset(email, DEFAULT_WALLET_PERMISSIONS)}

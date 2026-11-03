@@ -33,6 +33,11 @@ interface DashboardProps {
   onManualSync?: () => void;
   onOpenDatabaseTracker?: () => void;
   cloudTxIds?: Set<string>;
+  // [v7.5.56] Per-viewer Separate choice for shared wallets, keyed by
+  // shared wallet doc id (sharedDocId, else wallet id). Loaded/saved by
+  // the owner of the user doc; when absent, the wallet's own
+  // includeInTotals applies. Wired by the parent when available.
+  sharedWalletScopeOverrides?: Record<string, boolean>;
 }
 
 type TimeFilterOption = 'all' | 'this_month' | 'this_week' | 'last_30' | 'this_year' | 'custom';
@@ -41,8 +46,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   transactions, debts, wallets, categories, plan,
   lang,
   onAddTransaction, onAddDebt, onSelectTab, onOpenSearch,
+  sharedWalletScopeOverrides,
 }) => {
-  const { user, isSyncing, syncDataToCloud } = useAuth();
+  const { user, isSyncing, syncDataToCloud, invitedWorkspaces, sharedWalletScopeOverrides: ctxScopeOverrides } = useAuth();
+  // [v7.5.56] Scope overrides come from AuthContext (loaded from the
+  // viewer's own user doc by the context); the prop is a fallback for
+  // callers that pass them directly. Absent either way, the wallet's own
+  // includeInTotals applies.
+  const scopeOverrides = ctxScopeOverrides ?? sharedWalletScopeOverrides ?? {};
 
   const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('this_month');
   const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
@@ -52,6 +63,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const periodDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedWalletId, setSelectedWalletId] = useState<string>('all');
   const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
+  const [hasExplicitWalletSelection, setHasExplicitWalletSelection] = useState(false);
+  // [v7.5.56] Explicit-selection flag (finding 15): set the first time the
+  // user picks via the wallet selector (Select All, a preset, or a toggle).
+  // Until then the scope is the DEFAULT (included-only). An explicit
+  // "Select All" means ALL wallets — Separate included — while a manual
+  // subset means exactly that subset. Never inferred from the ids alone:
+  // [] is the untouched default, not a selection.
 
   // [v7.5.2] Currency-breakdown drill-down modal (Q4a=C)
   const [showCurrencyBreakdown, setShowCurrencyBreakdown] = useState<boolean>(false);
@@ -142,7 +160,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [timeFilter, customRange]);
 
+  // [v7.5.56] Shared-wallet helpers (findings 15/24/25).
+  const isSharedWallet = useCallback((w: WalletType) =>
+    !!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0), []);
+  const getWalletOwnerName = useCallback((w: WalletType): string => {
+    if (w.ownerName) return w.ownerName;
+    if (w.ownerEmail) return w.ownerEmail;
+    // Owner name may only be known via the invited-workspace list.
+    const ws = (invitedWorkspaces || []).find((x) => x.uid === w.ownerUid);
+    return ws?.displayName || ws?.email || '';
+  }, [invitedWorkspaces]);
+  // [v7.5.56] Effective include-in-totals for ONE wallet: for a shared
+  // wallet the viewer's own override (keyed by shared doc id) wins when
+  // set; otherwise the wallet's includeInTotals. Own wallets use
+  // includeInTotals as before.
+  const effectiveIncludeInTotals = useCallback((w: WalletType): boolean => {
+    if (isSharedWallet(w)) {
+      const key = w.sharedDocId || w.originalId || w.id;
+      const ov = scopeOverrides?.[key] ?? scopeOverrides?.[w.id];
+      if (typeof ov === 'boolean') return ov;
+    }
+    return w.includeInTotals !== false;
+  }, [isSharedWallet, scopeOverrides]);
+
   const scopedWallets = useMemo(() => {
+    // [v7.5.56] ONE effective scope (finding 15): an explicit "Select All"
+    // selects ALL wallets (Separate included); a manual subset uses
+    // exactly that subset. Only the untouched default is included-only.
+    if (hasExplicitWalletSelection && wallets.length > 0 && selectedWalletIds.length === wallets.length) {
+      return wallets;
+    }
     if (selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length) {
       return wallets.filter((w) => selectedWalletIds.some((s) => isWalletMatch(w, s)));
     }
@@ -155,8 +202,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     // aggregates (balance, income, expense, net). The old dataScope branches
     // (separate/included/personal/shared) were dead code — dataScope is
     // always 'all', nothing in the UI ever sets another scope.
-    return wallets.filter((w) => w.includeInTotals !== false);
-  }, [wallets, selectedWalletId, selectedWalletIds]);
+    // [v7.5.56] Shared wallets honour the viewer's own override above.
+    return wallets.filter((w) => effectiveIncludeInTotals(w));
+  }, [wallets, selectedWalletId, selectedWalletIds, hasExplicitWalletSelection, effectiveIncludeInTotals]);
 
   const scopedTransactions = useMemo(() => {
     if (selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length) {
@@ -217,21 +265,42 @@ export const Dashboard: React.FC<DashboardProps> = ({
     (s, w) => s + convertToMMK(w.balance, w.currency, w.exchangeRate), 0
   );
 
+  // [v7.5.56] Hero shared/own split (finding 24): balance of the shared
+  // wallets currently in scope, vs the rest. All three aggregates (header
+  // count, balance, income/expense) already derive from scopedWallets.
+  const sharedWalletsInScope = useMemo(
+    () => scopedWallets.filter((w) => isSharedWallet(w)),
+    [scopedWallets, isSharedWallet]
+  );
+  const sharedWalletBalance = useMemo(
+    () => sharedWalletsInScope.reduce((s, w) => s + convertToMMK(w.balance, w.currency, w.exchangeRate), 0),
+    [sharedWalletsInScope]
+  );
+  const ownWalletBalance = totalWalletBalance - sharedWalletBalance;
+
   // [v7.5.2] Group scoped wallets by currency.
   const currencyBreakdownData = useMemo(() => {
-    const map: Record<string, { code: string; total: number; count: number; totalMMK: number; flag: string; symbol: string }> = {};
+    const map: Record<string, { code: string; total: number; count: number; totalMMK: number; flag: string; symbol: string; sharedTotalMMK: number; sharedCount: number; sharedNames: string[] }> = {};
     scopedWallets.forEach((w) => {
       const code = (w.currency || 'MMK').toUpperCase();
       if (!map[code]) {
         const info = getCurrencyInfo(code);
-        map[code] = { code, total: 0, count: 0, totalMMK: 0, flag: info.flag, symbol: info.symbol };
+        map[code] = { code, total: 0, count: 0, totalMMK: 0, flag: info.flag, symbol: info.symbol, sharedTotalMMK: 0, sharedCount: 0, sharedNames: [] };
       }
+      const rowMMK = convertToMMK(w.balance, w.currency, w.exchangeRate);
       map[code].total += w.balance;
       map[code].count += 1;
-      map[code].totalMMK += convertToMMK(w.balance, w.currency, w.exchangeRate);
+      map[code].totalMMK += rowMMK;
+      // [v7.5.56] Shared/own split per currency + 🤝 owner badges (findings 24/25).
+      if (isSharedWallet(w)) {
+        map[code].sharedTotalMMK += rowMMK;
+        map[code].sharedCount += 1;
+        const owner = getWalletOwnerName(w);
+        map[code].sharedNames.push(`🤝 ${lang === 'my' ? w.name : w.nameEn || w.name}${owner ? ` (${owner})` : ''}`);
+      }
     });
     return Object.values(map).sort((a, b) => b.totalMMK - a.totalMMK);
-  }, [scopedWallets]);
+  }, [scopedWallets, isSharedWallet, getWalletOwnerName, lang]);
 
   const activeDebts = debts.filter((d) => d.status === 'active');
 
@@ -269,7 +338,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="min-w-0">
           <div className="text-sm font-bold text-slate-900 truncate">{todayStr}</div>
           <div className="text-[11px] text-slate-500 truncate">
+            {/* [v7.5.56] Label fix (finding 13): show the total too when
+                some wallets are excluded from the scope, so "1 ပိုက်ဆံအိတ်"
+                is never mistaken for "only 1 wallet exists". */}
             {scopedWallets.length} {lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'wallets'}
+            {scopedWallets.length < wallets.length && (
+              <span>{lang === 'my' ? ` (စုစုပေါင်း ${wallets.length} ခု)` : ` (total ${wallets.length})`}</span>
+            )}
           </div>
         </div>
         {/* [v7.5.55] The period-dropdown outside-click ref wraps ONLY the
@@ -281,7 +356,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <MultiWalletSelector
               wallets={wallets}
               selectedWalletIds={selectedWalletIds}
-              onChangeSelectedWalletIds={(ids) => { setSelectedWalletIds(ids); setSelectedWalletId('all'); }}
+              onChangeSelectedWalletIds={(ids) => { setSelectedWalletIds(ids); setSelectedWalletId('all'); setHasExplicitWalletSelection(true); }}
+              onExplicitSelection={() => setHasExplicitWalletSelection(true)}
               lang={lang}
               compact
             />
@@ -354,6 +430,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <span>{formatLakhs(totalWalletBalance, lang)}</span>
           <ChevronRight className="w-5 h-5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
         </button>
+        {/* [v7.5.56] Hero shared split (finding 24). */}
+        {sharedWalletsInScope.length > 0 && (
+          <div className="text-[11px] text-indigo-200 mt-1 font-semibold">
+            {lang === 'my'
+              ? `🤝 မျှဝေထားသော အိတ် ${formatLakhs(sharedWalletBalance, lang)} ပါဝင်`
+              : `🤝 Includes ${formatLakhs(sharedWalletBalance, lang)} from shared wallets`}
+          </div>
+        )}
         {currencyBreakdownData.length > 1 && (
           <div className="text-[10px] text-slate-400 mt-1 font-medium">
             {lang === 'my'
@@ -565,12 +649,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <div className="text-[10px] text-slate-500">
                           {row.count} {lang === 'my' ? 'အကောင့်' : 'wallets'}
                         </div>
+                        {/* [v7.5.56] Shared wallets in this currency, with owner (findings 24/25). */}
+                        {row.sharedNames.length > 0 && (
+                          <div className="text-[10px] text-amber-800 font-semibold truncate" title={row.sharedNames.join(', ')}>
+                            {row.sharedNames.join(', ')}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right shrink-0">
                       <div className="font-mono font-bold text-sm text-slate-900">
                         {row.total.toLocaleString('en-US', { maximumFractionDigits: 2 })} {row.symbol}
                       </div>
+                      {row.sharedTotalMMK !== 0 && (
+                        <div className="text-[10px] text-amber-700 font-bold" title={formatMMK(row.sharedTotalMMK)}>
+                          {lang === 'my' ? `🤝 မျှဝေထား ${formatMMK(row.sharedTotalMMK)}` : `🤝 Shared ${formatMMK(row.sharedTotalMMK)}`}
+                        </div>
+                      )}
                       {row.code !== 'MMK' && (
                         <div className="text-[10px] text-emerald-700 font-bold">
                           ≈ {formatMMK(row.totalMMK)}
@@ -583,13 +678,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             {currencyBreakdownData.length > 0 && (
-              <div className="pt-3 border-t-2 border-dashed border-slate-200 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">
-                  {lang === 'my' ? 'စုစုပေါင်း (ကျပ်ဖြင့်)' : 'Total (MMK)'}
-                </span>
-                <span className="font-mono font-black text-base text-emerald-700">
-                  {formatMMK(totalWalletBalance)}
-                </span>
+              <div className="pt-3 border-t-2 border-dashed border-slate-200 space-y-1.5">
+                {/* [v7.5.56] Shared/own split of the total (finding 24). */}
+                {sharedWalletsInScope.length > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-700">
+                      {lang === 'my' ? '🤝 မျှဝေထား / 👤 ကိုယ်ပိုင်' : '🤝 Shared / 👤 Own'}
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {formatMMK(sharedWalletBalance)} / {formatMMK(ownWalletBalance)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">
+                    {lang === 'my' ? 'စုစုပေါင်း (ကျပ်ဖြင့်)' : 'Total (MMK)'}
+                  </span>
+                  <span className="font-mono font-black text-base text-emerald-700">
+                    {formatMMK(totalWalletBalance)}
+                  </span>
+                </div>
               </div>
             )}
           </div>

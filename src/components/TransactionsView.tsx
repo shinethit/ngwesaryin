@@ -102,6 +102,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   onRefreshSync,
 }) => {
   const { user } = useAuth();
+  // [v7.5.56] Working All / ကိုယ်ပိုင် / မျှဝေထား filter (finding 25):
+  // dataScope already existed but nothing in the UI ever set it. When the
+  // parent supplies onSetDataScope the prop is authoritative; otherwise
+  // this local state drives the same logic.
+  const [localDataScope, setLocalDataScope] = useState<DataScope>('all');
+  const effectiveDataScope: DataScope = onSetDataScope ? dataScope : localDataScope;
+  const setEffectiveDataScope = (scope: DataScope) => {
+    if (onSetDataScope) onSetDataScope(scope);
+    else setLocalDataScope(scope);
+  };
   const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
@@ -136,33 +146,54 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     return wallets.some((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
   }, [wallets]);
 
+  // [v7.5.56] Shared-wallet helpers (findings 25/38).
+  const isSharedWallet = (w: Wallet | undefined | null): boolean =>
+    !!w && (!!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0));
+  const getWalletOwnerName = (w: Wallet | undefined | null): string =>
+    w?.ownerName || w?.ownerEmail || '';
+
+  const sharedWallets = useMemo(
+    () => wallets.filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0)),
+    [wallets]
+  );
+  const personalWallets = useMemo(
+    () => wallets.filter((w) => !w.isSharedFromOther && (!w.sharedWith || w.sharedWith.length === 0)),
+    [wallets]
+  );
+
   const sharedWalletIds = useMemo(
     () =>
-      getMatchingWalletIds(
-        wallets.filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0))
-      ),
-    [wallets]
+      getMatchingWalletIds(sharedWallets),
+    [sharedWallets]
   );
 
   const personalWalletIds = useMemo(
     () =>
-      getMatchingWalletIds(
-        wallets.filter((w) => !w.isSharedFromOther && (!w.sharedWith || w.sharedWith.length === 0))
-      ),
-    [wallets]
+      getMatchingWalletIds(personalWallets),
+    [personalWallets]
   );
 
   // Wallets visible in pills based on dataScope
+  // [v7.5.56] Now actually used: the wallet selector below lists only
+  // the wallets of the active scope, so a scope + wallet pick can never
+  // combine into a stale-empty list (finding 25).
   const visibleWalletsInFilter = useMemo(() => {
-    if (dataScope === 'personal') return wallets.filter((w) => !w.isSharedFromOther && (!w.sharedWith || w.sharedWith.length === 0));
-    if (dataScope === 'shared') return wallets.filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
+    if (effectiveDataScope === 'personal') return personalWallets;
+    if (effectiveDataScope === 'shared') return sharedWallets;
     return wallets;
-  }, [wallets, dataScope]);
+  }, [wallets, effectiveDataScope, personalWallets, sharedWallets]);
 
   // Reset pagination when filters change
   React.useEffect(() => {
     setVisibleDays(30);
-  }, [typeFilter, timeFilter, searchTerm, selectedCategory, selectedWallet, selectedWalletIds, dataScope]);
+  }, [typeFilter, timeFilter, searchTerm, selectedCategory, selectedWallet, selectedWalletIds, effectiveDataScope]);
+
+  // [v7.5.56] A scope change invalidates the wallet pick: a personal
+  // wallet selected under "Shared" would otherwise show nothing.
+  React.useEffect(() => {
+    setSelectedWalletIds([]);
+    setSelectedWallet('all');
+  }, [effectiveDataScope]);
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
@@ -227,17 +258,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
       // Data Scope (Combined vs Personal Only vs Shared Only)
-      if (dataScope === 'personal') {
-        const isPersonal = wallets
-          .filter((w) => !w.isSharedFromOther && (!w.sharedWith || w.sharedWith.length === 0))
-          .some((w) => isWalletMatch(w, t.walletId));
-        if (!isPersonal) return false;
+      // [v7.5.56] Uses the precomputed wallet lists / id sets instead of
+      // re-filtering `wallets` per transaction (finding 25).
+      if (effectiveDataScope === 'personal') {
+        if (!personalWalletIds.has(t.walletId) && !personalWallets.some((w) => isWalletMatch(w, t.walletId))) return false;
       }
-      if (dataScope === 'shared') {
-        const isShared = wallets
-          .filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0))
-          .some((w) => isWalletMatch(w, t.walletId));
-        if (!isShared) return false;
+      if (effectiveDataScope === 'shared') {
+        if (!sharedWalletIds.has(t.walletId) && !sharedWallets.some((w) => isWalletMatch(w, t.walletId))) return false;
       }
 
       // Type
@@ -319,7 +346,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       const aCreated = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || a.date).getTime() || 0;
       return bCreated - aCreated;
     });
-  }, [transactions, dataScope, personalWalletIds, sharedWalletIds, typeFilter, selectedCategory, selectedWallet, selectedWalletIds, wallets, walletMap, timeFilter, specificDate, startDate, endDate, searchTerm, catMap, subCatMap, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthPrefix, lastMonthPrefix]);
+  }, [transactions, effectiveDataScope, personalWalletIds, sharedWalletIds, personalWallets, sharedWallets, typeFilter, selectedCategory, selectedWallet, selectedWalletIds, wallets, walletMap, timeFilter, specificDate, startDate, endDate, searchTerm, catMap, subCatMap, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthPrefix, lastMonthPrefix]);
 
   // Filtered Totals (excluding internal transfers when viewing all wallets to match Dashboard, including when viewing specific wallet)
   const isSingleWalletFilter =
@@ -453,10 +480,24 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     d.setDate(d.getDate() - 29);
     return getLocalDateString(d);
   }, []);
-  const rolling30TxCount = useMemo(
-    () => transactions.filter((t) => t.date && t.date >= rolling30StartStr).length,
-    [transactions, rolling30StartStr]
-  );
+  const rolling30TxCount = useMemo(() => {
+    // [v7.5.56] Rolling-limit rule (finding 34): a transaction counts
+    // toward user U's limit iff tx.createdBy === U AND the wallet is U's
+    // own OR a shared wallet U owns. A collaborator's transactions in a
+    // shared wallet do NOT count toward the collaborator's limit.
+    // Legacy transactions with no createdBy stamp are counted (assumed
+    // own), preserving the v7.5.55 behaviour for pre-v7.5.56 data.
+    const uid = user?.uid;
+    return transactions.filter((t) => {
+      if (!t.date || t.date < rolling30StartStr) return false;
+      if (uid && t.createdBy && t.createdBy !== uid) return false;
+      if (uid && t.createdBy === uid) {
+        const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
+        if (w && w.isSharedFromOther && w.ownerUid !== uid) return false;
+      }
+      return true;
+    }).length;
+  }, [transactions, rolling30StartStr, user?.uid, walletMap, wallets]);
   const isAtLimit = (plan === 'free' || plan === 'guest') && rolling30TxCount >= maxFreeTransactions;
 
   return (
@@ -527,7 +568,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         {/* Row 1: Wallet, Search, Type */}
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
           <div className="flex-1 min-w-[200px]">
-            <MultiWalletSelector wallets={wallets} selectedWalletIds={selectedWalletIds} onChangeSelectedWalletIds={(ids) => { setSelectedWalletIds(ids); setSelectedWallet('all'); }} lang={lang} />
+            {/* [v7.5.56] Lists only the wallets of the active scope
+                (visibleWalletsInFilter); a scope change clears the pick. */}
+            <MultiWalletSelector wallets={visibleWalletsInFilter} selectedWalletIds={selectedWalletIds} onChangeSelectedWalletIds={(ids) => { setSelectedWalletIds(ids); setSelectedWallet('all'); }} lang={lang} />
           </div>
           <div className="relative w-full sm:w-48">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -540,8 +583,18 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
         </div>
 
-        {/* Row 2: Summary Toggle + Time + Category + Table Toggle */}
+        {/* Row 2: Scope + Summary Toggle + Time + Category + Table Toggle */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+          {/* [v7.5.56] All / ကိုယ်ပိုင် / မျှဝေထား filter (finding 25) —
+              wires the existing dataScope logic to real UI. Only shown
+              when shared wallets exist. */}
+          {hasSharedWallets && (
+            <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg shrink-0" role="group" aria-label={lang === 'my' ? 'ပိုက်ဆံအိတ် အမျိုးအစား' : 'Wallet scope'}>
+              <button type="button" onClick={() => setEffectiveDataScope('all')} className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${effectiveDataScope === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>{lang === 'my' ? 'အားလုံး' : 'All'}</button>
+              <button type="button" onClick={() => setEffectiveDataScope('personal')} className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${effectiveDataScope === 'personal' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>👤 {lang === 'my' ? 'ကိုယ်ပိုင်' : 'Personal'}</button>
+              <button type="button" onClick={() => setEffectiveDataScope('shared')} className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${effectiveDataScope === 'shared' ? 'bg-amber-500 text-white shadow-xs' : 'text-amber-800 hover:bg-amber-50'}`}>🤝 {lang === 'my' ? 'မျှဝေထား' : 'Shared'}</button>
+            </div>
+          )}
           <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200/70 shrink-0">
             <button type="button" onClick={() => setFinancialSystem('opening_closing')} className={'px-1.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>Opening / Closing</button>
             <button type="button" onClick={() => setFinancialSystem('inflow_outflow')} className={'px-1.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>Inflow / Outflow</button>
@@ -588,8 +641,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           )}
 
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || selectedWalletIds.length > 0 || dataScope !== 'all') && (
-              <button type="button" onClick={() => { setSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); onSetDataScope?.('all'); }} className="text-[10px] text-rose-600 hover:underline font-bold px-1.5 py-1 cursor-pointer bg-rose-50 rounded-lg">↺</button>
+            {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || selectedWalletIds.length > 0 || effectiveDataScope !== 'all') && (
+              <button type="button" onClick={() => { setSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); setEffectiveDataScope('all'); }} className="text-[10px] text-rose-600 hover:underline font-bold px-1.5 py-1 cursor-pointer bg-rose-50 rounded-lg">↺</button>
             )}
             <button type="button" onClick={() => setShowSummaryTable(!showSummaryTable)} className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0">
               {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းမည်' : '➖ Compact') : (lang === 'my' ? '📊 Table' : '📊 Table')}
@@ -658,7 +711,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               setSelectedCategory('all');
               setSelectedWallet('all');
               setSelectedWalletIds([]);
-              onSetDataScope?.('all');
+              setEffectiveDataScope('all');
             }}
             className="px-2.5 py-1 rounded-lg bg-amber-200/80 hover:bg-amber-300/80 text-amber-950 font-bold transition-all shrink-0 cursor-pointer text-[11px]"
           >
@@ -689,7 +742,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   setSelectedCategory('all');
                   setSelectedWallet('all');
                   setSelectedWalletIds([]);
-                  onSetDataScope?.('all');
+                  setEffectiveDataScope('all');
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer shadow-xs"
               >
@@ -799,17 +852,41 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     ≈ {formatMMK(convertToMMK(t.amount, wallet.currency, wallet.exchangeRate))}
                                   </span>
                                 )}
+                                {/* [v7.5.56] Wallet pill (finding 25): shared
+                                    wallets show "Shared" text + 🤝 + owner
+                                    name, not just a different colour. An
+                                    unresolvable wallet shows a neutral label,
+                                    never the raw walletId. */}
                                 <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
-                                  wallet?.isSharedFromOther || (wallet?.sharedWith && wallet.sharedWith.length > 0)
+                                  isSharedWallet(wallet)
                                     ? 'bg-amber-50 text-amber-900 border-amber-300'
                                     : 'bg-indigo-50 text-indigo-900 border-indigo-200'
                                 }`}>
-                                  <span className="truncate max-w-[100px] sm:max-w-[150px]">{lang === 'my' ? wallet?.name : wallet?.nameEn || t.walletId}</span>
+                                  {wallet ? (
+                                    <>
+                                      {isSharedWallet(wallet) && <span>{lang === 'my' ? '🤝 မျှဝေထား' : '🤝 Shared'}</span>}
+                                      <span className="truncate max-w-[100px] sm:max-w-[150px]">{(lang === 'my' ? wallet.name : wallet.nameEn) || wallet.name}</span>
+                                      {isSharedWallet(wallet) && getWalletOwnerName(wallet) && (
+                                        <span className="truncate max-w-[90px]">({getWalletOwnerName(wallet)})</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <span>{lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'Wallet'}</span>
+                                  )}
                                 </span>
                               </div>
 
                               {/* Line 3: Note / Shopping / Package */}
                               <div className="flex items-center gap-2 min-w-0 flex-wrap text-xs text-slate-500 pt-0.5">
+                                {/* [v7.5.56] Who added it (finding 38): the
+                                    creator's name on rows in shared wallets.
+                                    Own rows show "ကိုယ်တိုင်" when the stamp
+                                    is missing but the creator is the viewer. */}
+                                {isSharedWallet(wallet) && (t.createdByName || (t.createdBy && t.createdBy === user?.uid)) && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 text-[10px] font-bold border border-amber-200 shrink-0">
+                                    👤 {t.createdByName || (lang === 'my' ? 'ကိုယ်တိုင်' : 'You')}
+                                  </span>
+                                )}
                                 {t.note && (
                                   <span className="truncate text-slate-600 italic text-[11px] max-w-[200px]">
                                     "{t.note}"

@@ -1,11 +1,13 @@
 /**
- * Firestore Rules Emulator Tests — v6.23.0 (High E)
+ * Firestore Rules Emulator Tests — v6.23.0 (High E), v7.5.56 additions
  *
  * Run: npm run test:rules
  * (which invokes: firebase emulators:exec --only firestore
  *   "vitest run --config vitest.rules.config.ts")
  *
- * Covers the 8 scenarios from the v6.21.1 security review.
+ * Covers the 8 scenarios from the v6.21.1 security review, plus the
+ * v7.5.56 shared-wallet fixes (tests 21–29): member privacy, self-
+ * leave, ownership transfer, type-flip guard, invite accept, debts.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
@@ -324,5 +326,213 @@ describe('Firestore Rules — shared wallet security', () => {
       });
     });
     await assertSucceeds(deleteDoc(doc(asOwner(), 'users', OWNER_UID, 'budgets', 'b1')));
+  });
+
+  // ── v7.5.56 — Shared wallet privacy / leave / transfer / type-flip ──
+
+  // Helper: re-seed the shared wallet with the given member permissions.
+  const seedMemberPerms = async (perms: Record<string, boolean>) => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), WALLET_PATH), {
+        id: 'wallet_1',
+        ownerUid: OWNER_UID,
+        ownerEmail: OWNER_EMAIL,
+        ownerName: 'Owner',
+        name: 'Test Wallet',
+        nameEn: 'Test Wallet',
+        balance: 1000,
+        sharedWith: [MEMBER_EMAIL],
+        collaboratorPermissions: { [MEMBER_EMAIL]: perms },
+        updatedAt: Date.now(),
+      });
+    });
+  };
+
+  it('21. [v7.5.56] Member CANNOT read the owner\'s other wallets/transactions (finding 2)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'users', OWNER_UID, 'wallets', 'w_private'), {
+        id: 'w_private', userId: OWNER_UID, name: 'Private', nameEn: 'Private',
+        balance: 5000, color: '#000', icon: 'Wallet', createdAt: Date.now(),
+      });
+      await setDoc(doc(db, 'users', OWNER_UID, 'transactions', 'tx_private'), {
+        id: 'tx_private', userId: OWNER_UID, type: 'income', amount: 5000,
+        walletId: 'w_private', date: '2026-11-01', createdAt: Date.now(),
+      });
+    });
+    // Root doc, private wallet, and private transaction: all denied,
+    // even though the member is in the owner's shared wallet.
+    await assertFails(getDoc(doc(asMember(), 'users', OWNER_UID)));
+    await assertFails(getDoc(doc(asMember(), 'users', OWNER_UID, 'wallets', 'w_private')));
+    await assertFails(getDoc(doc(asMember(), 'users', OWNER_UID, 'transactions', 'tx_private')));
+    // Sanity: the owner can still read their own data.
+    await assertSucceeds(getDoc(doc(asOwner(), 'users', OWNER_UID, 'wallets', 'w_private')));
+  });
+
+  it('22. [v7.5.56] Member CAN remove themself from sharedWith (self-leave, finding 1)', async () => {
+    await assertSucceeds(updateDoc(doc(asMember(), WALLET_PATH), {
+      sharedWith: [],
+      collaboratorPermissions: {},
+      updatedAt: Date.now(),
+    }));
+    // …but still cannot remove anyone else / add anyone (test 3 covers
+    // adding; removing another member while keeping themself also fails
+    // because the removed entry would not be the leaver).
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), WALLET_PATH), {
+        id: 'wallet_1', ownerUid: OWNER_UID, ownerEmail: OWNER_EMAIL,
+        ownerName: 'Owner', name: 'Test Wallet', nameEn: 'Test Wallet',
+        balance: 1000, sharedWith: [MEMBER_EMAIL, OUTSIDER_EMAIL],
+        collaboratorPermissions: {}, updatedAt: Date.now(),
+      });
+    });
+    await assertFails(updateDoc(doc(asMember(), WALLET_PATH), {
+      sharedWith: [MEMBER_EMAIL],
+      collaboratorPermissions: {},
+      updatedAt: Date.now(),
+    }));
+  });
+
+  it('23. [v7.5.56] Owner CAN transfer ownership to a member', async () => {
+    await assertSucceeds(updateDoc(doc(asOwner(), WALLET_PATH), {
+      ownerUid: MEMBER_UID,
+      ownerEmail: MEMBER_EMAIL,
+      ownerName: 'Member',
+      updatedAt: Date.now(),
+    }));
+    // …but a MEMBER cannot transfer ownership to themself.
+    await assertFails(updateDoc(doc(asMember(), WALLET_PATH), {
+      ownerUid: MEMBER_UID,
+      ownerEmail: MEMBER_EMAIL,
+      ownerName: 'Member',
+      updatedAt: Date.now(),
+    }));
+  });
+
+  it('24. [v7.5.56] Edit CANNOT flip a transaction type without the old-type permission (finding 7)', async () => {
+    // Seed an expense transaction in the shared wallet.
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'sharedWallets', WALLET_ID, 'transactions', 'tx_exp'), {
+        id: 'tx_exp', type: 'expense', amount: 100,
+        walletId: WALLET_ID, date: '2026-11-01', createdAt: Date.now(),
+      });
+    });
+    // Member holds ONLY canEditIncome: flipping expense -> income fails.
+    await seedMemberPerms({
+      canAddIncome: false, canEditIncome: true, canDeleteIncome: false,
+      canAddExpense: false, canEditExpense: false, canDeleteExpense: false,
+    });
+    await assertFails(updateDoc(doc(asMember(), 'sharedWallets', WALLET_ID, 'transactions', 'tx_exp'), {
+      type: 'income', amount: 100, walletId: WALLET_ID,
+    }));
+    // Same-type edit with the matching permission succeeds.
+    await seedMemberPerms({
+      canAddIncome: false, canEditIncome: false, canDeleteIncome: false,
+      canAddExpense: false, canEditExpense: true, canDeleteExpense: false,
+    });
+    await assertSucceeds(updateDoc(doc(asMember(), 'sharedWallets', WALLET_ID, 'transactions', 'tx_exp'), {
+      type: 'expense', amount: 150, walletId: WALLET_ID,
+    }));
+    // With BOTH edit permissions, the flip is allowed.
+    await seedMemberPerms({
+      canAddIncome: false, canEditIncome: true, canDeleteIncome: false,
+      canAddExpense: false, canEditExpense: true, canDeleteExpense: false,
+    });
+    await assertSucceeds(updateDoc(doc(asMember(), 'sharedWallets', WALLET_ID, 'transactions', 'tx_exp'), {
+      type: 'income', amount: 150, walletId: WALLET_ID,
+    }));
+  });
+
+  it('25. [v7.5.56] Invitee CAN accept their own ref (status only)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'sharedWalletRefs', MEMBER_EMAIL, 'wallets', WALLET_ID), {
+        docId: WALLET_ID, ownerUid: OWNER_UID, ownerEmail: OWNER_EMAIL,
+        walletName: 'Test Wallet', addedAt: Date.now(), status: 'pending',
+      });
+    });
+    await assertSucceeds(updateDoc(
+      doc(asMember(), 'sharedWalletRefs', MEMBER_EMAIL, 'wallets', WALLET_ID),
+      { status: 'accepted' }
+    ));
+    // …but cannot rewrite any other ref field.
+    await assertFails(updateDoc(
+      doc(asMember(), 'sharedWalletRefs', MEMBER_EMAIL, 'wallets', WALLET_ID),
+      { walletName: 'Hacked' }
+    ));
+    // Decline = delete own ref.
+    await assertSucceeds(deleteDoc(
+      doc(asMember(), 'sharedWalletRefs', MEMBER_EMAIL, 'wallets', WALLET_ID)
+    ));
+  });
+
+  it('26. [v7.5.56] Member can read ONLY debts of a shared wallet, not other debts', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'users', OWNER_UID, 'debts', 'debt_shared'), {
+        id: 'debt_shared', userId: OWNER_UID, type: 'receivable',
+        personName: 'Shared', totalAmount: 100, paidAmount: 0,
+        walletId: 'wallet_1', status: 'active', repayments: [],
+        startDate: '2026-11-01', createdAt: Date.now(),
+      });
+      await setDoc(doc(db, 'users', OWNER_UID, 'debts', 'debt_private'), {
+        id: 'debt_private', userId: OWNER_UID, type: 'receivable',
+        personName: 'Private', totalAmount: 100, paidAmount: 0,
+        walletId: 'w_private', status: 'active', repayments: [],
+        startDate: '2026-11-01', createdAt: Date.now(),
+      });
+    });
+    // walletId 'wallet_1' belongs to shared doc OWNER_UID_wallet_1.
+    await assertSucceeds(getDoc(doc(asMember(), 'users', OWNER_UID, 'debts', 'debt_shared')));
+    // walletId 'w_private' is not a shared wallet for this member.
+    await assertFails(getDoc(doc(asMember(), 'users', OWNER_UID, 'debts', 'debt_private')));
+  });
+
+  it('27. [v7.5.56] Member still cannot LIST sharedWallets (privacy)', async () => {
+    await assertFails(getDocs(collection(asMember(), 'sharedWallets')));
+  });
+
+  it('28. [v7.5.56] Member CAN write ONLY their own memberUids entry (email → own uid)', async () => {
+    // Own entry, own uid: allowed.
+    await assertSucceeds(updateDoc(doc(asMember(), WALLET_PATH), {
+      memberUids: { [MEMBER_EMAIL]: MEMBER_UID },
+    }));
+    // Own entry pointing at someone else's uid: denied.
+    await assertFails(updateDoc(doc(asMember(), WALLET_PATH), {
+      memberUids: { [MEMBER_EMAIL]: OUTSIDER_UID },
+    }));
+    // Another member's entry: denied (diff touches a key that is not mine).
+    await assertFails(updateDoc(doc(asMember(), WALLET_PATH), {
+      memberUids: { [MEMBER_EMAIL]: MEMBER_UID, [OUTSIDER_EMAIL]: OUTSIDER_UID },
+    }));
+    // …and the owner may write the map (e.g. as part of a transfer).
+    await assertSucceeds(updateDoc(doc(asOwner(), WALLET_PATH), {
+      memberUids: { [MEMBER_EMAIL]: MEMBER_UID },
+    }));
+  });
+
+  it('29. [v7.5.56] Debts mirror: members read it; only owner/creator write it', async () => {
+    const DEBT_PATH = WALLET_PATH + '/debts/debt_1';
+    const memberDebt = {
+      id: 'debt_1',
+      sharedWalletId: WALLET_ID,
+      createdBy: MEMBER_UID,
+      createdByName: 'Member',
+      walletId: 'wallet_1',
+      totalAmount: 5000,
+    };
+    // Member (creator) can create their own debt mirror.
+    await assertSucceeds(setDoc(doc(asMember(), DEBT_PATH), memberDebt));
+    // Member can read it; outsider cannot.
+    await assertSucceeds(getDoc(doc(asMember(), DEBT_PATH)));
+    await assertFails(getDoc(doc(asOutsider(), DEBT_PATH)));
+    // Outsider cannot create in it.
+    await assertFails(setDoc(doc(asOutsider(), DEBT_PATH), memberDebt));
+    // Owner can update it.
+    await assertSucceeds(updateDoc(doc(asOwner(), DEBT_PATH), { totalAmount: 6000 }));
+    // Outsider cannot update or delete it.
+    await assertFails(updateDoc(doc(asOutsider(), DEBT_PATH), { totalAmount: 7000 }));
+    await assertFails(deleteDoc(doc(asOutsider(), DEBT_PATH)));
+    // Member-creator can delete their own mirror.
+    await assertSucceeds(deleteDoc(doc(asMember(), DEBT_PATH)));
   });
 });

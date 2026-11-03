@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle } from 'lucide-react';
+import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle, EyeOff, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Vehicle, FuelLog, VehicleMaintenance, TirePressureLog, Wallet, PlanType } from '../../types';
+import { DEFAULT_PLAN_LIMITS } from '../../data/initialData';
 import {
   enrichFuelLogs,
   calculateFuelStats,
@@ -78,14 +79,20 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   };
 
   const handleOpenAddVehicle = () => {
-    if (plan !== 'premium' && vehicles.length >= 1) {
+    // [v7.5.55 DECISION 1] Read the CURRENT plan's row from the limits
+    // table — Guest and Free each enforce their OWN maxVehicles (both 1);
+    // never hardcode another plan's number. Deactivated vehicles do not
+    // consume a slot.
+    const maxVehicles = DEFAULT_PLAN_LIMITS[plan ?? 'free']?.maxVehicles ?? 1;
+    const activeCount = vehicles.filter((v) => v.isActive !== false).length;
+    if (activeCount >= maxVehicles) {
       if (onOpenUpgradeModal) {
         onOpenUpgradeModal();
       } else {
         alert(
           lang === 'my'
-            ? 'Free Plan တွင် ယာဉ် ၁ စီးသာ ထည့်သွင်းနိုင်ပါသည်။ ယာဉ် အကန့်အသတ်မဲ့ ထည့်သွင်းစီမံရန် VIP Premium သို့ အဆင့်မြှင့်တင်ပါ'
-            : 'Free plan allows 1 vehicle. Please upgrade to VIP Premium for unlimited vehicles.'
+            ? `Free Plan တွင် ယာဉ် ${maxVehicles} စီးသာ ထည့်သွင်းနိုင်ပါသည်။ ယာဉ် အကန့်အသတ်မဲ့ ထည့်သွင်းစီမံရန် VIP Premium သို့ အဆင့်မြှင့်တင်ပါ`
+            : `Free plan allows ${maxVehicles} vehicle(s). Please upgrade to VIP Premium for unlimited vehicles.`
         );
       }
       return;
@@ -95,13 +102,59 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   };
 
   const handleDeleteVehicleAndClean = (vehicleId: string) => {
+    // [v7.5.55 C6] Delete is allowed ONLY behind a full-impact
+    // confirmation: counts of every log type + linked expense
+    // transactions + the balance impact, with explicit confirmation.
+    // The handler itself deletes the vehicle, all logs and linked
+    // transactions (useVehicleHandlers.handleDeleteVehicle).
+    const target = vehicles.find((v) => v.id === vehicleId);
+    if (!target) return;
+    const fLogs = fuelLogs.filter((f) => f.vehicleId === vehicleId);
+    const mLogs = vehicleMaintenance.filter((m) => m.vehicleId === vehicleId);
+    const tLogs = tirePressureLogs.filter((t) => t.vehicleId === vehicleId);
+    const linkedExpenseTotal =
+      fLogs.filter((f) => f.syncToExpense !== false).reduce((s, f) => s + (Number(f.totalCost) || 0), 0) +
+      mLogs.filter((m) => m.syncToExpense !== false).reduce((s, m) => s + (Number(m.cost) || 0), 0) +
+      tLogs.filter((t) => t.syncToExpense !== false).reduce((s, t) => s + (Number(t.cost) || 0), 0);
+    const impactMsg =
+      lang === 'my'
+        ? `"${target.name}" ကို အပြီးဖျက်မည် — ပြန်မရပါ။\n• ဆီမှတ်တမ်း: ${fLogs.length} ကြိမ်\n• ပြုပြင်မှတ်တမ်း: ${mLogs.length} ကြိမ်\n• တာယာမှတ်တမ်း: ${tLogs.length} ကြိမ်\n• ဆက်စပ်ထွက်ငွေစာရင်း: ${linkedExpenseTotal.toLocaleString()} MMK ပါ ဖျက်မည် (ငွေစာရင်းစုစုပေါင်းမှ နုတ်မည်)\n\nသေချာပါသလား? ယာယီပိတ်ထားရုံ (Deactivate) ဆိုရင် မှတ်တမ်းများ အားလုံး ကျန်ရှိနေပါမည်။`
+        : `Permanently delete "${target.name}"? This cannot be undone.\n• Fuel logs: ${fLogs.length}\n• Maintenance logs: ${mLogs.length}\n• Tire logs: ${tLogs.length}\n• Linked expenses: ${linkedExpenseTotal.toLocaleString()} MMK will also be removed from totals\n\nAre you sure? Deactivating instead keeps all records.`;
+    if (!confirm(impactMsg)) return;
     onDeleteVehicle(vehicleId);
-    const remaining = vehicles.filter((v) => v.id !== vehicleId);
+    const remaining = vehicles.filter((v) => v.id !== vehicleId && v.isActive !== false);
     if (remaining.length > 0) {
       setSelectedVehicleId(remaining[0].id);
     } else {
       setSelectedVehicleId('');
     }
+  };
+
+  // [v7.5.55 C6] Deactivate is the PRIMARY removal path: the vehicle is
+  // hidden from active lists/selectors, but all logs and money records
+  // are KEPT and balances are unchanged.
+  const handleDeactivateVehicle = (vehicle: Vehicle) => {
+    if (
+      !confirm(
+        lang === 'my'
+          ? `"${vehicle.name}" ကို ယာယီပိတ်ထားမည်။ မှတ်တမ်းများနှင့် ငွေစာရင်းများ အားလုံး ကျန်ရှိနေမည်ဖြစ်ပြီး နောက်မှ ပြန်ဖွင့်နိုင်ပါသည်။`
+          : `Deactivate "${vehicle.name}"? All logs and money records are kept and it can be reactivated later.`
+      )
+    ) {
+      return;
+    }
+    onSaveVehicle({ ...vehicle, isActive: false });
+    const remaining = vehicles.filter((v) => v.id !== vehicle.id && v.isActive !== false);
+    if (remaining.length > 0) {
+      setSelectedVehicleId(remaining[0].id);
+    } else {
+      setSelectedVehicleId('');
+    }
+  };
+
+  const handleReactivateVehicle = (vehicle: Vehicle) => {
+    onSaveVehicle({ ...vehicle, isActive: true });
+    setSelectedVehicleId(vehicle.id);
   };
 
   // Modals state
@@ -117,12 +170,18 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   const [isTireModalOpen, setIsTireModalOpen] = useState(false);
   const [editingTireLog, setEditingTireLog] = useState<TirePressureLog | null>(null);
   const [isFuelGuideOpen, setIsFuelGuideOpen] = useState(false);
+  const [showDeactivated, setShowDeactivated] = useState(false);
+
+  // [v7.5.55 C6] Active vs deactivated split — deactivated vehicles are
+  // hidden from every active list/selector but kept for reactivation.
+  const activeVehicles = useMemo(() => vehicles.filter((v) => v.isActive !== false), [vehicles]);
+  const deactivatedVehicles = useMemo(() => vehicles.filter((v) => v.isActive === false), [vehicles]);
 
   // Active Vehicle
   const currentVehicle = useMemo(() => {
-    const found = vehicles.find((v) => v.id === selectedVehicleId);
-    return found || vehicles[0] || null;
-  }, [vehicles, selectedVehicleId]);
+    const found = activeVehicles.find((v) => v.id === selectedVehicleId);
+    return found || activeVehicles[0] || null;
+  }, [activeVehicles, selectedVehicleId]);
 
   // Filtered records for current vehicle
   const vehicleFuelLogs = useMemo(() => {
@@ -153,7 +212,11 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   }, [currentVehicle, vehicleMaintenanceLogs]);
 
   const latestTireLog = useMemo(() => {
-    return [...vehicleTireLogs].sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+    // [v7.5.55 C24] Date tiebreak by createdAt so same-day logs pick the
+    // newest entry, not an arbitrary one.
+    return [...vehicleTireLogs].sort(
+      (a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0)
+    )[0] || null;
   }, [vehicleTireLogs]);
 
   // Count overdue or due soon items
@@ -161,8 +224,63 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
     return healthStatuses.filter((h) => h.status === 'overdue' || h.status === 'due_soon').length;
   }, [healthStatuses]);
 
+  // [v7.5.55 C6] Collapsed deactivated-vehicles section with Reactivate.
+  const deactivatedSection = deactivatedVehicles.length > 0 ? (
+    <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+      <button
+        type="button"
+        onClick={() => setShowDeactivated((v) => !v)}
+        className="w-full flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer"
+      >
+        <span>
+          {lang === 'my'
+            ? `⏸ ယာယီပိတ်ထားသော ယာဉ် (${deactivatedVehicles.length} စီး)`
+            : `⏸ Deactivated vehicles (${deactivatedVehicles.length})`}
+        </span>
+        {showDeactivated ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+      </button>
+      {showDeactivated && (
+        <div className="space-y-2 pt-1">
+          {deactivatedVehicles.map((v) => (
+            <div key={v.id} className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <div className="min-w-0">
+                <span className="font-bold text-sm text-slate-800 block truncate">{v.name}</span>
+                <span className="text-[11px] text-slate-500">
+                  {v.plateNumber ? `${v.plateNumber} · ` : ''}
+                  {v.currentOdometer?.toLocaleString()} {v.odometerUnit || 'km'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleReactivateVehicle(v)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>{lang === 'my' ? 'ပြန်ဖွင့်မည်' : 'Reactivate'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteVehicleAndClean(v.id)}
+                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  {lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          ))}
+          <p className="text-[11px] text-slate-400">
+            {lang === 'my'
+              ? 'ယာယီပိတ်ထားသော ယာဉ်၏ မှတ်တမ်းများနှင့် ငွေစာရင်းများ အားလုံး ကျန်ရှိနေပါသည်။'
+              : 'Logs and money records of deactivated vehicles are kept.'}
+          </p>
+        </div>
+      )}
+    </div>
+  ) : null;
+
   // Handle empty state
-  if (vehicles.length === 0) {
+  if (activeVehicles.length === 0) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto">
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-8 text-white shadow-xl text-center space-y-5">
@@ -238,6 +356,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           </div>
         </div>
 
+        {/* [v7.5.55 C6] Deactivated vehicles (if any) with Reactivate */}
+        {deactivatedSection}
+
         {/* Modal for adding first vehicle */}
         <AddVehicleModal
           isOpen={isVehicleModalOpen}
@@ -254,6 +375,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
     );
   }
 
+  // [v7.5.55 DECISION 1] Current plan's vehicle limit from the limits table.
+  const vehicleLimit = DEFAULT_PLAN_LIMITS[plan ?? 'free']?.maxVehicles ?? 1;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Free Tier Notice Banner if not Premium */}
@@ -265,7 +389,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </div>
             <div className="min-w-0">
               <div className="font-bold text-amber-900">
-                {lang === 'my' ? 'Free Tier: ယာဉ် ၁ စီးသာ ထည့်သွင်းစီမံနိုင်ပါသည်' : 'Free Tier: 1 Vehicle Included'}
+                {lang === 'my' ? `Free Tier: ယာဉ် ${vehicleLimit} စီးသာ ထည့်သွင်းစီမံနိုင်ပါသည်` : `Free Tier: ${vehicleLimit} Vehicle Included`}
               </div>
               <div className="text-[11px] text-amber-800/80 truncate">
                 {lang === 'my'
@@ -303,7 +427,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             }}
             className="font-bold text-slate-900 text-sm bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-slate-900 cursor-pointer transition-colors max-w-[170px] truncate"
           >
-            {vehicles.map((v) => (
+            {activeVehicles.map((v) => (
               <option key={v.id} value={v.id}>
                 🚗 {v.name} {v.plateNumber ? `(${v.plateNumber})` : ''}
               </option>
@@ -323,14 +447,24 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           >
             <Edit className="w-3.5 h-3.5" />
           </button>
-          {vehicles.length > 1 && currentVehicle && (
+          {/* [v7.5.55 C6] Deactivate is the primary removal path. */}
+          {currentVehicle && (
             <button
               type="button"
-              onClick={() => {
-                if (confirm(lang === 'my' ? `"${currentVehicle.name}" ကို ဖျက်ရန်?` : `Delete "${currentVehicle.name}"?`)) {
-                  handleDeleteVehicleAndClean(currentVehicle.id);
-                }
-              }}
+              onClick={() => handleDeactivateVehicle(currentVehicle)}
+              className="p-1.5 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
+              title={lang === 'my' ? 'ယာယီပိတ်ထားမည် (မှတ်တမ်းများ ကျန်မည်)' : 'Deactivate (logs are kept)'}
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {/* [v7.5.55 C6] Sole-vehicle guard applies in EVERY path — the
+              trash button is hidden unless 2+ ACTIVE vehicles exist. The
+              full-impact confirmation lives in handleDeleteVehicleAndClean. */}
+          {activeVehicles.length > 1 && currentVehicle && (
+            <button
+              type="button"
+              onClick={() => handleDeleteVehicleAndClean(currentVehicle.id)}
               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
               title={lang === 'my' ? 'ဖျက်ရန်' : 'Delete'}
             >
@@ -352,11 +486,11 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           {plan === 'premium' ? (
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 shrink-0">
               <Crown className="w-3 h-3 text-amber-600" />
-              <span>{vehicles.length} · VIP</span>
+              <span>{activeVehicles.length} · VIP</span>
             </span>
           ) : (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-              {vehicles.length}/1
+              {activeVehicles.length}/{vehicleLimit}
             </span>
           )}
         </div>
@@ -398,7 +532,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
             {lang === 'my' ? 'ယာဉ်စာရင်း:' : 'Fleet:'}
           </span>
-          {vehicles.map((v) => {
+          {activeVehicles.map((v) => {
             const isSelected = currentVehicle?.id === v.id;
             return (
               <button
@@ -422,6 +556,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* [v7.5.55 C6] Deactivated vehicles (if any) with Reactivate */}
+      {deactivatedSection}
 
       {/* [v7.3.0] Key metrics — ultra-compact single-row cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -805,13 +942,17 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                       <div className="w-full bg-slate-200/80 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${
-                            isOverdue
+                            isNotRecorded
+                              ? 'bg-slate-300'
+                              : isOverdue
                               ? 'bg-rose-500'
                               : isDueSoon
                               ? 'bg-amber-500'
                               : 'bg-emerald-500'
                           }`}
-                          style={{ width: `${Math.max(5, item.healthPercent)}%` }}
+                          // [v7.5.55 C20] Not-recorded shows 0/neutral grey,
+                          // never a full green bar.
+                          style={{ width: `${isNotRecorded ? 0 : Math.max(5, item.healthPercent)}%` }}
                         />
                       </div>
 
@@ -827,14 +968,20 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         </span>
                         <span
                           className={`font-mono font-bold ${
-                            isOverdue
+                            isNotRecorded
+                              ? 'text-slate-500'
+                              : isOverdue
                               ? 'text-rose-700'
                               : isDueSoon
                               ? 'text-amber-700'
                               : 'text-slate-700'
                           }`}
                         >
-                          {item.serviceType === 'license_renewal' ? (
+                          {/* [v7.5.55 C20] Not-recorded shows မမှတ်ရသေး, never
+                              a remaining-lifespan figure that looks healthy. */}
+                          {isNotRecorded ? (
+                            lang === 'my' ? 'မမှတ်ရသေး' : 'Not recorded yet'
+                          ) : item.serviceType === 'license_renewal' ? (
                             item.remainingDays > 0
                               ? `${item.remainingDays} ရက်`
                               : `${Math.abs(item.remainingDays)} ရက် ကျော်`
@@ -1139,6 +1286,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         }}
         onSave={handleSaveVehicleAndSelect}
         onDelete={onDeleteVehicle}
+        // [v7.5.55 C6] The Edit → modal delete path must obey the same
+        // sole-vehicle guard as the top-bar trash button.
+        canDeleteVehicle={activeVehicles.length > 1 || editingVehicle?.isActive === false}
         editingVehicle={editingVehicle}
         wallets={wallets}
         lang={lang}
@@ -1150,7 +1300,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         onSave={onSaveFuelLog}
         onDelete={onDeleteFuelLog}
         editingLog={editingFuelLog}
-        vehicles={vehicles}
+        vehicles={activeVehicles}
         wallets={wallets}
         selectedVehicleId={currentVehicle?.id}
         lang={lang}
@@ -1163,7 +1313,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         onSave={onSaveMaintenance}
         onDelete={onDeleteMaintenance}
         editingMaintenance={editingMaintenance}
-        vehicles={vehicles}
+        vehicles={activeVehicles}
         wallets={wallets}
         selectedVehicleId={currentVehicle?.id}
         lang={lang}
@@ -1176,7 +1326,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         onSave={onSaveTirePressure}
         onDelete={onDeleteTirePressure}
         editingLog={editingTireLog}
-        vehicles={vehicles}
+        vehicles={activeVehicles}
         wallets={wallets}
         selectedVehicleId={currentVehicle?.id}
         lang={lang}

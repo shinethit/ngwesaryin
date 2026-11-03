@@ -9,52 +9,36 @@ import { syncQueue } from '../lib/syncQueue';
 interface NavbarProps {
   currentPlan: PlanType;
   onOpenSidebar: () => void;
-  onOpenUpgradeModal: () => void;
-  onOpenAddModal: () => void;
   onOpenSearch: () => void;
   onOpenAccountModal: () => void;
-  onOpenLogin?: () => void;
   onLockApp: () => void;
   lang: 'my' | 'en';
   onToggleLang: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  transactionsCount: number;
-  maxFreeTransactions: number;
   logoStyle?: LogoStyle;
   onSelectLogoStyle?: (style: LogoStyle) => void;
-  onManualSync?: () => void;
   onOpenNotificationModal?: () => void;
   unreadNotificationCount?: number;
   onOpenAdminPanel?: () => void;
-  onOpenDatabaseTracker?: () => void;
-  pendingCloudCount?: number;
   onOpenShareApp?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentPlan,
   onOpenSidebar,
-  onOpenUpgradeModal,
-  onOpenAddModal,
   onOpenSearch,
   onOpenAccountModal,
-  onOpenLogin,
   onLockApp,
   lang,
   onToggleLang,
   activeTab,
   setActiveTab,
-  transactionsCount,
-  maxFreeTransactions,
   logoStyle = 'pixiu',
   onSelectLogoStyle,
-  onManualSync,
   onOpenNotificationModal,
   unreadNotificationCount = 0,
   onOpenAdminPanel,
-  onOpenDatabaseTracker,
-  pendingCloudCount = 0,
   onOpenShareApp,
 }) => {
   const { user, isGuest, isSyncing, activeWorkspaceId, isAdmin } = useAuth();
@@ -109,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="sidebar-toggle-btn"
               type="button"
               onClick={onOpenSidebar}
-              className="p-1.5 sm:p-2.5 rounded-xl text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0"
+              className="min-h-11 min-w-11 p-1.5 sm:p-2.5 rounded-xl text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0"
               title={lang === 'my' ? 'Sidebar Menu ဖွင့်ရန်' : 'Open Navigation Menu'}
             >
               <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-slate-800" />
@@ -257,7 +241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="navbar-admin-btn"
                 type="button"
                 onClick={onOpenAdminPanel}
-                className="hidden sm:flex p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer active:scale-95 items-center justify-center gap-1.5 shrink-0 shadow-2xs bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300"
+                className="hidden sm:flex min-h-11 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer active:scale-95 items-center justify-center gap-1.5 shrink-0 shadow-2xs bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300"
                 title={lang === 'my' ? 'Admin Control Center (စီမံခန့်ခွဲမှု)' : 'Admin Control Center'}
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-purple-700 shrink-0" />
@@ -271,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="navbar-notification-btn"
                 type="button"
                 onClick={onOpenNotificationModal}
-                className="relative p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0 shadow-2xs"
+                className="relative min-h-11 min-w-11 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0 shadow-2xs"
                 title={lang === 'my' ? 'အသိပေးချက်များ' : 'Notifications & Alerts'}
               >
                 <Bell className="w-4 h-4 text-amber-700 shrink-0" />
@@ -292,7 +276,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="navbar-share-btn"
                 type="button"
                 onClick={onOpenShareApp}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
+                className="min-h-11 min-w-11 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
                 title={lang === 'my' ? 'အက်ပ် မျှဝေရန်' : 'Share App'}
               >
                 <Share2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -306,7 +290,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="navbar-search-btn"
               onClick={onOpenSearch}
-              className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
+              className="min-h-11 min-w-11 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
               title="Search records, debts, notes (⌘K)"
             >
               <Search className="w-4 h-4 text-slate-600 shrink-0" />
@@ -322,7 +306,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="navbar-account-btn"
               onClick={onOpenAccountModal}
-              className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 border shrink-0 ${
+              className={`min-h-11 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 border shrink-0 ${
                 user
                   ? isAutoSyncing
                     ? 'bg-sky-50/90 text-slate-800 border-sky-200 hover:bg-sky-100 shadow-2xs'
@@ -424,7 +408,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="navbar-lock-btn"
               type="button"
               onClick={onLockApp}
-              className="hidden md:flex p-1.5 sm:p-2 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 items-center gap-1 shadow-2xs shrink-0"
+              className="hidden md:flex min-h-11 min-w-11 p-1.5 sm:p-2 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 items-center gap-1 shadow-2xs shrink-0"
               title={lang === 'my' ? 'အက်ပ်ကို လော့ခ်ချမည် (Lock App with PIN)' : 'Lock App with PIN'}
             >
               <Lock className="w-3.5 h-3.5 text-slate-700" />

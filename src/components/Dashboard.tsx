@@ -4,8 +4,8 @@ import {
   Calendar, ChevronRight, ChevronDown, Search, RefreshCw,
   Store, Database, Crown, MessageCircle, GraduationCap, BarChart3,
 } from 'lucide-react';
-import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, DataScope } from '../types';
-import { formatMMK, formatLakhs, isOverdue } from '../utils/formatters';
+import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
+import { formatMMK, formatLakhs, formatShortDate, isOverdue } from '../utils/formatters';
 import { convertToMMK, getCurrencyInfo } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { MultiWalletSelector } from './MultiWalletSelector';
@@ -21,8 +21,6 @@ interface DashboardProps {
   budgets?: BudgetConfig[];
   plan: PlanType;
   lang: 'my' | 'en';
-  dataScope?: DataScope;
-  onSetDataScope?: (scope: DataScope) => void;
   onAddTransaction: (type: 'income' | 'expense') => void;
   onAddDebt: () => void;
   onSelectTab: (tab: string) => void;
@@ -40,8 +38,8 @@ interface DashboardProps {
 type TimeFilterOption = 'all' | 'this_month' | 'this_week' | 'last_30' | 'this_year' | 'custom';
 
 export const Dashboard: React.FC<DashboardProps> = ({
-  transactions, debts, wallets, categories,
-  lang, dataScope = 'all',
+  transactions, debts, wallets, categories, plan,
+  lang,
   onAddTransaction, onAddDebt, onSelectTab, onOpenSearch,
 }) => {
   const { user, isSyncing, syncDataToCloud } = useAuth();
@@ -101,7 +99,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
       case 'this_week': return l === 'my' ? 'ဒီအပတ်' : 'This Week';
       case 'last_30':   return l === 'my' ? '၃၀ ရက်' : 'Last 30';
       case 'this_year': return l === 'my' ? 'ဒီနှစ်' : 'This Year';
-      case 'custom':    return r ? r.from.slice(5) + ' – ' + r.to.slice(5) : (l === 'my' ? 'စိတ်ကြိုက်' : 'Custom');
+      case 'custom': {
+        if (!r) return l === 'my' ? 'စိတ်ကြိုက်' : 'Custom';
+        // [v7.5.55] DD/MM, not MM-DD.
+        const ddmm = (s: string) => s.slice(8, 10) + '/' + s.slice(5, 7);
+        return ddmm(r.from) + ' – ' + ddmm(r.to);
+      }
       case 'all':       return l === 'my' ? 'တစ်သက်တာ' : 'All Time';
       default:          return l === 'my' ? 'ယခုလ' : 'This Month';
     }
@@ -147,15 +150,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const t = wallets.find((w) => isWalletMatch(w, selectedWalletId));
       return t ? [t] : wallets;
     }
-    if (dataScope === 'separate') return wallets.filter((w) => w.includeInTotals === false);
-    if (dataScope === 'included') return wallets.filter((w) => w.includeInTotals !== false);
-    if (dataScope === 'personal') return wallets.filter((w) => !w.isSharedFromOther && (!w.sharedWith || w.sharedWith.length === 0));
-    if (dataScope === 'shared')   return wallets.filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
-    // [calc-fix] Respect the per-wallet "Separate" flag so Dashboard totals
-    // match WalletsView. Wallets with includeInTotals === false are excluded
-    // from all Dashboard aggregates (balance, income, expense, net).
+    // [v7.5.55] Default scope is included-only: wallets with
+    // includeInTotals === false ("Separate") are excluded from all Dashboard
+    // aggregates (balance, income, expense, net). The old dataScope branches
+    // (separate/included/personal/shared) were dead code — dataScope is
+    // always 'all', nothing in the UI ever sets another scope.
     return wallets.filter((w) => w.includeInTotals !== false);
-  }, [wallets, selectedWalletId, selectedWalletIds, dataScope]);
+  }, [wallets, selectedWalletId, selectedWalletIds]);
 
   const scopedTransactions = useMemo(() => {
     if (selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length) {
@@ -166,9 +167,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (!t) return transactions;
       return transactions.filter((tx) => isWalletMatch(t, tx.walletId));
     }
-    if (dataScope === 'all') return transactions;
+    // [v7.5.55] No 'all' shortcut: filter by scopedWallets so income /
+    // expense / net use the same wallet scope as the header count and the
+    // balance (was: ALL transactions, including Separate wallets).
     return transactions.filter((t) => scopedWallets.some((w) => isWalletMatch(w, t.walletId)));
-  }, [transactions, dataScope, scopedWallets, selectedWalletId, selectedWalletIds, wallets]);
+  }, [transactions, scopedWallets, selectedWalletId, selectedWalletIds, wallets]);
 
   const filteredTransactions = useMemo(() => {
     if (!dateBounds) return scopedTransactions;
@@ -232,27 +235,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const activeDebts = debts.filter((d) => d.status === 'active');
 
-  const recentTransactions = [...scopedTransactions].sort((a, b) => {
-    const bD = new Date(b.date).getTime() || 0;
-    const aD = new Date(a.date).getTime() || 0;
-    if (bD !== aD) return bD - aD;
-    const bC = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || b.date).getTime() || 0;
-    const aC = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || a.date).getTime() || 0;
-    return bC - aC;
-  }).slice(0, 5);
-
   const urgentDebts = activeDebts
     .filter((d) => d.dueDate)
     .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
     .slice(0, 3);
 
-  const todayStr = new Date().toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-GB', {
-    weekday: 'long', month: 'short', day: 'numeric',
-  });
+  // [v7.5.55] Hardcoded Myanmar/English names: some phone browsers lack the
+  // Intl 'my-MM' locale and fall back to English.
+  const daysMy = ['တနင်္ဂနွေ', 'တနင်္လာ', 'အင်္ဂါ', 'ဗုဒ္ဓဟူး', 'ကြာသပတေး', 'သောကြာ', 'စနေ'];
+  const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthsMy = ['ဇန်နဝါရီ', 'ဖေဖော်ဝါရီ', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်', 'ဇူလိုင်', 'သြဂုတ်', 'စက်တင်ဘာ', 'အောက်တိုဘာ', 'နိုဝင်ဘာ', 'ဒီဇင်ဘာ'];
+  const monthsEnShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const todayDate = new Date();
+  const todayStr = lang === 'my'
+    ? `${daysMy[todayDate.getDay()]}၊ ${monthsMy[todayDate.getMonth()]} ${todayDate.getDate()} ရက်`
+    : `${daysEn[todayDate.getDay()]}, ${todayDate.getDate()} ${monthsEnShort[todayDate.getMonth()]}`;
 
+  // [v7.5.55] Pass the real plan (was hardcoded 'free') and surface a failed
+  // sync instead of silently swallowing the false return.
   const handleManualSync = async () => {
     if (user && syncDataToCloud) {
-      await syncDataToCloud(transactions, debts, wallets, categories, [], 'free' as PlanType);
+      const ok = await syncDataToCloud(transactions, debts, wallets, categories, [], plan);
+      if (!ok) {
+        alert(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ။ ထပ်မံ ကြိုးစားပါ။' : 'Could not sync to cloud. Please try again.');
+      }
     }
   };
 
@@ -266,7 +272,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {scopedWallets.length} {lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'wallets'}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap" ref={periodDropdownRef}>
+        {/* [v7.5.55] The period-dropdown outside-click ref wraps ONLY the
+            period control now: it used to wrap this whole cluster (including
+            the wallet selector), so the period dropdown and the wallet
+            popover could stay open and overlap. */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           <div className="w-full sm:w-auto min-w-[180px]">
             <MultiWalletSelector
               wallets={wallets}
@@ -276,7 +286,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               compact
             />
           </div>
-          <div className="relative">
+          <div className="relative" ref={periodDropdownRef}>
             <button
               type="button"
               onClick={openPeriodDropdown}
@@ -459,11 +469,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* SMART CALENDAR */}
+      {/* SMART CALENDAR — [v7.5.55] scoped transactions/wallets so the
+          calendar respects the same wallet scope as the rest of Dashboard. */}
       <SmartCalendarCard
-        transactions={transactions}
+        transactions={scopedTransactions}
         categories={categories}
-        wallets={wallets}
+        wallets={scopedWallets}
         lang={lang}
       />
 
@@ -485,19 +496,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
               const rem = debt.totalAmount - debt.paidAmount;
               const overdue = isOverdue(debt.dueDate);
               const isRec = debt.type === 'receivable';
+              // [v7.5.55] Tappable row: opens the Debts tab. Due date is
+              // DD/MM/YYYY via formatShortDate (was raw YYYY-MM-DD).
               return (
-                <div key={debt.id} className={'flex items-center justify-between p-2.5 rounded-xl ' + (overdue ? 'bg-rose-50' : 'bg-slate-50')}>
+                <button key={debt.id} type="button" onClick={() => onSelectTab('debts')} className={'w-full flex items-center justify-between p-2.5 rounded-xl text-left cursor-pointer transition-colors ' + (overdue ? 'bg-rose-50 hover:bg-rose-100' : 'bg-slate-50 hover:bg-slate-100')}>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 truncate">{debt.personName}</div>
                     <div className="text-[10px] text-slate-500 truncate">
                       {isRec ? (lang === 'my' ? 'ရရန်' : 'Owed to you') : (lang === 'my' ? 'ပေးရန်' : 'You owe')}
-                      {debt.dueDate ? ' · ' + (overdue ? '⚠️ ' : '') + debt.dueDate : ''}
+                      {debt.dueDate ? ' · ' + (overdue ? '⚠️ ' : '') + formatShortDate(debt.dueDate) : ''}
                     </div>
                   </div>
                   <div className={'text-xs font-bold font-mono shrink-0 ' + (overdue ? 'text-rose-700' : 'text-slate-800')}>
                     {formatMMK(rem)}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

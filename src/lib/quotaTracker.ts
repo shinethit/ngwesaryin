@@ -192,31 +192,17 @@ function getStatusLevel(used: number, limit: number): 'normal' | 'moderate' | 'w
 }
 
 export function getTimeUntilUTCMidnight(): { hours: number; minutes: number; seconds: number; formatted: string } {
+  // [v7.5.55 E9] Was computing midnight in America/Los_Angeles despite
+  // the name/label "(00:00 UTC)". True UTC midnight now.
   const now = new Date();
-  try {
-    const ptNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-    const ptTomorrowMidnight = new Date(ptNow.getFullYear(), ptNow.getMonth(), ptNow.getDate() + 1, 0, 0, 0);
-    const diffMs = Math.max(0, ptTomorrowMidnight.getTime() - ptNow.getTime());
-
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const formatted = `${hours}h ${minutes}m ${seconds}s`;
-    return { hours, minutes, seconds, formatted };
-  } catch {
-    const nextReset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-    const diffMs = Math.max(0, nextReset.getTime() - now.getTime());
-
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const formatted = `${hours}h ${minutes}m ${seconds}s`;
-    return { hours, minutes, seconds, formatted };
-  }
+  const nextReset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+  const diffMs = Math.max(0, nextReset.getTime() - now.getTime());
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const formatted = `${hours}h ${minutes}m ${seconds}s`;
+  return { hours, minutes, seconds, formatted };
 }
 
 export function getQuotaOverviewStats(): QuotaOverviewStats {

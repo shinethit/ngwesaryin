@@ -212,8 +212,8 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
               </div>
               <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
                 {lang === 'my'
-                  ? 'Firebase Firestore အခမဲ့ သုံးစွဲခွင့် (Free Tier: 50,000 Reads/Day, 20,000 Writes/Day, 1GB Storage) ၏ လက်ရှိ အသုံးပြုမှုနှင့် ကျန်ရှိမှု အခြေအနေ'
-                  : 'Real-time monitoring of Firebase Firestore Free Tier limits (50k Reads, 20k Writes, 20k Deletes, 1GB Storage)'}
+                  ? '⚠️ ဤကိန်းဂဏန်းများသည် ဤဖုန်းတစ်လုံးတည်းတွင် ခန့်မှန်းတိုင်းတာထားသော ဒေသတွင်း ခန့်မှန်းခြေသာ ဖြစ်ပါသည် — Firebase အမှန်တကယ် သုံးစွဲမှုမဟုတ်ပါ။ အမှန်တကယ် သုံးစွဲမှုကို Firebase Console &gt; Firestore &gt; Usage တွင် ကြည့်ပါ။'
+                  : '⚠️ These numbers are estimates counted on this device only — not real Firebase usage. See real usage in Firebase Console &gt; Firestore &gt; Usage.'}
               </p>
             </div>
           </div>

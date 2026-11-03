@@ -18,12 +18,16 @@ export const FinancialOverviewBanner: React.FC<{
   onAddExpense,
   onAddDebt,
 }) => {
-  const currentDate = new Date().toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-US', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  // [v7.5.55] Hardcoded Myanmar/English names: some phone browsers lack the
+  // Intl 'my-MM' locale and fall back to English.
+  const daysMy = ['တနင်္ဂနွေ', 'တနင်္လာ', 'အင်္ဂါ', 'ဗုဒ္ဓဟူး', 'ကြာသပတေး', 'သောကြာ', 'စနေ'];
+  const daysEnShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthsMy = ['ဇန်နဝါရီ', 'ဖေဖော်ဝါရီ', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်', 'ဇူလိုင်', 'သြဂုတ်', 'စက်တင်ဘာ', 'အောက်တိုဘာ', 'နိုဝင်ဘာ', 'ဒီဇင်ဘာ'];
+  const monthsEnShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const currentDate = lang === 'my'
+    ? `${daysMy[now.getDay()]}၊ ${now.getDate()} ${monthsMy[now.getMonth()]} ${now.getFullYear()}`
+    : `${daysEnShort[now.getDay()]}, ${monthsEnShort[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 
   return (
     <div
@@ -180,18 +184,18 @@ export const ClayCategoryCard = FinancialInsightCard;
 export const FloatingAddButton: React.FC<{
   onClick: () => void;
   lang?: 'my' | 'en';
-  label?: string;
 }> = ({ onClick, lang = 'my' }) => {
+  // [v7.5.55] Icon-only 48px circle (the label prop was dead and rendering
+  // it as a pill would make this the big labelled add button the user
+  // rejected — the label stays in the title attribute only).
   return (
     <button
       id="floating-quick-add-btn"
       onClick={onClick}
-      className="relative -mt-6 group cursor-pointer active:scale-95 transition-all duration-200"
+      className="relative -mt-6 group cursor-pointer active:scale-95 transition-all duration-200 flex items-center justify-center w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg border-2 border-white"
       title={lang === 'my' ? 'စာရင်း အမြန်ထည့်မည်' : 'Quick Add'}
     >
-      <div className="w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md hover:shadow-lg border-2 border-white transition-all">
-        <Plus className="w-6 h-6 stroke-[2.5]" />
-      </div>
+      <Plus className="w-5 h-5 stroke-[2.5]" />
     </button>
   );
 };

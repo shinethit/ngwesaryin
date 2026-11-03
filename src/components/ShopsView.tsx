@@ -7,19 +7,22 @@ import {
   onSnapshot,
   doc,
   query,
+  updateDoc,
+  increment,
 } from 'firebase/firestore';
 import { MYANMAR_REGIONS, PRESET_TAGS } from './shops/shopConstants';
 import { ShopCard } from './shops/ShopCard';
 import { ShopModal } from './shops/ShopModal';
+import { useSearchSeed } from '../hooks/useSearchSeed';
 
 interface ShopsViewProps {
   shops: ShopContact[];
   lang: 'my' | 'en';
   plan?: string;
   onOpenUpgradeModal?: () => void;
-  onAddShop: (shop: Omit<ShopContact, 'id' | 'userId' | 'createdAt'>) => void;
-  onUpdateShop: (shop: ShopContact) => void;
-  onDeleteShop: (id: string) => void;
+  onAddShop: (shop: Omit<ShopContact, 'id' | 'userId' | 'createdAt'>) => Promise<boolean>;
+  onUpdateShop: (shop: ShopContact) => Promise<boolean>;
+  onDeleteShop: (id: string) => Promise<boolean>;
 }
 
 export const ShopsView: React.FC<ShopsViewProps> = ({
@@ -40,6 +43,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
+  // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
+  useSearchSeed('shops', setSearchQuery);
   const [selectedTagFilter, setSelectedTagFilter] = useState('all');
 
   // Hierarchical Filter States
@@ -108,30 +113,48 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   }, [votedIds]);
 
   // Upvote / Helpful Vote
+  // [v7.5.55 C28] Atomic increment — the old read-then-write (count ± 1)
+  // lost concurrent votes. NOTE: FieldValue.increment() cannot go through
+  // safeUpdateDoc (its cleanForFirestore mangles the sentinel into a plain
+  // object), so this uses updateDoc directly with try/catch instead.
+  // [v7.5.55 C4] Only the shop's adder or an admin may vote (Firestore
+  // rules allow update by owner-or-admin only) — the return is checked and
+  // a failed vote never flips local state or claims success.
   const handleToggleVote = async (shop: PublicShop) => {
     const hasVoted = votedIds.includes(shop.id);
     const shopRef = doc(db, 'public_shops', shop.id);
-    const currentVotes = (shop as any).helpfulCount || 0;
 
     try {
+      await updateDoc(shopRef, {
+        helpfulCount: increment(hasVoted ? -1 : 1),
+      });
       if (hasVoted) {
-        await safeUpdateDoc(shopRef, {
-          helpfulCount: Math.max(0, currentVotes - 1),
-        });
         setVotedIds((prev) => prev.filter((id) => id !== shop.id));
       } else {
-        await safeUpdateDoc(shopRef, {
-          helpfulCount: currentVotes + 1,
-        });
         setVotedIds((prev) => [...prev, shop.id]);
       }
     } catch (err) {
       console.error('Failed to vote shop', err);
+      alert(
+        lang === 'my'
+          ? 'မဲပေး၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ မဲပေးနိုင်ပါသည်'
+          : 'Could not vote — only the shop adder and admins can vote'
+      );
     }
   };
 
   // Open Add Modal
   const handleOpenAdd = () => {
+    // [v7.5.55 C15] Stop guests at form open — show the sign-in prompt
+    // immediately instead of letting them fill the whole form first.
+    if (!auth.currentUser) {
+      alert(
+        lang === 'my'
+          ? 'ဆိုင်အချက်အလက် ထည့်သွင်းရန် ဦးစွာ အကောင့်ဝင်ရန် လိုအပ်ပါသည်'
+          : 'Please sign in first to add a shop'
+      );
+      return;
+    }
     if (directoryType === 'private' && plan !== 'premium') {
       if (onOpenUpgradeModal) onOpenUpgradeModal();
       return;
@@ -143,7 +166,30 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
   // Open Edit Modal
   const handleOpenEdit = (shop: ShopContact | PublicShop) => {
+    // [v7.5.55 C15] Stop guests at form open.
+    if (!auth.currentUser) {
+      alert(
+        lang === 'my'
+          ? 'ဆိုင်အချက်အလက် ပြင်ဆင်ရန် ဦးစွာ အကောင့်ဝင်ရန် လိုအပ်ပါသည်'
+          : 'Please sign in first to edit a shop'
+      );
+      return;
+    }
     const isPublic = 'addedBy' in shop;
+    // [v7.5.55 C4] Only the shop's adder and admins may edit a public
+    // shop (Firestore rules enforce this too) — stop here, not at save.
+    if (isPublic) {
+      const isOwner = auth.currentUser.uid === (shop as PublicShop).addedByUid;
+      const isAdmin = auth.currentUser.email === 'khunthanshwe@gmail.com';
+      if (!isOwner && !isAdmin) {
+        alert(
+          lang === 'my'
+            ? 'ဤဆိုင်ကို ထည့်သူနှင့် admin သာ ပြင်ဆင်နိုင်ပါသည်'
+            : 'Only the shop adder and admins can edit this shop'
+        );
+        return;
+      }
+    }
     if (!isPublic && plan !== 'premium') {
       if (onOpenUpgradeModal) onOpenUpgradeModal();
       return;
@@ -162,11 +208,15 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           : `Are you sure you want to delete "${name}" from the Community Directory?`;
       if (!window.confirm(confirmMsg)) return;
 
-      try {
-        await safeDeleteDoc(doc(db, 'public_shops', id));
-      } catch (err: any) {
-        console.error('Failed to delete public shop', err);
-        alert(`Error: ${err.message || err}`);
+      // [v7.5.55] Check the safe* return — a permission-denied delete
+      // must not look like success.
+      const ok = await safeDeleteDoc(doc(db, 'public_shops', id));
+      if (!ok) {
+        alert(
+          lang === 'my'
+            ? 'ဆိုင်ကို ဖျက်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ဖျက်နိုင်ပါသည်'
+            : 'Could not delete this shop — only the shop adder and admins can delete it'
+        );
       }
     } else {
       const confirmMsg =
@@ -174,7 +224,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           ? `"${name}" ဆိုင်လိပ်စာကို ကိုယ်ပိုင်လမ်းညွှန်ထဲမှ ဖျက်ရန် သေချာပါသလား။`
           : `Are you sure you want to delete "${name}" from your private list?`;
       if (window.confirm(confirmMsg)) {
-        onDeletePrivateShop(id);
+        // [v7.5.55 C5] Await the delete — the handler toasts on failure and
+        // the shop stays in the list when the cloud write fails.
+        await onDeletePrivateShop(id);
       }
     }
   };
@@ -222,22 +274,28 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     }
 
     if (isPublic) {
-      try {
-        await safeUpdateDoc(doc(db, 'public_shops', shop.id), {
-          items: updatedItems,
-        });
-        return true;
-      } catch (err: any) {
-        console.error('Failed to update pricing item', err);
-        alert(`Error: ${err.message || err}`);
+      // [v7.5.55 C4] Check the safe* return — only the shop's adder/admin
+      // may update (rules), so a denied write must show an error instead
+      // of fake success.
+      const ok = await safeUpdateDoc(doc(db, 'public_shops', shop.id), {
+        items: updatedItems,
+      });
+      if (!ok) {
+        alert(
+          lang === 'my'
+            ? 'ဈေးနှုန်း ထည့်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည်'
+            : 'Could not add the price — only the shop adder and admins can edit prices'
+        );
         return false;
       }
+      return true;
     } else {
-      onUpdatePrivateShop({
+      // [v7.5.55 C5] Await the private save and report its real result —
+      // the price edit must not claim success when the write failed.
+      return await onUpdatePrivateShop({
         ...(shop as ShopContact),
         items: updatedItems,
       });
-      return true;
     }
   };
 
@@ -264,22 +322,25 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         );
         return false;
       }
-      try {
-        await safeUpdateDoc(doc(db, 'public_shops', shop.id), {
-          items: updatedItems,
-        });
-        return true;
-      } catch (err: any) {
-        console.error('Failed to delete pricing item', err);
-        alert(`Error: ${err.message || err}`);
+      // [v7.5.55 C4] Check the safe* return — see handleAddPricingItem.
+      const ok = await safeUpdateDoc(doc(db, 'public_shops', shop.id), {
+        items: updatedItems,
+      });
+      if (!ok) {
+        alert(
+          lang === 'my'
+            ? 'ပစ္စည်းကို ဖျက်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည်'
+            : 'Could not delete the item — only the shop adder and admins can edit prices'
+        );
         return false;
       }
+      return true;
     } else {
-      onUpdatePrivateShop({
+      // [v7.5.55 C5] Await the private save — see handleAddPricingItem.
+      return await onUpdatePrivateShop({
         ...(shop as ShopContact),
         items: updatedItems,
       });
-      return true;
     }
   };
 
@@ -295,6 +356,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     ward: string;
     kpayNumber: string;
     generalNotes: string;
+    // [v7.5.55 C3] subCategory is collected by the modal — save it.
+    subCategory: string;
     targetDirectory: 'public' | 'private';
   }): Promise<boolean> => {
     const currentUser = auth.currentUser;
@@ -309,53 +372,109 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         return false;
       }
 
-      try {
-        if (editingShop && isEditingPublic) {
-          const shopRef = doc(db, 'public_shops', editingShop.id);
-          await safeUpdateDoc(shopRef, {
-            name: data.name,
-            phone: data.phones[0] || '',
-            phones: data.phones,
-            address: data.addresses[0] || '',
-            addresses: data.addresses,
-            note: data.note,
-            stateRegion: data.stateRegion,
-            township: data.township,
-            city: data.city,
-            ward: data.ward,
-            kpayNumber: data.kpayNumber,
-            generalNotes: data.generalNotes,
-          });
-        } else {
-          const id = `pub_shop_${Date.now()}`;
-          const shopRef = doc(db, 'public_shops', id);
-          await safeSetDoc(shopRef, {
-            id,
-            name: data.name,
-            phone: data.phones[0] || '',
-            phones: data.phones,
-            stateRegion: data.stateRegion,
-            township: data.township,
-            city: data.city,
-            ward: data.ward,
-            address: data.addresses[0] || '',
-            addresses: data.addresses,
-            note: data.note,
-            addedBy: currentUser.email || currentUser.displayName || 'အသုံးပြုသူ',
-            addedByUid: currentUser.uid,
-            createdAt: Date.now(),
-            helpfulCount: 0,
-            kpayNumber: data.kpayNumber,
-            generalNotes: data.generalNotes,
-            items: [],
-          });
+      // [v7.5.55 C27] Moving a PRIVATE shop to Public: create the public
+      // copy first (checked); only then remove the private original.
+      if (editingShop && !isEditingPublic) {
+        const id = `pub_shop_${Date.now()}`;
+        const okCreate = await safeSetDoc(doc(db, 'public_shops', id), {
+          id,
+          name: data.name,
+          phone: data.phones[0] || '',
+          phones: data.phones,
+          stateRegion: data.stateRegion,
+          township: data.township,
+          city: data.city,
+          ward: data.ward,
+          address: data.addresses[0] || '',
+          addresses: data.addresses,
+          note: data.note,
+          subCategory: data.subCategory,
+          addedBy: currentUser.email || currentUser.displayName || 'အသုံးပြုသူ',
+          addedByUid: currentUser.uid,
+          createdAt: Date.now(),
+          helpfulCount: 0,
+          kpayNumber: data.kpayNumber,
+          generalNotes: data.generalNotes,
+          items: (editingShop as ShopContact).items || [],
+        });
+        if (!okCreate) {
+          alert(
+            lang === 'my'
+              ? 'ပြည်သူ့လမ်းညွှန်သို့ ရွှေ့၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
+              : 'Could not move the shop to the public directory — please check your connection and permissions'
+          );
+          return false;
         }
+        // [v7.5.55 C5] The public copy is safely created at this point, so
+        // the move reports success even if removing the private original
+        // fails — the handler toasts that failure and the user can remove
+        // the private copy by hand. Returning false here would re-run the
+        // create on retry and duplicate the public shop.
+        await onDeletePrivateShop(editingShop.id);
         return true;
-      } catch (err: any) {
-        console.error('Failed to save public shop', err);
-        alert(`Error: ${err.message || err}`);
-        return false;
       }
+
+      // [v7.5.55 C5] Check the safe* returns — a rejected write must show
+      // an error and keep the modal open (ShopModal closes only on true).
+      if (editingShop && isEditingPublic) {
+        const shopRef = doc(db, 'public_shops', editingShop.id);
+        const ok = await safeUpdateDoc(shopRef, {
+          name: data.name,
+          phone: data.phones[0] || '',
+          phones: data.phones,
+          address: data.addresses[0] || '',
+          addresses: data.addresses,
+          note: data.note,
+          subCategory: data.subCategory,
+          stateRegion: data.stateRegion,
+          township: data.township,
+          city: data.city,
+          ward: data.ward,
+          kpayNumber: data.kpayNumber,
+          generalNotes: data.generalNotes,
+        });
+        if (!ok) {
+          alert(
+            lang === 'my'
+              ? 'ဆိုင်ကို သိမ်း၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည် (သို့မဟုတ် အင်တာနက် စစ်ပေးပါ)'
+              : 'Could not save the shop — only the shop adder and admins can edit it (or check your connection)'
+          );
+          return false;
+        }
+      } else {
+        const id = `pub_shop_${Date.now()}`;
+        const shopRef = doc(db, 'public_shops', id);
+        const ok = await safeSetDoc(shopRef, {
+          id,
+          name: data.name,
+          phone: data.phones[0] || '',
+          phones: data.phones,
+          stateRegion: data.stateRegion,
+          township: data.township,
+          city: data.city,
+          ward: data.ward,
+          address: data.addresses[0] || '',
+          addresses: data.addresses,
+          note: data.note,
+          subCategory: data.subCategory,
+          addedBy: currentUser.email || currentUser.displayName || 'အသုံးပြုသူ',
+          addedByUid: currentUser.uid,
+          createdAt: Date.now(),
+          helpfulCount: 0,
+          kpayNumber: data.kpayNumber,
+          generalNotes: data.generalNotes,
+          items: [],
+        });
+        if (!ok) {
+          alert(
+            lang === 'my'
+              ? 'ဆိုင်ကို သိမ်း၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
+              : 'Could not save the shop — please check your connection and permissions'
+          );
+          return false;
+        }
+      }
+      return true;
     } else {
       // Save Private Shop
       if (plan !== 'premium') {
@@ -368,8 +487,45 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         return false;
       }
 
+      // [v7.5.55 C27] Moving a PUBLIC shop to Private: delete the public
+      // copy first (checked); only then save the private copy.
+      if (editingShop && isEditingPublic) {
+        const okDel = await safeDeleteDoc(doc(db, 'public_shops', editingShop.id));
+        if (!okDel) {
+          alert(
+            lang === 'my'
+              ? 'ကိုယ်ပိုင်စာရင်းသို့ ရွှေ့၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ရွှေ့နိုင်ပါသည်'
+              : 'Could not move the shop to your private list — only the shop adder and admins can move it'
+          );
+          return false;
+        }
+        // [v7.5.55 C5] Await the private save and report its real result —
+        // the public copy is already deleted, so a failed private save
+        // keeps the modal open with the data still in the form for retry
+        // (deleting a gone public doc succeeds trivially on retry).
+        return await onAddPrivateShop({
+          name: data.name,
+          phone: data.phones[0] || '',
+          phones: data.phones,
+          address: data.addresses[0] || '',
+          addresses: data.addresses,
+          note: data.note,
+          subCategory: data.subCategory,
+          stateRegion: data.stateRegion,
+          township: data.township,
+          city: data.city,
+          ward: data.ward,
+          kpayNumber: data.kpayNumber,
+          generalNotes: data.generalNotes,
+          items: (editingShop as PublicShop).items || [],
+        });
+      }
+
+      // [v7.5.55 C5, private half] The private-shop callbacks are async and
+      // return false when the cloud write fails — return that result so the
+      // modal stays open for retry instead of claiming success.
       if (editingShop && !isEditingPublic) {
-        onUpdatePrivateShop({
+        return await onUpdatePrivateShop({
           ...(editingShop as ShopContact),
           name: data.name,
           phone: data.phones[0] || '',
@@ -377,31 +533,31 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           address: data.addresses[0] || '',
           addresses: data.addresses,
           note: data.note,
+          subCategory: data.subCategory,
           stateRegion: data.stateRegion,
           township: data.township,
           city: data.city,
           ward: data.ward,
           kpayNumber: data.kpayNumber,
           generalNotes: data.generalNotes,
-        });
-      } else {
-        onAddPrivateShop({
-          name: data.name,
-          phone: data.phones[0] || '',
-          phones: data.phones,
-          address: data.addresses[0] || '',
-          addresses: data.addresses,
-          note: data.note,
-          stateRegion: data.stateRegion,
-          township: data.township,
-          city: data.city,
-          ward: data.ward,
-          kpayNumber: data.kpayNumber,
-          generalNotes: data.generalNotes,
-          items: [],
         });
       }
-      return true;
+      return await onAddPrivateShop({
+        name: data.name,
+        phone: data.phones[0] || '',
+        phones: data.phones,
+        address: data.addresses[0] || '',
+        addresses: data.addresses,
+        note: data.note,
+        subCategory: data.subCategory,
+        stateRegion: data.stateRegion,
+        township: data.township,
+        city: data.city,
+        ward: data.ward,
+        kpayNumber: data.kpayNumber,
+        generalNotes: data.generalNotes,
+        items: [],
+      });
     }
   };
 
@@ -487,6 +643,14 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     searchQuery,
   ]);
 
+  // [v7.5.55 C22] The "Unknown shops" toggle applies in ALL sort modes —
+  // filter hidden Unknown shops once here so the header count and the
+  // empty state always match the VISIBLE cards.
+  const visibleShops = useMemo(
+    () => filteredShops.filter((s) => showUnknown || !s.name.startsWith('Unknown ')),
+    [filteredShops, showUnknown]
+  );
+
   // [v7.5.37] Sort + Group logic
   const sortedAndGrouped = useMemo(() => {
     // First sort the filtered shops
@@ -505,9 +669,13 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       return bCreated - aCreated;
     });
 
-    // If not grouping, return flat
+    // If not grouping, return flat — [v7.5.55 C22] the Unknown toggle
+    // applies here too, not only in the grouped branch.
     if (sortMode !== 'group-category') {
-      return { flat: sorted, groups: null };
+      return {
+        flat: sorted.filter((s) => showUnknown || !s.name.startsWith('Unknown ')),
+        groups: null,
+      };
     }
 
     // Group by category (note field)
@@ -889,7 +1057,13 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             <div className="flex items-center justify-between gap-2 text-[11px]">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-slate-800">
-                  {lang === 'my' ? `တွေ့ရှိ ${filteredShops.length} ဆိုင်` : `${filteredShops.length} shops`}
+                  {loadingPublic && directoryType === 'public'
+                    ? lang === 'my'
+                      ? 'ဆိုင်များ ရှာဖွေနေပါသည်…'
+                      : 'Loading shops…'
+                    : lang === 'my'
+                    ? `တွေ့ရှိ ${visibleShops.length} ဆိုင်`
+                    : `${visibleShops.length} shops`}
                 </span>
                 {selectedStateRegionFilter !== 'all' && (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[10px] font-bold border border-emerald-100">
@@ -916,7 +1090,23 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           {/* ----------------------------------------------------------------- */}
           {/* 4. SHOPS LIST / GRID DISPLAY (with sort + group)                  */}
           {/* ----------------------------------------------------------------- */}
-          {filteredShops.length === 0 ? (
+          {/* [v7.5.55 C30] While the first onSnapshot has not returned, show
+              a loading state — never the empty-state card when shops exist. */}
+          {loadingPublic && directoryType === 'public' ? (
+            <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto animate-pulse">
+                <Store className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-sm">
+                {lang === 'my' ? 'ဆိုင်များ ရှာဖွေနေပါသည်…' : 'Loading shops…'}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                {lang === 'my'
+                  ? 'ပြည်သူ့လမ်းညွှန်မှ ဆိုင်စာရင်းများ ရယူနေပါသည်။ ခဏစောင့်ပေးပါ။'
+                  : 'Fetching the community directory. Please wait a moment.'}
+              </p>
+            </div>
+          ) : visibleShops.length === 0 ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Store className="w-6 h-6" />
@@ -1073,7 +1263,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               <p className="text-[10px] text-slate-500 font-medium mt-0.5">
                 {lang === 'my'
                   ? 'လုံခြုံစိတ်ချစွာ အတူတကွ အသုံးပြုနိုင်ရန် စည်းကမ်းချက်များနှင့် တာဝန်ယူမှု ရှင်းလင်းချက်'
-                  : 'Read community rules, disclaimers, and 30-day auto-migration policy'}
+                  : 'Read community rules and disclaimers'}
               </p>
             </div>
           </div>
@@ -1134,9 +1324,6 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   <div>
                     ⚠️ <strong>သတိပြုရန်:</strong> ပြည်သူ့လမ်းညွှန်တွင် မိမိမျှဝေလိုက်သော အချက်အလက်များကို အခြားအသုံးပြုသူများအားလုံး မြင်တွေ့နိုင်မည်ဖြစ်ပြီး ဝိုင်းဝန်းပြင်ဆင်နိုင်မည် ဖြစ်သည်။ လျှို့ဝှက်သော သို့မဟုတ် ကိုယ်ပိုင်သီးသန့် သိမ်းဆည်းလိုသော ဆိုင်များကို <strong>"ကိုယ်ပိုင်ဆိုင်များ"</strong> tab တွင်သာ သိမ်းဆည်းရန် တိုက်တွန်းအပ်ပါသည်။
                   </div>
-                  <div className="text-rose-700 font-extrabold border-t border-amber-200/80 pt-2">
-                    ⭐️ <strong>သီးသန့်ဆိုင်များ သတိပြုရန် မူဝါဒ:</strong> Premium သက်တမ်းကုန်ဆုံးပြီး ရက်ပေါင်း ၃၀ ကျော်သည်အထိ ပြန်လည်သက်တမ်းမတိုးပါက ကိုယ်ပိုင်စာရင်း (Private List) ထဲရှိ ဆိုင်များကို စနစ်မှ အများပြည်သူသုံး ပြည်သူ့လမ်းညွှန် (Public Directory) ထဲသို့ အလိုအလျောက် ပြောင်းရွှေ့ပေးသွားမည် ဖြစ်ပါသည်။
-                  </div>
                 </div>
               </div>
             ) : (
@@ -1158,9 +1345,6 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 space-y-2">
                   <div>
                     ⚠️ <strong>Privacy Note:</strong> Public shop listings are visible to and editable by all users. Keep sensitive contacts in your Private List.
-                  </div>
-                  <div className="text-rose-700 font-bold border-t border-amber-200/80 pt-2">
-                    ⭐️ <strong>30-Day Auto-Migration Policy:</strong> If a Premium account expires and remains inactive for more than 30 days, private shops are automatically transitioned to the public directory.
                   </div>
                 </div>
               </div>

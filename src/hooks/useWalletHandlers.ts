@@ -64,6 +64,19 @@ export function useWalletHandlers({
   removeCollaborator,
 }: UseWalletHandlersParams) {
 
+  // [v7.5.55] safeSetDoc returns false when the write did not land (it
+  // enqueues a retry in the sync queue, so local data is safe). Surface
+  // that as a "cloud save pending" notice instead of a silent false success.
+  const cloudPendingMsg =
+    lang === 'my'
+      ? '☁️ Cloud သို့ သိမ်းဆည်းခြင်း ခေတ္တမရသေးပါ — အင်တာနက်ရလျှင် အလိုအလျောက် ထပ်တင်ပါမည်'
+      : '☁️ Cloud save is pending — it will retry automatically when you are back online';
+  const persistDoc = (ref: any, data: any, options?: any) => {
+    safeSetDoc(ref, data, options).then((ok) => {
+      if (ok === false) showToast(cloudPendingMsg);
+    }).catch(() => {});
+  };
+
   const handleAddWallet = (walletData: Omit<Wallet, 'id'>) => {
     const ownWalletsCount = wallets.filter((w) => !w.isSharedFromOther).length;
     if (ownWalletsCount >= limits.maxWallets) {
@@ -84,7 +97,7 @@ export function useWalletHandlers({
     setWallets((prev) => [...prev, newWallet]);
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'wallets', id), {
+      persistDoc(doc(db, 'users', targetUid, 'wallets', id), {
         ...newWallet,
         userId: targetUid,
       }, { merge: true });
@@ -101,7 +114,7 @@ export function useWalletHandlers({
     });
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'wallets', updatedWallet.id), {
+      persistDoc(doc(db, 'users', targetUid, 'wallets', updatedWallet.id), {
         ...updatedWallet,
         userId: targetUid,
       }, { merge: true });
@@ -190,7 +203,7 @@ export function useWalletHandlers({
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
         updatedTransactions.filter(t => t.walletId === fallbackWallet.id).forEach(t => {
-          safeSetDoc(doc(db, 'users', targetUid, 'transactions', t.id), {
+          persistDoc(doc(db, 'users', targetUid, 'transactions', t.id), {
             ...t,
             walletId: fallbackWallet.id,
             userId: targetUid,
@@ -221,6 +234,12 @@ export function useWalletHandlers({
     );
   };
 
+  // [v7.5.55] B19 — KEPT as-is deliberately (see WalletModal): the live
+  // balance is derived as initialBalance + transactions (see
+  // utils/walletBalance calculateWalletLiveBalance), so a manual balance
+  // correction MUST move initialBalance by the same delta or
+  // syncWalletsWithTransactions recomputes the correction away. The Wallet
+  // type has no separate correction field to store it in.
   const handleUpdateWalletBalance = (id: string, newBalance: number) => {
     const target = computedWallets.find((w) => w.id === id);
     if (!target) return;
@@ -239,7 +258,7 @@ export function useWalletHandlers({
         const targetUid = activeWorkspaceId || user.uid;
         const updatedW = next.find((w) => w.id === id);
         if (updatedW) {
-          safeSetDoc(doc(db, 'users', targetUid, 'wallets', id), {
+          persistDoc(doc(db, 'users', targetUid, 'wallets', id), {
             ...updatedW,
             userId: targetUid,
           }, { merge: true });
@@ -315,11 +334,11 @@ export function useWalletHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'transactions', outId), {
+      persistDoc(doc(db, 'users', targetUid, 'transactions', outId), {
         ...outTx,
         userId: targetUid,
       }, { merge: true });
-      safeSetDoc(doc(db, 'users', targetUid, 'transactions', inId), {
+      persistDoc(doc(db, 'users', targetUid, 'transactions', inId), {
         ...inTx,
         userId: targetUid,
       }, { merge: true });
@@ -385,7 +404,7 @@ export function useWalletHandlers({
 
       const txs = transactions.filter((t) => isWalletMatch(target, t.walletId));
       await syncSharedWalletToCloud(updatedWallet, user, txs);
-      safeSetDoc(doc(db, 'users', user.uid, 'wallets', updatedWallet.id), {
+      persistDoc(doc(db, 'users', user.uid, 'wallets', updatedWallet.id), {
         ...updatedWallet,
         userId: user.uid,
       }, { merge: true });
@@ -416,7 +435,7 @@ export function useWalletHandlers({
 
     if (user) {
       await syncSharedWalletToCloud(updatedWallet, user);
-      safeSetDoc(doc(db, 'users', user.uid, 'wallets', updatedWallet.id), {
+      persistDoc(doc(db, 'users', user.uid, 'wallets', updatedWallet.id), {
         ...updatedWallet,
         userId: user.uid,
       }, { merge: true });
@@ -484,7 +503,7 @@ export function useWalletHandlers({
           const targetUid = activeWorkspaceId || user.uid;
           const updatedW = next.find((w) => w.id === walletId);
           if (updatedW) {
-            safeSetDoc(doc(db, 'users', targetUid, 'wallets', walletId), {
+            persistDoc(doc(db, 'users', targetUid, 'wallets', walletId), {
               ...updatedW,
               userId: targetUid,
             }, { merge: true });
@@ -536,7 +555,7 @@ export function useWalletHandlers({
 
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', newTx.id), {
+        persistDoc(doc(db, 'users', targetUid, 'transactions', newTx.id), {
           ...newTx,
           userId: targetUid,
         }, { merge: true });

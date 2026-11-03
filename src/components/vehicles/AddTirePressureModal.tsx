@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Disc, Gauge, Save, Trash2 } from 'lucide-react';
 import { TirePressureLog, Vehicle, Wallet } from '../../types';
+import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 
 interface AddTirePressureModalProps {
   isOpen: boolean;
@@ -46,6 +47,13 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
   }, [vehicles, vehicleId]);
 
   const isTwoWheeler = currentVehicle?.type === 'motorcycle';
+
+  // [v7.5.55 D3] Number inputs accept Myanmar digits (၀-၉).
+  const handleNumberInput = (val: string): number | '' => {
+    if (val.trim() === '') return '';
+    const n = parseMyanmarNumber(val);
+    return Number.isNaN(n) ? '' : n;
+  };
 
   useEffect(() => {
     if (editingLog) {
@@ -168,6 +176,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                 setVehicleId(e.target.value);
                 const v = vehicles.find((item) => item.id === e.target.value);
                 if (v) {
+                  // [v7.5.55 C11] Refresh the odometer prefill AND the PSI
+                  // defaults to the NEW vehicle — never keep the old one's.
+                  if (!editingLog) setOdometer(v.currentOdometer ?? '');
                   setFrontLeftPsi(v.recommendedTirePressureFront ?? 32);
                   setFrontRightPsi(v.recommendedTirePressureFront ?? 32);
                   setRearLeftPsi(v.recommendedTirePressureRear ?? 34);
@@ -208,10 +219,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
               <div className="relative">
                 <Gauge className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="number"
-                  min="0"
+                  type="text" inputMode="decimal"
                   value={odometer}
-                  onChange={(e) => setOdometer(e.target.value === '' ? '' : Number(e.target.value))}
+                  onChange={(e) => setOdometer(handleNumberInput(e.target.value))}
                   placeholder="e.g. 45000"
                   className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
                 />
@@ -238,11 +248,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     {lang === 'my' ? 'ရှေ့ဘီး (Front)' : 'Front Tire'}
                   </span>
                   <input
-                    type="number"
-                    min="10"
-                    max="80"
+                    type="text" inputMode="decimal"
                     value={frontPsi}
-                    onChange={(e) => setFrontPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) => setFrontPsi(handleNumberInput(e.target.value))}
                     className="w-20 text-center py-1.5 text-lg font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
                   <span className="text-[10px] text-slate-400 block mt-1">PSI</span>
@@ -253,11 +261,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     {lang === 'my' ? 'နောက်ဘီး (Rear)' : 'Rear Tire'}
                   </span>
                   <input
-                    type="number"
-                    min="10"
-                    max="80"
+                    type="text" inputMode="decimal"
                     value={rearPsi}
-                    onChange={(e) => setRearPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) => setRearPsi(handleNumberInput(e.target.value))}
                     className="w-20 text-center py-1.5 text-lg font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
                   <span className="text-[10px] text-slate-400 block mt-1">PSI</span>
@@ -271,11 +277,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     {lang === 'my' ? 'ရှေ့ ဘယ် (FL)' : 'Front Left'}
                   </span>
                   <input
-                    type="number"
-                    min="10"
-                    max="80"
+                    type="text" inputMode="decimal"
                     value={frontLeftPsi}
-                    onChange={(e) => setFrontLeftPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) => setFrontLeftPsi(handleNumberInput(e.target.value))}
                     className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
                   <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
@@ -286,11 +290,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     {lang === 'my' ? 'ရှေ့ ညာ (FR)' : 'Front Right'}
                   </span>
                   <input
-                    type="number"
-                    min="10"
-                    max="80"
+                    type="text" inputMode="decimal"
                     value={frontRightPsi}
-                    onChange={(e) => setFrontRightPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) => setFrontRightPsi(handleNumberInput(e.target.value))}
                     className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
                   <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
@@ -301,11 +303,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     {lang === 'my' ? 'နောက် ဘယ် (RL)' : 'Rear Left'}
                   </span>
                   <input
-                    type="number"
-                    min="10"
-                    max="80"
+                    type="text" inputMode="decimal"
                     value={rearLeftPsi}
-                    onChange={(e) => setRearLeftPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) => setRearLeftPsi(handleNumberInput(e.target.value))}
                     className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
                   <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
@@ -316,11 +316,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     {lang === 'my' ? 'နောက် ညာ (RR)' : 'Rear Right'}
                   </span>
                   <input
-                    type="number"
-                    min="10"
-                    max="80"
+                    type="text" inputMode="decimal"
                     value={rearRightPsi}
-                    onChange={(e) => setRearRightPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) => setRearRightPsi(handleNumberInput(e.target.value))}
                     className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
                   <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
@@ -367,11 +365,10 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                 {lang === 'my' ? 'ကုန်ကျငွေ (ရှိလျှင်)' : 'Cost (Optional MMK)'}
               </label>
               <input
-                type="number"
-                min="0"
+                type="text" inputMode="decimal"
                 value={cost}
                 onChange={(e) => {
-                  const val = e.target.value === '' ? '' : Number(e.target.value);
+                  const val = handleNumberInput(e.target.value);
                   setCost(val);
                   if (val !== '' && val > 0) setSyncToExpense(true);
                 }}

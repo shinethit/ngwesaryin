@@ -7,6 +7,8 @@ import { fetchContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';
 import { getDoc, doc } from 'firebase/firestore';
 import { db, safeUpdateDoc, safeSetDoc } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
+import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
+import { toMyanmarDigits } from '../utils/myanmarDigits';
 
 interface PremiumModalProps {
   currentPlan: PlanType;
@@ -43,7 +45,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchContactInfo().then(setContactInfo).catch(() => {});
+      fetchContactInfo().then((info) => { if (info) setContactInfo(info); }).catch(() => {});
     }
   }, [isOpen]);
 
@@ -123,10 +125,31 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     '12': { price: '20,000', original: '24,000', my: '၁၂ လ', en: '12 Months' },
   };
 
-  const copyToClipboard = (text: string, type: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedAccount(type);
-    setTimeout(() => setCopiedAccount(null), 2000);
+  // [v7.5.55 E12] Copy only shows "Copied" when the write really
+  // succeeded; falls back to a textarea + execCommand, and alerts on failure.
+  const copyToClipboard = async (text: string, type: string) => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch { ok = false; }
+    }
+    if (ok) {
+      setCopiedAccount(type);
+      setTimeout(() => setCopiedAccount(null), 2000);
+    } else {
+      alert(lang === 'my' ? 'ကူးယူ၍ မရပါ — နံပါတ်ကို လက်ဖြင့် ရွေးပြီး ကူးပါ' : 'Copy failed — please select and copy the number manually');
+    }
   };
 
   const handleApplyPromo = async (e: React.FormEvent) => {
@@ -168,37 +191,68 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
               ? 'ဤကုဒ်ကို အသုံးပြုပြီး ဖြစ်ပါသည် (Code already used)'
               : 'This activation code has already been redeemed.'
           );
+        } else if (codeData.expiresAt && new Date(codeData.expiresAt).getTime() < Date.now()) {
+          // [v7.5.55 E6/E30] Expired activation code — reject, do not burn.
+          setPromoError(
+            lang === 'my'
+              ? 'ဤကုဒ်သည် သက်တမ်းကုန်ဆုံးသွားပါပြီ။ Admin ထံမှ ကုဒ်အသစ် တောင်းယူပါ'
+              : 'This activation code has expired. Please request a new code from Admin.'
+          );
         } else {
-          // Valid code, mark as used in Firestore
+          // [v7.5.55 E6] Write ORDER matters: the profile write goes
+          // FIRST and its boolean return is checked; the code is marked
+          // used ONLY after the profile write succeeds. Burning the code
+          // first used to lose the code (and the renewal) when the
+          // profile write was rejected — e.g. canUpgradePremium() in
+          // Firestore rules rejects a premium user, so a renewal burned
+          // the code and granted nothing.
           const months = Number(codeData.months) || 1;
           const isLifetime = months >= 900;
           const now = new Date();
+          // Renewals STACK onto the existing expiry (max(now, current)).
+          const currentExpMs = userProfile?.premiumExpiresAt ? new Date(userProfile.premiumExpiresAt).getTime() : NaN;
+          const baseMs = !isNaN(currentExpMs) && currentExpMs > now.getTime() ? currentExpMs : now.getTime();
           const expiresAt = isLifetime
-            ? new Date(now.getTime() + 100 * 365.25 * 24 * 60 * 60 * 1000).toISOString()
-            : new Date(now.getTime() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
+            ? new Date(baseMs + 100 * 365.25 * 24 * 60 * 60 * 1000).toISOString()
+            : new Date(baseMs + months * 30 * 24 * 60 * 60 * 1000).toISOString();
 
-          await safeUpdateDoc(codeRef, {
+          const userRef = doc(db, 'users', user.uid);
+          const profileOk = await safeSetDoc(userRef, {
+            plan: 'premium',
+            premiumActivatedAt: now.toISOString(),
+            premiumExpiresAt: expiresAt,
+            premiumMonths: months,
+            premiumCodeUsed: cleanCode,
+            email: user.email || '',
+            displayName: user.displayName || '',
+            updatedAt: now.toISOString(),
+          }, { merge: true });
+          if (!profileOk) {
+            setPromoError(
+              lang === 'my'
+                ? 'Premium ဖွင့်၍ မရပါ — ကုဒ်ကို မသုံးသေးပါ (ထပ်ကြိုးစားနိုင်ပါသည်)။ အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ'
+                : 'Could not activate Premium — the code was NOT used, please try again. Check connection / permissions.'
+            );
+            return;
+          }
+
+          const codeOk = await safeUpdateDoc(codeRef, {
             isUsed: true,
             usedBy: user.uid,
             usedEmail: user.email || '',
             usedAt: now.toISOString(),
           });
-
-          // Also update user's profile in Firestore to ensure it stays permanent across all devices
-          try {
-            const userRef = doc(db, 'users', user.uid);
-            await safeSetDoc(userRef, {
-              plan: 'premium',
-              premiumActivatedAt: now.toISOString(),
-              premiumExpiresAt: expiresAt,
-              premiumMonths: months,
-              premiumCodeUsed: cleanCode,
-              email: user.email || '',
-              displayName: user.displayName || '',
-              updatedAt: now.toISOString(),
-            }, { merge: true });
-          } catch (profileErr) {
-            console.warn('Could not update user doc directly, handled in state', profileErr);
+          if (!codeOk) {
+            // Profile is already premium; the code was NOT burned, so
+            // it can still be redeemed. Tell the user honestly instead
+            // of pretending everything worked.
+            setPromoError(
+              lang === 'my'
+                ? 'Premium ဖွင့်ပြီးသော်လည်း ကုဒ်ကို အသုံးပြုပြီးအဖြစ် မှတ်သား၍ မရပါ — Admin ကို ဆက်သွယ်ပါ (ကုဒ်သည် ထပ်သုံးနိုင်သေးသည်)'
+                : 'Premium was activated, but the code could not be marked as used — please contact Admin (the code can still be redeemed).'
+            );
+            if (refreshUserProfile) await refreshUserProfile();
+            return;
           }
 
           // Cache locally
@@ -242,29 +296,32 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     }
   };
 
+  // [v7.5.55 E7] Free-column numbers come from the limits table
+  // (DEFAULT_PLAN_LIMITS.free) — never hardcoded here.
+  const freeLimits = DEFAULT_PLAN_LIMITS.free;
   const features = [
     {
       titleMy: 'ဝင်ငွေ/ထွက်ငွေ မှတ်တမ်း',
       titleEn: 'Transactions Recording',
-      free: lang === 'my' ? 'တစ်လလျှင် ၁၀၀ ခု' : '100 per month',
+      free: lang === 'my' ? `ရက် ၃၀ အတွင်း ${toMyanmarDigits(freeLimits.maxTransactions)} ခု` : `${freeLimits.maxTransactions} per rolling 30 days`,
       premium: lang === 'my' ? 'အကန့်အသတ်မရှိ (Unlimited)' : 'Unlimited',
     },
     {
       titleMy: 'အကြွေးစာရင်း (ပေးရန်/ရရန်)',
       titleEn: 'Debt & Loan Tracking',
-      free: lang === 'my' ? 'အများဆုံး ၅ ခု' : 'Up to 5 active',
+      free: lang === 'my' ? `အများဆုံး ${toMyanmarDigits(freeLimits.maxDebts)} ခု` : `Up to ${freeLimits.maxDebts} active`,
       premium: lang === 'my' ? 'အကန့်အသတ်မရှိ + အရစ်ကျမှတ်တမ်း' : 'Unlimited + Installments',
     },
     {
       titleMy: 'ပိုက်ဆံအိတ်နှင့် ဘဏ်အကောင့်များ',
       titleEn: 'Wallets & Bank Accounts',
-      free: lang === 'my' ? '၂ ခု အထိ' : 'Up to 2 accounts',
+      free: lang === 'my' ? `${toMyanmarDigits(freeLimits.maxWallets)} ခု အထိ` : `Up to ${freeLimits.maxWallets} accounts`,
       premium: lang === 'my' ? 'စိတ်ကြိုက် အကန့်အသတ်မဲ့' : 'Unlimited accounts',
     },
     {
       titleMy: 'ဘတ်ဂျက်နှင့် ကဏ္ဍခွဲများ',
       titleEn: 'Custom Categories & Sub-categories',
-      free: lang === 'my' ? 'အခြေခံ ကဏ္ဍများသာ' : 'Default presets only',
+      free: lang === 'my' ? `ဘတ်ဂျက် ကဏ္ဍ ${toMyanmarDigits(freeLimits.maxBudgetCategories)} ခု၊ စိတ်ကြိုက်ကဏ္ဍ မပါ` : `Budgets: ${freeLimits.maxBudgetCategories} categories, no custom categories`,
       premium: lang === 'my' ? 'စိတ်ကြိုက်ကဏ္ဍ/ကဏ္ဍခွဲ ထပ်တိုးနိုင်' : 'Unlimited custom categories',
     },
     {
@@ -276,7 +333,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     {
       titleMy: 'အဖွဲ့ဝင်/မိသားစု တွဲဖက်သုံးစွဲခြင်း (Collaborators)',
       titleEn: 'Collaborators / Workspace Sharing',
-      free: lang === 'my' ? '၂ ယောက် အထိ' : 'Up to 2 members',
+      free: lang === 'my' ? `${toMyanmarDigits(freeLimits.maxCollaborators)} ယောက် အထိ` : `Up to ${freeLimits.maxCollaborators} members`,
       premium: lang === 'my' ? 'စိတ်ကြိုက် အကန့်အသတ်မဲ့' : 'Unlimited members',
     },
     {
@@ -288,8 +345,8 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     {
       titleMy: 'ယာဉ်စီမံခန့်ခွဲမှု (ဆီစားနှုန်း၊ ပြုပြင်စရိတ်နှင့် တာယာလေပေါင်)',
       titleEn: 'Vehicle & Fleet Management (Fuel km/L, Maintenance & Tires)',
-      free: false,
-      premium: true,
+      free: lang === 'my' ? `ယာဉ် ${toMyanmarDigits(freeLimits.maxVehicles)} စီး` : `${freeLimits.maxVehicles} vehicle`,
+      premium: lang === 'my' ? 'အကန့်အသတ်မဲ့' : 'Unlimited',
     },
     {
       titleMy: 'ကြော်ငြာမပါ၊ အနှောင့်အယှက်ကင်းရှင်းမှု',
@@ -733,9 +790,11 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     {PRICING[planDuration].price} MMK
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/70 text-amber-900">
-                  {lang === 'my' ? 'သက်သာသော နှုန်းထား' : 'Best Value'}
-                </span>
+                {PRICING[planDuration].original && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/70 text-amber-900">
+                    {lang === 'my' ? 'သက်သာသော နှုန်းထား' : 'Best Value'}
+                  </span>
+                )}
               </div>
 
               {/* Step 2: Contact Telegram for Payment & Code */}
@@ -772,27 +831,42 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                 {(contactInfo.viberPhone || contactInfo.kpayPhone || contactInfo.wavePhone) && (
                   <div className="p-3 bg-slate-50 border border-slate-200/90 rounded-xl space-y-2 text-xs">
                     {contactInfo.viberPhone && (
-                      <div className="flex items-center justify-between text-slate-700">
+                      <div className="flex items-center justify-between gap-2 text-slate-700">
                         <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600">
                           <Phone className="w-3.5 h-3.5 text-purple-600" /> Phone / Viber:
                         </span>
-                        <span className="font-bold text-indigo-900">{contactInfo.viberPhone}</span>
+                        <span className="flex items-center gap-1.5">
+                          <a href={`tel:${contactInfo.viberPhone}`} className="font-bold text-indigo-900 underline underline-offset-2">{contactInfo.viberPhone}</a>
+                          <button type="button" onClick={() => copyToClipboard(contactInfo.viberPhone || '', 'viber')} className="px-2 py-1 rounded-lg bg-white border border-slate-300 text-[10px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
+                            {copiedAccount === 'viber' ? '✓ ကူးပြီး' : 'ကူးမည်'}
+                          </button>
+                        </span>
                       </div>
                     )}
                     {contactInfo.kpayPhone && (
-                      <div className="flex items-center justify-between text-slate-700">
+                      <div className="flex items-center justify-between gap-2 text-slate-700">
                         <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600">
-                          💳 KBZPay Account:
+                          💳 KBZPay{contactInfo.kpayName ? ` (${contactInfo.kpayName})` : ''}:
                         </span>
-                        <span className="font-bold text-emerald-800">{contactInfo.kpayPhone}</span>
+                        <span className="flex items-center gap-1.5">
+                          <a href={`tel:${contactInfo.kpayPhone}`} className="font-bold text-emerald-800 underline underline-offset-2">{contactInfo.kpayPhone}</a>
+                          <button type="button" onClick={() => copyToClipboard(contactInfo.kpayPhone || '', 'kpay')} className="px-2 py-1 rounded-lg bg-white border border-slate-300 text-[10px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
+                            {copiedAccount === 'kpay' ? '✓ ကူးပြီး' : 'ကူးမည်'}
+                          </button>
+                        </span>
                       </div>
                     )}
                     {contactInfo.wavePhone && (
-                      <div className="flex items-center justify-between text-slate-700">
+                      <div className="flex items-center justify-between gap-2 text-slate-700">
                         <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600">
-                          🌊 WaveMoney Account:
+                          🌊 WaveMoney{contactInfo.waveName ? ` (${contactInfo.waveName})` : ''}:
                         </span>
-                        <span className="font-bold text-amber-800">{contactInfo.wavePhone}</span>
+                        <span className="flex items-center gap-1.5">
+                          <a href={`tel:${contactInfo.wavePhone}`} className="font-bold text-amber-800 underline underline-offset-2">{contactInfo.wavePhone}</a>
+                          <button type="button" onClick={() => copyToClipboard(contactInfo.wavePhone || '', 'wave')} className="px-2 py-1 rounded-lg bg-white border border-slate-300 text-[10px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
+                            {copiedAccount === 'wave' ? '✓ ကူးပြီး' : 'ကူးမည်'}
+                          </button>
+                        </span>
                       </div>
                     )}
                   </div>

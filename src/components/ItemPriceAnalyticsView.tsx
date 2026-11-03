@@ -6,6 +6,7 @@ import {
   Line,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,7 +15,18 @@ import {
 } from 'recharts';
 import { Category, PlanType, Transaction, Wallet } from '../types';
 import { formatMMK, formatDateDisplay } from '../utils/formatters';
-import { normalizeItemName } from '../utils/itemIntelligence';
+import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
+
+// [v7.5.55 C19] Vehicle sub-categories are costs, not purchasable items —
+// whole fuel bills must never appear as "items" in Compare Price.
+const VEHICLE_SUB_CATEGORY_IDS = new Set([
+  'sub_veh_fuel',
+  'sub_veh_maintenance',
+  'sub_veh_parts',
+  'sub_veh_tire',
+  'sub_veh_wash',
+  'sub_veh_license',
+]);
 
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 
@@ -39,6 +51,10 @@ interface ItemPurchaseRecord {
   note?: string;
   shopName?: string; // [v7.5.54] Shop where this purchase was made
   isShoppingList?: boolean;
+  // [v7.5.55 C9] True for sub-category / note records: unitPrice here is
+  // the WHOLE TRIP total, not a per-unit price — never average it with
+  // true per-unit prices.
+  isTripTotal?: boolean;
 }
 
 interface ItemSummary {
@@ -60,6 +76,14 @@ interface ItemSummary {
   avgPrice: number;
   cheapestShop?: string; // [v7.5.54] Shop with the lowest unit price
   cheapestPrice?: number;
+  // [v7.5.55 C13] All shops tied at the lowest unit price (normalized
+  // names), and the cheapest purchase that has NO shop at all.
+  cheapestShops?: string[];
+  cheapestNoShopPrice?: number;
+  // [v7.5.55 C9] False when every record is a trip total (no per-unit
+  // price exists at all); latestTotal is the newest trip total then.
+  hasUnitPrices: boolean;
+  latestTotal: number;
   priceDelta: number;
   priceDeltaPercent: number;
   lastDate: string;
@@ -83,7 +107,10 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<'all' | '30d' | '90d' | '180d' | '365d'>('all');
   const [chartMode, setChartMode] = useState<'price' | 'frequency'>('price');
-  const [selectedItemNames, setSelectedItemNames] = useState<string[]>([]);
+  // [v7.5.55 C17] null = no explicit choice yet (default top 2);
+  // [] = the user explicitly deselected everything — that must stay
+  // empty with an honest empty state, never snap back to the top 2.
+  const [selectedItemNames, setSelectedItemNames] = useState<string[] | null>(null);
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
@@ -186,11 +213,57 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         });
       }
 
-      // 2. Process subcategory or clean note if no items
-      if (tx.subCategoryId) {
-        const sub = subCategoryMap.get(tx.subCategoryId);
-        if (sub) {
-          const norm = normalizeItemName(lang === 'my' ? sub.name : sub.nameEn || sub.name);
+      // 2. Process subcategory if there are NO shopping items.
+      // [v7.5.55 C2/D15] The old code ran this branch even when the tx had
+      // items, so a shopping trip was counted TWICE (once per item, once
+      // as a phantom sub-category record priced at the whole tx amount).
+      // [v7.5.55 C19] Vehicle sub-categories are excluded entirely.
+      // [v7.5.55 C9] This record is a TRIP TOTAL, not a per-unit price.
+      if (tx.subCategoryId && (!tx.items || tx.items.length === 0)) {
+        if (VEHICLE_SUB_CATEGORY_IDS.has(tx.subCategoryId)) {
+          // Vehicle cost — not a purchasable item. Skip.
+        } else {
+          const sub = subCategoryMap.get(tx.subCategoryId);
+          if (sub) {
+            const norm = normalizeItemName(lang === 'my' ? sub.name : sub.nameEn || sub.name);
+            const cleanName = norm.display;
+            const normalized = norm.key;
+            const mapKey = normalized + '|' + norm.unit;
+            if (!itemMap.has(mapKey)) {
+              itemMap.set(mapKey, {
+                name: cleanName,
+                normalizedName: normalized,
+                unit: norm.unit,
+                chartKey: mapKey,
+                categoryId: sub.categoryId,
+                records: [],
+              });
+            }
+            itemMap.get(mapKey)!.records.push({
+              id: tx.id,
+              txId: tx.id,
+              date: tx.date,
+              unitPrice: tx.amount,
+              quantity: 1,
+              totalAmount: tx.amount,
+              walletId: tx.walletId,
+              categoryId: tx.category,
+              note: tx.note,
+              shopName: tx.shopName,
+              isTripTotal: true,
+            });
+          }
+        }
+      } else if ((!tx.items || tx.items.length === 0) && tx.note && tx.note.trim().length >= 2) {
+        // [v7.5.55 D20] A free-text note becomes an item ONLY when it
+        // parses as an item name (+ quantity/unit) — otherwise the whole
+        // note would become a phantom "item" priced at the full amount.
+        // [v7.5.55 C9] This record is a TRIP TOTAL, not a per-unit price.
+        const parsed = parseNoteAsItem(tx.note);
+        if (!parsed) {
+          // Not an item signal — skip, do not create a catalog item.
+        } else {
+          const norm = normalizeItemName(tx.note);
           const cleanName = norm.display;
           const normalized = norm.key;
           const mapKey = normalized + '|' + norm.unit;
@@ -200,7 +273,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               normalizedName: normalized,
               unit: norm.unit,
               chartKey: mapKey,
-              categoryId: sub.categoryId,
+              categoryId: tx.category,
               records: [],
             });
           }
@@ -215,35 +288,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             categoryId: tx.category,
             note: tx.note,
             shopName: tx.shopName,
+            isTripTotal: true,
           });
         }
-      } else if ((!tx.items || tx.items.length === 0) && tx.note && tx.note.trim().length >= 2) {
-        const norm = normalizeItemName(tx.note);
-        const cleanName = norm.display;
-        const normalized = norm.key;
-        const mapKey = normalized + '|' + norm.unit;
-        if (!itemMap.has(mapKey)) {
-          itemMap.set(mapKey, {
-            name: cleanName,
-            normalizedName: normalized,
-            unit: norm.unit,
-            chartKey: mapKey,
-            categoryId: tx.category,
-            records: [],
-          });
-        }
-        itemMap.get(mapKey)!.records.push({
-          id: tx.id,
-          txId: tx.id,
-          date: tx.date,
-          unitPrice: tx.amount,
-          quantity: 1,
-          totalAmount: tx.amount,
-          walletId: tx.walletId,
-          categoryId: tx.category,
-          note: tx.note,
-          shopName: tx.shopName,
-        });
       }
     });
 
@@ -257,19 +304,50 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       const totalPurchases = sortedRecords.length;
       const totalQuantity = sortedRecords.reduce((s, r) => s + r.quantity, 0);
       const totalSpent = sortedRecords.reduce((s, r) => s + r.totalAmount, 0);
-      const prices = sortedRecords.map((r) => r.unitPrice);
-      const minPrice = Math.min(...prices);
-      const maxPrice = Math.max(...prices);
-      const avgPrice = Math.round(prices.reduce((s, p) => s + p, 0) / prices.length);
-      const firstPrice = sortedRecords[0]?.unitPrice || 0;
-      const latestPrice = sortedRecords[sortedRecords.length - 1]?.unitPrice || 0;
+      // [v7.5.55 C9] Unit-price stats use ONLY true per-unit records.
+      // Trip totals are visible as totals but never averaged with them.
+      const unitRecords = sortedRecords.filter((r) => !r.isTripTotal);
+      const hasUnitPrices = unitRecords.length > 0;
+      const unitPrices = unitRecords.map((r) => r.unitPrice);
+      const minPrice = hasUnitPrices ? Math.min(...unitPrices) : 0;
+      const maxPrice = hasUnitPrices ? Math.max(...unitPrices) : 0;
+      // [v7.5.55 D20] Quantity-weighted average: 1 kg at 5,000 and 10 kg
+      // at 4,000 averages to 4,091 — not the simple mean of 4,500.
+      const unitQtyTotal = unitRecords.reduce((s, r) => s + r.quantity, 0);
+      const avgPrice = hasUnitPrices && unitQtyTotal > 0
+        ? Math.round(unitRecords.reduce((s, r) => s + r.unitPrice * r.quantity, 0) / unitQtyTotal)
+        : 0;
+      const firstPrice = hasUnitPrices ? unitRecords[0].unitPrice : 0;
+      const latestPrice = hasUnitPrices ? unitRecords[unitRecords.length - 1].unitPrice : 0;
+      const latestTotal = sortedRecords[sortedRecords.length - 1]?.totalAmount || 0;
       const priceDelta = latestPrice - firstPrice;
       const priceDeltaPercent = firstPrice > 0 ? (priceDelta / firstPrice) * 100 : 0;
       const lastDate = sortedRecords[sortedRecords.length - 1]?.date || '';
-      const withShop = sortedRecords.filter((r) => r.shopName);
-      const cheapestRecord = withShop.length > 0 ? withShop.reduce((a, b) => (b.unitPrice < a.unitPrice ? b : a)) : undefined;
-      const cheapestShop = cheapestRecord?.shopName;
-      const cheapestPrice = cheapestRecord?.unitPrice;
+      // [v7.5.55 C13] Cheapest shop over UNIT prices only, with shop names
+      // normalized (trim + case-insensitive) so "City Mart" and
+      // "city mart" are one shop; ties are all shown.
+      const shopMin = new Map<string, { display: string; min: number }>();
+      unitRecords.forEach((r) => {
+        if (!r.shopName) return;
+        const key = r.shopName.trim().toLowerCase();
+        if (!key) return;
+        const prev = shopMin.get(key);
+        if (!prev || r.unitPrice < prev.min) {
+          shopMin.set(key, { display: r.shopName.trim(), min: r.unitPrice });
+        }
+      });
+      const cheapestPrice = shopMin.size > 0 ? Math.min(...Array.from(shopMin.values()).map((v) => v.min)) : undefined;
+      const cheapestShops = cheapestPrice !== undefined
+        ? Array.from(shopMin.values()).filter((v) => v.min === cheapestPrice).map((v) => v.display)
+        : undefined;
+      const cheapestShop = cheapestShops?.[0];
+      // [v7.5.55 C13b] Hint when the genuinely cheapest purchase has no
+      // shop at all — the badge only ever considers records WITH a shop.
+      const noShopPrices = unitRecords.filter((r) => !r.shopName || !r.shopName.trim()).map((r) => r.unitPrice);
+      const cheapestNoShopPrice =
+        noShopPrices.length > 0 && cheapestPrice !== undefined && Math.min(...noShopPrices) < cheapestPrice
+          ? Math.min(...noShopPrices)
+          : undefined;
 
       return {
         name: item.name,
@@ -291,6 +369,10 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         lastDate,
         cheapestShop,
         cheapestPrice,
+        cheapestShops,
+        cheapestNoShopPrice,
+        hasUnitPrices,
+        latestTotal,
       };
     });
 
@@ -305,12 +387,15 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         return false;
       }
       if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase();
-        const matchName = item.normalizedName.includes(q);
+        // [v7.5.55 C14f] Normalize the query (incl. Myanmar digits) the
+        // same way item names are normalized — "ဆန် ၁ပြည်" must find "ဆန်".
+        const q = normalizeItemName(searchTerm).key;
+        const rawQ = searchTerm.toLowerCase();
+        const matchName = q ? item.normalizedName.includes(q) : false;
         const cat = catMap.get(item.categoryId);
         const matchCat =
-          (cat?.name || '').toLowerCase().includes(q) ||
-          (cat?.nameEn || '').toLowerCase().includes(q);
+          (cat?.name || '').toLowerCase().includes(rawQ) ||
+          (cat?.nameEn || '').toLowerCase().includes(rawQ);
         return matchName || matchCat;
       }
       return true;
@@ -319,7 +404,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
   // Selected items objects (default to top 2 most purchased items if none explicitly selected)
   const activeSelectedItems = useMemo(() => {
-    if (selectedItemNames.length > 0) {
+    if (selectedItemNames !== null) {
       return selectedItemNames
         .map((name) => allItemSummaries.find((it) => it.chartKey === name || it.normalizedName === name))
         .filter((it): it is ItemSummary => it !== undefined);
@@ -331,15 +416,22 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   // Toggle item selection
   const handleToggleItem = (chartKey: string) => {
     setSelectedItemNames((prev) => {
-      // If currently using default (empty array), initialize with top item + new item
-      const currentList = prev.length === 0 ? activeSelectedItems.map((it) => it.chartKey) : prev;
+      // If currently using default (null), initialize with top items first.
+      const currentList = prev === null ? activeSelectedItems.map((it) => it.chartKey) : prev;
       if (currentList.includes(chartKey)) {
-        const next = currentList.filter((n) => n !== chartKey);
-        return next;
+        // Deselecting the last item leaves an explicit empty selection —
+        // no snap-back to the top 2 (v7.5.55 C17).
+        return currentList.filter((n) => n !== chartKey);
       } else {
         if (currentList.length >= 5) {
-          // Replace the last item to keep max 5 items
-          return [...currentList.slice(0, 4), chartKey];
+          // [v7.5.55 C17] A 6th item must WARN and not be added — never
+          // silently replace the 5th.
+          alert(
+            lang === 'my'
+              ? 'ပစ္စည်း ၅ မျိုးထိသာ တစ်ပြိုင်နက် နှိုင်းယှဉ်နိုင်ပါသည် — တစ်ခုခု ဖယ်ထုတ်ပြီးမှ အသစ်ထည့်ပါ'
+              : 'You can compare up to 5 items at once — remove one first to add another'
+          );
+          return currentList;
         }
         return [...currentList, chartKey];
       }
@@ -374,6 +466,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       const point: Record<string, any> = {
         date: dateStr,
         displayDate: formatDateDisplay(dateStr),
+        // [v7.5.55 C31] Real timestamp for a true time-scale X axis.
+        ts: new Date(dateStr + 'T00:00:00').getTime(),
       };
 
       activeSelectedItems.forEach((item) => {
@@ -393,8 +487,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
   // Build Purchase Frequency & Total Spending Bar Chart Data
   const frequencyChartData = useMemo(() => {
-    const itemsToChart = activeSelectedItems.length > 0 ? activeSelectedItems : allItemSummaries.slice(0, 5);
-    return itemsToChart.map((it, idx) => ({
+    // [v7.5.55 C17] Only the explicitly selected items — an empty
+    // selection shows an empty chart, never a silent top-5 fallback.
+    return activeSelectedItems.map((it, idx) => ({
       name: it.unit ? it.name + ' · ' + it.unit : it.name,
       normalizedName: it.normalizedName,
       purchases: it.totalPurchases,
@@ -402,7 +497,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       avgPrice: it.avgPrice,
       color: ITEM_COLORS[idx % ITEM_COLORS.length].stroke,
     }));
-  }, [activeSelectedItems, allItemSummaries]);
+  }, [activeSelectedItems]);
 
   // Flattened all purchase records of active selected items for the detailed table
   const selectedItemsPurchaseLogs = useMemo(() => {
@@ -420,6 +515,28 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
     // Sort descending by date
     return logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeSelectedItems]);
+
+  // [v7.5.55 C13d] The cheapest shop is computed over the selected range.
+  const timeRangeLabel =
+    timeRange === 'all'
+      ? lang === 'my'
+        ? 'အချိန်အားလုံး'
+        : 'all time'
+      : timeRange === '30d'
+      ? lang === 'my'
+        ? 'နောက်ဆုံး ၃၀ ရက်'
+        : 'last 30 days'
+      : timeRange === '90d'
+      ? lang === 'my'
+        ? 'နောက်ဆုံး ၃ လ'
+        : 'last 3 months'
+      : timeRange === '180d'
+      ? lang === 'my'
+        ? 'နောက်ဆုံး ၆ လ'
+        : 'last 6 months'
+      : lang === 'my'
+      ? 'နောက်ဆုံး ၁ နှစ်'
+      : 'past year';
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -523,7 +640,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             >
               {lang === 'my' ? '⚡ အများဆုံး ၃ မျိုး ရွေးမည်' : '⚡ Top 3 Items'}
             </button>
-            {selectedItemNames.length > 0 && (
+            {selectedItemNames !== null && (
               <button
                 type="button"
                 onClick={handleClearSelection}
@@ -574,6 +691,13 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               {lang === 'my' ? 'လက်ရှိ Chart တွင် ပြသနေသည့် ပစ္စည်းများ:' : 'Active on Chart:'}
             </span>
             <div className="flex flex-wrap gap-1.5">
+              {activeSelectedItems.length === 0 && (
+                <span className="text-[11px] text-slate-400 italic">
+                  {lang === 'my'
+                    ? 'ပစ္စည်း မရွေးထားပါ — အောက်ပါစာရင်းမှ ရွေးချယ်ပါ'
+                    : 'No items selected — pick from the list below'}
+                </span>
+              )}
               {activeSelectedItems.map((it, idx) => {
                 const colorObj = ITEM_COLORS[idx % ITEM_COLORS.length];
                 return (
@@ -718,11 +842,22 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
                     <div>
                       <span className="text-[10px] text-slate-400 block">
-                        {lang === 'my' ? 'နောက်ဆုံးဝယ်ဈေး' : 'Latest Price'}
+                        {item.hasUnitPrices
+                          ? lang === 'my'
+                            ? 'နောက်ဆုံးဝယ်ဈေး'
+                            : 'Latest Price'
+                          : lang === 'my'
+                          ? 'နောက်ဆုံးစုစုပေါင်း'
+                          : 'Latest Trip Total'}
                       </span>
                       <span className="font-mono font-bold text-slate-900 text-xs">
-                        {formatMMK(item.latestPrice)}
+                        {formatMMK(item.hasUnitPrices ? item.latestPrice : item.latestTotal)}
                       </span>
+                      {!item.hasUnitPrices && (
+                        <span className="ml-1 px-1 py-px rounded bg-amber-50 text-amber-800 text-[9px] font-bold border border-amber-200">
+                          {lang === 'my' ? 'စုစုပေါင်း' : 'Total'}
+                        </span>
+                      )}
                     </div>
 
                     <div>
@@ -730,7 +865,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         {lang === 'my' ? 'ပျမ်းမျှဈေး' : 'Average Price'}
                       </span>
                       <span className="font-mono font-bold text-slate-700 text-xs">
-                        {formatMMK(item.avgPrice)}
+                        {item.hasUnitPrices ? formatMMK(item.avgPrice) : '—'}
                       </span>
                     </div>
 
@@ -739,7 +874,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         {lang === 'my' ? 'အနိမ့် ~ အမြင့်' : 'Min ~ Max'}
                       </span>
                       <span className="font-mono text-[11px] text-slate-600 block truncate">
-                        {formatMMK(item.minPrice)} ~ {formatMMK(item.maxPrice)}
+                        {item.hasUnitPrices
+                          ? `${formatMMK(item.minPrice)} ~ ${formatMMK(item.maxPrice)}`
+                          : '—'}
                       </span>
                     </div>
 
@@ -752,13 +889,42 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       </span>
                     </div>
                   </div>
+                  {/* [v7.5.55 C31] Latest purchase date + total quantity —
+                      both were computed but never rendered. */}
+                  <div className="pt-1 text-[11px] text-slate-500 flex items-center gap-2 flex-wrap">
+                    <span>
+                      🗓️ {lang === 'my' ? 'နောက်ဆုံးဝယ်:' : 'Last bought:'}{' '}
+                      <span className="font-mono font-bold text-slate-700">{item.lastDate || '—'}</span>
+                    </span>
+                    <span>
+                      · {lang === 'my' ? 'စုစုပေါင်း' : 'Qty:'} {item.totalQuantity}
+                    </span>
+                  </div>
                   {item.cheapestShop && (
                     <div className="pt-2 border-t border-slate-100 text-xs">
                       <span className="text-[10px] text-slate-400 block">
                         {lang === 'my' ? 'အတန်ဆုံးဆိုင်' : 'Cheapest Shop'}
                       </span>
-                      <span className="font-bold text-emerald-700">{item.cheapestShop}</span>
+                      <span className="font-bold text-emerald-700">
+                        {(item.cheapestShops || [item.cheapestShop]).join(', ')}
+                      </span>
                       <span className="font-mono text-slate-600"> · {formatMMK(item.cheapestPrice || 0)}</span>
+                      {(item.cheapestShops || []).length > 1 && (
+                        <span className="ml-1 text-[10px] text-slate-400">
+                          {lang === 'my' ? '(ဈေးတူ)' : '(tied)'}
+                        </span>
+                      )}
+                      {item.cheapestNoShopPrice !== undefined && (
+                        <span className="block text-[11px] text-amber-700 mt-0.5">
+                          ⚠️{' '}
+                          {lang === 'my'
+                            ? `အတန်ဆုံး ဝယ်ယူမှု (${formatMMK(item.cheapestNoShopPrice)}) တွင် ဆိုင်အမည် မပါဝင်ပါ`
+                            : `The cheapest purchase (${formatMMK(item.cheapestNoShopPrice)}) has no shop recorded`}
+                        </span>
+                      )}
+                      <span className="block text-[10px] text-slate-400 mt-0.5">
+                        {lang === 'my' ? `(${timeRangeLabel} အတွင်း တွက်ချက်ထားသည်)` : `(computed over ${timeRangeLabel})`}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -790,8 +956,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                   <p className="text-[11px] text-slate-400">
                     {chartMode === 'price'
                       ? lang === 'my'
-                        ? 'ဝယ်ယူခဲ့သည့် ရက်စွဲအလိုက် ဈေးနှုန်းပြောင်းလဲမှု လှိုင်းခတ်ပုံ'
-                        : 'Connects past purchase rates chronologically'
+                        ? 'ဝယ်ယူခဲ့သည့် ရက်စွဲအလိုက် ဈေးနှုန်းပြောင်းလဲမှု — X ဝင်ရိုးသည် ရက်အကွာအဝေး အမှန်အတိုင်း ပြထားသည်'
+                        : 'Price changes by purchase date — the X axis shows real time gaps between purchases'
                       : lang === 'my'
                       ? 'မည်သည့်ပစ္စည်းကို အကြိမ်ရေ မည်မျှအထိ အသုံးများဆုံးလဲ'
                       : 'Compares total purchase occurrences'}
@@ -829,8 +995,17 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={priceChartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      {/* [v7.5.55 C31] True time-scale X axis — the old
+                          categorical axis drew straight lines across gaps
+                          as if purchases were evenly spaced. */}
                       <XAxis
-                        dataKey="displayDate"
+                        dataKey="ts"
+                        type="number"
+                        scale="time"
+                        domain={['dataMin', 'dataMax']}
+                        tickFormatter={(ts: number) =>
+                          formatDateDisplay(new Date(ts).toISOString().slice(0, 10))
+                        }
                         tick={{ fontSize: 11, fill: '#64748B' }}
                         tickLine={false}
                         axisLine={{ stroke: '#CBD5E1' }}
@@ -850,10 +1025,14 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       <Tooltip
                         content={({ active, payload, label }) => {
                           if (!active || !payload || !payload.length) return null;
+                          const labelStr =
+                            typeof label === 'number'
+                              ? formatDateDisplay(new Date(label).toISOString().slice(0, 10))
+                              : String(label ?? '');
                           return (
                             <div className="bg-slate-900/95 text-white p-3 rounded-2xl shadow-xl text-xs space-y-1.5 border border-slate-700">
                               <div className="text-[11px] text-slate-400 font-semibold border-b border-slate-800 pb-1 flex items-center justify-between gap-2">
-                                <span>{label}</span>
+                                <span>{labelStr}</span>
                                 <span className="text-[10px] text-indigo-400">📅 ဝယ်ယူမှုမှတ်တမ်း</span>
                               </div>
                               {payload.map((entry: any, i: number) => {
@@ -903,6 +1082,13 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                 )
               ) : (
                 /* Bar Chart for Frequency / Purchase Count */
+                frequencyChartData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                    {lang === 'my'
+                      ? 'ပစ္စည်း မရွေးထားပါ — ဘယ်ဘက်စာရင်းမှ ရွေးချယ်ပါ'
+                      : 'No items selected — pick items from the catalog'}
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={frequencyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -950,12 +1136,18 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                     <Bar
                       dataKey="purchases"
                       name={lang === 'my' ? 'ဝယ်ယူခဲ့သည့် အကြိမ်ရေ' : 'Purchases'}
-                      fill="#6366F1"
                       radius={[8, 8, 0, 0]}
                       barSize={36}
-                    />
+                    >
+                      {/* [v7.5.55 C32] Per-item colours — the old single
+                          fill painted every bar indigo. */}
+                      {frequencyChartData.map((d, i) => (
+                        <Cell key={i} fill={d.color} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+                )
               )}
             </div>
           </div>
@@ -1007,6 +1199,13 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                             {log.isShoppingList && (
                               <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200">
                                 🛒 Shopping
+                              </span>
+                            )}
+                            {/* [v7.5.55 C9] Trip totals are labelled as
+                                totals, never shown as per-unit prices. */}
+                            {log.isTripTotal && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200">
+                                {lang === 'my' ? 'စုစုပေါင်း' : 'Trip Total'}
                               </span>
                             )}
                           </div>

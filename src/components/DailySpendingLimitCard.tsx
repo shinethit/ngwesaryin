@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Flame, CheckCircle2, AlertTriangle, Settings, X } from 'lucide-react';
-import { Transaction } from '../types';
+import { Transaction, Wallet } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { convertToMMK } from '../utils/currency';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { isTransferTransaction } from '../utils/walletBalance';
 
 interface DailySpendingLimitCardProps {
   transactions: Transaction[];
+  wallets?: Wallet[];
   lang: 'my' | 'en';
 }
 
@@ -19,6 +22,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
 
 export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
   transactions,
+  wallets = [],
   lang,
 }) => {
   const todayStr = getLocalDateString(new Date());
@@ -34,19 +38,25 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
     safeSetItem('ngwe_daily_spending_limit', String(dailyLimit));
   }, [dailyLimit]);
 
-  // Calculate today's total expenses (exclude transfers)
+  // Calculate today's total expenses (exclude transfers), converted to
+  // MMK like every other Analytics figure — raw amounts would mix wallet
+  // currencies (e.g. a USD wallet's 50 counted as 50 MMK).
   const todaySpent = useMemo(() => {
     return transactions
       .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && t.date === todayStr)
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-  }, [transactions, todayStr]);
+      .reduce((sum, t) => {
+        const w = wallets.find((x) => x.id === t.walletId);
+        return sum + convertToMMK(Number(t.amount) || 0, w?.currency, w?.exchangeRate);
+      }, 0);
+  }, [transactions, wallets, todayStr]);
 
   const isOverBudget = todaySpent > dailyLimit;
   const percentage = dailyLimit > 0 ? Math.min(150, Math.round((todaySpent / dailyLimit) * 100)) : 0;
 
   const handleSaveLimit = (e: React.FormEvent) => {
     e.preventDefault();
-    const val = Number(inputLimit);
+    // [v7.5.55] Myanmar digits (၀-၉) accepted in the limit input.
+    const val = parseMyanmarNumber(inputLimit);
     if (!isNaN(val) && val >= 0) {
       setDailyLimit(val);
       setIsEditing(false);
@@ -178,7 +188,8 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
                 {lang === 'my' ? 'ကန့်သတ်ငွေ (MMK)' : 'Daily Limit (MMK)'}
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={inputLimit}
                 onChange={(e) => setInputLimit(e.target.value)}
                 placeholder="20000"

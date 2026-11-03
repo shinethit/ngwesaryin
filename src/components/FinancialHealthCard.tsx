@@ -63,7 +63,10 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
             className={`h-full rounded-full transition-all duration-500 ${theme.progressFill}`}
             style={{
               width:
-                tier === 'negative'
+                // [v7.5.55 D6] No data yet: empty bar, not a fake score.
+                tier === 'no_data'
+                  ? '0%'
+                  : tier === 'negative'
                   ? '100%'
                   : tier === 'super_surplus'
                   ? '100%'

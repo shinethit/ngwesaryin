@@ -64,9 +64,27 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
   const netSavings = totalIncome - totalExpense;
 
-  const totalWalletBalance = wallets.reduce(
-    (s, w) => s + convertToMMK(w.balance, w.currency, w.exchangeRate), 0
-  );
+  // [v7.5.55 D13] Same wallet scope as the Dashboard: exclude "separate"
+  // (includeInTotals === false) wallets from the health inputs.
+  const totalWalletBalance = wallets
+    .filter((w) => w.includeInTotals !== false)
+    .reduce(
+      (s, w) => s + convertToMMK(w.balance, w.currency, w.exchangeRate), 0
+    );
+
+  // [v7.5.55 D3] Current-month income/expense ONLY for the Monthly Savings
+  // Goal — the all-time totals above made every established user
+  // permanently "achieved". Local month key, never toISOString (UTC).
+  const currentMonthKey = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+  })();
+  const currentMonthIncome = transactions
+    .filter((t) => t.type === 'income' && !isTransferTransaction(t) && t.date?.startsWith(currentMonthKey))
+    .reduce((s, t) => s + convertTxToMMK(t), 0);
+  const currentMonthExpense = transactions
+    .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && t.date?.startsWith(currentMonthKey))
+    .reduce((s, t) => s + convertTxToMMK(t), 0);
 
   const activeDebts = debts.filter((d) => d.status === 'active');
 
@@ -123,12 +141,16 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
               title={lang === 'my' ? 'စုငွေ' : 'Savings'}
               subtitle={formatMMK(netSavings)}
               badge="Net"
-              onClick={() => onSelectTab && onSelectTab('analytics')}
+              // [v7.5.55 D27] Was onSelectTab('analytics') while already on
+              // Analytics (a no-op). Now opens the Budget tab, where the
+              // Monthly Savings Goal card lives.
+              onClick={() => setSubTab('budget')}
             />
             <ClayCategoryCard
               type="avatar"
               title={lang === 'my' ? 'အကြွေး' : 'Debts'}
-              subtitle={debts.length + ' ' + (lang === 'my' ? 'ခု' : 'items')}
+              // [v7.5.55 D27] Count ACTIVE debts only, not settled ones.
+              subtitle={activeDebts.length + ' ' + (lang === 'my' ? 'ခု' : 'items')}
               badge="Debts"
               onClick={() => onSelectTab && onSelectTab('debts')}
             />
@@ -183,6 +205,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <CurrentMonthExpenseDonutChart
             transactions={transactions}
             categories={categories}
+            wallets={wallets}
             lang={lang}
           />
 
@@ -190,6 +213,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <CategorySpendingTrendLineChart
             transactions={transactions}
             categories={categories}
+            wallets={wallets}
             lang={lang}
           />
 
@@ -206,6 +230,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <MonthlySummaryChart
             transactions={transactions}
             categories={categories}
+            wallets={wallets}
             lang={lang}
           />
         </div>
@@ -215,8 +240,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       {subTab === 'budget' && (
         <div className="space-y-4">
           <MonthlySavingsTarget
-            income={totalIncome}
-            expense={totalExpense}
+            income={currentMonthIncome}
+            expense={currentMonthExpense}
             lang={lang}
             plan={plan}
             onOpenUpgrade={onOpenUpgradeModal}
@@ -224,6 +249,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
           <DailySpendingLimitCard
             transactions={transactions}
+            wallets={wallets}
             lang={lang}
           />
 
@@ -231,6 +257,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             budgets={budgets as any}
             categories={categories}
             transactions={transactions}
+            wallets={wallets}
             lang={lang}
           />
 
@@ -250,13 +277,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         </div>
       )}
 
+      {/* [v7.5.55 D17] Was setSubTab('reports') while the modal only opens
+          from the reports tab (a no-op). Now switches to the Budget tab,
+          where the detailed budget analytics live. */}
       <FinancialHealthModal
         isOpen={isHealthModalOpen}
         onClose={() => setIsHealthModalOpen(false)}
         health={financialHealth}
         lang={lang}
-        onNavigateToAnalytics={() => setSubTab('reports')}
-        onNavigateToBudgets={() => setSubTab('budget')}
+        onNavigateToAnalytics={() => setSubTab('budget')}
       />
     </div>
   );

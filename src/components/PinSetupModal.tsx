@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, X } from 'lucide-react';
 import { hashPin, generateSalt } from '../utils/pinHash';
 
@@ -24,6 +24,22 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   const [step, setStep] = useState<'create' | 'confirm'>('create');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // [v7.5.55 E11] Trivially guessable PINs are rejected.
+  const WEAK_PINS = new Set(['0000','1111','2222','3333','4444','5555','6666','7777','8888','9999','1234','4321','0123','1212','1122','2468','1357','9876','0001','1000','1112','1221','1123','1231']);
+  const isWeakPin = (v: string) => WEAK_PINS.has(v);
+
+  // [v7.5.55 E11] State survives closing (always mounted, returns
+  // null when closed) — reset every time the modal opens.
+  useEffect(() => {
+    if (isOpen) {
+      setPin('');
+      setConfirmPin('');
+      setStep('create');
+      setErrorMsg('');
+      setIsSaving(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,6 +75,19 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
         const nextPin = pin + num;
         setPin(nextPin);
         if (nextPin.length === 4) {
+          if (isWeakPin(nextPin)) {
+            setErrorMsg(
+              lang === 'my'
+                ? 'ဤ PIN သည် ခန့်မှန်းရလွယ်လွန်းပါသည် (ဥပမာ 0000, 1234)။ အခြား PIN တစ်ခု ရွေးပါ'
+                : 'This PIN is too easy to guess (e.g. 0000, 1234). Please choose another PIN.'
+            );
+            setTimeout(() => {
+              setConfirmPin('');
+              setStep('create');
+              setPin('');
+            }, 1500);
+            return;
+          }
           setTimeout(() => {
             setStep('confirm');
           }, 300);

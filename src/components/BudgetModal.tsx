@@ -8,6 +8,7 @@ import {
   Wallet,
 } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { CategoryIcon } from './CategoryIcon';
 
 interface BudgetModalProps {
@@ -62,12 +63,41 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   const [walletId, setWalletId] = useState<string>(
     editingBudget?.walletId || 'all'
   );
+  const [error, setError] = useState('');
+  // [v7.5.55 D25] Remember the last value typed in EACH mode, so switching
+  // % <-> Fixed restores that mode's own number instead of carrying e.g.
+  // 20% across as 20 MMK or 200,000 MMK across as 200,000%.
+  const [lastPercentValue, setLastPercentValue] = useState<string>(
+    editingBudget?.calcType === 'percentage' ? editingBudget.value.toString() : '15'
+  );
+  const [lastFixedValue, setLastFixedValue] = useState<string>(
+    editingBudget?.calcType === 'fixed' ? editingBudget.value.toString() : '100000'
+  );
+
+  const handleCalcTypeChange = (next: BudgetCalcType) => {
+    if (next === calcType) return;
+    // Remember the value being left behind, then restore the other mode's
+    // own last value (a valid percent, never > 100; a sensible fixed amount).
+    if (calcType === 'percentage') setLastPercentValue(value);
+    else setLastFixedValue(value);
+    if (next === 'percentage') {
+      const pct = parseMyanmarNumber(lastPercentValue);
+      setValue(!isNaN(pct) && pct >= 1 && pct <= 100 ? lastPercentValue : '15');
+    } else {
+      const fixed = parseMyanmarNumber(lastFixedValue);
+      setValue(!isNaN(fixed) && fixed > 0 ? lastFixedValue : '100000');
+    }
+    setCalcType(next);
+    setError('');
+  };
 
   useEffect(() => {
     if (editingBudget) {
       setCategoryId(editingBudget.categoryId);
       setCalcType(editingBudget.calcType);
       setValue(editingBudget.value.toString());
+      if (editingBudget.calcType === 'percentage') setLastPercentValue(editingBudget.value.toString());
+      else setLastFixedValue(editingBudget.value.toString());
       setWalletId(editingBudget.walletId || 'all');
     } else {
       const defaultCat = !isGeneralUsed && availableCategories.length === 0
@@ -82,20 +112,34 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 
   if (!isOpen) return null;
 
-  const numValue = parseFloat(value) || 0;
+  // [v7.5.55] Myanmar digits (၀-၉) accepted in the value field.
+  const numValue = parseMyanmarNumber(value) || 0;
   const calculatedMMK =
     calcType === 'percentage'
       ? Math.round((monthlyIncome * numValue) / 100)
       : numValue;
 
   const handleQuickAddMMK = (add: number) => {
-    const curr = parseFloat(value) || 0;
+    const curr = parseMyanmarNumber(value) || 0;
     setValue((curr + add).toString());
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryId || numValue <= 0) return;
+    // [v7.5.55] Validation failures show a message — never silently return.
+    if (!categoryId) {
+      setError(lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်မည့် ကဏ္ဍကို ရွေးချယ်ပါ' : 'Please choose a category');
+      return;
+    }
+    if (calcType === 'percentage' && (numValue <= 0 || numValue > 100)) {
+      setError(lang === 'my' ? 'ရာခိုင်နှုန်းသည် ၁ မှ ၁၀၀ ကြား ဖြစ်ရပါမည်' : 'Percentage must be between 1 and 100');
+      return;
+    }
+    if (calcType === 'fixed' && numValue <= 0) {
+      setError(lang === 'my' ? 'သတ်မှတ် ဘတ်ဂျက်ငွေပမာဏ မှန်ကန်စွာ ထည့်ပါ' : 'Please enter a valid fixed amount');
+      return;
+    }
+    setError('');
 
     onSubmit({
       id: categoryId,
@@ -217,7 +261,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
             <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
               <button
                 type="button"
-                onClick={() => setCalcType('percentage')}
+                onClick={() => handleCalcTypeChange('percentage')}
                 className={`py-2 px-3 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all text-xs sm:text-sm ${
                   calcType === 'percentage'
                     ? 'bg-indigo-600 text-white shadow-xs'
@@ -229,7 +273,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setCalcType('fixed')}
+                onClick={() => handleCalcTypeChange('fixed')}
                 className={`py-2 px-3 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all text-xs sm:text-sm ${
                   calcType === 'fixed'
                     ? 'bg-indigo-600 text-white shadow-xs'
@@ -250,13 +294,12 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               </label>
               <div className="relative">
                 <input
-                  type="number"
-                  min="1"
-                  max="100"
+                  type="text"
+                  inputMode="decimal"
                   required
                   placeholder="15"
                   value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  onChange={(e) => { setValue(e.target.value); setLastPercentValue(e.target.value); }}
                   className="w-full text-xl sm:text-2xl font-bold py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-base">
@@ -315,12 +358,12 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               </label>
               <div className="relative">
                 <input
-                  type="number"
-                  min="1000"
+                  type="text"
+                  inputMode="decimal"
                   required
                   placeholder="100000"
                   value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  onChange={(e) => { setValue(e.target.value); setLastFixedValue(e.target.value); }}
                   className="w-full text-xl sm:text-2xl font-bold py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
@@ -374,6 +417,12 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                     : `This budget will only count expenses paid using this selected wallet.`)}
             </p>
           </div>
+
+          {error && (
+            <p className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+              ⚠️ {error}
+            </p>
+          )}
 
           {/* Footer buttons */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

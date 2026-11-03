@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { CreditCard } from 'lucide-react';
 import { Debt, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { formatCurrency } from '../utils/currency';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { getLocalDateString } from '../utils/dateUtils';
 
 interface RepaymentModalProps {
@@ -30,6 +32,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
   const [walletId, setWalletId] = useState(wallets[0]?.id || 'cash');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   React.useEffect(() => {
     if (isOpen && debt) {
@@ -42,9 +45,12 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
         const rem = Math.max(0, debt.totalAmount - debt.paidAmount);
         setAmount(rem.toString());
         setDate(getLocalDateString());
-        setWalletId(wallets[0]?.id || 'cash');
+        // [v7.5.55 D12] Default to the debt's own wallet so the repayment
+        // uses the same currency as the debt.
+        setWalletId(debt.walletId || wallets[0]?.id || 'cash');
         setNote('');
       }
+      setError('');
       setIsSubmitting(false);
     }
   }, [isOpen, debt, editingRepayment, wallets]);
@@ -52,12 +58,34 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
   if (!isOpen || !debt) return null;
 
   const isReceivable = debt.type === 'receivable';
+  // [v7.5.55 D12] The debt's currency: explicit field, else its wallet's
+  // currency. All amounts in this modal are in this currency.
+  const debtWallet = wallets.find((w) => w.id === debt.walletId);
+  const debtCurrency = debt.currency || debtWallet?.currency || 'MMK';
+  const selectedWallet = wallets.find((w) => w.id === walletId);
+  const walletCurrencyMismatch =
+    !!selectedWallet?.currency && selectedWallet.currency !== debtCurrency;
+  const parsedAmount = parseMyanmarNumber(amount);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    const num = parseFloat(amount);
-    if (!num || num <= 0) return;
+    // [v7.5.55 D29] Validation failures show a Burmese message, never a
+    // silent return. Myanmar digits (၀-၉) accepted.
+    const num = parseMyanmarNumber(amount);
+    if (!num || num <= 0) {
+      setError(lang === 'my' ? 'ဆပ်မည့် ပမာဏ မှန်ကန်စွာ ထည့်ပါ (0 ထက် ကြီးရမည်)' : 'Please enter a valid amount greater than 0');
+      return;
+    }
+    if (num > maxAllowedAmount) {
+      setError(
+        lang === 'my'
+          ? `ဤအကြွေးအတွက် အများဆုံး ${formatMMK(maxAllowedAmount)} အထိသာ ဆပ်နိုင်ပါသည် (ကျန်ငွေ ကန့်သတ်ချက်)`
+          : `You can pay at most ${formatMMK(maxAllowedAmount)} for this debt (remaining balance cap)`
+      );
+      return;
+    }
+    setError('');
 
     setIsSubmitting(true);
     try {
@@ -103,14 +131,14 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
-              <span>{lang === 'my' ? 'မူလပမာဏ:' : 'Total Debt:'} {formatMMK(debt.totalAmount)}</span>
-              <span>{lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatMMK(debt.paidAmount)}</span>
+              <span>{lang === 'my' ? 'မူလပမာဏ:' : 'Total Debt:'} {formatCurrency(debt.totalAmount, debtCurrency)}</span>
+              <span>{lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatCurrency(debt.paidAmount, debtCurrency)}</span>
             </div>
 
             <div className="flex items-center justify-between text-xs font-bold text-slate-900 border-t border-slate-200/80 pt-1">
               <span>{lang === 'my' ? 'လက်ကျန်ငွေ:' : 'Current Remaining:'}</span>
               <span className={isReceivable ? 'text-emerald-700' : 'text-rose-700'}>
-                {formatMMK(remaining)}
+                {formatCurrency(remaining, debtCurrency)}
               </span>
             </div>
           </div>
@@ -118,10 +146,11 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
           {/* Amount Input */}
           <div>
             <label className="block text-slate-700 font-semibold mb-1">
-              {lang === 'my' ? 'ယခုဆပ်သည့် ပမာဏ (MMK):' : 'Payment Amount (MMK):'}
+              {lang === 'my' ? `ယခုဆပ်သည့် ပမာဏ (${debtCurrency}):` : `Payment Amount (${debtCurrency}):`}
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               required
               autoFocus
               max={maxAllowedAmount}
@@ -129,6 +158,20 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
               onChange={(e) => setAmount(e.target.value)}
               className="w-full text-xl font-bold py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
+            {!isNaN(parsedAmount) && parsedAmount > maxAllowedAmount && (
+              <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
+                {lang === 'my'
+                  ? `ကျန်ငွေ ${formatCurrency(maxAllowedAmount, debtCurrency)} ထက် ပိုမဆပ်နိုင်ပါ — အများဆုံးပမာဏအထိသာ မှတ်တမ်းတင်ပါမည်`
+                  : `You cannot pay more than the remaining ${formatCurrency(maxAllowedAmount, debtCurrency)}`}
+              </p>
+            )}
+            {walletCurrencyMismatch && (
+              <p className="text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 mt-1">
+                {lang === 'my'
+                  ? `မှတ်ချက် — ဤငွေပေးချေမှုကို အကြွေး၏ ငွေကြေး (${debtCurrency}) ဖြင့် မှတ်တမ်းတင်ပါမည်`
+                  : `Note — this payment is recorded in the debt's currency (${debtCurrency})`}
+              </p>
+            )}
             <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
               <button
                 type="button"
@@ -137,15 +180,15 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
               >
                 {lang === 'my' ? 'အကြွေးအကုန်ဆပ်မည် (Pay in full)' : 'Pay full balance'}
               </button>
-              {remaining > 50000 && (
-                <button
-                  type="button"
-                  onClick={() => setAmount((Math.round(remaining / 2)).toString())}
-                  className="text-slate-600 hover:underline"
-                >
-                  {lang === 'my' ? 'တစ်ဝက်ဆပ်မည် (50%)' : 'Pay 50%'}
-                </button>
-              )}
+              {/* [v7.5.55 D32] "Pay 50%" is always shown now — it used to be
+                  hidden for small debts (remaining <= 50000) with no reason given. */}
+              <button
+                type="button"
+                onClick={() => setAmount((Math.round(remaining / 2)).toString())}
+                className="text-slate-600 hover:underline"
+              >
+                {lang === 'my' ? 'တစ်ဝက်ဆပ်မည် (50%)' : 'Pay 50%'}
+              </button>
             </div>
           </div>
 
@@ -162,7 +205,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
               >
                 {wallets.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {lang === 'my' ? w.name : w.nameEn}
+                    {lang === 'my' ? w.name : w.nameEn} ({formatCurrency(w.balance, w.currency || 'MMK')})
                   </option>
                 ))}
               </select>
@@ -194,6 +237,12 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
             />
           </div>
+
+          {error && (
+            <p className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+              ⚠️ {error}
+            </p>
+          )}
 
           {/* Submit */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

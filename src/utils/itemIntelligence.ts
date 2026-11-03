@@ -37,6 +37,20 @@ const ITEM_UNIT_WORDS = new Set([
   'litre', 'liter', 'can', 'dozen',
 ]);
 
+// [v7.5.55 C14a] Litre spellings are ONE unit: "ရေ 1L" and "ရေ 1လီတာ"
+// must group together, never split into different units.
+const UNIT_ALIASES: Record<string, string> = {
+  l: 'လီတာ',
+  litre: 'လီတာ',
+  liter: 'လီတာ',
+  'လီတာ': 'လီတာ',
+};
+
+const canonicalUnit = (u: string): string => {
+  const lower = u.toLowerCase();
+  return UNIT_ALIASES[lower] ?? lower;
+};
+
 export interface NormalizedItemName {
   /** Lowercased base name, quantity stripped — the grouping key. */
   key: string;
@@ -50,7 +64,9 @@ export function normalizeItemName(rawName: string): NormalizedItemName {
   const empty = { key: '', display: '', unit: '' };
   if (!rawName) return empty;
   const converted = rawName.replace(/[၀-၉]/g, (d) => MYANMAR_DIGITS[d] ?? d);
-  const collapsed = converted.trim().replace(/\s+/g, ' ');
+  // [v7.5.55 C14b] Strip trailing punctuation FIRST — "ဆန် 1 ပြည်။" must
+  // strip its unit exactly like "ဆန် 1 ပြည်".
+  const collapsed = converted.trim().replace(/\s+/g, ' ').replace(/[။.,;:!?]+$/, '').trim();
   if (!collapsed) return empty;
 
   const tokens = collapsed.split(' ');
@@ -59,7 +75,7 @@ export function normalizeItemName(rawName: string): NormalizedItemName {
   const isPureNumber = (t: string) => /^\d+([.,]\d+)?$/.test(t);
   const gluedUnit = (t: string): string | null => {
     const m = /^(\d+(?:[.,]\d+)?)(.+)$/.exec(t);
-    if (m && isUnitWord(m[2])) return m[2].toLowerCase();
+    if (m && isUnitWord(m[2])) return canonicalUnit(m[2]);
     return null;
   };
 
@@ -74,20 +90,68 @@ export function normalizeItemName(rawName: string): NormalizedItemName {
       continue;
     }
     if (isUnitWord(last)) {
-      if (!unit) unit = last.toLowerCase();
+      if (!unit) unit = canonicalUnit(last);
       tokens.pop();
       continue;
     }
     if (isPureNumber(last)) {
+      // [v7.5.55 C14c] Never strip a trailing "1" that belongs to
+      // "in 1" / "3in1" — "ကော်ဖီ 3 in 1" is one item name, not "ကော်ဖီ 3 in".
+      if (tokens.length >= 2 && tokens[tokens.length - 2].toLowerCase() === 'in') break;
       tokens.pop();
       continue;
     }
     break;
   }
 
+  // [v7.5.55 C14e] Unit in the middle — "1L ရေ" is the same item as
+  // "ရေ 1L": strip a leading quantity ("1L", "1 လီတာ") and keep it as unit.
+  if (tokens.length > 1) {
+    const firstGlued = gluedUnit(tokens[0]);
+    if (firstGlued) {
+      if (!unit) unit = firstGlued;
+      tokens.shift();
+    } else if (isPureNumber(tokens[0]) && tokens.length > 2 && isUnitWord(tokens[1])) {
+      if (!unit) unit = canonicalUnit(tokens[1]);
+      tokens.shift();
+      tokens.shift();
+    }
+  }
+
   const display = tokens.join(' ');
   if (!display) return empty;
+  // [v7.5.55 C14d] A name that is only a number or only a unit word
+  // ("1 ပြည်", "10 kg", "ပြည်" alone) is not an item — never emit it.
+  if (/^[\d.,]+$/.test(display)) return empty;
+  if (tokens.length === 1 && isUnitWord(tokens[0])) return empty;
   return { key: display.toLowerCase(), display, unit };
+}
+
+/**
+ * [v7.5.55 D20] Explicit-item gate for free-text notes. A note becomes a
+ * catalog item ONLY when it parses as an item name (+ quantity/unit):
+ * a short name such as "ဆန်", or a name with a quantity such as
+ * "ဆန် 3 ပြည်" / "ကော်ဖီ 3 in 1". Longer free text ("မိသားစု နေ့လယ်စာ
+ * စားသောက်စရိတ်") never becomes a purchasable "item". Returns null when
+ * the note is not an item signal.
+ */
+export function parseNoteAsItem(note: string): { name: string; unit: string } | null {
+  if (!note) return null;
+  const trimmed = note.trim().replace(/[။.,;:!?]+$/, '').trim();
+  if (!trimmed) return null;
+  // "ကော်ဖီ 3 in 1" / "ကော်ဖီ 3in1" is one item name, not a sentence.
+  if (/\d+\s*in\s*\d+$/i.test(trimmed) || /\bin\s+\d+$/i.test(trimmed)) {
+    const norm = normalizeItemName(trimmed);
+    if (!norm.key) return null;
+    return { name: norm.display, unit: norm.unit };
+  }
+  const norm = normalizeItemName(trimmed);
+  if (!norm.key) return null;
+  const baseTokens = norm.display.split(' ');
+  if (baseTokens.length > 2) return null;
+  // Two-word text with no quantity/unit is a sentence fragment, not an item.
+  if (baseTokens.length === 2 && !norm.unit && !/\d/.test(trimmed)) return null;
+  return { name: norm.display, unit: norm.unit };
 }
 
 /**
@@ -186,7 +250,10 @@ export function getAllItemSuggestions(
     }
 
     // C. Direct Note transactions
-    if (tx.note && tx.note.trim()) {
+    // [v7.5.55 D20] Only an explicit item signal becomes an item —
+    // free-text notes ("မိသားစု နေ့လယ်စာ စားသောက်စရိတ်") must not
+    // become phantom catalog items.
+    if (tx.note && tx.note.trim() && parseNoteAsItem(tx.note.trim())) {
       // If note contains multi-item formula (e.g. "ကြက်သား + ဆီ"), split or record
       const noteStr = tx.note.trim();
       const unitAmount = tx.amount || 0;

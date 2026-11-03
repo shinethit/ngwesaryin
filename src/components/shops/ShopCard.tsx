@@ -3,6 +3,8 @@ import { Store, Phone, MapPin, Edit2, Trash2, Copy, ExternalLink, Sparkles, Chec
 import { ShopContact, PublicShop } from '../../types';
 import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
+import { parseMyanmarNumber } from '../../utils/myanmarDigits';
+import { normalizeMyanmarPhone } from './ShopModal';
 
 interface ShopCardProps {
   shop: ShopContact | PublicShop;
@@ -55,27 +57,60 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       : shop.address
       ? [shop.address]
       : [];
-  const primaryPhone = phonesList[0] || '';
-  const secondaryPhones = phonesList.slice(1);
+  // [v7.5.55 C16] Normalize before tel: links — spaces/dashes/Myanmar
+  // digits in the raw string break dialling.
+  const primaryPhone = normalizeMyanmarPhone(phonesList[0] || '');
+  const secondaryPhones = phonesList.slice(1).map((p) => normalizeMyanmarPhone(p)).filter(Boolean);
   const primaryAddress = addressesList[0] || '';
+  const normalizedKpay = normalizeMyanmarPhone(shop.kpayNumber || '');
 
   const locationSegments = [shop.stateRegion, shop.township, (shop as any).city, (shop as any).ward].filter(
     Boolean
   );
   const locationString = locationSegments.length > 0 ? locationSegments.join(' • ') : '';
 
-  const handleCopyText = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => {
-      setCopiedId((prev) => (prev === id ? null : prev));
-    }, 2000);
+  // [v7.5.55 C26] Await the clipboard write and show ✓ ONLY on success;
+  // fall back to a textarea + execCommand for non-secure contexts, and
+  // show an error when copying really fails.
+  const handleCopyText = async (id: string, text: string) => {
+    const markCopied = () => {
+      setCopiedId(id);
+      setTimeout(() => {
+        setCopiedId((prev) => (prev === id ? null : prev));
+      }, 2000);
+    };
+    try {
+      await navigator.clipboard.writeText(text);
+      markCopied();
+      return;
+    } catch {
+      // Fallback for non-secure contexts / denied clipboard permission.
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) {
+          markCopied();
+          return;
+        }
+      } catch {
+        // fall through to the error alert below
+      }
+      alert(lang === 'my' ? 'ကူးယူ၍ မရပါ — ဘရောက်ဆာ ခွင့်ပြုချက် စစ်ပေးပါ' : 'Could not copy — please check browser permissions');
+    }
   };
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim() || !newItemPrice.trim()) return;
-    const priceNum = Number(newItemPrice.replace(/[^0-9]/g, ''));
+    // [v7.5.55 C16] Myanmar-digit prices must work — parseMyanmarNumber,
+    // not a digit-strip that silently turns ၅၀၀၀ into nothing.
+    const priceNum = parseMyanmarNumber(newItemPrice);
     if (isNaN(priceNum) || priceNum <= 0) return;
 
     setIsSubmittingItem(true);
@@ -105,6 +140,18 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         return <Store className={className} />;
     }
   };
+
+  // [v7.5.55 C4] Firestore rules allow public-shop updates only by the
+  // adder or an admin — vote / add-price / edit / per-item delete are
+  // disabled for everyone else, with an explanation. Private shops are
+  // the user's own list, so they are always manageable.
+  const isShopOwner = isPublic && auth.currentUser?.uid === pub?.addedByUid;
+  const isShopAdmin = auth.currentUser?.email === 'khunthanshwe@gmail.com';
+  const canManage = !isPublic || isShopOwner || isShopAdmin;
+  const manageDisabledNote =
+    lang === 'my'
+      ? 'ဆိုင်ထည့်သူနှင့် admin သာ ပြင်ဆင်နိုင်ပါသည်'
+      : 'Only the shop adder and admins can edit this shop';
 
   const canDelete =
     !isPublic ||
@@ -169,12 +216,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               <button
                 type="button"
                 onClick={() => onToggleVote(pub)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                disabled={!canManage}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                   hasVoted
                     ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
                     : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
-                title={lang === 'my' ? 'အသုံးဝင်ကြောင်း မဲပေးမည်' : 'Helpful Vote'}
+                title={!canManage ? manageDisabledNote : lang === 'my' ? 'အသုံးဝင်ကြောင်း မဲပေးမည်' : 'Helpful Vote'}
               >
                 <ThumbsUp className="w-3 h-3" />
                 <span>{votesCount}</span>
@@ -195,8 +243,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             <button
               type="button"
               onClick={() => onOpenEdit(shop)}
-              className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl transition-all cursor-pointer"
-              title={lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
+              disabled={isPublic && !canManage}
+              className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title={isPublic && !canManage ? manageDisabledNote : lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
             >
               <Edit2 className="w-3.5 h-3.5" />
             </button>
@@ -211,8 +260,118 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
+
+            {/* [v7.5.55 C32] Compact view gets the same Map + Copy-all
+                actions as the grid view. */}
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                `${shop.name} ${shop.stateRegion || ''} ${shop.township || ''} ${primaryAddress}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 flex items-center gap-1"
+              title={lang === 'my' ? 'Google Maps တွင်ကြည့်ရန်' : 'View on Maps'}
+            >
+              <MapPin className="w-3 h-3 text-slate-400" />
+              <span className="text-[10px] font-semibold hidden sm:inline">{lang === 'my' ? 'မြေပုံ' : 'Map'}</span>
+              <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+            </a>
+            <button
+              type="button"
+              onClick={() =>
+                handleCopyText(
+                  `full-${shop.id}`,
+                  `${shop.name}\n${lang === 'my' ? 'ဖုန်း' : 'Phone'}: ${phonesList.join(', ')}\n${
+                    locationString ? `${lang === 'my' ? 'တည်နေရာ' : 'Location'}: ${locationString}\n` : ''
+                  }${primaryAddress ? `${lang === 'my' ? 'လိပ်စာ' : 'Address'}: ${addressesList.join(' | ')}\n` : ''}${
+                    shop.kpayNumber ? `KPay: ${shop.kpayNumber}\n` : ''
+                  }${shop.generalNotes ? `Note: ${shop.generalNotes}` : ''}`
+                )
+              }
+              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 flex items-center gap-1 cursor-pointer"
+              title={lang === 'my' ? 'အပြည့်အစုံ ကူးယူမည်' : 'Copy all info'}
+            >
+              {copiedId === `full-${shop.id}` ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-bold text-emerald-700">{lang === 'my' ? 'ကူးပြီး' : 'Copied'}</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3 text-slate-400" />
+                  <span className="text-[10px] font-semibold hidden sm:inline">{lang === 'my' ? 'ကူးမည်' : 'Copy'}</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* [v7.5.55 C32] Compact view: address, secondary phones, KPay —
+            same info as the grid view. */}
+        {(primaryAddress || secondaryPhones.length > 0 || shop.kpayNumber) && (
+          <div className="mt-3 space-y-1.5">
+            {primaryAddress && (
+              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-150">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <span className="line-clamp-2">{primaryAddress}</span>
+              </div>
+            )}
+            {secondaryPhones.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowAllPhones(!showAllPhones)}
+                  className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  {showAllPhones
+                    ? lang === 'my'
+                      ? 'အခြားဖုန်းများ ဝှက်မည် ▲'
+                      : 'Hide extra phones ▲'
+                    : lang === 'my'
+                    ? `+ အခြားဖုန်း (${secondaryPhones.length}) ခု ကြည့်မည် ▼`
+                    : `+${secondaryPhones.length} more phones ▼`}
+                </button>
+                {showAllPhones &&
+                  secondaryPhones.map((ph, idx) => (
+                    <span key={idx} className="flex items-center gap-1 text-xs">
+                      <a href={`tel:${ph}`} className="text-emerald-700 font-bold hover:underline">
+                        {ph}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(`ph-${shop.id}-${idx + 1}`, ph)}
+                        className="text-slate-400 hover:text-slate-600 p-0.5"
+                      >
+                        {copiedId === `ph-${shop.id}-${idx + 1}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </span>
+                  ))}
+              </div>
+            )}
+            {shop.kpayNumber && (
+              <div className="px-3 py-1.5 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs text-indigo-950 font-semibold min-w-0">
+                  <span className="px-1.5 py-0.2 bg-indigo-600 text-white rounded text-[10px] font-black shrink-0">
+                    KPay
+                  </span>
+                  <span className="truncate">{normalizedKpay || shop.kpayNumber}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyText(`kpay-${shop.id}`, normalizedKpay || shop.kpayNumber || '')}
+                  className="p-1 hover:bg-indigo-100 text-indigo-600 rounded-md transition-colors cursor-pointer shrink-0"
+                  title={lang === 'my' ? 'KPay နံပါတ်ကူးမည်' : 'Copy KPay'}
+                >
+                  {copiedId === `kpay-${shop.id}` ? (
+                    <Check className="w-3.5 h-3.5 text-indigo-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Compact View Items expansion */}
         {isItemsExpanded && (
@@ -239,12 +398,63 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                       <span className="font-bold text-slate-800 text-xs block">{item.name}</span>
                       <span className="text-[10px] text-slate-400">{item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
                     </div>
-                    <span className="text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
-                      {item.price.toLocaleString()} Ks
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+                        {item.price.toLocaleString()} Ks
+                      </span>
+                      {/* [v7.5.55 C32] Compact view: per-item delete, like grid. */}
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => onDeletePricingItem(shop, idx)}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                          title={lang === 'my' ? 'ပစ္စည်းဖျက်မည်' : 'Delete item'}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* [v7.5.55 C32] Compact view: add-price form, like grid. */}
+            {canManage ? (
+              <form onSubmit={handleAddItem} className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  {lang === 'my' ? '+ ပစ္စည်းနှင့် ဈေးနှုန်း ဖြည့်စွက်ရန်' : '+ Add Item & Price'}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'}
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 text-xs border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                  />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={lang === 'my' ? 'ဈေးနှုန်း (Ks)' : 'Price (Ks)'}
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 text-xs border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmittingItem || !newItemName.trim() || !newItemPrice.trim()}
+                  className="w-full py-1.5 bg-slate-900 hover:bg-black disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>{lang === 'my' ? 'ဈေးနှုန်းအသစ် ထည့်သွင်းမည်' : 'Save Price'}</span>
+                </button>
+              </form>
+            ) : (
+              <p className="text-[11px] text-slate-400 italic">
+                {lang === 'my' ? 'ဈေးနှုန်း ထည့်သွင်းရန် ဆိုင်ထည့်သူ သို့မဟုတ် admin ဖြစ်ရပါမည်။' : 'Only the shop adder or an admin can add prices.'}
+              </p>
             )}
           </div>
         )}
@@ -294,12 +504,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               <button
                 type="button"
                 onClick={() => onToggleVote(pub)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                disabled={!canManage}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                   hasVoted
                     ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
                     : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
-                title={lang === 'my' ? 'အသုံးဝင်ကြောင်း မဲပေးမည်' : 'Helpful Vote'}
+                title={!canManage ? manageDisabledNote : lang === 'my' ? 'အသုံးဝင်ကြောင်း မဲပေးမည်' : 'Helpful Vote'}
               >
                 <ThumbsUp className={`w-3 h-3 ${hasVoted ? 'fill-white' : ''}`} />
                 <span>{votesCount > 0 ? votesCount : ''}</span>
@@ -309,8 +520,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             <button
               type="button"
               onClick={() => onOpenEdit(shop)}
-              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-              title={lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
+              disabled={isPublic && !canManage}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title={isPublic && !canManage ? manageDisabledNote : lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
             >
               <Edit2 className="w-3.5 h-3.5" />
             </button>
@@ -423,7 +635,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => handleCopyText(`kpay-${shop.id}`, shop.kpayNumber || '')}
+              onClick={() => handleCopyText(`kpay-${shop.id}`, normalizedKpay || shop.kpayNumber || '')}
               className="p-1 hover:bg-indigo-100 text-indigo-600 rounded-md transition-colors cursor-pointer shrink-0"
               title={lang === 'my' ? 'KPay နံပါတ်ကူးမည်' : 'Copy KPay'}
             >
@@ -517,7 +729,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                       <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 text-xs">
                         {item.price.toLocaleString()} Ks
                       </span>
-                      {auth.currentUser && (
+                      {canManage && (
                         <button
                           type="button"
                           onClick={() => onDeletePricingItem(shop, idx)}
@@ -534,35 +746,42 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             )}
 
             {/* Add Price Item Form */}
-            <form onSubmit={handleAddItem} className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                {lang === 'my' ? '+ ပစ္စည်းနှင့် ဈေးနှုန်း ဖြည့်စွက်ရန်' : '+ Add Item & Price'}
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'}
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-slate-50 text-xs border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
-                />
-                <input
-                  type="number"
-                  placeholder={lang === 'my' ? 'ဈေးနှုန်း (Ks)' : 'Price (Ks)'}
-                  value={newItemPrice}
-                  onChange={(e) => setNewItemPrice(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-slate-50 text-xs border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={isSubmittingItem || !newItemName.trim() || !newItemPrice.trim()}
-                className="w-full py-1.5 bg-slate-900 hover:bg-black disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" />
-                <span>{lang === 'my' ? 'ဈေးနှုန်းအသစ် ထည့်သွင်းမည်' : 'Save Price'}</span>
-              </button>
-            </form>
+            {canManage ? (
+              <form onSubmit={handleAddItem} className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  {lang === 'my' ? '+ ပစ္စည်းနှင့် ဈေးနှုန်း ဖြည့်စွက်ရန်' : '+ Add Item & Price'}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'}
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 text-xs border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                  />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={lang === 'my' ? 'ဈေးနှုန်း (Ks)' : 'Price (Ks)'}
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 text-xs border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmittingItem || !newItemName.trim() || !newItemPrice.trim()}
+                  className="w-full py-1.5 bg-slate-900 hover:bg-black disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>{lang === 'my' ? 'ဈေးနှုန်းအသစ် ထည့်သွင်းမည်' : 'Save Price'}</span>
+                </button>
+              </form>
+            ) : (
+              <p className="text-[11px] text-slate-400 italic">
+                {lang === 'my' ? 'ဈေးနှုန်း ထည့်သွင်းရန် ဆိုင်ထည့်သူ သို့မဟုတ် admin ဖြစ်ရပါမည်။' : 'Only the shop adder or an admin can add prices.'}
+              </p>
+            )}
           </div>
         )}
       </div>

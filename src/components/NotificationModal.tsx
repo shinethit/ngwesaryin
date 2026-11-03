@@ -12,6 +12,8 @@ import {
   AdminSystemMessage,
 } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { convertToMMK } from '../utils/currency';
+import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 import { getMaintenanceAlerts } from '../utils/vehicleAnalytics';
 
 export interface NotificationItem {
@@ -34,6 +36,9 @@ interface NotificationModalProps {
   budgets: BudgetConfig[];
   transactions: Transaction[];
   categories: Category[];
+  // [v7.5.55 E32] Optional — when App passes wallets, budget-alert amounts
+  // convert to MMK per wallet currency; without it amounts stay raw.
+  wallets?: { id: string; currency?: string; exchangeRate?: number }[];
   vehicles?: Vehicle[];
   tireLogs?: TirePressureLog[];
   maintenanceLogs?: VehicleMaintenance[];
@@ -53,6 +58,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   budgets = [],
   transactions = [],
   categories = [],
+  wallets = [],
   vehicles = [],
   tireLogs = [],
   maintenanceLogs = [],
@@ -79,7 +85,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
   if (!isOpen) return null;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // [v7.5.55] Local date/month — toISOString() is UTC and was still the
+  // previous day/month before 06:30 local time.
+  const todayStr = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  })();
   const currentMonthStr = todayStr.substring(0, 7);
   const currentDayNum = new Date().getDate();
 
@@ -150,14 +161,34 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   });
 
   // 2. Budget Threshold Alerts
+  // [v7.5.55 E32] Reuse the Budget view's math: convert to MMK, exclude
+  // transfers, % budgets via this month's income, and the General pool =
+  // spending in categories with NO explicit budget (the old code used raw
+  // amounts, counted transfers, treated a 20% budget as a 20 MMK limit,
+  // and could never trigger the General budget).
+  // NOTE: App does not pass `wallets` to this modal yet, so conversion
+  // falls back to raw amounts until that wiring lands (see report).
+  const notifWalletMap = buildWalletMap((wallets as any) || []);
+  const notifConvertTx = (t: Transaction) => {
+    const w = notifWalletMap.get(t.walletId);
+    return convertToMMK(t.amount, (w as any)?.currency, (w as any)?.exchangeRate);
+  };
   const currentMonthTx = transactions.filter(
-    (t) => t.type === 'expense' && t.date && t.date.startsWith(currentMonthStr)
+    (t) => t.type === 'expense' && !isTransferTransaction(t) && t.date && t.date.startsWith(currentMonthStr)
   );
-
+  const monthlyIncomeForBudgets = transactions
+    .filter((t) => t.type === 'income' && !isTransferTransaction(t) && t.date && t.date.startsWith(currentMonthStr))
+    .reduce((sum, t) => sum + notifConvertTx(t), 0);
+  const explicitBudgetedCatIds = new Set(
+    budgets.map((b) => b.categoryId).filter((id) => id !== 'cat_general_unbudgeted')
+  );
   const spendingByCategory: Record<string, number> = {};
   currentMonthTx.forEach((t) => {
-    spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + t.amount;
+    spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + notifConvertTx(t);
   });
+  const generalPoolSpent = currentMonthTx
+    .filter((t) => !explicitBudgetedCatIds.has(t.category))
+    .reduce((sum, t) => sum + notifConvertTx(t), 0);
 
   budgets.forEach((budget) => {
     const category = categories.find((c) => c.id === budget.categoryId);
@@ -172,8 +203,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           : category.nameEn
         : 'Budget';
 
-    const spent = spendingByCategory[budget.categoryId] || 0;
-    const limit = budget.value;
+    const isGeneralBudget = budget.categoryId === 'cat_general_unbudgeted';
+    const spent = isGeneralBudget ? generalPoolSpent : (spendingByCategory[budget.categoryId] || 0);
+    const limit =
+      budget.calcType === 'percentage'
+        ? Math.round((monthlyIncomeForBudgets * budget.value) / 100)
+        : budget.value;
 
     if (limit > 0) {
       const percentage = (spent / limit) * 100;

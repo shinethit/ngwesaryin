@@ -17,6 +17,7 @@ import {
 } from '../lib/exchangeRates';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { isWalletMatch } from '../utils/walletBalance';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { ShareWalletModal } from './ShareWalletModal';
 import { WalletModal } from './WalletModal';
 import { useAuth } from '../context/AuthContext';
@@ -200,12 +201,15 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     return map;
   }, [wallets, transactions]);
 
+  // [v7.5.55] Wallet limit from the CURRENT plan's row (App passes
+  // maxFreeWallets={limits.maxWallets}: guest 1, free 2). Guest is
+  // limited too — previously only free was enforced here.
   const isAtLimit =
-    plan === 'free' && wallets.filter((w) => !w.isSharedFromOther).length >= maxFreeWallets;
+    (plan === 'free' || plan === 'guest') && wallets.filter((w) => !w.isSharedFromOther).length >= maxFreeWallets;
 
   const handleTransferSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = parseFloat(transferAmount);
+    const amt = parseMyanmarNumber(transferAmount);
     if (!amt || amt <= 0) return;
     if (transferFrom === transferTo) return;
 
@@ -216,7 +220,10 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   };
 
   const handleOpenAddWallet = () => {
-    if (isAtLimit) {
+    // [v7.5.55] Free at the limit goes to the upgrade modal. Guest at the
+    // limit still opens the modal — the App-level handler enforces the
+    // guest limit with the sign-in prompt (this view has no auth opener).
+    if (isAtLimit && plan === 'free') {
       onOpenUpgradeModal();
       return;
     }
@@ -324,8 +331,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             <Lock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
               {lang === 'my'
-                ? `Free Plan တွင် ပိုက်ဆံအိတ် အများဆုံး ${maxFreeWallets} ခုသာ ထည့်သွင်းခွင့်ပြုထားသည်။ စိတ်ကြိုက်အကောင့်များ ထည့်သွင်းရန် Premium သို့ အဆင့်မြှင့်ပါ။`
-                : `Free Plan allows up to ${maxFreeWallets} wallets. Upgrade to Premium to create unlimited custom bank accounts and digital wallets.`}
+                ? `${plan === 'guest' ? 'Guest Mode' : 'Free Plan'} တွင် ပိုက်ဆံအိတ် အများဆုံး ${maxFreeWallets} ခုသာ ထည့်သွင်းခွင့်ပြုထားသည်။ စိတ်ကြိုက်အကောင့်များ ထည့်သွင်းရန် Premium သို့ အဆင့်မြှင့်ပါ။`
+                : `${plan === 'guest' ? 'Guest Mode' : 'Free Plan'} allows up to ${maxFreeWallets} wallets. Upgrade to Premium to create unlimited custom bank accounts and digital wallets.`}
             </span>
           </div>
           <button

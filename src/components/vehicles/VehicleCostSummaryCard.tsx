@@ -59,6 +59,11 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
     return getRangeForPreset(preset);
   }, [preset, customStart, customEnd]);
 
+  // [v7.5.55 C25] A custom range with NO dates picked must not silently
+  // show all-time totals under a "select dates" label — show an honest
+  // choose-dates state instead.
+  const isCustomRangeEmpty = preset === 'custom' && !range.start && !range.end;
+
   const inRange = (dateStr: string): boolean => {
     if (!dateStr) return true;
     if (range.start && dateStr < range.start) return false;
@@ -171,6 +176,23 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
         </div>
       )}
 
+      {/* [v7.5.55 C25] Custom range with no dates — honest empty state,
+          never all-time totals. */}
+      {isCustomRangeEmpty ? (
+        <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+          <p className="text-xs font-bold text-slate-600">
+            {lang === 'my'
+              ? '📅 ရက်စွဲ ရွေးချယ်ပါ — စတင်ရက် (သို့မဟုတ်) အဆုံးရက် တစ်ခုခု ရွေးမှ ကုန်ကျစရိတ် ပြသပါမည်'
+              : '📅 Pick a start or end date to see costs for a custom range'}
+          </p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {lang === 'my'
+              ? 'ရက်စွဲ မရွေးရသေးသဖြင့် စုစုပေါင်း ပြမထားပါ'
+              : 'No totals are shown until a date is picked'}
+          </p>
+        </div>
+      ) : (
+      <>
       {/* 3 Cost Categories */}
       <div className="grid grid-cols-3 gap-2">
         {/* Fuel */}
@@ -265,6 +287,8 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

@@ -144,8 +144,12 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         ? Math.round((monthlyIncome * b.value) / 100)
         : b.value;
 
-    const percent = limitMMK > 0 ? Math.round((spent / limitMMK) * 100) : 0;
-    const isOver = limitMMK > 0 && spent > limitMMK;
+    // [v7.5.55 D10] A % budget with zero income has limit 0: any spending is
+    // OVER budget (there is no income to base it on) — never green
+    // "Within Budget". Percent capped at 150 like the summary card (D19).
+    const noIncomeBase = limitMMK === 0 && spent > 0;
+    const percent = limitMMK > 0 ? Math.min(150, Math.round((spent / limitMMK) * 100)) : (spent > 0 ? 150 : 0);
+    const isOver = spent > limitMMK;
     const isNear = limitMMK > 0 && percent >= 80 && !isOver;
 
     return {
@@ -156,6 +160,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
       percent,
       isOver,
       isNear,
+      noIncomeBase,
       breakdown,
     };
   });
@@ -175,17 +180,21 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   );
 
   // Unbudgeted total if no general budget is configured
+  // [v7.5.55 D11] Convert to MMK and exclude transfers, like the per-budget
+  // math above (was raw amounts, transfers included).
   const unbudgetedSpentWithoutGeneral = !hasGeneralBudget
     ? monthTransactions
         .filter(
           (t) =>
-            t.type === 'expense' && !explicitBudgetedCatIds.has(t.category)
+            t.type === 'expense' && !isTransferTransaction(t) && !explicitBudgetedCatIds.has(t.category)
         )
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + convertTxToMMK(t), 0)
     : 0;
 
+  // [v7.5.55] maxBudgetCategories comes from DEFAULT_PLAN_LIMITS (free 5,
+  // guest 0) via props — never hardcoded here.
   const isFreeAtLimit =
-    plan === 'free' && budgets.length >= maxBudgetCategories;
+    (plan === 'free' || plan === 'guest') && budgets.length >= maxBudgetCategories;
 
   const handleOpenAdd = () => {
     if (isFreeAtLimit) {
@@ -209,13 +218,14 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
     }
   };
 
+  // [v7.5.55] Hardcoded month names — 'my-MM' falls back to English on
+  // phones whose browser does not ship the Myanmar locale.
   const formatMonthLabel = (m: string) => {
     const [year, month] = m.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-    return date.toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-US', {
-      month: 'long',
-      year: 'numeric',
-    });
+    const monthIdx = parseInt(month, 10) - 1;
+    const monthsMy = ['ဇန်နဝါရီ', 'ဖေဖော်ဝါရီ', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်', 'ဇူလိုင်', 'သြဂုတ်', 'စက်တင်ဘာ', 'အောက်တိုဘာ', 'နိုဝင်ဘာ', 'ဒီဇင်ဘာ'];
+    const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return lang === 'my' ? `${monthsMy[monthIdx]} ${year}` : `${monthsEn[monthIdx]} ${year}`;
   };
 
   return (
@@ -404,18 +414,18 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
             {lang === 'my' ? 'ဘတ်ဂျက်ကဏ္ဍ အသုံးပြုမှု:' : 'Budget Categories Quota:'}
           </span>
           <span className="font-black px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-900">
-            {budgets.length} / {plan === 'free' ? `${maxBudgetCategories} (Free Plan)` : '∞ (Premium)'}
+            {budgets.length} / {plan !== 'premium' ? `${maxBudgetCategories} (${plan === 'guest' ? 'Guest' : 'Free Plan'})` : '∞ (Premium)'}
           </span>
-          {plan === 'free' && (
+          {plan !== 'premium' && (
             <span className="text-[11px] text-slate-500">
               {lang === 'my'
-                ? '(Free အဆင့်တွင် ဘတ်ဂျက်ကဏ္ဍ အများဆုံး ၅ ခု သတ်မှတ်နိုင်ပါသည်)'
-                : '(Free plan supports up to 5 categories)'}
+                ? `(${plan === 'guest' ? 'Guest' : 'Free'} အဆင့်တွင် ဘတ်ဂျက်ကဏ္ဍ အများဆုံး ${maxBudgetCategories} ခု သတ်မှတ်နိုင်ပါသည်)`
+                : `(${plan === 'guest' ? 'Guest' : 'Free'} plan supports up to ${maxBudgetCategories} categories)`}
             </span>
           )}
         </div>
 
-        {plan === 'free' ? (
+        {plan !== 'premium' ? (
           <button
             onClick={onOpenUpgradeModal}
             className="text-amber-700 hover:text-amber-800 font-bold flex items-center gap-1 text-xs"
@@ -625,6 +635,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                 percent,
                 isOver,
                 isNear,
+                noIncomeBase,
                 breakdown,
               }) => {
                 const cat = !isGeneral ? catMap.get(budget.categoryId) : null;
@@ -722,7 +733,11 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                           {isOver ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">
                               <ShieldAlert className="w-3.5 h-3.5" />
-                              <span>{lang === 'my' ? 'ဘတ်ဂျက်ကျော်လွန်' : 'Over Budget'}</span>
+                              <span>
+                                {noIncomeBase
+                                  ? (lang === 'my' ? 'ဝင်ငွေမရှိသေးပါ' : 'No income to base on')
+                                  : (lang === 'my' ? 'ဘတ်ဂျက်ကျော်လွန်' : 'Over Budget')}
+                              </span>
                             </span>
                           ) : isNear ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">

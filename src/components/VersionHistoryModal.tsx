@@ -18,6 +18,8 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   // [v7.5.4] Real update check state
   const [pendingUpdate, setPendingUpdate] = useState<{ version: string; buildNumber: number } | null>(null);
+  // [v7.5.55 E28] A failed check must not render in green success styling.
+  const [updateError, setUpdateError] = useState(false);
 
   if (!isOpen) return null;
 
@@ -34,6 +36,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   const handleCheckUpdate = async () => {
     setCheckingUpdate(true);
     setUpdateMsg(null);
+    setUpdateError(false);
     // (pendingUpdate declared in v7.5.4; add guarded set)
     try { if (typeof (setPendingUpdate as any) === 'function') (setPendingUpdate as any)(null); } catch {}
 
@@ -52,7 +55,9 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       const cloudB = Number(data?.buildNumber) || 0;
       if (!cloudV) throw new Error('Bad payload');
 
-      if (cloudV !== CURRENT_APP_VERSION && cloudB > CURRENT_BUILD_NUMBER) {
+      // [v7.5.55 E28] A same-version hotfix (higher build number) is
+      // an update too — the old && required a version change as well.
+      if (cloudV !== CURRENT_APP_VERSION || cloudB > CURRENT_BUILD_NUMBER) {
         try { if (typeof (setPendingUpdate as any) === 'function') (setPendingUpdate as any)({ version: cloudV, buildNumber: cloudB }); } catch {}
         setUpdateMsg(
           (lang as any) === 'my'
@@ -68,6 +73,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       }
     } catch (e: any) {
       const msg = e?.message === 'timeout' ? 'Network timeout (5s)' : (e?.message || 'Error');
+      setUpdateError(true);
       setUpdateMsg(
         (lang as any) === 'my'
           ? `⚠️ ဗားရှင်း စစ်ဆေး၍ မရပါ: ${msg}`
@@ -98,6 +104,8 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   };
 
   const getTagBadge = (item: VersionItem) => {
+    // [v7.5.55 E28] Untagged entries (stale 'current' removed) show no badge.
+    if (!item.tag) return null;
     switch (item.tag) {
       case 'current':
         return (
@@ -204,7 +212,9 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
         {updateMsg && (
           <div className={`px-4 py-2 text-xs font-bold text-center border-b animate-fadeIn ${
-            pendingUpdate
+            updateError
+              ? 'bg-rose-100 text-rose-900 border-rose-300'
+              : pendingUpdate
               ? 'bg-amber-100 text-amber-900 border-amber-300'
               : 'bg-emerald-100 text-emerald-900 border-emerald-200'
           }`}>

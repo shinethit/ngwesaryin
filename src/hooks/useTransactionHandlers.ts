@@ -5,6 +5,7 @@ import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { markTxDeleted, unmarkTxDeleted, markVehicleLogDeleted } from '../utils/deletedMarkers';
 import { getCollaboratorPermissions } from '../utils/permissions';
+import { getLocalDateString } from '../utils/dateUtils';
 import { isWalletMatch } from '../utils/walletBalance';
 import {
   saveSharedWalletTransaction,
@@ -92,25 +93,86 @@ export function useTransactionHandlers({
   handleSaveVehicle,
 }: UseTransactionHandlersParams) {
 
+  // [v7.5.55] safe* Firestore helpers return false when the write did not
+  // land (they enqueue a retry in the sync queue, so local data is safe).
+  // Surface that as a "cloud save pending" notice instead of a silent
+  // false success.
+  const cloudPendingMsg =
+    lang === 'my'
+      ? '☁️ Cloud သို့ သိမ်းဆည်းခြင်း ခေတ္တမရသေးပါ — အင်တာနက်ရလျှင် အလိုအလျောက် ထပ်တင်ပါမည်'
+      : '☁️ Cloud save is pending — it will retry automatically when you are back online';
+  const persistDoc = (ref: any, data: any, options?: any) => {
+    safeSetDoc(ref, data, options).then((ok) => {
+      if (ok === false) showToast(cloudPendingMsg);
+    }).catch(() => {});
+  };
+  const deleteDocChecked = (ref: any) => {
+    safeDeleteDoc(ref).then((ok) => {
+      if (ok === false) showToast(cloudPendingMsg);
+    }).catch(() => {});
+  };
+
+  // [v7.5.55] Decision 1 — transaction limit is per ROLLING 30 days:
+  // count transactions dated within the last 30 days (local YYYY-MM-DD
+  // compare). The count blocks the moment it reaches the CURRENT plan's
+  // maxTransactions (guest 30, free 100), even if reached in 10 days.
+  const countRolling30DayTransactions = (txs: Transaction[]) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    const start = getLocalDateString(d);
+    return txs.filter((t) => t.date && t.date >= start).length;
+  };
+
+  // [v7.5.55] C8c — motorcycle logs store frontPsi/rearPsi; car logs store
+  // the 4-wheel fields. The form sends Front/Rear as frontLeftPsi/
+  // rearLeftPsi and they are mapped here by vehicle type.
+  const resolveTirePsi = (
+    link: VehicleLinkData,
+    vehicle?: Vehicle
+  ): {
+    frontPsi?: number;
+    rearPsi?: number;
+    frontLeftPsi?: number;
+    frontRightPsi?: number;
+    rearLeftPsi?: number;
+    rearRightPsi?: number;
+  } => {
+    if (vehicle?.type === 'motorcycle') {
+      return {
+        frontPsi: link.frontLeftPsi,
+        rearPsi: link.rearLeftPsi,
+        frontLeftPsi: undefined,
+        frontRightPsi: undefined,
+        rearLeftPsi: undefined,
+        rearRightPsi: undefined,
+      };
+    }
+    return {
+      frontLeftPsi: link.frontLeftPsi,
+      frontRightPsi: link.frontRightPsi,
+      rearLeftPsi: link.rearLeftPsi,
+      rearRightPsi: link.rearRightPsi,
+    };
+  };
+
   const handleOpenAddTx = (
     type: TransactionType = 'expense',
     targetWalletId?: string,
     initialModel: 'general' | 'fuel' | 'vehicle_service' = 'general'
   ) => {
-    // Current month transaction check for Guest
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
-    const monthlyTxCount = transactions.filter((t) => t.date && t.date.startsWith(currentMonthStr)).length;
+    // [v7.5.55] Rolling-30-day count against the CURRENT plan's row.
+    const rollingTxCount = countRolling30DayTransactions(transactions);
 
-    if (plan === 'guest' && monthlyTxCount >= limits.maxTransactions) {
-      if (window.confirm(lang === 'my' 
-        ? 'Guest Mode တွင် ၁ လလျှင် မှတ်တမ်း (၃၀) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ သို့မဟုတ် Premium သို့ တိုးမြှင့်ပါ'
-        : 'Guest Mode allows up to 30 transactions per month. Please Sign In with Google or Upgrade.')) {
+    if (plan === 'guest' && rollingTxCount >= limits.maxTransactions) {
+      if (window.confirm(lang === 'my'
+        ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ သို့မဟုတ် Premium သို့ တိုးမြှင့်ပါ`
+        : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days. Please Sign In with Google or Upgrade.`)) {
         setIsAuthModalOpen(true);
       }
       return;
     }
 
-    if (plan === 'free' && transactions.length >= limits.maxTransactions) {
+    if (plan === 'free' && rollingTxCount >= limits.maxTransactions) {
       setIsPremiumModalOpen(true);
       return;
     }
@@ -147,7 +209,9 @@ export function useTransactionHandlers({
       return;
     }
     const activeDebtsCount = debts.filter((d) => d.status === 'active').length;
-    if (plan === 'free' && activeDebtsCount >= limits.maxDebts) {
+    // [v7.5.55] Per-plan limit from the limits table: any non-premium plan
+    // enforces its own row (guest is already turned away above; free = 5).
+    if (plan !== 'premium' && activeDebtsCount >= limits.maxDebts) {
       setIsPremiumModalOpen(true);
       return;
     }
@@ -204,7 +268,7 @@ export function useTransactionHandlers({
           });
           if (user?.uid) {
             const targetUid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', targetUid, 'transactions', pairTx.id), {
+            persistDoc(doc(db, 'users', targetUid, 'transactions', pairTx.id), {
               ...updatedPair,
               userId: targetUid,
             }, { merge: true });
@@ -214,7 +278,7 @@ export function useTransactionHandlers({
 
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', editingTransaction.id), {
+        persistDoc(doc(db, 'users', targetUid, 'transactions', editingTransaction.id), {
           ...updatedTx,
           userId: targetUid,
         }, { merge: true });
@@ -260,7 +324,7 @@ export function useTransactionHandlers({
           });
           if (user?.uid) {
             const uid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', uid, 'fuelLogs', updatedFuel.id), { ...updatedFuel, userId: uid }, { merge: true });
+            persistDoc(doc(db, 'users', uid, 'fuelLogs', updatedFuel.id), { ...updatedFuel, userId: uid }, { merge: true });
           }
         }
         if (linkedMaint) {
@@ -287,19 +351,25 @@ export function useTransactionHandlers({
           });
           if (user?.uid) {
             const uid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', uid, 'vehicleMaintenance', updatedMaint.id), { ...updatedMaint, userId: uid }, { merge: true });
+            persistDoc(doc(db, 'users', uid, 'vehicleMaintenance', updatedMaint.id), { ...updatedMaint, userId: uid }, { merge: true });
           }
         }
         if (linkedTire) {
+          // [v7.5.55] C8c: a motorcycle edit updates frontPsi/rearPsi and
+          // clears the 4-wheel fields; a car edit keeps the 4-wheel fields.
+          const editVehicle = vehicles.find((v) => v.id === vehicleLinkData.vehicleId);
+          const isBikeEdit = editVehicle?.type === 'motorcycle';
           const updatedTire: TirePressureLog = {
             ...linkedTire,
             vehicleId: vehicleLinkData.vehicleId,
             date: sanitizedTx.date,
             odometer: vehicleLinkData.odometer || linkedTire.odometer,
-            frontLeftPsi: vehicleLinkData.frontLeftPsi ?? linkedTire.frontLeftPsi,
-            frontRightPsi: vehicleLinkData.frontRightPsi ?? linkedTire.frontRightPsi,
-            rearLeftPsi: vehicleLinkData.rearLeftPsi ?? linkedTire.rearLeftPsi,
-            rearRightPsi: vehicleLinkData.rearRightPsi ?? linkedTire.rearRightPsi,
+            frontPsi: isBikeEdit ? (vehicleLinkData.frontLeftPsi ?? linkedTire.frontPsi) : linkedTire.frontPsi,
+            rearPsi: isBikeEdit ? (vehicleLinkData.rearLeftPsi ?? linkedTire.rearPsi) : linkedTire.rearPsi,
+            frontLeftPsi: isBikeEdit ? undefined : (vehicleLinkData.frontLeftPsi ?? linkedTire.frontLeftPsi),
+            frontRightPsi: isBikeEdit ? undefined : (vehicleLinkData.frontRightPsi ?? linkedTire.frontRightPsi),
+            rearLeftPsi: isBikeEdit ? undefined : (vehicleLinkData.rearLeftPsi ?? linkedTire.rearLeftPsi),
+            rearRightPsi: isBikeEdit ? undefined : (vehicleLinkData.rearRightPsi ?? linkedTire.rearRightPsi),
             cost: cleanAmount,
             walletId: sanitizedTx.walletId,
             note: sanitizedTx.note,
@@ -312,7 +382,7 @@ export function useTransactionHandlers({
           });
           if (user?.uid) {
             const uid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', uid, 'tirePressureLogs', updatedTire.id), { ...updatedTire, userId: uid }, { merge: true });
+            persistDoc(doc(db, 'users', uid, 'tirePressureLogs', updatedTire.id), { ...updatedTire, userId: uid }, { merge: true });
           }
         }
 
@@ -327,7 +397,7 @@ export function useTransactionHandlers({
             ...mLogs.filter(m => m.vehicleId === vehicleLinkData.vehicleId).map(m => m.odometer || 0),
             ...tLogs.filter(t => t.vehicleId === vehicleLinkData.vehicleId).map(t => t.odometer || 0)
           ];
-          // No logs left: keep the current odometer instead of resetting it to 0.
+          // မှတ်တမ်းတစ်စောင်မှ မကျန်တော့ရင် မိုင်တာကို 0 ပြန်မချဘဲ အရင်အတိုင်း ထားပါတယ်
           if (odos.length > 0) {
             const newMax = Math.max(...odos);
             if (newMax !== targetVehicle.currentOdometer) {
@@ -355,12 +425,11 @@ export function useTransactionHandlers({
     }
 
     if (plan === 'guest') {
-      const currentMonthStr = new Date().toISOString().substring(0, 7);
-      const monthlyTxCount = transactions.filter((t) => t.date && t.date.startsWith(currentMonthStr)).length;
-      if (monthlyTxCount >= limits.maxTransactions) {
+      // [v7.5.55] Rolling-30-day re-check (same rule as handleOpenAddTx).
+      if (countRolling30DayTransactions(transactions) >= limits.maxTransactions) {
         if (window.confirm(lang === 'my'
-          ? 'Guest Mode တွင် ၁ လလျှင် မှတ်တမ်း (၃၀) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
-          : 'Guest Mode allows up to 30 transactions per month. Please Sign In with Google.')) {
+          ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
+          : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days. Please Sign In with Google.`)) {
           setIsAuthModalOpen(true);
         }
         return;
@@ -453,11 +522,11 @@ export function useTransactionHandlers({
 
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', outId), {
+        persistDoc(doc(db, 'users', targetUid, 'transactions', outId), {
           ...outTx,
           userId: targetUid,
         }, { merge: true });
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', inId), {
+        persistDoc(doc(db, 'users', targetUid, 'transactions', inId), {
           ...inTx,
           userId: targetUid,
         }, { merge: true });
@@ -471,6 +540,49 @@ export function useTransactionHandlers({
       }
 
       showToast(lang === 'my' ? 'ငွေလွှဲပြောင်းမှု ထည့်သွင်းပြီးပါပြီ ✓' : 'Transfer recorded successfully ✓');
+      return;
+    }
+
+    // [v7.5.55] C8: a free 0-Ks tire-pressure check creates NO expense
+    // transaction — only the tire log (syncToExpense false, no
+    // transactionId). The + form bypasses the amount > 0 gate for this.
+    if (vehicleLinkData?.logType === 'tire' && cleanAmount === 0) {
+      const targetVehicle = vehicles.find((v) => v.id === vehicleLinkData.vehicleId);
+      const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
+      const odo = vehicleLinkData.odometer || targetVehicle?.currentOdometer || 0;
+      const tireId = `tire_${Date.now()}`;
+      const tireLog: TirePressureLog = {
+        id: tireId,
+        vehicleId: vehicleLinkData.vehicleId,
+        vehicleName,
+        date: sanitizedTx.date,
+        odometer: odo,
+        ...resolveTirePsi(vehicleLinkData, targetVehicle),
+        cost: 0,
+        syncToExpense: false,
+        transactionId: undefined,
+        walletId: sanitizedTx.walletId,
+        note: sanitizedTx.note,
+        userId: user?.uid || 'guest',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setTirePressureLogs((prev) => {
+        const next = [tireLog, ...prev];
+        safeSetItem('ngwe_tire_logs', JSON.stringify(next));
+        return next;
+      });
+      if (user?.uid) {
+        const targetUid = activeWorkspaceId || user.uid;
+        persistDoc(doc(db, 'users', targetUid, 'tirePressureLogs', tireId), {
+          ...tireLog,
+          userId: targetUid,
+        }, { merge: true });
+      }
+      if (odo > 0 && targetVehicle && odo > (targetVehicle.currentOdometer || 0)) {
+        handleSaveVehicle({ ...targetVehicle, currentOdometer: odo });
+      }
+      showToast(lang === 'my' ? 'လေချိန် စစ်ဆေးမှု မှတ်တမ်းတင်ပြီးပါပြီ ✓ (အခမဲ့ — ငွေစာရင်း မထည့်ပါ)' : 'Tire pressure check recorded ✓ (free — no expense recorded)');
       return;
     }
 
@@ -493,7 +605,7 @@ export function useTransactionHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'transactions', id), {
+      persistDoc(doc(db, 'users', targetUid, 'transactions', id), {
         ...transaction,
         userId: targetUid,
       }, { merge: true });
@@ -570,7 +682,7 @@ export function useTransactionHandlers({
 
         if (user?.uid) {
           const targetUid = activeWorkspaceId || user.uid;
-          safeSetDoc(doc(db, 'users', targetUid, 'fuelLogs', fuelId), {
+          persistDoc(doc(db, 'users', targetUid, 'fuelLogs', fuelId), {
             ...fuelLog,
             userId: targetUid,
           }, { merge: true });
@@ -609,7 +721,7 @@ export function useTransactionHandlers({
 
         if (user?.uid) {
           const targetUid = activeWorkspaceId || user.uid;
-          safeSetDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', maintId), {
+          persistDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', maintId), {
             ...maint,
             userId: targetUid,
           }, { merge: true });
@@ -622,12 +734,13 @@ export function useTransactionHandlers({
           vehicleName,
           date: sanitizedTx.date,
           odometer: odo,
-          frontLeftPsi: vehicleLinkData.frontLeftPsi,
-          frontRightPsi: vehicleLinkData.frontRightPsi,
-          rearLeftPsi: vehicleLinkData.rearLeftPsi,
-          rearRightPsi: vehicleLinkData.rearRightPsi,
+          ...resolveTirePsi(vehicleLinkData, targetVehicle),
           cost: cleanAmount,
-          syncToExpense: true,
+          // [v7.5.55] C8b: syncToExpense is true only when an expense
+          // transaction was actually created for this check. There is no
+          // sync toggle in the + form, so the 0-cost check (handled in the
+          // early branch above, syncToExpense false) is the false case.
+          syncToExpense: cleanAmount > 0,
           transactionId: id,
           walletId: sanitizedTx.walletId,
           note: sanitizedTx.note,
@@ -644,7 +757,7 @@ export function useTransactionHandlers({
 
         if (user?.uid) {
           const targetUid = activeWorkspaceId || user.uid;
-          safeSetDoc(doc(db, 'users', targetUid, 'tirePressureLogs', tireId), {
+          persistDoc(doc(db, 'users', targetUid, 'tirePressureLogs', tireId), {
             ...tireLog,
             userId: targetUid,
           }, { merge: true });
@@ -710,10 +823,10 @@ export function useTransactionHandlers({
     // 3. Cloud deletion for deleted transaction (and pair if transfer)
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', id));
+      deleteDocChecked(doc(db, 'users', targetUid, 'transactions', id));
       if (pairId) {
         markTxDeleted(pairId);
-        safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', pairId));
+        deleteDocChecked(doc(db, 'users', targetUid, 'transactions', pairId));
       }
 
       if (targetWallet && (targetWallet.isSharedFromOther || (targetWallet.sharedWith && targetWallet.sharedWith.length > 0))) {
@@ -753,19 +866,19 @@ export function useTransactionHandlers({
       nextFuel = fuelLogs.filter(f => f.id !== linkedFuelDel.id);
       setFuelLogs(nextFuel);
       markVehicleLogDeleted('fuelLogs', linkedFuelDel.id);
-      if (user?.uid) safeDeleteDoc(doc(db, 'users', activeWorkspaceId || user.uid, 'fuelLogs', linkedFuelDel.id));
+      if (user?.uid) deleteDocChecked(doc(db, 'users', activeWorkspaceId || user.uid, 'fuelLogs', linkedFuelDel.id));
     }
     if (linkedMaintDel) {
       nextMaint = vehicleMaintenance.filter(m => m.id !== linkedMaintDel.id);
       setVehicleMaintenance(nextMaint);
       markVehicleLogDeleted('vehicleMaintenance', linkedMaintDel.id);
-      if (user?.uid) safeDeleteDoc(doc(db, 'users', activeWorkspaceId || user.uid, 'vehicleMaintenance', linkedMaintDel.id));
+      if (user?.uid) deleteDocChecked(doc(db, 'users', activeWorkspaceId || user.uid, 'vehicleMaintenance', linkedMaintDel.id));
     }
     if (linkedTireDel) {
       nextTire = tirePressureLogs.filter(t => t.id !== linkedTireDel.id);
       setTirePressureLogs(nextTire);
       markVehicleLogDeleted('tirePressureLogs', linkedTireDel.id);
-      if (user?.uid) safeDeleteDoc(doc(db, 'users', activeWorkspaceId || user.uid, 'tirePressureLogs', linkedTireDel.id));
+      if (user?.uid) deleteDocChecked(doc(db, 'users', activeWorkspaceId || user.uid, 'tirePressureLogs', linkedTireDel.id));
     }
     if (affectedVehicleId) {
       const targetVeh = vehicles.find(v => v.id === affectedVehicleId);
@@ -775,7 +888,7 @@ export function useTransactionHandlers({
           ...nextMaint.filter(m => m.vehicleId === affectedVehicleId).map(m => m.odometer || 0),
           ...nextTire.filter(t => t.vehicleId === affectedVehicleId).map(t => t.odometer || 0)
         ];
-        // No logs left: keep the current odometer instead of resetting it to 0.
+        // မှတ်တမ်းတစ်စောင်မှ မကျန်တော့ရင် မိုင်တာကို 0 ပြန်မချဘဲ အရင်အတိုင်း ထားပါတယ်
         if (odos.length > 0) {
           const newMax = Math.max(...odos);
           if (newMax !== targetVeh.currentOdometer) {

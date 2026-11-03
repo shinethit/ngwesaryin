@@ -33,7 +33,9 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
         {/* Header with Dynamic Tier Gradient / Ambient Color */}
         <div
           className={`p-5 sm:p-6 transition-all border-b relative ${
-            health.tier === 'negative'
+            health.tier === 'no_data'
+              ? 'bg-gradient-to-r from-slate-700 to-slate-800 text-white border-slate-600'
+              : health.tier === 'negative'
               ? 'bg-gradient-to-r from-slate-950 via-slate-900 to-rose-950 text-white border-rose-900/60'
               : health.tier === 'super_surplus'
               ? 'bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-800 text-white border-purple-800'
@@ -101,7 +103,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                   {lang === 'my' ? 'စုစုပေါင်း ဝင်ငွေ' : 'Total Income'}
                 </span>
                 <span className="text-sm font-bold text-emerald-600">
-                  {formatMMK(metrics.totalIncome)} Ks
+                  {formatMMK(metrics.totalIncome)}
                 </span>
               </div>
 
@@ -110,7 +112,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                   {lang === 'my' ? 'စုစုပေါင်း အသုံး' : 'Total Expense'}
                 </span>
                 <span className="text-sm font-bold text-rose-600">
-                  {formatMMK(metrics.totalExpense)} Ks
+                  {formatMMK(metrics.totalExpense)}
                 </span>
               </div>
 
@@ -125,7 +127,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 <span className={`text-sm font-black ${
                   metrics.netSavings < 0 ? 'text-rose-700' : 'text-emerald-700'
                 }`}>
-                  {metrics.netSavings < 0 ? '-' : '+'}{formatMMK(Math.abs(metrics.netSavings))} Ks
+                  {metrics.netSavings < 0 ? '-' : '+'}{formatMMK(Math.abs(metrics.netSavings))}
                 </span>
               </div>
 
@@ -136,7 +138,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 <span className={`text-sm font-bold ${
                   metrics.totalPayableDebt > 0 ? 'text-amber-700' : 'text-slate-700'
                 }`}>
-                  {formatMMK(metrics.totalPayableDebt)} Ks
+                  {formatMMK(metrics.totalPayableDebt)}
                 </span>
               </div>
             </div>
@@ -233,16 +235,35 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-          <button
-            onClick={() => {
-              onClose();
-              onNavigateToAnalytics?.();
-            }}
-            className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            <span>{lang === 'my' ? 'ဘတ်ဂျက်နှင့် စာရင်းအင်းသို့ သွားမည်' : 'View Full Analytics'}</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          {/* [v7.5.55 D17] Navigation buttons only render when a real target
+              exists; previously "View Full Analytics" called setSubTab('reports')
+              from the reports tab — a no-op. AnalyticsView now passes a
+              handler that switches to the Budget tab. */}
+          {onNavigateToAnalytics ? (
+            <button
+              onClick={() => {
+                onClose();
+                onNavigateToAnalytics?.();
+              }}
+              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>{lang === 'my' ? 'ဘတ်ဂျက်နှင့် စာရင်းအင်းသို့ သွားမည်' : 'View Budgets & Analytics'}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : onNavigateToBudgets ? (
+            <button
+              onClick={() => {
+                onClose();
+                onNavigateToBudgets?.();
+              }}
+              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>{lang === 'my' ? 'ဘတ်ဂျက်သို့ သွားမည်' : 'View Budgets'}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <span />
+          )}
 
           <button
             onClick={onClose}

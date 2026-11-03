@@ -96,7 +96,8 @@ export function useVehicleHandlers({
       ...mLogs.filter((m) => m.vehicleId === vehicleId).map((m) => m.odometer || 0),
       ...tLogs.filter((t) => t.vehicleId === vehicleId).map((t) => t.odometer || 0),
     ];
-    // No logs left: keep the current odometer instead of resetting it to 0.
+    // မှတ်တမ်းတစ်စောင်မှ မကျန်တော့ရင် မိုင်တာကို 0 ပြန်မချဘဲ အရင်အတိုင်း ထားပါတယ် —
+    // မဟုတ်ရင် ယာဉ်အစမိုင်တာ ပျောက်သွားမှာပါ။
     if (odos.length === 0) return;
     const newOdo = Math.max(...odos);
     if (newOdo !== targetVehicle.currentOdometer) {
@@ -104,7 +105,56 @@ export function useVehicleHandlers({
     }
   };
 
-  const handleDeleteVehicle = (vehicleId: string) => {
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    const target = vehicles.find((v) => v.id === vehicleId);
+    const activeCount = vehicles.filter((v) => v.isActive !== false).length;
+    // [v7.5.55 C6] Sole-vehicle backstop: the last ACTIVE vehicle can never
+    // be deleted from any path (VehiclesView + AddVehicleModal also guard it).
+    if (target && target.isActive !== false && activeCount <= 1) {
+      showToast(
+        lang === 'my'
+          ? 'နောက်ဆုံးကျန်သော ယာဉ်ကို ဖျက်၍ မရပါ — အနည်းဆုံး ယာဉ် ၁ စီး ရှိရပါမည်'
+          : 'Cannot delete the last vehicle — at least one vehicle is required'
+      );
+      return;
+    }
+
+    // [v7.5.55 C6] Delete the vehicle AND all its logs AND linked expense
+    // transactions (previously only the vehicle doc was removed and the
+    // logs/transactions were orphaned in Dashboard/wallet totals forever).
+    // Deletion markers are written first so a cloud snapshot cannot
+    // resurrect anything.
+    const fLogs = fuelLogs.filter((f) => f.vehicleId === vehicleId);
+    const mLogs = vehicleMaintenance.filter((m) => m.vehicleId === vehicleId);
+    const tLogs = tirePressureLogs.filter((t) => t.vehicleId === vehicleId);
+    const txIds = new Set<string>();
+    fLogs.forEach((f) => txIds.add(f.transactionId || `tx_fuel_${f.id}`));
+    mLogs.forEach((m) => txIds.add(m.transactionId || `tx_maint_${m.id}`));
+    tLogs.forEach((t) => txIds.add(t.transactionId || `tx_tire_${t.id}`));
+    const linkedTxCount = transactions.filter((t) => txIds.has(t.id)).length;
+
+    txIds.forEach((id) => markTxDeleted(id));
+    fLogs.forEach((f) => markVehicleLogDeleted('fuelLogs', f.id));
+    mLogs.forEach((m) => markVehicleLogDeleted('vehicleMaintenance', m.id));
+    tLogs.forEach((t) => markVehicleLogDeleted('tirePressureLogs', t.id));
+
+    if (linkedTxCount > 0) {
+      setTransactions((prev) => {
+        const next = prev.filter((t) => !txIds.has(t.id));
+        safeSetItem('ngwe_transactions', JSON.stringify(next));
+        return next;
+      });
+    }
+    const nextFuel = fuelLogs.filter((f) => f.vehicleId !== vehicleId);
+    setFuelLogs(nextFuel);
+    safeSetItem('ngwe_fuel_logs', JSON.stringify(nextFuel));
+    const nextMaint = vehicleMaintenance.filter((m) => m.vehicleId !== vehicleId);
+    setVehicleMaintenance(nextMaint);
+    safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(nextMaint));
+    const nextTire = tirePressureLogs.filter((t) => t.vehicleId !== vehicleId);
+    setTirePressureLogs(nextTire);
+    safeSetItem('ngwe_tire_logs', JSON.stringify(nextTire));
+
     setVehicles((prev) => {
       const next = prev.filter((v) => v.id !== vehicleId);
       safeSetItem('ngwe_vehicles', JSON.stringify(next));
@@ -113,10 +163,46 @@ export function useVehicleHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeDeleteDoc(doc(db, 'users', targetUid, 'vehicles', vehicleId));
+      const results = await Promise.all([
+        safeDeleteDoc(doc(db, 'users', targetUid, 'vehicles', vehicleId)),
+        ...fLogs.map((f) => safeDeleteDoc(doc(db, 'users', targetUid, 'fuelLogs', f.id))),
+        ...mLogs.map((m) => safeDeleteDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', m.id))),
+        ...tLogs.map((t) => safeDeleteDoc(doc(db, 'users', targetUid, 'tirePressureLogs', t.id))),
+        ...Array.from(txIds).map((id) => safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', id))),
+      ]);
+      if (results.includes(false)) {
+        showToast(
+          lang === 'my'
+            ? 'ယာဉ်ကို ဖျက်ပြီးသော်လည်း cloud မှ အချို့မှတ်တမ်းများ ဖျက်မရခဲ့ပါ — အင်တာနက်ရချိန် ပြန်စစ်ပေးပါ'
+            : 'Vehicle deleted locally, but some cloud records could not be deleted — please check when back online'
+        );
+        return;
+      }
     }
 
-    showToast(lang === 'my' ? 'ယာဉ်ကို ဖျက်လိုက်ပါပြီ ✓' : 'Vehicle removed ✓');
+    showToast(
+      lang === 'my'
+        ? `ယာဉ်ကို ဖျက်လိုက်ပါပြီ ✓ (ဆီ ${fLogs.length} • ပြုပြင် ${mLogs.length} • တာယာ ${tLogs.length} • ငွေစာရင်း ${linkedTxCount})`
+        : `Vehicle removed ✓ (fuel ${fLogs.length} • maintenance ${mLogs.length} • tire ${tLogs.length} • expenses ${linkedTxCount})`
+    );
+  };
+
+  // [v7.5.55 C7] Remove a previously linked expense transaction when an
+  // edit turns sync off or the cost becomes 0 — otherwise the stale
+  // expense stays in Dashboard/wallet totals forever.
+  const removeLinkedTransaction = (txId: string) => {
+    const linkedTx = transactions.find((t) => t.id === txId);
+    if (!linkedTx) return;
+    markTxDeleted(txId);
+    setTransactions((prev) => {
+      const next = prev.filter((t) => t.id !== txId);
+      safeSetItem('ngwe_transactions', JSON.stringify(next));
+      return next;
+    });
+    if (user?.uid) {
+      const targetUid = activeWorkspaceId || user.uid;
+      safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', txId));
+    }
   };
 
   const handleSaveFuelLog = (logData: FuelLog) => {
@@ -133,7 +219,11 @@ export function useVehicleHandlers({
       : (computedWallets[0]?.id || '');
     log.walletId = resolvedWalletId;
 
-    if (log.syncToExpense !== false && log.totalCost > 0 && log.walletId) {
+    // [v7.5.55 C7] Expense is written only when sync is on and cost > 0.
+    // Otherwise any previously linked expense must be REMOVED, and the
+    // toast must not claim an expense was written when it was not.
+    const fuelExpenseWritten = log.syncToExpense !== false && log.totalCost > 0 && log.walletId;
+    if (fuelExpenseWritten) {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
         c.id === 'cat_vehicle_management' ||
@@ -174,6 +264,8 @@ export function useVehicleHandlers({
           userId: targetUid,
         }, { merge: true });
       }
+    } else {
+      removeLinkedTransaction(txId);
     }
 
     const existsFuel = fuelLogs.some((f) => f.id === log.id);
@@ -191,14 +283,22 @@ export function useVehicleHandlers({
 
     recalculateVehicleOdometer(log.vehicleId, nextFuelLogs, vehicleMaintenance, tirePressureLogs);
 
-    showToast(lang === 'my' ? 'ဆီထည့်မှတ်တမ်းနှင့် ထွက်ငွေစာရင်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Fuel log & expense recorded ✓');
+    showToast(
+      fuelExpenseWritten
+        ? lang === 'my'
+          ? 'ဆီထည့်မှတ်တမ်းနှင့် ထွက်ငွေစာရင်း သိမ်းဆည်းပြီးပါပြီ ✓'
+          : 'Fuel log & expense recorded ✓'
+        : lang === 'my'
+        ? 'ဆီထည့်မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓ (ထွက်ငွေစာရင်း မသွင်းထားပါ)'
+        : 'Fuel log saved ✓ (no expense recorded)'
+    );
   };
 
   const handleDeleteFuelLog = (logId: string) => {
     const logToDelete = fuelLogs.find((f) => f.id === logId);
     const txId = logToDelete?.transactionId || `tx_fuel_${logId}`;
 
-    // Mark deleted so a cloud snapshot cannot bring this log back.
+    // ဖျက်လိုက်တဲ့ မှတ်တမ်းကို cloud snapshot က ပြန်ထည့်မလာစေဖို့ မှတ်ထားပါတယ်
     markVehicleLogDeleted('fuelLogs', logId);
 
     const linkedTx = transactions.find((t) => t.id === txId);
@@ -242,7 +342,10 @@ export function useVehicleHandlers({
       : (computedWallets[0]?.id || '');
     maint.walletId = resolvedMaintWalletId;
 
-    if (maint.syncToExpense !== false && maint.cost > 0 && maint.walletId) {
+    // [v7.5.55 C7] See handleSaveFuelLog — sync off / cost 0 removes the
+    // previously linked expense instead of leaving it stale.
+    const maintExpenseWritten = maint.syncToExpense !== false && maint.cost > 0 && maint.walletId;
+    if (maintExpenseWritten) {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
         c.id === 'cat_vehicle_management' ||
@@ -283,6 +386,8 @@ export function useVehicleHandlers({
           userId: targetUid,
         }, { merge: true });
       }
+    } else {
+      removeLinkedTransaction(txId);
     }
 
     const existsMaint = vehicleMaintenance.some((m) => m.id === maint.id);
@@ -350,7 +455,10 @@ export function useVehicleHandlers({
       : (computedWallets[0]?.id || '');
     log.walletId = resolvedTireWalletId;
 
-    if (log.syncToExpense !== false && log.cost && log.cost > 0 && log.walletId) {
+    // [v7.5.55 C7] See handleSaveFuelLog — sync off / cost 0 removes the
+    // previously linked expense instead of leaving it stale.
+    const tireExpenseWritten = log.syncToExpense !== false && log.cost && log.cost > 0 && log.walletId;
+    if (tireExpenseWritten) {
       const vehicleCat = categories.find((c) =>
         c.id === 'cat_vehicle' ||
         c.id === 'cat_vehicle_management' ||
@@ -386,6 +494,8 @@ export function useVehicleHandlers({
           userId: targetUid,
         }, { merge: true });
       }
+    } else {
+      removeLinkedTransaction(txId);
     }
 
     const existsTire = tirePressureLogs.some((t) => t.id === log.id);
@@ -400,6 +510,9 @@ export function useVehicleHandlers({
         userId: targetUid,
       }, { merge: true });
     }
+
+    // တာယာမှတ်တမ်း သိမ်းချိန်မှာလည်း မိုင်တာ ပြန်တွက်ပေးပါတယ် (ဆီ/ပြုပြင်မှတ်တမ်းတွေလိုပဲ)
+    recalculateVehicleOdometer(log.vehicleId, fuelLogs, vehicleMaintenance, nextTire);
 
     // Tire save also recalculates the odometer (fuel / maintenance already did).
     recalculateVehicleOdometer(log.vehicleId, fuelLogs, vehicleMaintenance, nextTire);

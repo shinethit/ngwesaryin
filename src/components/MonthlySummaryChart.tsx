@@ -12,22 +12,42 @@ import {
   Line,
 } from 'recharts';
 import { BarChart3, TrendingUp, TrendingDown, Sparkles, Filter } from 'lucide-react';
-import { Category, Transaction } from '../types';
+import { Category, Transaction, Wallet } from '../types';
 import { formatMMK } from '../utils/formatters';
-import { isTransferTransaction } from '../utils/walletBalance';
+import { convertToMMK } from '../utils/currency';
+import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 
 
 interface MonthlySummaryChartProps {
   transactions: Transaction[];
   categories?: Category[];
+  wallets?: Wallet[];
   lang: 'my' | 'en';
 }
+
+// [v7.5.55] Hardcoded month names — 'my-MM' falls back to English on phones
+// whose browser does not ship the Myanmar locale.
+const MONTHS_MY_SHORT = ['ဇန်', 'ဖေဖော်', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်', 'ဇူလိုင်', 'သြဂုတ်', 'စက်', 'အောက်', 'နို', 'ဒီဇင်'];
+const MONTHS_EN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const formatMonthLabelLocal = (d: Date, lang: 'my' | 'en', withYear: boolean): string => {
+  const m = lang === 'my' ? MONTHS_MY_SHORT[d.getMonth()] : MONTHS_EN_SHORT[d.getMonth()];
+  return withYear ? `${m} ${String(d.getFullYear()).slice(2)}` : m;
+};
 
 export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
   transactions,
   categories = [],
+  wallets = [],
   lang,
 }) => {
+  // [v7.5.55 D18] Convert every amount to MMK via its wallet (raw sums mixed
+  // USD/THB/etc. with MMK before).
+  const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
+  const convertTxToMMK = (tx: Transaction) => {
+    let w = walletMap.get(tx.walletId);
+    if (!w) w = wallets.find((wall) => isWalletMatch(wall, tx.walletId));
+    return convertToMMK(tx.amount, w?.currency, w?.exchangeRate);
+  };
   const [viewMode, setViewMode] = useState<'cashflow' | 'category_cost'>('cashflow');
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
   const [monthRange, setMonthRange] = useState<6 | 12>(6);
@@ -55,10 +75,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-      const monthLabel = d.toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-US', {
-        month: 'short',
-        year: monthRange === 12 ? '2-digit' : undefined,
-      });
+      const monthLabel = formatMonthLabelLocal(d, lang, monthRange === 12);
 
       monthsMap[key] = {
         monthKey: key,
@@ -74,17 +91,18 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
       if (isTransferTransaction(tx)) return;
       const monthKey = tx.date.slice(0, 7);
       if (monthsMap[monthKey]) {
+        const amtMMK = convertTxToMMK(tx);
         if (tx.type === 'income') {
-          monthsMap[monthKey].income += tx.amount;
+          monthsMap[monthKey].income += amtMMK;
         } else if (tx.type === 'expense') {
-          monthsMap[monthKey].expense += tx.amount;
+          monthsMap[monthKey].expense += amtMMK;
         }
         monthsMap[monthKey].net = monthsMap[monthKey].income - monthsMap[monthKey].expense;
       }
     });
 
     return Object.values(monthsMap);
-  }, [transactions, monthRange, lang]);
+  }, [transactions, monthRange, lang, walletMap, wallets]);
 
   // Calculations for cashflow summary pills
   const totalPeriodIncome = useMemo(
@@ -105,10 +123,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     for (let i = monthRange - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-US', {
-        month: 'short',
-        year: monthRange === 12 ? '2-digit' : undefined,
-      });
+      const label = formatMonthLabelLocal(d, lang, monthRange === 12);
       monthsList.push({ key, label });
     }
 
@@ -146,7 +161,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
       const isCatMatch = selectedCategoryId === 'all' || tx.category === selectedCategoryId;
       if (!isCatMatch) return;
 
-      monthCatMap[monthKey].totalSpent += tx.amount;
+      monthCatMap[monthKey].totalSpent += convertTxToMMK(tx);
       monthCatMap[monthKey].txCount += 1;
 
       if (tx.items && tx.items.length > 0) {
@@ -167,7 +182,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     });
 
     return result;
-  }, [transactions, monthRange, lang, selectedCategoryId]);
+  }, [transactions, monthRange, lang, selectedCategoryId, walletMap, wallets]);
 
   // Summary stats for category average cost
   const categoryCostStats = useMemo(() => {

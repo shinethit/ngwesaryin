@@ -62,14 +62,18 @@ export function usePWAInstall() {
     try {
       await deferredPrompt.prompt();
       const choice = await deferredPrompt.userChoice;
+      // [v7.5.55 E22] beforeinstallprompt can only be used ONCE: the
+      // spent prompt must be cleared after ANY outcome, otherwise a
+      // second prompt() call throws and install goes dead forever.
+      setDeferredPrompt(null);
       if (choice.outcome === 'accepted') {
         setIsInstalled(true);
-        setDeferredPrompt(null);
         return true;
       }
       return false;
     } catch (err) {
       console.error('PWA install prompt error:', err);
+      setDeferredPrompt(null);
       return false;
     }
   }, [deferredPrompt]);

@@ -61,8 +61,22 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
     );
   };
 
+  // [v7.5.55] The wallets prop is the Dashboard scope (A5): drop any selected
+  // ids that are no longer in scope so the filter never goes stale-empty.
+  useEffect(() => {
+    setSelectedWalletIds((prev) => {
+      const pruned = prev.filter((id) => wallets.some((w) => w.id === id));
+      return pruned.length === prev.length ? prev : pruned;
+    });
+  }, [wallets]);
+
   const selectAllWallets = () => setSelectedWalletIds(wallets.map((w) => w.id));
   const clearWallets = () => setSelectedWalletIds([]);
+
+  // [v7.5.55] [] and "every id" both mean "all" (A9): only a partial
+  // selection is shown as "N / M selected".
+  const isAllWalletsShown =
+    selectedWalletIds.length === 0 || selectedWalletIds.length === wallets.length;
 
   const matchesWalletFilter = (walletId: string | undefined): boolean => {
     if (selectedWalletIds.length === 0) return true;
@@ -165,6 +179,21 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
     ? ['တနင်္ဂနွေ', 'တနင်္လာ', 'အင်္ဂါ', 'ဗုဒ္ဓဟူး', 'ကြာသပတေး', 'သောကြာ', 'စနေ']
     : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // [v7.5.55] Localized selected-day label with hardcoded Myanmar names
+  // (some phone browsers lack the Intl 'my-MM' locale) — was raw ISO.
+  const formatSelectedDay = (dateStr: string): string => {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(y, m, d);
+    if (isNaN(dt.getTime())) return dateStr;
+    if (lang === 'my') return `${weekDays[dt.getDay()]}၊ ${d} ${monthNameMy[m]} ${y} ခုနှစ်`;
+    const daysEnFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return `${daysEnFull[dt.getDay()]}, ${d} ${monthNameEn[m]} ${y}`;
+  };
+
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-4">
       {/* Header & Month Navigator */}
@@ -218,14 +247,14 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
               type="button"
               onClick={() => setWalletFilterOpen((v) => !v)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                selectedWalletIds.length > 0
+                !isAllWalletsShown
                   ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
               <Filter className="w-3.5 h-3.5" />
               <span>
-                {selectedWalletIds.length === 0
+                {isAllWalletsShown
                   ? (lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး' : 'All Wallets')
                   : `${selectedWalletIds.length} / ${wallets.length} ${lang === 'my' ? 'ရွေးထား' : 'selected'}`}
               </span>
@@ -300,7 +329,9 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                     onClick={() => setWalletFilterOpen(false)}
                     className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 cursor-pointer"
                   >
-                    {lang === 'my' ? 'ပြီးပြီ' : 'Done'}
+                    {/* [v7.5.55] Selection applies live on toggle; this button
+                        only closes the popover, so it is labelled Close. */}
+                    {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
                   </button>
                 </div>
               </div>
@@ -363,6 +394,13 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                         -{formatShortLakhs(metrics.expense)}
                       </div>
                     )}
+                    {/* [v7.5.55] Net row: the header promises ဝင်/ထွက်/ကျန်
+                        but cells only showed income/expense. */}
+                    {(metrics.income > 0 || metrics.expense > 0) && (
+                      <div className="text-indigo-700 font-bold truncate" title={`Net: ${metrics.net >= 0 ? '+' : ''}${formatMMK(metrics.net)}`}>
+                        {metrics.net >= 0 ? '+' : '-'}{formatShortLakhs(metrics.net)}
+                      </div>
+                    )}
                     {metrics.income === 0 && metrics.expense === 0 && (
                       <div className="text-slate-300 text-[8px]">-</div>
                     )}
@@ -382,7 +420,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           <div className="flex items-center justify-between border-b border-indigo-100 pb-2.5">
             <div className="flex items-center gap-2.5">
               <span className="font-black text-xs sm:text-sm text-indigo-950 font-mono bg-white px-2.5 py-1 rounded-xl border border-indigo-200 shadow-2xs">
-                📅 {selectedDayStr}
+                📅 {formatSelectedDay(selectedDayStr)}
               </span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
                 {selectedDayTxs.length} {lang === 'my' ? 'မှတ်တမ်း' : 'records'}

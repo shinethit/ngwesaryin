@@ -158,6 +158,11 @@ export function enrichFuelLogs(fuelLogs: FuelLog[]): EnrichedFuelLog[] {
   const enriched: EnrichedFuelLog[] = [];
   let prevFullTankLog: FuelLog | null = null;
   let partialLitersSinceLastFull = 0;
+  // [v7.5.55 C23] Partial fills' cost also belongs to the distance driven
+  // since the last full tank — a full tank's cost-per-km must include it,
+  // and a partial fill gets no cost-per-km of its own (its fuel covers
+  // distance that has not been driven yet).
+  let partialCostSinceLastFull = 0;
 
   for (let i = 0; i < sorted.length; i++) {
     const current = sorted[i];
@@ -170,20 +175,22 @@ export function enrichFuelLogs(fuelLogs: FuelLog[]): EnrichedFuelLog[] {
       const effectiveLiters = current.liters + partialLitersSinceLastFull;
       if (current.isFullTank && effectiveLiters > 0) {
         efficiency = Number((distance / effectiveLiters).toFixed(2));
-        costPerDist = Number((current.totalCost / distance).toFixed(1));
+        costPerDist = Number(((current.totalCost + partialCostSinceLastFull) / distance).toFixed(1));
       }
     } else if (i > 0 && current.odometer > sorted[i - 1].odometer) {
       distance = current.odometer - sorted[i - 1].odometer;
-      if (current.liters > 0) {
-        costPerDist = Number((current.totalCost / distance).toFixed(1));
+      if (current.isFullTank) {
+        costPerDist = Number(((current.totalCost + partialCostSinceLastFull) / distance).toFixed(1));
       }
     }
 
     if (current.isFullTank) {
       prevFullTankLog = current;
       partialLitersSinceLastFull = 0;
+      partialCostSinceLastFull = 0;
     } else {
       partialLitersSinceLastFull += current.liters;
+      partialCostSinceLastFull += current.totalCost;
     }
 
     enriched.push({
@@ -223,15 +230,26 @@ export function calculateFuelStats(logs: FuelLog[]): FuelStats {
   const totalSpent = logs.reduce((sum, l) => sum + l.totalCost, 0);
   const totalLiters = logs.reduce((sum, l) => sum + l.liters, 0);
 
-  const efficiencies = enriched
-    .map((l) => l.calculatedEfficiency)
-    .filter((e): e is number => typeof e === 'number' && e > 0);
+  const efficiencyEntries = enriched
+    .map((l) => ({ eff: l.calculatedEfficiency, dist: l.calculatedDistance }))
+    .filter(
+      (e): e is { eff: number; dist: number } =>
+        typeof e.eff === 'number' && e.eff > 0 && typeof e.dist === 'number' && e.dist > 0
+    );
 
+  // [v7.5.55 C23] Distance-weighted average efficiency — a 500 km stretch
+  // at 20 km/L must count far more than a 50 km stretch at 10 km/L.
+  const totalEffDistance = efficiencyEntries.reduce((s, e) => s + e.dist, 0);
   const avgEfficiency =
-    efficiencies.length > 0
-      ? Number((efficiencies.reduce((a, b) => a + b, 0) / efficiencies.length).toFixed(2))
+    efficiencyEntries.length > 0 && totalEffDistance > 0
+      ? Number(
+          (
+            efficiencyEntries.reduce((s, e) => s + e.eff * e.dist, 0) / totalEffDistance
+          ).toFixed(2)
+        )
       : 0;
 
+  const efficiencies = efficiencyEntries.map((e) => e.eff);
   const bestEfficiency = efficiencies.length > 0 ? Math.max(...efficiencies) : 0;
   const worstEfficiency = efficiencies.length > 0 ? Math.min(...efficiencies) : 0;
 
@@ -388,6 +406,9 @@ export function calculateServiceHealthStatuses(
     'transmission_fluid',
     'coolant',
     'wheel_alignment',
+    'suspension',
+    'general_repair',
+    'other',
     'license_renewal',
   ];
 
@@ -412,7 +433,9 @@ export function calculateServiceHealthStatuses(
         remainingKm: config.defaultLifespanKm,
         remainingDays: config.defaultLifespanDays,
         status: 'not_recorded',
-        healthPercent: 100,
+        // [v7.5.55 C20] Never-serviced is NOT healthy — 0/neutral, never a
+        // full green bar. VehiclesView renders this grey with a မမှတ်ရသေး pill.
+        healthPercent: 0,
       };
     }
 

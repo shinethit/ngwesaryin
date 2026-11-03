@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { HandCoins, Plus, ArrowUpRight, ArrowDownLeft, Phone, Clock, AlertTriangle, CreditCard, Trash2, Lock, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { Debt, PlanType, Wallet } from '../types';
-import { formatMMK, isOverdue } from '../utils/formatters';
+import { formatMMK, formatShortDate, isOverdue } from '../utils/formatters';
 import { buildWalletMap } from '../utils/walletBalance';
-import { convertToMMK } from '../utils/currency';
+import { convertToMMK, formatCurrency } from '../utils/currency';
 
 interface DebtsViewProps {
   debts: Debt[];
@@ -17,6 +17,9 @@ interface DebtsViewProps {
   onDeleteRepayment?: (debtId: string, repaymentId: string) => void;
   onEditRepayment?: (debt: Debt, repayment: { id: string; amount: number; date: string; walletId: string; note?: string }) => void;
   onToggleStatus: (id: string) => void;
+  // [v7.5.55 D28] Edit a debt (App wiring: onEditDebt opens DebtModal in
+  // edit mode with onUpdate={handleUpdateDebt}).
+  onEditDebt?: (debt: Debt) => void;
   onOpenUpgradeModal: () => void;
 }
 
@@ -32,6 +35,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
   onDeleteRepayment,
   onEditRepayment,
   onToggleStatus,
+  onEditDebt,
   onOpenUpgradeModal,
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'receivable' | 'payable' | 'settled'>('all');
@@ -49,10 +53,22 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
   const activeDebts = walletFilteredDebts.filter((d) => d.status === 'active');
   const settledDebts = walletFilteredDebts.filter((d) => d.status === 'settled');
 
-  const convertDebtToMMK = (d: Debt) => {
+  // [v7.5.55 D12] Convert using the DEBT's currency (explicit Debt.currency,
+  // else its wallet's currency). The wallet's pinned rate only applies when
+  // it is the same currency; otherwise the default rate for the currency is used.
+  const debtCurrency = (d: Debt) => {
     const w = walletMap.get(d.walletId);
+    return d.currency || w?.currency || 'MMK';
+  };
+  const convertDebtAmountToMMK = (d: Debt, amount: number) => {
+    const w = walletMap.get(d.walletId);
+    const cur = debtCurrency(d);
+    const rate = w && (w.currency || 'MMK') === cur ? w.exchangeRate : undefined;
+    return convertToMMK(amount, cur, rate);
+  };
+  const convertDebtToMMK = (d: Debt) => {
     const remaining = Math.max(0, d.totalAmount - d.paidAmount);
-    return convertToMMK(remaining, w?.currency, w?.exchangeRate);
+    return convertDebtAmountToMMK(d, remaining);
   };
 
   // Calculations
@@ -73,10 +89,122 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
     return true;
   });
 
-  const isAtLimit = plan === 'free' && activeDebts.length >= maxFreeDebts;
+  const isAtLimit = plan !== 'premium' && activeDebts.length >= maxFreeDebts;
 
   const toggleExpand = (id: string) => {
     setExpandedDebtId(expandedDebtId === id ? null : id);
+  };
+
+  // [v7.5.55 D32] Overdue debts first, then earliest due date, then newest.
+  const sortedFilteredDebts = React.useMemo(() => {
+    return [...filteredDebts].sort((a, b) => {
+      const aOver = a.status === 'active' && isOverdue(a.dueDate);
+      const bOver = b.status === 'active' && isOverdue(b.dueDate);
+      if (aOver !== bOver) return aOver ? -1 : 1;
+      const aDue = a.dueDate || '9999-99-99';
+      const bDue = b.dueDate || '9999-99-99';
+      if (aDue !== bDue) return aDue < bDue ? -1 : 1;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+  }, [filteredDebts]);
+
+  // [v7.5.55 D32] Same person with several debts, grouped with a per-person
+  // remaining total (group order follows the sorted list).
+  const personGroups = React.useMemo(() => {
+    const groups: { key: string; personName: string; debts: Debt[]; totalRemainingMMK: number }[] = [];
+    const byKey = new Map<string, (typeof groups)[number]>();
+    sortedFilteredDebts.forEach((d) => {
+      const key = d.personName.trim().toLowerCase();
+      let g = byKey.get(key);
+      if (!g) {
+        g = { key, personName: d.personName, debts: [], totalRemainingMMK: 0 };
+        byKey.set(key, g);
+        groups.push(g);
+      }
+      g.debts.push(d);
+      g.totalRemainingMMK += convertDebtToMMK(d);
+    });
+    return groups;
+  }, [sortedFilteredDebts]);
+
+  // [v7.5.55 D5] Mark Settled / Reopen must be confirmed with the EXACT
+  // amount and what it will do to real money — one tap used to invent a
+  // repayment for the whole remaining balance plus a wallet transaction.
+  const handleToggleClick = (debt: Debt) => {
+    const cur = debtCurrency(debt);
+    if (debt.status === 'active') {
+      const remaining = Math.max(0, debt.totalAmount - debt.paidAmount);
+      if (remaining <= 0) {
+        onToggleStatus(debt.id);
+        return;
+      }
+      const direction = debt.type === 'receivable'
+        ? (lang === 'my' ? 'ငွေပြန်ဝင်လာမည် (ဝင်ငွေ)' : 'money will come IN (income)')
+        : (lang === 'my' ? 'ငွေထွက်သွားမည် (ထွက်ငွေ)' : 'money will go OUT (expense)');
+      const ok = window.confirm(
+        lang === 'my'
+          ? `“${debt.personName}” ၏ အကြွေးကို ကြေပြီဟု သတ်မှတ်မလား?
+
+ကျန်ငွေ: ${formatCurrency(remaining, cur)}
+ဤလုပ်ဆောင်ချက်သည် ကျန်ငွေ ${formatCurrency(remaining, cur)} အတွက် ငွေဆပ်မှတ်တမ်း တစ်ခု အလိုအလျောက် ဖန်တီးပြီး ပိုက်ဆံအိတ်တွင် ${direction} အဖြစ် တကယ့် ငွေစာရင်း (transaction) တစ်ခု ထည့်သွင်းပါမည်။`
+          : `Mark "${debt.personName}"'s debt as settled?
+
+Remaining: ${formatCurrency(remaining, cur)}
+This will create a repayment record for ${formatCurrency(remaining, cur)} and book a REAL wallet transaction (${direction}).`
+      );
+      if (ok) onToggleStatus(debt.id);
+      return;
+    }
+    // Reopen
+    const settlementReps = (debt.repayments || []).filter((r) => r.id.startsWith('rep_settle_'));
+    if (settlementReps.length > 0) {
+      const ok = window.confirm(
+        lang === 'my'
+          ? `“${debt.personName}” ၏ အကြွေးကို ပြန်ဖွင့်မလား?
+
+အလိုအလျောက် ကျေဇယား ငွေဆပ်မှတ်တမ်း (${settlementReps.length} ခု) နှင့် ၎င်း၏ တွဲဖက် ငွေစာရင်းများကို ဖျက်ပါမည်။`
+          : `Reopen "${debt.personName}"'s debt?
+
+The auto-settlement repayment (${settlementReps.length} record(s)) and its linked wallet transaction(s) will be deleted.`
+      );
+      if (ok) onToggleStatus(debt.id);
+      return;
+    }
+    // Naturally settled: the handler removes the most recent repayment(s)
+    // until paid < total — name exactly which records that deletes.
+    const sorted = [...(debt.repayments || [])].sort((a, b) =>
+      (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0));
+    // Same basis as the handler: paid is the sum of the repayment records.
+    let paid = (debt.repayments || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const toRemove: typeof sorted = [];
+    for (const r of sorted) {
+      if (paid < debt.totalAmount) break;
+      toRemove.push(r);
+      paid -= Number(r.amount) || 0;
+    }
+    if (toRemove.length === 0) {
+      onToggleStatus(debt.id);
+      return;
+    }
+    const desc = toRemove
+      .map((r) => `${formatCurrency(r.amount, cur)} (${formatShortDate(r.date)})`)
+      .join(', ');
+    const ok = window.confirm(
+      lang === 'my'
+        ? `“${debt.personName}” ၏ အကြွေးကို ပြန်ဖွင့်မလား?
+
+ဤအကြွေးသည် ပုံမှန် ငွေဆပ်မှုများဖြင့် ကြေခဲ့ခြင်း ဖြစ်ပါသည်။ ပြန်ဖွင့်ရန် နောက်ဆုံး ငွေဆပ်မှတ်တမ်း(များ) ကို ဖျက်ရပါမည်:
+${desc}
+
+ထို မှတ်တမ်းများနှင့် ၎င်းတို့၏ တွဲဖက် ငွေစာရင်း (wallet transaction) များကို ဖျက်ပါမည်။`
+        : `Reopen "${debt.personName}"'s debt?
+
+This debt was settled by ordinary repayments. To reopen it the most recent repayment(s) must be removed:
+${desc}
+
+Those records and their linked wallet transactions will be deleted.`
+    );
+    if (ok) onToggleStatus(debt.id);
   };
 
   return (
@@ -260,7 +388,10 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       {/* Tabs Filter (All / Receivable / Payable / Settled) - Responsive Wrap */}
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2">
         {[
-          { id: 'all', labelMy: 'အားလုံး', labelEn: 'All Debts', count: debts.length },
+          // [v7.5.55 D22] Was debts.length (unfiltered) while the list, the
+          // header badge, the KPIs and the limit check all use the
+          // wallet-filtered lists.
+          { id: 'all', labelMy: 'အားလုံး', labelEn: 'All Debts', count: walletFilteredDebts.length },
           {
             id: 'receivable',
             labelMy: 'ရရန်ရှိ (သူများဆီက)',
@@ -319,7 +450,21 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
             </p>
           </div>
         ) : (
-          filteredDebts.map((debt) => {
+          personGroups.map((group) => (
+            <div key={group.key} className="space-y-4">
+              {/* [v7.5.55 D32] Per-person group header (only when one person
+                  has several debts in the current filter). */}
+              {group.debts.length > 1 && (
+                <div className="flex items-center justify-between px-1 pt-1">
+                  <span className="text-xs font-bold text-slate-700">
+                    👤 {group.personName} · {group.debts.length} {lang === 'my' ? 'ခု' : 'debts'}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">
+                    {lang === 'my' ? 'စုစုပေါင်း ကျန်ငွေ:' : 'Total remaining:'} {formatMMK(group.totalRemainingMMK)}
+                  </span>
+                </div>
+              )}
+              {group.debts.map((debt) => {
             const remaining = Math.max(0, debt.totalAmount - debt.paidAmount);
             const percentPaid = Math.min(100, Math.round((debt.paidAmount / debt.totalAmount) * 100));
             const overdue = debt.status === 'active' && isOverdue(debt.dueDate);
@@ -388,7 +533,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                           {debt.dueDate && (
                             <span className={`text-[11px] font-mono shrink-0 flex items-center gap-1 ${overdue ? 'text-rose-600 font-bold' : 'text-slate-400'}`}>
                               <Clock className="w-3 h-3" />
-                              {debt.dueDate}
+                              {formatShortDate(debt.dueDate)}
                             </span>
                           )}
                         </div>
@@ -403,27 +548,27 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                                 ? 'text-emerald-700'
                                 : 'text-rose-700'
                             }`}>
-                              {formatMMK(debt.status === 'settled' ? debt.totalAmount : remaining)}
+                              {formatMMK(convertDebtAmountToMMK(debt, debt.status === 'settled' ? debt.totalAmount : remaining))}
                             </span>
                             <span className="text-slate-300">•</span>
                             <span
                               className="text-slate-600 text-[11px] font-mono shrink-0 flex items-center gap-0.5"
                               title={lang === 'my' ? 'အကြွေးစတင်သည့်ရက်စွဲ' : 'Start date'}
                             >
-                              📅 {lang === 'my' ? 'စတင်:' : 'Since:'} {debt.startDate}
+                              📅 {lang === 'my' ? 'စတင်:' : 'Since:'} {formatShortDate(debt.startDate)}
                             </span>
                             {debt.phone && (
                               <>
                                 <span className="text-slate-300">•</span>
-                                <span className="text-slate-600 text-[11px] font-mono shrink-0">
+                                <a href={`tel:${debt.phone}`} className="text-indigo-600 text-[11px] font-mono shrink-0 hover:underline">
                                   📞 {debt.phone}
-                                </span>
+                                </a>
                               </>
                             )}
                           </div>
 
                           <div className="text-[11px] text-slate-400 font-mono shrink-0">
-                            {lang === 'my' ? 'မူလ:' : 'Total:'} {formatMMK(debt.totalAmount)}
+                            {lang === 'my' ? 'မူလ:' : 'Total:'} {formatMMK(convertDebtAmountToMMK(debt, debt.totalAmount))}
                           </div>
                         </div>
                       </div>
@@ -441,10 +586,10 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                   <div className="mt-3 space-y-1">
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>
-                        {lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatMMK(debt.paidAmount)} ({percentPaid}%)
+                        {lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatMMK(convertDebtAmountToMMK(debt, debt.paidAmount))} ({percentPaid}%)
                       </span>
                       <span>
-                        {lang === 'my' ? 'ကျန်ငွေ:' : 'Left:'} {formatMMK(remaining)}
+                        {lang === 'my' ? 'ကျန်ငွေ:' : 'Left:'} {formatMMK(convertDebtAmountToMMK(debt, remaining))}
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -492,9 +637,21 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                         </button>
                       )}
 
+                      {/* [v7.5.55 D28] Edit the debt itself (person, amount,
+                          type, dates, wallet, note). */}
+                      {onEditDebt && (
+                        <button
+                          onClick={() => onEditDebt(debt)}
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title={lang === 'my' ? 'အကြွေး ပြင်ဆင်မည်' : 'Edit debt'}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+
                       {/* Mark Settled Toggle */}
                       <button
-                        onClick={() => onToggleStatus(debt.id)}
+                        onClick={() => handleToggleClick(debt)}
                         className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                           debt.status === 'settled'
                             ? 'text-slate-600 border-slate-200 hover:bg-slate-100'
@@ -546,9 +703,9 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                               className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/70 text-xs"
                             >
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                <div className={`w-2 h-2 rounded-full ${isReceivable ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                                 <div>
-                                  <span className="font-semibold text-slate-900">{rep.date}</span>
+                                  <span className="font-semibold text-slate-900">{formatShortDate(rep.date)}</span>
                                   {rep.note && (
                                     <span className="text-slate-500 ml-2 italic">"{rep.note}"</span>
                                   )}
@@ -557,10 +714,12 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
 
                               <div className="flex items-center gap-3">
                                 <span className="text-slate-500">
-                                  {lang === 'my' ? repWallet?.name : repWallet?.nameEn}
+                                  {repWallet
+                                    ? (lang === 'my' ? repWallet.name : repWallet.nameEn)
+                                    : (lang === 'my' ? 'ဖျက်လိုက်သော ပိုက်ဆံအိတ်' : 'Deleted wallet')}
                                 </span>
                                 <span className={`font-bold ${isReceivable ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                  {isReceivable ? '+' : '-'}{formatMMK(rep.amount)}
+                                  {isReceivable ? '+' : '-'}{formatCurrency(rep.amount, debtCurrency(debt))}
                                 </span>
                                 <div className="flex items-center gap-1">
                                   {rep.transactionId && (
@@ -606,7 +765,9 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                 )}
               </div>
             );
-          })
+              })}
+            </div>
+          ))
         )}
       </div>
     </div>

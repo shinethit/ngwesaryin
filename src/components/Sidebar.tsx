@@ -14,14 +14,12 @@ interface SidebarProps {
   currentPlan: PlanType;
   lang: 'my' | 'en';
   onToggleLang: () => void;
-  onOpenUpgradeModal: () => void;
   onOpenAccountModal: () => void;
   onOpenSearch: () => void;
   onOpenLogin: () => void;
   onOpenAdminPanel?: () => void;
   onLockApp: () => void;
   transactionsCount: number;
-  maxFreeTransactions: number;
   debtsCount: number;
   walletsCount: number;
   vehiclesCount?: number;
@@ -42,14 +40,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentPlan,
   lang,
   onToggleLang,
-  onOpenUpgradeModal,
   onOpenAccountModal,
   onOpenSearch,
   onOpenLogin,
   onOpenAdminPanel,
   onLockApp,
   transactionsCount,
-  maxFreeTransactions,
   debtsCount,
   walletsCount,
   vehiclesCount = 0,
@@ -110,6 +106,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [isOpen]);
 
+  // [v7.5.55 E25] Escape closes the sidebar drawer.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   const navItems = [
     {
       id: 'dashboard',
@@ -130,7 +134,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       labelMy: '၃ - ကဏ္ဍနှင့် ကဏ္ဍခွဲများ',
       labelEn: '3 - Categories & Subcategories',
       icon: Tags,
-      isPremiumFeature: true,
     },
     {
       id: 'transactions',
@@ -144,7 +147,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       labelMy: '၅ - ဘတ်ဂျက်နှင့် စာရင်းဇယား',
       labelEn: '5 - Budgets & Analytics',
       icon: PieChart,
-      isPremiumFeature: true,
     },
     {
       id: 'debts',
@@ -450,7 +452,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onLockApp();
                     onClose();
                   }}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer"
+                  className="min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/70 transition-colors cursor-pointer"
                   title={lang === 'my' ? 'အက်ပ်ကို လော့ခ်ချမည်' : 'Lock App'}
                 >
                   <Lock className="w-4 h-4 text-slate-600" />
@@ -549,11 +551,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span>LOCK</span>
                     </span>
                   )}
-                  {item.isPremiumFeature && currentPlan === 'free' && (
-                    <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                      PRO
-                    </span>
-                  )}
                   {item.highlight && (
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                   )}
@@ -593,7 +590,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Search className="w-3.5 h-3.5 text-slate-500" />
               <span>{lang === 'my' ? 'မှတ်တမ်းများ ရှာဖွေရန်' : 'Search records'}</span>
             </div>
-            <kbd className="px-1.5 py-0.2 text-[9px] font-mono text-slate-500 bg-slate-100 border border-slate-200 rounded">
+            <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono text-slate-500 bg-slate-100 border border-slate-200 rounded">
               ⌘K
             </kbd>
           </button>

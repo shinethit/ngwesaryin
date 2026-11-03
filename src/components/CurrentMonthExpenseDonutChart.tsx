@@ -1,13 +1,15 @@
 import React, { useMemo } from 'react';
 import { PieChart, Tag } from 'lucide-react';
-import { Transaction, Category } from '../types';
+import { Transaction, Category, Wallet } from '../types';
 import { formatMMK } from '../utils/formatters';
-import { isTransferTransaction } from '../utils/walletBalance';
+import { convertToMMK } from '../utils/currency';
+import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 import { CategoryIcon } from './CategoryIcon';
 
 interface CurrentMonthExpenseDonutChartProps {
   transactions: Transaction[];
   categories: Category[];
+  wallets?: Wallet[];
   lang: 'my' | 'en';
 }
 
@@ -21,8 +23,16 @@ const getLocalDateString = (d: Date = new Date()): string => {
 export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutChartProps> = ({
   transactions,
   categories,
+  wallets = [],
   lang,
 }) => {
+  // [v7.5.55 D18] Convert amounts to MMK via each transaction's wallet.
+  const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
+  const convertTxToMMK = (t: Transaction) => {
+    let w = walletMap.get(t.walletId);
+    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
+    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+  };
   const currentYearMonth = useMemo(() => getLocalDateString(new Date()).slice(0, 7), []);
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
@@ -38,8 +48,8 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
   }, [transactions, currentYearMonth]);
 
   const totalExpense = useMemo(() => {
-    return currentMonthExpenses.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-  }, [currentMonthExpenses]);
+    return currentMonthExpenses.reduce((sum, t) => sum + convertTxToMMK(t), 0);
+  }, [currentMonthExpenses, walletMap, wallets]);
 
   // Aggregate by category
   const categoryBreakdown = useMemo(() => {
@@ -48,7 +58,7 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
     currentMonthExpenses.forEach((t) => {
       const catId = t.category || 'other';
       const existing = map.get(catId) || { categoryId: catId, amount: 0, count: 0 };
-      existing.amount += Number(t.amount) || 0;
+      existing.amount += convertTxToMMK(t);
       existing.count += 1;
       map.set(catId, existing);
     });
@@ -69,7 +79,7 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
         };
       })
       .sort((a, b) => b.amount - a.amount);
-  }, [currentMonthExpenses, catMap, lang, totalExpense]);
+  }, [currentMonthExpenses, catMap, lang, totalExpense, walletMap, wallets]);
 
   // Build SVG Donut slices
   const svgSlices = useMemo(() => {

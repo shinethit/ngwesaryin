@@ -49,6 +49,17 @@ export const formatDateDisplay = (dateString: string, lang: 'my' | 'en' = 'my'):
   return `${year} ခုနှစ်၊ ${parseInt(month)} လ၊ ${parseInt(day)} ရက်`;
 };
 
+// [v7.5.55 D23] Short DD/MM/YYYY date (the app-wide date format chosen in
+// v7.5.54). Unlike formatDateDisplay this is NOT long-form — debt dates
+// (due / start / repayment) render as e.g. 03/11/2026 in both languages.
+export const formatShortDate = (dateString: string): string => {
+  if (!dateString) return '';
+  const parts = dateString.split('-');
+  if (parts.length !== 3) return dateString;
+  const [year, month, day] = parts;
+  return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+};
+
 export const getCategoryDisplayName = (
   categoryId: string,
   categories: { id: string; name: string; nameEn?: string }[] = [],
@@ -89,7 +100,13 @@ export const getCategoryDisplayName = (
 
 export const isOverdue = (dueDate?: string): boolean => {
   if (!dueDate) return false;
-  const todayStr = new Date().toISOString().split('T')[0];
+  // [v7.5.55] Local date, not UTC: toISOString() is UTC, so a debt due
+  // yesterday was not flagged overdue until 06:30 local (UTC+6:30).
+  const now = new Date();
+  const todayStr =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
   return dueDate < todayStr;
 };
 

@@ -18,7 +18,12 @@ export const DEFAULT_CONTACT_INFO: ContactInfo = {
 
 const LOCAL_STORAGE_KEY = 'ngwe_contact_info';
 
-export async function fetchContactInfo(): Promise<ContactInfo> {
+// [v7.5.55 E16] Returns null when NOTHING could be read (no Firestore
+// doc and no local cache). Callers must keep their previous values in
+// that case — returning DEFAULT_CONTACT_INFO here used to let a save
+// after a failed read push the placeholder number 09777123456 over the
+// real saved number.
+export async function fetchContactInfo(): Promise<ContactInfo | null> {
   // 1. Try Firestore
   try {
     const docRef = doc(db, 'systemSettings', 'contactInfo');
@@ -42,7 +47,7 @@ export async function fetchContactInfo(): Promise<ContactInfo> {
     // Ignore error
   }
 
-  return DEFAULT_CONTACT_INFO;
+  return null;
 }
 
 export async function saveContactInfo(info: ContactInfo): Promise<void> {
@@ -59,9 +64,13 @@ export async function saveContactInfo(info: ContactInfo): Promise<void> {
     }
   }
 
-  // Save to Firestore
+  // Save to Firestore — safeSetDoc returns false (never throws) on
+  // permission/quota failure; surface that instead of pretending success.
   const docRef = doc(db, 'systemSettings', 'contactInfo');
-  await safeSetDoc(docRef, updatedInfo, { merge: true });
+  const ok = await safeSetDoc(docRef, updatedInfo, { merge: true });
+  if (!ok) {
+    throw new Error('Failed to save contact info to Firestore');
+  }
 
   // Save to LocalStorage
   safeSetItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedInfo));

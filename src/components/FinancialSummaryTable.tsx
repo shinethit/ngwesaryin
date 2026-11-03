@@ -1,8 +1,9 @@
 import React from 'react';
 import { Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
+import { convertToMMK } from '../utils/currency';
 
-import { isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 
 interface FinancialSummaryTableProps {
   income: number;
@@ -30,18 +31,24 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
   const net = income - expense;
 
   // Per-wallet breakdown → total Opening / Inflow / Outflow / Closing
+  // [v7.5.55 D18] All amounts converted to MMK (transaction amounts via
+  // their wallet, balances via the wallet's own currency) — raw sums mixed
+  // foreign-currency amounts with MMK before.
   const totals = React.useMemo(() => {
     let opening = 0, inflow = 0, outflow = 0;
+    const walletMap = buildWalletMap(selectedWallets);
     for (const w of selectedWallets) {
       const wTxs = transactions.filter((t) => isWalletMatch(w, t.walletId) && !isTransferTransaction(t));
       let wIn = 0, wOut = 0;
       wTxs.forEach((t) => {
-        const amt = Number(t.amount) || 0;
+        let tw = walletMap.get(t.walletId);
+        if (!tw) tw = selectedWallets.find((wall) => isWalletMatch(wall, t.walletId));
+        const amt = convertToMMK(t.amount, tw?.currency, tw?.exchangeRate);
         if (t.type === 'income') wIn += amt;
         else if (t.type === 'expense') wOut += amt;
       });
       const wNet = wIn - wOut;
-      opening += (Number(w.balance) || 0) - wNet;
+      opening += convertToMMK(Number(w.balance) || 0, w.currency, w.exchangeRate) - wNet;
       inflow += wIn;
       outflow += wOut;
     }
@@ -75,19 +82,19 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
       {financialSystem === 'opening_closing' && (
         <div className="grid grid-cols-3 gap-1.5">
           <Card
-            label="Opening"
+            label={lang === 'my' ? 'အစလက်ကျန်' : 'Opening'}
             value={formatLakhs(totals.opening, lang)}
             tip={formatMMK(totals.opening)}
             tone="neutral"
           />
           <Card
-            label="Movement"
+            label={lang === 'my' ? 'လှုပ်ရှားမှု' : 'Movement'}
             value={(totals.net >= 0 ? '+' : '') + formatLakhs(totals.net, lang)}
             tip={formatMMK(totals.net)}
             tone={totals.net >= 0 ? 'pos' : 'neg'}
           />
           <Card
-            label="Closing"
+            label={lang === 'my' ? 'အဆုံးလက်ကျန်' : 'Closing'}
             value={formatLakhs(totals.closing, lang)}
             tip={formatMMK(totals.closing)}
             tone={totals.closing >= 0 ? 'neutral' : 'down'}
@@ -98,19 +105,19 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
       {financialSystem === 'inflow_outflow' && (
         <div className="grid grid-cols-3 gap-1.5">
           <Card
-            label={`Inflow · ${incomeCount}`}
+            label={`${lang === 'my' ? 'ဝင်ငွေ' : 'Inflow'} · ${incomeCount}`}
             value={'+' + formatLakhs(totals.inflow, lang)}
             tip={formatMMK(totals.inflow)}
             tone="up"
           />
           <Card
-            label={`Outflow · ${expenseCount}`}
+            label={`${lang === 'my' ? 'ထွက်ငွေ' : 'Outflow'} · ${expenseCount}`}
             value={'-' + formatLakhs(totals.outflow, lang)}
             tip={formatMMK(totals.outflow)}
             tone="down"
           />
           <Card
-            label="Net"
+            label={lang === 'my' ? 'အသားတင်' : 'Net'}
             value={(totals.net >= 0 ? '+' : '') + formatLakhs(totals.net, lang)}
             tip={formatMMK(totals.net)}
             tone={totals.net >= 0 ? 'pos' : 'neg'}

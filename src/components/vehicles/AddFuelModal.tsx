@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Fuel, Gauge, CheckCircle2, Save, Trash2, Building2, TrendingUp, TrendingDown } from 'lucide-react';
 import { FuelLog, Vehicle, Wallet } from '../../types';
 import { usePersistedState } from '../../hooks/usePersistedState';
+import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 
 interface AddFuelModalProps {
   isOpen: boolean;
@@ -145,20 +146,33 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
   }, [editingLog, isOpen, vehicles, selectedVehicleId, wallets]);
 
   // Auto-calc logic: Liters = Total Cost / Price per Liter
+  // [v7.5.55 D3] Myanmar digits (၀-၉) parse through parseMyanmarNumber.
   const handlePriceChange = (val: string) => {
-    const num = val === '' ? '' : Number(val);
-    setPricePerLiter(num);
-    if (num !== '' && num > 0 && totalCost !== '') {
-      setLiters(Number((Number(totalCost) / num).toFixed(2)));
+    const num = val.trim() === '' ? '' : parseMyanmarNumber(val);
+    const parsed = num === '' || Number.isNaN(num as number) ? '' : (num as number);
+    setPricePerLiter(parsed);
+    if (parsed !== '' && parsed > 0 && totalCost !== '') {
+      setLiters(Number((Number(totalCost) / parsed).toFixed(2)));
     }
   };
 
   const handleTotalCostChange = (val: string) => {
-    const num = val === '' ? '' : Number(val);
-    setTotalCost(num);
-    if (num !== '' && num > 0 && pricePerLiter !== '' && Number(pricePerLiter) > 0) {
-      setLiters(Number((num / Number(pricePerLiter)).toFixed(2)));
+    const num = val.trim() === '' ? '' : parseMyanmarNumber(val);
+    const parsed = num === '' || Number.isNaN(num as number) ? '' : (num as number);
+    setTotalCost(parsed);
+    // [v7.5.55 C7] Cost 0 must recalculate liters to 0 too — the old
+    // `num > 0` guard left the previous liters value standing.
+    if (parsed !== '' && pricePerLiter !== '' && Number(pricePerLiter) > 0) {
+      setLiters(Number((parsed / Number(pricePerLiter)).toFixed(2)));
     }
+  };
+
+  // [v7.5.55 D3] Number inputs accept Myanmar digits: parse text input
+  // instead of relying on type="number", which cannot type ၀-၉.
+  const handleNumberInput = (val: string): number | '' => {
+    if (val.trim() === '') return '';
+    const n = parseMyanmarNumber(val);
+    return Number.isNaN(n) ? '' : n;
   };
 
   if (!isOpen) return null;
@@ -169,12 +183,11 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       return;
     }
 
-    // Odometer Validation — editing the same vehicle: odometer may stay the same
+    // Odometer Validation — ပြင်ဆင်နေချိန် (ယာဉ်မပြောင်းရင်) မိုင်တာမကြီးလည်း ရပါတယ်
+    // [v7.5.50] အသစ်ထည့်ချိန်မှာလည်း လက်ရှိမိုင်တာနဲ့ တူရင် ရပါတယ် (ဥပမာ- ပြုပြင်ပြီး
+    // တူညီသောမိုင်တာမှာ ဆီဖြည့်ခြင်း) — လက်ရှိထက် နည်းနေမှသာ ပိတ်ပါတယ်။
+    // အတိအကျ ထပ်နေတဲ့ မှတ်တမ်းကိုတော့ အောက်က Double Entry စစ်ဆေးမှုက တားပါတယ်။
     const isEditingSameVehicle = !!editingLog && editingLog.vehicleId === vehicleId;
-    // [v7.5.50] New logs may use the current odometer (equal is allowed —
-    // e.g. a fill-up right after a service at the same reading). Only a
-    // LOWER odometer is blocked. Exact duplicates are still caught by the
-    // double-entry check below.
     if (!isEditingSameVehicle && currentVehicle && Number(odometer) < (currentVehicle.currentOdometer || 0)) {
       // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
       // odometer. Ask instead of blocking — the vehicle odometer itself stays
@@ -187,8 +200,19 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       if (!okBackfill) return;
     }
     if (lastLogForComparison && Number(odometer) === lastLogForComparison.odometer) {
-      alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry. (Prevent Double Entry)');
-      return;
+      // [v7.5.55 C1] The old check blocked ANY log whose odometer equalled
+      // the last log — which is exactly the pre-filled current odometer, so
+      // saving was blocked in the normal case. Block only a TRUE duplicate:
+      // same odometer AND same date AND same station AND same amount.
+      const station = gasStation === 'Other' ? customGasStation.trim() : gasStation;
+      const isTrueDuplicate =
+        lastLogForComparison.date === date &&
+        (lastLogForComparison.gasStation || '') === (station || '') &&
+        Number(lastLogForComparison.totalCost) === Number(totalCost);
+      if (isTrueDuplicate) {
+        alert(lang === 'my' ? 'ဤမှတ်တမ်းသည် ယခင်မှတ်တမ်းနှင့် အတိအကျ တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'This entry is an exact duplicate of the last entry. (Prevent Double Entry)');
+        return;
+      }
     }
 
     const station = gasStation === 'Other' ? customGasStation.trim() : gasStation;
@@ -258,6 +282,9 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
                 if (selected) {
                   setFuelType(selected.fuelType || 'Octane 92');
                   if (selected.walletId) setWalletId(selected.walletId);
+                  // [v7.5.55 C11] Refresh the odometer prefill to the NEW
+                  // vehicle's current odometer — never keep the old one's.
+                  if (!editingLog) setOdometer(selected.currentOdometer ?? '');
                 }
               }}
               className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium cursor-pointer"
@@ -291,7 +318,7 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
               </div>
               <div className="relative">
                 <Gauge className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input type="number" required min="0" value={odometer} onChange={(e) => setOdometer(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g. 45200" className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono" />
+                <input type="text" inputMode="decimal" required value={odometer} onChange={(e) => setOdometer(handleNumberInput(e.target.value))} placeholder="e.g. 45200" className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono" />
               </div>
             </div>
           </div>
@@ -302,7 +329,7 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 {lang === 'my' ? '၁ လီတာ ဈေးနှုန်း (MMK) *' : 'Price per Liter (MMK) *'}
               </label>
-              <input type="number" required min="100" step="1" value={pricePerLiter} onChange={(e) => handlePriceChange(e.target.value)} placeholder="e.g. 3150" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono" />
+              <input type="text" inputMode="decimal" required value={pricePerLiter} onChange={(e) => handlePriceChange(e.target.value)} placeholder="e.g. 3150" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono" />
               {lastLogForComparison && lastLogForComparison.pricePerLiter > 0 && pricePerLiter && (
                 <div className="text-[10px] mt-1 flex items-center gap-1">
                   <span className="text-slate-500">{lang === 'my' ? 'ယခင်ဈေး:' : 'Prev:'} {lastLogForComparison.pricePerLiter.toLocaleString()} Ks</span>
@@ -324,7 +351,7 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 {lang === 'my' ? 'ကျသင့်ငွေ စုစုပေါင်း (MMK) *' : 'Total Cost (MMK) *'}
               </label>
-              <input type="number" required min="0" value={totalCost} onChange={(e) => handleTotalCostChange(e.target.value)} placeholder="e.g. 100000" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-amber-900" />
+              <input type="text" inputMode="decimal" required value={totalCost} onChange={(e) => handleTotalCostChange(e.target.value)} placeholder="e.g. 100000" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-amber-900" />
             </div>
           </div>
 

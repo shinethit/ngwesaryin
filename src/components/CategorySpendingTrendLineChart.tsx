@@ -10,22 +10,33 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
-import { Transaction, Category } from '../types';
+import { Transaction, Category, Wallet } from '../types';
 import { formatMMK } from '../utils/formatters';
-import { isTransferTransaction } from '../utils/walletBalance';
+import { convertToMMK } from '../utils/currency';
+import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 
 interface CategorySpendingTrendLineChartProps {
   transactions: Transaction[];
   categories: Category[];
+  wallets?: Wallet[];
   lang: 'my' | 'en';
 }
 
 export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineChartProps> = ({
   transactions,
   categories,
+  wallets = [],
   lang,
 }) => {
   const [selectedTopCount, setSelectedTopCount] = useState<number>(4);
+
+  // [v7.5.55 D18] Convert amounts to MMK via each transaction's wallet.
+  const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
+  const convertTxToMMK = (t: Transaction) => {
+    let w = walletMap.get(t.walletId);
+    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
+    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+  };
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
@@ -54,7 +65,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       if (!isInLast6) return;
 
       const catId = t.category || 'other';
-      categoryTotals[catId] = (categoryTotals[catId] || 0) + (Number(t.amount) || 0);
+      categoryTotals[catId] = (categoryTotals[catId] || 0) + convertTxToMMK(t);
     });
 
     const sorted = Object.entries(categoryTotals)
@@ -62,13 +73,12 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       .map(([catId]) => catId);
 
     return sorted.slice(0, selectedTopCount);
-  }, [transactions, lastSixMonths, selectedTopCount]);
+  }, [transactions, lastSixMonths, selectedTopCount, walletMap, wallets]);
 
   // 3. Build chart data array with monthly spending per top category
   const chartData = useMemo(() => {
     return lastSixMonths.map((m) => {
       const row: any = { month: m.label, monthKey: m.key };
-      let totalMonthExpense = 0;
 
       topCategories.forEach((catId) => {
         const cat = catMap.get(catId);
@@ -76,16 +86,21 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
 
         const sum = transactions
           .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && t.date?.startsWith(m.key) && (t.category === catId))
-          .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+          .reduce((acc, t) => acc + convertTxToMMK(t), 0);
 
         row[catName] = sum;
-        totalMonthExpense += sum;
       });
+
+      // [v7.5.55 D18] "Total Expense" is the TRUE monthly total across ALL
+      // expense categories — previously it summed only the top-N lines.
+      const totalMonthExpense = transactions
+        .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && t.date?.startsWith(m.key))
+        .reduce((acc, t) => acc + convertTxToMMK(t), 0);
 
       row[lang === 'my' ? 'စုစုပေါင်းထွက်ငွေ' : 'Total Expense'] = totalMonthExpense;
       return row;
     });
-  }, [lastSixMonths, topCategories, transactions, catMap, lang]);
+  }, [lastSixMonths, topCategories, transactions, catMap, lang, walletMap, wallets]);
 
   const categoryColors = ['#10B981', '#6366F1', '#EC4899', '#F59E0B', '#3B82F6', '#8B5CF6'];
 

@@ -8,6 +8,10 @@ interface AdminBroadcastBannerProps {
   lang: 'my' | 'en';
 }
 
+// [v7.5.55] Hardcoded Myanmar names — phones without the 'my-MM'
+// Intl locale fell back to English (see formatLocalizedDate pattern).
+const monthsMy = ['ဇန်နဝါရီ','ဖေဖော်ဝါရီ','မတ်','ဧပြီ','မေ','ဇွန်','ဇူလိုင်','သြဂုတ်','စက်တင်ဘာ','အောက်တိုဘာ','နိုဝင်ဘာ','ဒီဇင်ဘာ'];
+
 export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang }) => {
   const [activeMessages, setActiveMessages] = useState<AdminSystemMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<AdminSystemMessage | null>(null);
@@ -238,10 +242,13 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
               <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  {new Date(selectedMessage.createdAt).toLocaleString(
-                    lang === 'my' ? 'my-MM' : 'en-US',
-                    { dateStyle: 'medium', timeStyle: 'short' }
-                  )}
+                  {(() => {
+                    const dt = new Date(selectedMessage.createdAt);
+                    if (lang !== 'my') return dt.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+                    const hh = String(dt.getHours()).padStart(2, '0');
+                    const mm = String(dt.getMinutes()).padStart(2, '0');
+                    return `${dt.getDate()} ${monthsMy[dt.getMonth()]} ${dt.getFullYear()}, ${hh}:${mm}`;
+                  })()}
                 </span>
                 {selectedMessage.authorEmail && (
                   <span className="text-[11px] text-slate-500 font-medium">

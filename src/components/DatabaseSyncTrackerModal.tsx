@@ -14,6 +14,9 @@ import {
 } from '../lib/syncOperationLogger';
 import firebaseConfig from '@/firebase-applet-config.json';
 
+// [v7.5.55] Hardcoded Myanmar month names (no 'my-MM' Intl reliance).
+const monthsMy = ['ဇန်နဝါရီ','ဖေဖော်ဝါရီ','မတ်','ဧပြီ','မေ','ဇွန်','ဇူလိုင်','သြဂုတ်','စက်တင်ဘာ','အောက်တိုဘာ','နိုဝင်ဘာ','ဒီဇင်ဘာ'];
+
 interface DatabaseSyncTrackerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -89,7 +92,9 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
     if (isToday) {
       return timeStr;
     }
-    const dateStr = d.toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-GB', { month: 'short', day: 'numeric' });
+    const dateStr = lang === 'my'
+      ? `${d.getDate()} ${monthsMy[d.getMonth()]}`
+      : d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
     return `${dateStr}, ${timeStr}`;
   };
 

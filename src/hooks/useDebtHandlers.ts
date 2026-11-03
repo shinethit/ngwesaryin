@@ -4,6 +4,7 @@ import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { markTxDeleted } from '../utils/deletedMarkers';
+import { getLocalDateString } from '../utils/dateUtils';
 import { isWalletMatch } from '../utils/walletBalance';
 import {
   getSharedWalletDocId,
@@ -51,10 +52,25 @@ export function useDebtHandlers({
   markDebtLocalWrite,
 }: UseDebtHandlersParams) {
 
+  // [v7.5.55] safe* Firestore calls return false on failure — surface it
+  // with a toast instead of silently assuming the cloud write succeeded.
+  const reportCloudWrite = (p: Promise<boolean>) => {
+    p.then((ok) => {
+      if (!ok) {
+        showToast(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : 'Could not save to cloud — check connection and retry');
+      }
+    }).catch(() => {
+      showToast(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : 'Could not save to cloud — check connection and retry');
+    });
+  };
+
   const handleAddDebt = (newDebt: Omit<Debt, 'id' | 'paidAmount' | 'repayments' | 'status' | 'createdAt'>) => {
     const id = `debt_${Date.now()}`;
+    // [v7.5.55 D12] The debt amount is denominated in its wallet's currency.
+    const debtWallet = wallets.find((w) => w.id === newDebt.walletId);
     const debt: Debt = {
       ...newDebt,
+      currency: newDebt.currency || debtWallet?.currency || 'MMK',
       id,
       paidAmount: 0,
       repayments: [],
@@ -91,15 +107,15 @@ export function useDebtHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'debts', id), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'debts', id), {
         ...debt,
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
 
-      safeSetDoc(doc(db, 'users', targetUid, 'transactions', txId), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', txId), {
         ...debtTx,
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
 
     showToast(lang === 'my' ? 'အကြွေးစာရင်းနှင့် Wallet ဝင်ငွေ/ထွက်ငွေ စာရင်း ချိတ်ဆက်ပြီးပါပြီ ✓' : 'Debt record & wallet transaction synced ✓');
@@ -158,9 +174,9 @@ export function useDebtHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeDeleteDoc(doc(db, 'users', targetUid, 'debts', id));
+      reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'debts', id)));
       txIdsToDelete.forEach((tid) => {
-        safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid));
+        reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid)));
       });
 
       (async () => {
@@ -184,13 +200,19 @@ export function useDebtHandlers({
     // [v6.3.2] auto-settle creates linked transaction; reopen deletes it
     const targetDebt = debts.find((d) => d.id === id);
     if (!targetDebt) return;
+    // [v7.5.55 D4] A debt whose total is 0 cannot be meaningfully reopened.
+    if (targetDebt.status === 'settled' && targetDebt.totalAmount <= 0) {
+      showToast(lang === 'my' ? 'ဤအကြွေး၏ စုစုပေါင်းပမာဏမှာ ၀ ဖြစ်နေသဖြင့် ပြန်ဖွင့်၍ မရပါ' : 'Cannot reopen a debt with a total of 0');
+      return;
+    }
 
     const newStatus = targetDebt.status === 'active' ? 'settled' : 'active';
     const isReceivable = targetDebt.type === 'receivable';
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString(); // [v7.5.55] local date, not UTC toISOString()
 
     let newSettlementTx: Transaction | null = null;
     let deletedSettlementTxIds: string[] = [];
+    let removedRepaymentCount = 0;
     let updatedRepayments = [...(targetDebt.repayments || [])];
 
     if (newStatus === 'settled') {
@@ -227,6 +249,46 @@ export function useDebtHandlers({
         .map((r) => r.transactionId)
         .filter((tid): tid is string => Boolean(tid));
       updatedRepayments = updatedRepayments.filter((r) => !r.id.startsWith('rep_settle_'));
+      // [v7.5.55 D4] CHOSEN APPROACH — delete the most recent ordinary
+      // repayment(s) until paid < total. A naturally-settled debt (ordinary
+      // repayments totalling the full amount) has no rep_settle_ record, so
+      // the old code removed nothing and the debt silently stayed settled.
+      // The alternative (a settled-by flag) would leave paid >= total while
+      // status is 'active' — an inconsistent money record. Deleting is the
+      // honest option, and the confirm in DebtsView names exactly which
+      // repayment records + linked wallet transactions will be removed, so
+      // nothing is lost silently.
+      let paidNow = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      if (paidNow >= targetDebt.totalAmount) {
+        const sorted = [...updatedRepayments].sort((a, b) =>
+          (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0));
+        const removedIds = new Set<string>();
+        for (const r of sorted) {
+          if (paidNow < targetDebt.totalAmount) break;
+          removedIds.add(r.id);
+          removedRepaymentCount += 1;
+          paidNow -= Number(r.amount) || 0;
+          if (r.transactionId) {
+            deletedSettlementTxIds.push(r.transactionId);
+          } else {
+            // Legacy repayment without transactionId: locate the linked tx
+            // the same way handleDeleteDebt does.
+            const expectedType = isReceivable ? 'income' : 'expense';
+            const expectedCat = isReceivable ? 'cat_debt_repayment' : 'cat_debt_payment';
+            const matched = transactions.find(
+              (t) =>
+                t.type === expectedType &&
+                t.category === expectedCat &&
+                t.amount === r.amount &&
+                t.date === r.date &&
+                t.walletId === r.walletId &&
+                (t.note || '').includes(targetDebt.personName)
+            );
+            if (matched) deletedSettlementTxIds.push(matched.id);
+          }
+        }
+        updatedRepayments = updatedRepayments.filter((r) => !removedIds.has(r.id));
+      }
     }
 
     const newPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
@@ -276,21 +338,21 @@ export function useDebtHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'debts', id), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'debts', id), {
         ...updatedDebt,
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
 
       if (newSettlementTx) {
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', newSettlementTx.id), {
+        reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', newSettlementTx.id), {
           ...newSettlementTx,
           userId: targetUid,
-        }, { merge: true });
+        }, { merge: true }));
       }
 
       if (deletedSettlementTxIds.length > 0) {
         deletedSettlementTxIds.forEach((tid) => {
-          safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid));
+          reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', tid)));
         });
         (async () => {
           try {
@@ -305,8 +367,101 @@ export function useDebtHandlers({
 
     showToast(
       lang === 'my'
-        ? (derivedStatus === 'settled' ? 'အကြွေးကြေပြီ — ငွေစာရင်းထဲ ထည့်ပြီးပါပြီ ✓' : 'အကြွေးပြန်ဖွင့်ပြီ — ငွေစာရင်းမှ ဖျက်ပြီးပါပြီ ✓')
-        : (derivedStatus === 'settled' ? 'Debt settled — transaction recorded ✓' : 'Debt reopened — settlement removed ✓')
+        ? (derivedStatus === 'settled'
+          ? 'အကြွေးကြေပြီ — ငွေစာရင်းထဲ ထည့်ပြီးပါပြီ ✓'
+          : removedRepaymentCount > 0
+          ? `အကြွေးပြန်ဖွင့်ပြီ — နောက်ဆုံး ငွေဆပ်မှတ်တမ်း ${removedRepaymentCount} ခုနှင့် တွဲဖက် ငွေစာရင်းများ ဖျက်ပြီးပါပြီ ✓`
+          : 'အကြွေးပြန်ဖွင့်ပြီ — ငွေစာရင်းမှ ဖျက်ပြီးပါပြီ ✓')
+        : (derivedStatus === 'settled'
+          ? 'Debt settled — transaction recorded ✓'
+          : removedRepaymentCount > 0
+          ? `Debt reopened — removed ${removedRepaymentCount} most recent repayment(s) + linked transactions ✓`
+          : 'Debt reopened — settlement removed ✓')
+    );
+  };
+
+  // [v7.5.55 D28] Edit a debt itself (person, amount, type, dates, wallet,
+  // note, currency) and keep its linked main transaction consistent: the
+  // main tx amount/wallet/date/note follow the edited debt, so the wallet
+  // balance and the income/expense totals stay in sync. Repayments are NOT
+  // touched; if the new total is below what is already paid, the debt
+  // becomes settled by derivation and the toast says so.
+  const handleUpdateDebt = (updated: Debt) => {
+    const prev = debts.find((d) => d.id === updated.id);
+    if (!prev) return;
+    const txId = `tx_debt_${updated.id}`;
+    const isReceivable = updated.type === 'receivable';
+    const paidFromRepayments = (updated.repayments || []).reduce(
+      (sum, r) => sum + (Number(r.amount) || 0), 0
+    );
+    const newPaid = paidFromRepayments > 0 ? paidFromRepayments : (prev.paidAmount || 0);
+    const newStatus: Debt['status'] = newPaid >= updated.totalAmount ? 'settled' : 'active';
+    const updatedDebt: Debt = {
+      ...prev,
+      ...updated,
+      repayments: updated.repayments ?? prev.repayments ?? [],
+      paidAmount: newPaid,
+      status: newStatus,
+      currency: updated.currency || prev.currency || wallets.find((w) => w.id === updated.walletId)?.currency || 'MMK',
+      updatedAt: Date.now(),
+      version: (prev.version || 0) + 1,
+      lastEditedBy: user?.uid || 'guest',
+    };
+
+    markDebtLocalWrite(updated.id);
+    setDebts((prevDebts) => {
+      const next = prevDebts.map((d) => (d.id === updated.id ? updatedDebt : d));
+      safeSetItem('ngwe_debts', JSON.stringify(next));
+      return next;
+    });
+
+    // Keep the linked main transaction consistent with the edited debt.
+    setTransactions((prevTxs) => {
+      const next = prevTxs.map((t) => {
+        if (t.id !== txId) return t;
+        return {
+          ...t,
+          type: isReceivable ? 'expense' : 'income',
+          amount: updated.totalAmount,
+          category: isReceivable ? 'cat_debt_issued' : 'cat_debt_received',
+          walletId: updated.walletId,
+          date: updated.startDate,
+          note: isReceivable
+            ? `[အကြွေးထုတ်ပေးခြင်း] ➔ ${updated.personName}${updated.note ? ` (${updated.note})` : ''}`
+            : `[အကြွေးရယူခြင်း] ⬅ ${updated.personName}${updated.note ? ` (${updated.note})` : ''}`,
+        } as Transaction;
+      });
+      safeSetItem('ngwe_transactions', JSON.stringify(next));
+      return next;
+    });
+
+    if (user?.uid) {
+      const targetUid = activeWorkspaceId || user.uid;
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'debts', updated.id), {
+        ...updatedDebt,
+        userId: targetUid,
+      }, { merge: true }));
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', txId), {
+        type: isReceivable ? 'expense' : 'income',
+        amount: updated.totalAmount,
+        category: isReceivable ? 'cat_debt_issued' : 'cat_debt_received',
+        walletId: updated.walletId,
+        date: updated.startDate,
+        note: isReceivable
+          ? `[အကြွေးထုတ်ပေးခြင်း] ➔ ${updated.personName}${updated.note ? ` (${updated.note})` : ''}`
+          : `[အကြွေးရယူခြင်း] ⬅ ${updated.personName}${updated.note ? ` (${updated.note})` : ''}`,
+        userId: targetUid,
+      }, { merge: true }));
+    }
+
+    showToast(
+      lang === 'my'
+        ? (newStatus === 'settled' && prev.status === 'active'
+          ? 'အကြွေး ပြင်ဆင်ပြီးပါပြီ — ဆပ်ပြီးငွေက စုစုပေါင်းထက် များနေသဖြင့် အကြွေးကြေပြီဟု သတ်မှတ်လိုက်ပါသည် ✓'
+          : 'အကြွေး ပြင်ဆင်ပြီး — တွဲဖက် ငွေစာရင်းပါ ညှိပြီးပါပြီ ✓')
+        : (newStatus === 'settled' && prev.status === 'active'
+          ? 'Debt updated — paid now covers the new total, so it is settled ✓'
+          : 'Debt updated — linked transaction synced ✓')
     );
   };
 
@@ -368,10 +523,10 @@ export function useDebtHandlers({
 
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', repTxId), {
+        reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', repTxId), {
           ...repTx,
           userId: targetUid,
-        }, { merge: true });
+        }, { merge: true }));
       }
     }
 
@@ -404,10 +559,10 @@ export function useDebtHandlers({
 
           if (user?.uid) {
             const targetUid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', targetUid, 'debts', debtId), {
+            reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'debts', debtId), {
               ...updatedDebt,
               userId: targetUid,
-            }, { merge: true });
+            }, { merge: true }));
           }
 
           return updatedDebt;
@@ -459,10 +614,10 @@ export function useDebtHandlers({
 
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
-        safeSetDoc(doc(db, 'users', targetUid, 'transactions', linkedTxIdForEdit), {
+        reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', linkedTxIdForEdit), {
           ...updatedLinkedTx,
           userId: targetUid,
-        }, { merge: true });
+        }, { merge: true }));
       }
     }
 
@@ -487,10 +642,10 @@ export function useDebtHandlers({
 
           if (user?.uid) {
             const targetUid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', targetUid, 'debts', debtId), {
+            reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'debts', debtId), {
               ...updatedDebt,
               userId: targetUid,
-            }, { merge: true });
+            }, { merge: true }));
           }
 
           return updatedDebt;
@@ -548,7 +703,7 @@ export function useDebtHandlers({
 
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
-        safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', linkedTxIdToDel));
+        reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', linkedTxIdToDel)));
 
         if (linkedWallet && (linkedWallet.isSharedFromOther || (linkedWallet.sharedWith && linkedWallet.sharedWith.length > 0))) {
           const sharedDocId = getSharedWalletDocId(linkedWallet, user.uid);
@@ -583,10 +738,10 @@ export function useDebtHandlers({
 
           if (user?.uid) {
             const targetUid = activeWorkspaceId || user.uid;
-            safeSetDoc(doc(db, 'users', targetUid, 'debts', debtId), {
+            reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'debts', debtId), {
               ...updatedDebt,
               userId: targetUid,
-            }, { merge: true });
+            }, { merge: true }));
           }
 
           return updatedDebt;
@@ -602,6 +757,7 @@ export function useDebtHandlers({
 
   return {
     handleAddDebt,
+    handleUpdateDebt,
     handleDeleteDebt,
     handleToggleDebtStatus,
     handleRecordRepaymentSubmit,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Delete } from 'lucide-react';
 import { FortuneLogo } from './FortuneLogo';
 import { verifyPin, isHashedPinFormat } from '../utils/pinHash';
@@ -21,6 +21,10 @@ interface PinLockScreenProps {
   onForgotPin?: () => void;
 }
 
+// [v7.5.55 E11] 5 failed attempts -> 30s lockout.
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 30 * 1000;
+
 export const PinLockScreen: React.FC<PinLockScreenProps> = ({
   pinHash,
   pinSalt,
@@ -32,46 +36,68 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const [lockoutLeft, setLockoutLeft] = useState(0);
 
-  // Verify PIN asynchronously whenever 4 digits entered
+  // [v7.5.55 E2] Re-entry guard is a ref, NOT state: setting state
+  // mid-verification used to re-run this effect, whose cleanup marked
+  // the in-flight PBKDF2 check as cancelled, so a correct PIN could
+  // strand the user on "Verifying..." forever. Callbacks are also
+  // held in refs so their (unstable) identities never re-trigger it.
+  const verifyingRef = useRef(false);
+  const onUnlockRef = useRef(onUnlock);
+  onUnlockRef.current = onUnlock;
+  const onLegacyPinVerifiedRef = useRef(onLegacyPinVerified);
+  onLegacyPinVerifiedRef.current = onLegacyPinVerified;
+
+  // Verify PIN asynchronously whenever 4 digits entered.
+  // Deps are ONLY the inputs that define the check — never
+  // isVerifying and never the (inline, new-every-render) callbacks.
   useEffect(() => {
-    if (pin.length !== 4 || isVerifying) return;
+    if (pin.length !== 4) return;
+    if (verifyingRef.current) return;
+    if (Date.now() < lockedUntil) return;
 
     let cancelled = false;
+    verifyingRef.current = true;
+    setIsVerifying(true);
 
     const runVerification = async () => {
-      setIsVerifying(true);
-
       try {
         let isCorrect = false;
-
         if (isHashedPinFormat({ pin: pinHash, pinSalt })) {
-          // New hashed format — async PBKDF2 verification
           isCorrect = await verifyPin(pin, pinSalt, pinHash);
         } else {
-          // Legacy plaintext format — direct comparison
           isCorrect = pin === pinHash;
         }
 
-        if (cancelled) return;
-
+        // NOTE: deliberately NOT `if (cancelled) return` before
+        // onUnlock — a cleanup must never swallow a correct PIN.
         if (isCorrect) {
-          // [v6.7g] Legacy plaintext PIN succeeded → notify parent to migrate.
-          //         Fire-and-forget: parent's callback is async and
-          //         survives our unmount (it lives in App.tsx closure).
-          if (!isHashedPinFormat({ pin: pinHash, pinSalt }) && onLegacyPinVerified) {
+          if (!isHashedPinFormat({ pin: pinHash, pinSalt }) && onLegacyPinVerifiedRef.current) {
             try {
-              onLegacyPinVerified(pin);
+              onLegacyPinVerifiedRef.current(pin);
             } catch (e) {
               console.warn('[PinLockScreen] legacy migration callback failed:', e);
             }
           }
-          onUnlock();
+          onUnlockRef.current();
         } else {
+          if (cancelled) return;
           setError(true);
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
             try { navigator.vibrate(200); } catch {}
           }
+          // [v7.5.55 E11] Count failures; lock out after 5.
+          setFailedAttempts((prev) => {
+            const next = prev + 1;
+            if (next >= MAX_ATTEMPTS) {
+              setLockedUntil(Date.now() + LOCKOUT_MS);
+              return 0;
+            }
+            return next;
+          });
           setTimeout(() => {
             if (cancelled) return;
             setPin('');
@@ -89,16 +115,32 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
           }, 500);
         }
       } finally {
+        verifyingRef.current = false;
         if (!cancelled) setIsVerifying(false);
       }
     };
 
     runVerification();
-
     return () => {
+      // Only cancels the post-failure pin-clear timeouts above;
+      // it can no longer abort a correct unlock.
       cancelled = true;
     };
-  }, [pin, pinHash, pinSalt, onUnlock, onLegacyPinVerified, isVerifying]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin, pinHash, pinSalt, lockedUntil]);
+
+  // Lockout countdown (1s tick while locked out).
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const tick = () => setLockoutLeft(Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
+
+  const isLockedOut = lockedUntil > Date.now() && lockoutLeft > 0;
+  const lockedOutRef = useRef(false);
+  lockedOutRef.current = isLockedOut;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -113,6 +155,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
   }, []);
 
   const handleKeyPress = (num: string) => {
+    if (lockedOutRef.current) return;
     setPin((prev) => {
       if (prev.length < 4) {
         return prev + num;
@@ -160,13 +203,28 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
           ))}
         </div>
 
-        {error && (
+        {error && !isLockedOut && (
           <div className="text-xs text-rose-400 font-semibold mb-4 animate-shake">
             {lang === 'my' ? '❌ PIN နံပါတ် မှားယွင်းနေပါသည်' : '❌ Incorrect PIN code'}
+            {failedAttempts > 0 && (
+              <span className="block text-slate-400 font-normal mt-1">
+                {lang === 'my'
+                  ? `မှားယွင်းမှု ${failedAttempts}/${MAX_ATTEMPTS} ကြိမ် — ${MAX_ATTEMPTS} ကြိမ်မှားပါက စက္ကန့် ၃၀ လော့ခ်ကျပါမည်`
+                  : `Attempt ${failedAttempts}/${MAX_ATTEMPTS} — ${MAX_ATTEMPTS} failures lock for 30s`}
+              </span>
+            )}
           </div>
         )}
 
-        {isVerifying && !error && (
+        {isLockedOut && (
+          <div className="text-xs text-amber-400 font-semibold mb-4 text-center">
+            {lang === 'my'
+              ? `⏳ PIN ၅ ကြိမ် မှားသဖြင့် ${lockoutLeft} စက္ကန့် လော့ခ်ကျထားပါသည်`
+              : `⏳ Locked for ${lockoutLeft}s after 5 wrong attempts`}
+          </div>
+        )}
+
+        {isVerifying && !error && !isLockedOut && (
           <div className="text-xs text-slate-500 font-medium mb-4">
             {lang === 'my' ? 'စစ်ဆေးနေသည်...' : 'Verifying...'}
           </div>
@@ -178,8 +236,9 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
             <button
               key={num}
               type="button"
+              disabled={isLockedOut}
               onClick={() => handleKeyPress(num.toString())}
-              className="w-18 h-18 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center text-2xl font-bold text-white bg-slate-900/90 hover:bg-slate-800 active:bg-slate-700 active:scale-95 transition-all shadow-md border border-slate-800 cursor-pointer"
+              className="w-18 h-18 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center text-2xl font-bold text-white bg-slate-900/90 hover:bg-slate-800 active:bg-slate-700 active:scale-95 transition-all shadow-md border border-slate-800 cursor-pointer disabled:opacity-40"
             >
               {num}
             </button>
@@ -198,15 +257,17 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
           </div>
           <button
             type="button"
+            disabled={isLockedOut}
             onClick={() => handleKeyPress('0')}
-            className="w-18 h-18 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center text-2xl font-bold text-white bg-slate-900/90 hover:bg-slate-800 active:bg-slate-700 active:scale-95 transition-all shadow-md border border-slate-800 cursor-pointer"
+            className="w-18 h-18 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center text-2xl font-bold text-white bg-slate-900/90 hover:bg-slate-800 active:bg-slate-700 active:scale-95 transition-all shadow-md border border-slate-800 cursor-pointer disabled:opacity-40"
           >
             0
           </button>
           <button
             type="button"
+            disabled={isLockedOut}
             onClick={handleDelete}
-            className="w-18 h-18 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center text-slate-400 bg-slate-900/50 hover:bg-slate-800 active:bg-slate-700 active:scale-95 transition-all shadow-md border border-slate-800/80 cursor-pointer"
+            className="w-18 h-18 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center text-slate-400 bg-slate-900/50 hover:bg-slate-800 active:bg-slate-700 active:scale-95 transition-all shadow-md border border-slate-800/80 cursor-pointer disabled:opacity-40"
           >
             <Delete className="w-6 h-6" />
           </button>

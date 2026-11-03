@@ -16,10 +16,19 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
   // State to control floating bottom banner
   // [v7.5.52] Remember banner dismissal for 7 days. It used to be plain
   // React state, so the banner came back on every fresh launch.
+  // [v7.5.55 E22] DEVICE-GLOBAL keys (no 'ngwe_' prefix): storage.ts
+  // scopes every ngwe_* key per user, so ngwe_pwa_* dismissals were
+  // per-account. These keys deliberately bypass that scoping.
+  const PWA_INSTALL_DISMISSED_KEY = 'pwa_install_dismissed_time';
+  const PWA_BANNER_DISMISSED_KEY = 'pwa_banner_dismissed_time';
+  const readDismissed = (key: string, legacyKey: string): string | null =>
+    safeGetItem(key) || safeGetItem(legacyKey);
   const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(() => {
-    const t = safeGetItem('ngwe_pwa_banner_dismissed_time');
+    const t = readDismissed(PWA_BANNER_DISMISSED_KEY, 'ngwe_pwa_banner_dismissed_time');
     return !!t && Date.now() - Number(t) < 7 * 24 * 60 * 60 * 1000;
   });
+  // [v7.5.55 E29] Banner must not flash before the 1.5s modal timer.
+  const [modalTimerDone, setModalTimerDone] = useState(false);
   // iOS guide modal state
   const [showIOSModal, setShowIOSModal] = useState<boolean>(false);
 
@@ -32,15 +41,18 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
     // [v7.5.52] Full-screen modal shows only on the very first launch, before
     // the user has ever dismissed it. It used to come back every 24h and pop
     // up 1.5s after load, on top of the entry form.
-    const dismissedTime = safeGetItem('ngwe_pwa_install_dismissed_time');
+    const dismissedTime = readDismissed(PWA_INSTALL_DISMISSED_KEY, 'ngwe_pwa_install_dismissed_time');
 
     if (!dismissedTime) {
       // Show auto modal shortly after loading (1.5s) to allow page to settle
       const timer = setTimeout(() => {
+        setModalTimerDone(true);
         setShowAutoModal(true);
       }, 1500);
       return () => clearTimeout(timer);
     }
+    // Already dismissed before: no modal timer, banner may show at once.
+    setModalTimerDone(true);
   }, [isInstalled, isStandalone]);
 
   useEffect(() => {
@@ -54,17 +66,24 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
   const handleDismiss = () => {
     setShowAutoModal(false);
     setIsBannerDismissed(true);
-    safeSetItem('ngwe_pwa_install_dismissed_time', Date.now().toString());
+    safeSetItem(PWA_INSTALL_DISMISSED_KEY, Date.now().toString());
     // [v7.5.52] Dismissing the modal also snoozes the banner, otherwise it
     // pops back on the next launch even though the modal stays away.
-    safeSetItem('ngwe_pwa_banner_dismissed_time', Date.now().toString());
+    safeSetItem(PWA_BANNER_DISMISSED_KEY, Date.now().toString());
   };
 
   // [v7.5.52] Banner X: remember the dismissal, otherwise the banner
   // returns on the next launch.
   const handleBannerDismiss = () => {
     setIsBannerDismissed(true);
-    safeSetItem('ngwe_pwa_banner_dismissed_time', Date.now().toString());
+    safeSetItem(PWA_BANNER_DISMISSED_KEY, Date.now().toString());
+  };
+
+  // [v7.5.55 E29] Closing the iOS guide also dismisses the banner
+  // (7-day snooze) — otherwise the banner underneath stays until X'd.
+  const handleCloseIOSGuide = () => {
+    setShowIOSModal(false);
+    handleBannerDismiss();
   };
 
   const handleInstallClick = async () => {
@@ -210,7 +229,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
       )}
 
       {/* 2. FLOATING BOTTOM BAR (If auto modal was closed, persistent easy access banner) */}
-      {!showAutoModal && !isBannerDismissed && (
+      {!showAutoModal && !isBannerDismissed && modalTimerDone && (
         <div className="fixed bottom-20 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 animate-slideUp">
           <div className="bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border border-slate-700 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -257,7 +276,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative text-slate-800">
             <button
               type="button"
-              onClick={() => setShowIOSModal(false)}
+              onClick={handleCloseIOSGuide}
               className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -331,7 +350,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
 
             <button
               type="button"
-              onClick={() => setShowIOSModal(false)}
+              onClick={handleCloseIOSGuide}
               className="w-full py-3 px-4 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
             >
               {lang === 'my' ? 'နားလည်ပါပြီ' : 'Got it'}

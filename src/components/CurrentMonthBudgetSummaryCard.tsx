@@ -1,13 +1,16 @@
 import React from 'react';
 import { PieChart } from 'lucide-react';
-import { Budget, Category, Transaction } from '../types';
+import { Budget, Category, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 
 interface CurrentMonthBudgetSummaryCardProps {
   budgets: Budget[];
   categories: Category[];
   transactions: Transaction[];
+  wallets?: Wallet[];
   lang: 'my' | 'en';
 }
 
@@ -15,6 +18,7 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
   budgets,
   categories,
   transactions,
+  wallets = [],
   lang,
 }) => {
   // Determine current year and month (YYYY-MM)
@@ -25,24 +29,82 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
 
   const catMap = new Map<string, Category>();
   categories.forEach((c) => catMap.set(c.id, c));
+  const walletMap = React.useMemo(() => buildWalletMap(wallets), [wallets]);
 
-  // Calculate actual spending for each category in the current month
-  const categorySpending = React.useMemo(() => {
-    const spendingMap = new Map<string, number>();
-    transactions.forEach((t) => {
-      if (t.type === 'expense' && t.date && t.date.startsWith(currentYearMonth)) {
-        const amt = Number(t.amount) || 0;
-        const cur = spendingMap.get(t.category) || 0;
-        spendingMap.set(t.category, cur + amt);
-      }
+  // [v7.5.55 D2/D19] Reuse the Budget detail view's math exactly, so the card
+  // and the detail can never disagree again:
+  //  - % budgets are % of THIS month's income (20% is NOT 20 MMK)
+  //  - General pool = spending in categories with NO explicit budget
+  //  - totals count BUDGETED spending only (not every expense category)
+  //  - amounts converted to MMK, transfers excluded
+  //  - wallet scope defaults to "Included" (exclude includeInTotals === false),
+  //    matching the detail view's default scope
+  //  - near-limit threshold >= 80 and percent capped at 150, like the detail view
+  const includedWalletIds = React.useMemo(
+    () => getMatchingWalletIds(wallets.filter((w) => w.includeInTotals !== false)),
+    [wallets]
+  );
+  const hasExcludedWallets = wallets.some((w) => w.includeInTotals === false);
+
+  const monthTransactions = React.useMemo(() => {
+    return transactions.filter((t) => {
+      if (!t.date || !t.date.startsWith(currentYearMonth)) return false;
+      if (hasExcludedWallets && !includedWalletIds.has(t.walletId)) return false;
+      return true;
     });
-    return spendingMap;
-  }, [transactions, currentYearMonth]);
+  }, [transactions, currentYearMonth, hasExcludedWallets, includedWalletIds]);
 
-  // Total budget and total actual spending
-  const totalBudget = budgets.reduce((sum, b) => sum + (Number(b.value) || 0), 0);
-  const totalActual = Array.from(categorySpending.values()).reduce((sum, val) => sum + val, 0);
-  const overallPercent = totalBudget > 0 ? Math.min(150, Math.round((totalActual / totalBudget) * 100)) : 0;
+  const convertTxToMMK = React.useCallback((t: Transaction) => {
+    let w = walletMap.get(t.walletId);
+    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
+    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+  }, [walletMap, wallets]);
+
+  const monthlyIncome = monthTransactions
+    .filter((t) => t.type === 'income' && !isTransferTransaction(t))
+    .reduce((sum, t) => sum + convertTxToMMK(t), 0);
+
+  const explicitBudgetedCatIds = new Set(
+    budgets.map((b) => b.categoryId).filter((id) => id !== UNBUDGETED_CATEGORY_ID)
+  );
+
+  // Per-budget limit/spent, identical to BudgetAnalyticsView.
+  const budgetRows = budgets.map((b) => {
+    const isGeneral = b.categoryId === UNBUDGETED_CATEGORY_ID;
+    let spent = 0;
+    monthTransactions
+      .filter((t) => t.type === 'expense' && !isTransferTransaction(t))
+      .forEach((t) => {
+        const targetW = b.walletId && b.walletId !== 'all' ? walletMap.get(b.walletId) : undefined;
+        const matchesWallet =
+          !b.walletId || b.walletId === 'all' ||
+          (targetW ? isWalletMatch(targetW, t.walletId) : t.walletId === b.walletId);
+        if (!matchesWallet) return;
+        const amtMMK = convertTxToMMK(t);
+        if (isGeneral) {
+          if (!explicitBudgetedCatIds.has(t.category)) spent += amtMMK;
+        } else if (t.category === b.categoryId) {
+          spent += amtMMK;
+        }
+      });
+    const limitMMK = b.calcType === 'percentage'
+      ? Math.round((monthlyIncome * b.value) / 100)
+      : b.value;
+    // [v7.5.55 D10] limit 0 with spending > 0 is OVER budget (no income to
+    // base the % on) — never green "Within Budget".
+    const noIncomeBase = limitMMK === 0 && spent > 0;
+    const percent = limitMMK > 0 ? Math.min(150, Math.round((spent / limitMMK) * 100)) : (spent > 0 ? 150 : 0);
+    const isOver = spent > limitMMK;
+    const isNear = limitMMK > 0 && percent >= 80 && !isOver;
+    return { budget: b, isGeneral, spent, limitMMK, percent, isOver, isNear, noIncomeBase };
+  });
+
+  // Total budget and total actual spending (budgeted categories only)
+  const totalBudget = budgetRows.reduce((sum, r) => sum + r.limitMMK, 0);
+  const totalActual = budgetRows.reduce((sum, r) => sum + r.spent, 0);
+  const overallPercent = totalBudget > 0 ? Math.min(150, Math.round((totalActual / totalBudget) * 100)) : (totalActual > 0 ? 150 : 0);
+  const overallNoIncomeBase = totalBudget === 0 && totalActual > 0;
+  const overallIsOver = totalActual > totalBudget;
 
   if (budgets.length === 0) {
     return (
@@ -78,13 +140,15 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
 
         <div className="text-right">
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-            overallPercent > 100
+            overallIsOver
               ? 'bg-rose-100 text-rose-800'
-              : overallPercent > 80
+              : overallPercent >= 80
               ? 'bg-amber-100 text-amber-900'
               : 'bg-emerald-100 text-emerald-800'
           }`}>
-            {overallPercent}% {lang === 'my' ? 'သုံးပြီး' : 'used'}
+            {overallNoIncomeBase
+              ? (lang === 'my' ? 'ဝင်ငွေမရှိ' : 'No income base')
+              : `${overallPercent}% ${lang === 'my' ? 'သုံးပြီး' : 'used'}`}
           </span>
         </div>
       </div>
@@ -100,9 +164,9 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
         <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              overallPercent > 100
+              overallIsOver
                 ? 'bg-rose-600'
-                : overallPercent > 80
+                : overallPercent >= 80
                 ? 'bg-amber-500'
                 : 'bg-indigo-600'
             }`}
@@ -113,12 +177,8 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
 
       {/* Per-Category Budget Progress Bars */}
       <div className="space-y-3 pt-1">
-        {budgets.map((b) => {
-          const cat = catMap.get(b.categoryId);
-          const budgeted = Number(b.value) || 0;
-          const actual = categorySpending.get(b.categoryId) || 0;
-          const percent = budgeted > 0 ? Math.min(150, Math.round((actual / budgeted) * 100)) : 0;
-          const isOver = actual > budgeted;
+        {budgetRows.map(({ budget: b, isGeneral, spent: actual, limitMMK: budgeted, percent, isOver, isNear, noIncomeBase }) => {
+          const cat = isGeneral ? undefined : catMap.get(b.categoryId);
 
           return (
             <div key={b.categoryId} className="space-y-1.5">
@@ -131,8 +191,15 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
                     <CategoryIcon name={cat?.icon || 'Tag'} className="w-3.5 h-3.5" />
                   </div>
                   <span className="font-bold text-slate-900 truncate">
-                    {lang === 'my' ? cat?.name : cat?.nameEn || b.categoryId}
+                    {isGeneral
+                      ? (lang === 'my' ? 'အထွေထွေ (အခြား အသုံးစရိတ်များ)' : 'General & Others')
+                      : (lang === 'my' ? cat?.name : cat?.nameEn || b.categoryId)}
                   </span>
+                  {noIncomeBase && (
+                    <span className="text-[10px] font-bold text-rose-600 shrink-0">
+                      {lang === 'my' ? 'ဝင်ငွေမရှိ' : 'No income'}
+                    </span>
+                  )}
                 </div>
 
                 <div className="text-right font-mono text-[11px] shrink-0 font-medium">
@@ -152,7 +219,7 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
                   className={`h-full rounded-full transition-all duration-500 ${
                     percent > 100
                       ? 'bg-rose-600'
-                      : percent > 80
+                      : percent >= 80
                       ? 'bg-amber-500'
                       : 'bg-emerald-500'
                   }`}

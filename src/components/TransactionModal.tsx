@@ -19,6 +19,7 @@ import { ShopContact } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { CategoryIcon } from './CategoryIcon';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { CategoryPickerModal } from './CategoryPickerModal';
@@ -49,7 +50,9 @@ interface TransactionModalProps {
   plan: PlanType;
   lang: 'my' | 'en';
   onClose: () => void;
-  onSubmit: (tx: Omit<Transaction, 'id' | 'createdAt'>, vehicleLinkData?: VehicleLinkData) => void;
+  // [v7.5.55] Returns false when the save handler blocks the save —
+  // the modal then stays open instead of discarding the entry.
+  onSubmit: (tx: Omit<Transaction, 'id' | 'createdAt'>, vehicleLinkData?: VehicleLinkData) => boolean | void;
   onOpenUpgrade: () => void;
   onAddSubCategory?: (categoryId: string, subCategory: Omit<SubCategory, 'id'>) => void;
   onManageCategories?: () => void;
@@ -85,6 +88,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   vehicleMaintenance = [],
   tirePressureLogs = [],
 }) => {
+  // [v7.5.55] Deactivated vehicles (isActive === false) are hidden from
+  // every vehicle selector/default; undefined counts as active.
+  const activeVehicles = useMemo(() => vehicles.filter((v) => v.isActive !== false), [vehicles]);
   const [type, setType] = useState<TransactionType>(editTransaction?.type || initialType);
   const [amount, setAmount] = useState(editTransaction ? String(editTransaction.amount) : '');
   const [categoryId, setCategoryId] = useState(editTransaction?.category || '');
@@ -118,15 +124,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       if (tirePressureLogs.some((t) => t.transactionId === editTransaction.id)) {
         return 'tire_pressure';
       }
+      // [v7.5.55] Fuel resolves only from a linked fuel log, the fuel
+      // flag/liters, or the fuel subcategory — note text alone (e.g. a
+      // note mentioning 'ဆီဖိုး') must not switch the model.
       if (
         editTransaction.isFuelLog ||
         editTransaction.fuelLiters ||
         editTransaction.subCategoryId === 'sub_veh_fuel' ||
-        (editTransaction.note &&
-          (editTransaction.note.includes('စက်သုံးဆီ') ||
-            editTransaction.note.includes('ဆီဖိုး') ||
-            editTransaction.note.includes('Octane') ||
-            editTransaction.note.includes('Diesel')))
+        fuelLogs.some((f) => f.transactionId === editTransaction.id)
       ) {
         return 'fuel';
       }
@@ -186,7 +191,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   // Vehicle Linkage State
   const [isVehicleLinkEnabled, setIsVehicleLinkEnabled] = useState(false);
-  const [vehicleId, setVehicleId] = useState<string>(vehicles[0]?.id || '');
+  const [vehicleId, setVehicleId] = useState<string>(activeVehicles[0]?.id || '');
   const [vehicleLogType, setVehicleLogType] = useState<'fuel' | 'maintenance' | 'tire'>('fuel');
   const [fuelEntryStyle, setFuelEntryStyle] = useState<'quick' | 'detailed'>('quick');
   const [showFuelGuideModal, setShowFuelGuideModal] = useState(false);
@@ -216,6 +221,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [tireRR, setTireRR] = useState<string>('32');
 
   const [vehicleOdometer, setVehicleOdometer] = useState<string>('');
+  // [v7.5.55] Validation message shown inside the form (never a silent return).
+  const [formError, setFormError] = useState('');
+  // [v7.5.55] Public-shop publish opt-in (B8): default UNCHECKED.
+  const [publishShopOptIn, setPublishShopOptIn] = useState(false);
 
   const { user } = useAuth();
   const selectedWallet = useMemo(() => wallets.find((w) => w.id === walletId) || wallets[0], [wallets, walletId]);
@@ -267,7 +276,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               setExtraNote(fullNote);
             }
           } else if (editTransaction.unitPrice) {
-            const match = fullNote.match(/^(.*?) \((.*)\)$/);
+            const match = fullNote.match(/^(.*) \((.*)\)$/);
             if (match) {
               setItemName(match[1].trim());
               setExtraNote(match[2].trim());
@@ -276,7 +285,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               setExtraNote('');
             }
           } else {
-            const match = fullNote.match(/^(.*?) \((.*)\)$/);
+            const match = fullNote.match(/^(.*) \((.*)\)$/);
             if (match) {
               setItemName(match[1].trim());
               setExtraNote(match[2].trim());
@@ -285,7 +294,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               setExtraNote('');
             }
           }
-          setShopName('');
+          // [v7.5.55] Prefill the shop name on edit — never clear it.
+          setShopName(editTransaction.shopName || '');
+          setShopInput(editTransaction.shopName || '');
+          setPublishShopOptIn(false);
           const resolvedModel = getResolvedModel();
           setEntryModel(resolvedModel);
           if (resolvedModel === 'fuel') {
@@ -338,10 +350,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             setMaintLifespanDays(String(linkedMaint.expectedLifespanDays || 180));
           }
           if (linkedTire) {
-            setTireFL(String(linkedTire.frontLeftPsi || 32));
-            setTireFR(String(linkedTire.frontRightPsi || 32));
-            setTireRL(String(linkedTire.rearLeftPsi || 32));
-            setTireRR(String(linkedTire.rearRightPsi || 32));
+            // [v7.5.55] A motorcycle log stores frontPsi/rearPsi (not the
+            // 4-wheel fields) — prefill FL/RL from those and clear FR/RR
+            // so no spurious 4-wheel values leak onto a bike log.
+            if (linkedTire.frontPsi !== undefined || linkedTire.rearPsi !== undefined) {
+              setTireFL(String(linkedTire.frontPsi ?? 32));
+              setTireRL(String(linkedTire.rearPsi ?? 32));
+              setTireFR('');
+              setTireRR('');
+            } else {
+              setTireFL(String(linkedTire.frontLeftPsi || 32));
+              setTireFR(String(linkedTire.frontRightPsi || 32));
+              setTireRL(String(linkedTire.rearLeftPsi || 32));
+              setTireRR(String(linkedTire.rearRightPsi || 32));
+            }
           }
 
           if (editTransaction.unitPrice) {
@@ -394,13 +416,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           );
           if (vehCat) setCategoryId(vehCat.id);
           setSubCategoryId('sub_veh_fuel');
-          if (vehicles && vehicles.length > 0) {
-            setVehicleId(vehicles[0].id);
-            if (vehicles[0].fuelType) setFuelType(vehicles[0].fuelType);
-            if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
-            if (vehicles[0].walletId && wallets.some((w) => w.id === vehicles[0].walletId)) {
-              chosenWalletId = vehicles[0].walletId;
-              setWalletId(vehicles[0].walletId);
+          if (activeVehicles.length > 0) {
+            setVehicleId(activeVehicles[0].id);
+            if (activeVehicles[0].fuelType) setFuelType(activeVehicles[0].fuelType);
+            if (activeVehicles[0].currentOdometer) setVehicleOdometer(String(activeVehicles[0].currentOdometer));
+            if (activeVehicles[0].walletId && wallets.some((w) => w.id === activeVehicles[0].walletId)) {
+              chosenWalletId = activeVehicles[0].walletId;
+              setWalletId(activeVehicles[0].walletId);
             }
           }
         } else if (resolvedModel === 'vehicle_service') {
@@ -416,12 +438,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           );
           if (vehCat) setCategoryId(vehCat.id);
           setSubCategoryId('sub_veh_maintenance');
-          if (vehicles && vehicles.length > 0) {
-            setVehicleId(vehicles[0].id);
-            if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
-            if (vehicles[0].walletId && wallets.some((w) => w.id === vehicles[0].walletId)) {
-              chosenWalletId = vehicles[0].walletId;
-              setWalletId(vehicles[0].walletId);
+          if (activeVehicles.length > 0) {
+            setVehicleId(activeVehicles[0].id);
+            if (activeVehicles[0].currentOdometer) setVehicleOdometer(String(activeVehicles[0].currentOdometer));
+            if (activeVehicles[0].walletId && wallets.some((w) => w.id === activeVehicles[0].walletId)) {
+              chosenWalletId = activeVehicles[0].walletId;
+              setWalletId(activeVehicles[0].walletId);
             }
           }
         } else if (resolvedModel === 'tire_pressure') {
@@ -438,12 +460,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           );
           if (vehCat) setCategoryId(vehCat.id);
           setSubCategoryId('sub_veh_tire');
-          if (vehicles && vehicles.length > 0) {
-            setVehicleId(vehicles[0].id);
-            if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
-            if (vehicles[0].walletId && wallets.some((w) => w.id === vehicles[0].walletId)) {
-              chosenWalletId = vehicles[0].walletId;
-              setWalletId(vehicles[0].walletId);
+          if (activeVehicles.length > 0) {
+            setVehicleId(activeVehicles[0].id);
+            if (activeVehicles[0].currentOdometer) setVehicleOdometer(String(activeVehicles[0].currentOdometer));
+            if (activeVehicles[0].walletId && wallets.some((w) => w.id === activeVehicles[0].walletId)) {
+              chosenWalletId = activeVehicles[0].walletId;
+              setWalletId(activeVehicles[0].walletId);
             }
           }
         } else {
@@ -463,6 +485,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setItemName('');
         setExtraNote('');
         setShopName('');
+        setShopInput('');
+        setPublishShopOptIn(false);
         setEntryMode('direct');
         setUnitPrice('');
         setQuantity('1');
@@ -470,6 +494,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setShowQuickAddSub(true);
         setNewSubName('');
         setVehicleOdometer('');
+        // [v7.5.55] PSI resets to the 32 defaults on a new entry instead
+        // of persisting across opens.
+        setTireFL('32');
+        setTireFR('32');
+        setTireRL('32');
+        setTireRR('32');
         setFuelLiters('');
         setFuelPricePerLiter('');
         setFuelGasStation('Denko');
@@ -477,6 +507,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setMaintTitle('');
         setMaintWorkshopName('');
       }
+      setFormError('');
       setIsSubmitting(false);
     }
   }, [isOpen, editTransaction, initialType, initialWalletId, wallets, user, fuelLogs, vehicleMaintenance, tirePressureLogs]);
@@ -502,9 +533,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const handleUnitQtyChange = (field: 'price' | 'qty', val: string) => {
     const p = field === 'price' ? val : unitPrice;
     const q = field === 'qty' ? val : quantity;
-    const pNum = parseFloat(p) || 0;
-    const qNum = parseFloat(q) || 0;
-    const tot = parseFloat(amount) || 0;
+    const pNum = parseMyanmarNumber(p) || 0;
+    const qNum = parseMyanmarNumber(q) || 0;
+    const tot = parseMyanmarNumber(amount) || 0;
     if (field === 'price') setUnitPrice(val); else setQuantity(val);
     computeUnitQtyThird(field, pNum, qNum, tot);
   };
@@ -513,10 +544,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setAmount(amtStr);
     if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
     unitQtyAmountTimerRef.current = setTimeout(() => {
-      const tot = parseFloat(amtStr) || 0;
+      const tot = parseMyanmarNumber(amtStr) || 0;
       if (tot <= 0) { setUnitQtyLastEdited('total'); return; }
-      const pNum = parseFloat(unitPrice) || 0;
-      const qNum = parseFloat(quantity) || 0;
+      const pNum = parseMyanmarNumber(unitPrice) || 0;
+      const qNum = parseMyanmarNumber(quantity) || 0;
       computeUnitQtyThird('total', pNum, qNum, tot);
     }, 500);
   };
@@ -541,9 +572,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               }
             }
           }
-          const pNum = parseFloat(newItem.price as any) || 0;
-          const qNum = parseFloat(newItem.quantity as any) || 0;
-          const aNum = parseFloat(newItem.amount as any) || 0;
+          const pNum = parseMyanmarNumber(newItem.price as any) || 0;
+          const qNum = parseMyanmarNumber(newItem.quantity as any) || 0;
+          const aNum = parseMyanmarNumber(newItem.amount as any) || 0;
           const last = shoppingLastEditedRef.current[id] || null;
           if (field === 'price') {
             if (last === 'qty') newItem.amount = Number((pNum * qNum).toFixed(2));
@@ -775,11 +806,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const vehCat = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle')));
       if (vehCat) setCategoryId(vehCat.id);
       setSubCategoryId('sub_veh_fuel');
-      if (vehicles && vehicles.length > 0) {
+      if (activeVehicles.length > 0) {
         if (!vehicleId) {
-          setVehicleId(vehicles[0].id);
-          if (vehicles[0].fuelType) setFuelType(vehicles[0].fuelType);
-          if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
+          setVehicleId(activeVehicles[0].id);
+          if (activeVehicles[0].fuelType) setFuelType(activeVehicles[0].fuelType);
+          if (activeVehicles[0].currentOdometer) setVehicleOdometer(String(activeVehicles[0].currentOdometer));
         } else {
           const target = vehicles.find((x) => x.id === vehicleId);
           if (target) {
@@ -795,10 +826,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const vehCat = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle')));
       if (vehCat) setCategoryId(vehCat.id);
       if (!subCategoryId || subCategoryId === 'sub_veh_fuel') setSubCategoryId('sub_veh_maintenance');
-      if (vehicles && vehicles.length > 0) {
+      if (activeVehicles.length > 0) {
         if (!vehicleId) {
-          setVehicleId(vehicles[0].id);
-          if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
+          setVehicleId(activeVehicles[0].id);
+          if (activeVehicles[0].currentOdometer) setVehicleOdometer(String(activeVehicles[0].currentOdometer));
         } else {
           const target = vehicles.find((x) => x.id === vehicleId);
           if (target && target.currentOdometer && !vehicleOdometer) setVehicleOdometer(String(target.currentOdometer));
@@ -814,10 +845,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const vehCat = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle')));
       if (vehCat) setCategoryId(vehCat.id);
       setSubCategoryId('sub_veh_tire');
-      if (vehicles && vehicles.length > 0) {
+      if (activeVehicles.length > 0) {
         if (!vehicleId) {
-          setVehicleId(vehicles[0].id);
-          if (vehicles[0].currentOdometer) setVehicleOdometer(String(vehicles[0].currentOdometer));
+          setVehicleId(activeVehicles[0].id);
+          if (activeVehicles[0].currentOdometer) setVehicleOdometer(String(activeVehicles[0].currentOdometer));
         } else {
           const target = vehicles.find((x) => x.id === vehicleId);
           if (target && target.currentOdometer && !vehicleOdometer) setVehicleOdometer(String(target.currentOdometer));
@@ -836,6 +867,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       ...publicShops.filter((s) => s.name.toLowerCase().includes(q) && !shops.some((ps) => ps.name === s.name))
     ].slice(0, 5);
   }, [shopInput, shops, publicShops]);
+
+  // [v7.5.55] True when the typed shop name is not in the private or
+  // public directory — only then is the publish opt-in shown.
+  const isNewShopName = useMemo(() => {
+    const clean = shopName.trim();
+    if (!clean) return false;
+    const lower = clean.toLowerCase();
+    return (
+      !shops.some((s) => s.name.trim().toLowerCase() === lower) &&
+      !publicShops.some((s) => s.name.trim().toLowerCase() === lower)
+    );
+  }, [shopName, shops, publicShops]);
 
   const filteredItemsForDatalist = useMemo(() => {
     if (!itemInput.trim()) return unifiedItemSuggestions.slice(0, 5);
@@ -862,8 +905,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   }, [fuelLogs, vehicleId, fuelGasStation, fuelType]);
 
   const currentVehicle = useMemo(() => {
-    return vehicles.find((v) => v.id === vehicleId) || vehicles[0];
+    return vehicles.find((v) => v.id === vehicleId) || activeVehicles[0];
   }, [vehicles, vehicleId]);
+
+  // [v7.5.55] Select options: active vehicles, plus the currently selected
+  // one even if it was deactivated (so editing a record linked to it
+  // still shows it).
+  const vehicleSelectOptions = useMemo(() => {
+    const selected = vehicles.find((v) => v.id === vehicleId);
+    if (selected && selected.isActive === false && !activeVehicles.some((v) => v.id === selected.id)) {
+      return [...activeVehicles, selected];
+    }
+    return activeVehicles;
+  }, [vehicles, activeVehicles, vehicleId]);
 
   const lastMaintLogForComparison = useMemo(() => {
     if (!vehicleMaintenance || vehicleMaintenance.length === 0) return null;
@@ -884,9 +938,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (isFuelMode) {
       setIsVehicleLinkEnabled(true);
       setVehicleLogType('fuel');
-      if (vehicles && vehicles.length > 0) {
+      if (activeVehicles.length > 0) {
         if (!vehicleId) {
-          const target = vehicles[0];
+          const target = activeVehicles[0];
           setVehicleId(target.id);
           if (target.fuelType) setFuelType(target.fuelType);
           if (target.currentOdometer) setVehicleOdometer(String(target.currentOdometer));
@@ -904,8 +958,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     if (vehicleId) return;
-    if (!vehicles || vehicles.length === 0) return;
-    setVehicleId(vehicles[0].id);
+    if (activeVehicles.length === 0) return;
+    setVehicleId(activeVehicles[0].id);
   }, [isOpen, vehicleId, vehicles]);
 
   interface MatchedPreviousPurchase {
@@ -974,7 +1028,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     return null;
   }, [isOpen, type, allTransactions, editTransaction, entryMode, shoppingItems, itemName, subCategoryId, selectedCatObj, effectiveCategoryId, categories, unifiedItemSuggestions]);
 
-  const currentEffectivePrice = useMemo(() => (entryMode === 'unit_qty' ? parseFloat(unitPrice) || 0 : parseFloat(amount) || 0), [entryMode, unitPrice, amount]);
+  const currentEffectivePrice = useMemo(() => (entryMode === 'unit_qty' ? parseMyanmarNumber(unitPrice) || 0 : parseMyanmarNumber(amount) || 0), [entryMode, unitPrice, amount]);
 
   const priceComparison = useMemo(() => {
     if (!isOpen || !latestPreviousPurchase || currentEffectivePrice <= 0) return null;
@@ -988,7 +1042,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const p = latestPreviousPurchase.amount;
     if (entryMode === 'unit_qty') {
       setUnitPrice(String(p));
-      const q = parseFloat(quantity) || 1;
+      const q = parseMyanmarNumber(quantity) || 1;
       setAmount(String(p * q));
     } else {
       setAmount(String(p));
@@ -1006,7 +1060,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   if (!isOpen) return null;
 
   const handleAddAmount = (add: number) => {
-    const current = parseFloat(amount) || 0;
+    const current = parseMyanmarNumber(amount) || 0;
     setAmount((current + add).toString());
   };
 
@@ -1023,22 +1077,37 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || !isActionAllowed) return;
-    const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount <= 0) return;
+    const numAmount = parseMyanmarNumber(amount);
+    // [v7.5.55] A free 0-Ks tire-pressure check bypasses the amount > 0
+    // gate (C8) and creates no expense transaction — the save handler
+    // deals with it. Every other empty/0 amount shows a message instead
+    // of silently doing nothing.
+    const isFreeTireCheck = entryModel === 'tire_pressure';
+    if ((!numAmount || numAmount <= 0) && !isFreeTireCheck) {
+      setFormError(lang === 'my' ? 'ပမာဏ ထည့်ပေးပါ (၀ ထက် ကြီးရပါမည်)' : 'Please enter an amount greater than 0');
+      return;
+    }
 
     setIsSubmitting(true);
+    setFormError('');
 
-    const validItems = shoppingItems.filter((i) => i.name.trim() && i.price > 0 && i.quantity > 0).map((i) => ({ name: i.name.trim(), price: i.price, quantity: i.quantity, amount: i.price * i.quantity }));
+    // [v7.5.55] Price-0 items are kept (free items); only quantity must be > 0.
+    const validItems = shoppingItems.filter((i) => i.name.trim() && parseMyanmarNumber(i.quantity as any) > 0).map((i) => {
+      const p = parseMyanmarNumber(i.price as any) || 0;
+      const q = parseMyanmarNumber(i.quantity as any) || 0;
+      return { name: i.name.trim(), price: p, quantity: q, amount: p * q };
+    });
     let finalAmount = numAmount;
+    if (isFreeTireCheck && (!finalAmount || finalAmount <= 0)) finalAmount = 0;
     if (entryMode === 'shopping_list' && validItems.length > 0) {
       finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);
-    } else if (entryMode === 'unit_qty' && parseFloat(unitPrice) > 0 && parseFloat(quantity) > 0) {
-      finalAmount = parseFloat(unitPrice) * parseFloat(quantity);
+    } else if (entryMode === 'unit_qty' && parseMyanmarNumber(unitPrice) > 0 && parseMyanmarNumber(quantity) > 0) {
+      finalAmount = parseMyanmarNumber(unitPrice) * parseMyanmarNumber(quantity);
     }
 
     try {
       let vehicleLinkPayload: VehicleLinkData | undefined = undefined;
-      const targetVehicleId = vehicleId || (vehicles && vehicles[0]?.id) || '';
+      const targetVehicleId = vehicleId || activeVehicles[0]?.id || '';
 
       // [v7.5.49] Edit-mode odometer rules: the odometer shown while editing is
       // the existing record's own value, so "must be greater" / "double entry"
@@ -1056,11 +1125,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         || vehicleMaintenance.find((m) => m.transactionId === editTransaction?.id)
         || tirePressureLogs.find((t) => t.transactionId === editTransaction?.id);
       const editingVehicleSwitched = isEditing && !!linkedVehicleLog && linkedVehicleLog.vehicleId !== targetVehicleId;
-      const editingOwnOdometer = isEditing && !!linkedVehicleLog && (parseFloat(vehicleOdometer) || 0) === linkedVehicleLog.odometer;
+      const editingOwnOdometer = isEditing && !!linkedVehicleLog && (parseMyanmarNumber(vehicleOdometer) || 0) === linkedVehicleLog.odometer;
       const editingUnlinkedLog = isEditing && !linkedVehicleLog;
 
       if (entryModel === 'fuel' && targetVehicleId) {
-        const odoNum = parseFloat(vehicleOdometer) || 0;
+        const odoNum = parseMyanmarNumber(vehicleOdometer) || 0;
         const currVeh = vehicles.find(v => v.id === targetVehicleId);
         if ((!isEditing || editingVehicleSwitched) && currVeh && odoNum < (currVeh.currentOdometer || 0)) {
           // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
@@ -1082,8 +1151,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           return;
         }
         
-        const litersNum = parseFloat(fuelLiters) || 0;
-        const pplNum = parseFloat(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
+        const litersNum = parseMyanmarNumber(fuelLiters) || 0;
+        const pplNum = parseMyanmarNumber(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
         const resolvedStation = fuelGasStation === 'Other' ? (customGasStation.trim() || undefined) : (fuelGasStation.trim() || undefined);
         
         if (fuelGasStation === 'Other' && resolvedStation && !customStations.includes(resolvedStation)) {
@@ -1101,7 +1170,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           odometer: odoNum,
         };
       } else if (entryModel === 'vehicle_service' && targetVehicleId && maintServiceType !== 'license_renewal') {
-        const odoNum = parseFloat(vehicleOdometer) || 0;
+        const odoNum = parseMyanmarNumber(vehicleOdometer) || 0;
         const currVeh = vehicles.find(v => v.id === targetVehicleId);
         if ((!isEditing || editingVehicleSwitched) && currVeh && odoNum < (currVeh.currentOdometer || 0)) {
           // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
@@ -1129,25 +1198,31 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           title: maintTitle.trim() || extraNote.trim() || (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service'),
           sparePartBrand: maintSparePartBrand.trim() || undefined,
           workshopName: maintWorkshopName.trim() || undefined,
-          expectedLifespanKm: parseFloat(maintLifespanKm) || undefined,
-          expectedLifespanDays: parseFloat(maintLifespanDays) || undefined,
+          expectedLifespanKm: parseMyanmarNumber(maintLifespanKm) || undefined,
+          expectedLifespanDays: parseMyanmarNumber(maintLifespanDays) || undefined,
           odometer: odoNum,
         };
       } else if (entryModel === 'vehicle_service' && maintServiceType === 'license_renewal') {
+        // [v7.5.55] Expiry date is required — no silent 365-day fallback.
+        if (!maintExpiryDate) {
+          setFormError(lang === 'my' ? 'လိုင်စင် ကုန်ဆုံးမည့်ရက်စွဲ ထည့်ပေးပါ' : 'Please enter the license expiry date');
+          setIsSubmitting(false);
+          return;
+        }
         vehicleLinkPayload = {
           vehicleId: targetVehicleId,
           logType: 'maintenance',
           serviceType: maintServiceType,
           title: lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal',
           expectedLifespanKm: 0,
-          expectedLifespanDays: parseFloat(maintLifespanDays) || 365,
+          expectedLifespanDays: parseMyanmarNumber(maintLifespanDays) || 365,
           odometer: currentVehicle?.currentOdometer || 0,
         };
       } else if (type === 'expense' && isVehicleLinkEnabled && targetVehicleId) {
-        const odoNum = parseFloat(vehicleOdometer) || 0;
+        const odoNum = parseMyanmarNumber(vehicleOdometer) || 0;
         if (vehicleLogType === 'fuel') {
-          const litersNum = parseFloat(fuelLiters) || 0;
-          const pplNum = parseFloat(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
+          const litersNum = parseMyanmarNumber(fuelLiters) || 0;
+          const pplNum = parseMyanmarNumber(fuelPricePerLiter) || (litersNum > 0 ? Math.round(finalAmount / litersNum) : 0);
           const resolvedStation = fuelGasStation === 'Other' ? (customGasStation.trim() || undefined) : (fuelGasStation.trim() || undefined);
           
           if (fuelGasStation === 'Other' && resolvedStation && !customStations.includes(resolvedStation)) {
@@ -1172,27 +1247,49 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             title: maintTitle.trim() || itemName.trim() || extraNote.trim() || (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Maintenance'),
             sparePartBrand: maintSparePartBrand.trim() || undefined,
             workshopName: maintWorkshopName.trim() || undefined,
-            expectedLifespanKm: parseFloat(maintLifespanKm) || undefined,
-            expectedLifespanDays: parseFloat(maintLifespanDays) || undefined,
+            expectedLifespanKm: parseMyanmarNumber(maintLifespanKm) || undefined,
+            expectedLifespanDays: parseMyanmarNumber(maintLifespanDays) || undefined,
             odometer: odoNum,
           };
         } else if (vehicleLogType === 'tire') {
+          // [v7.5.55] PSI must be 10–80 (same range as the Vehicles view).
+          const isBikeTire = currentVehicle?.type === 'motorcycle';
+          const psiValues = isBikeTire
+            ? [parseMyanmarNumber(tireFL), parseMyanmarNumber(tireRL)]
+            : [parseMyanmarNumber(tireFL), parseMyanmarNumber(tireFR), parseMyanmarNumber(tireRL), parseMyanmarNumber(tireRR)];
+          if (psiValues.some((v) => Number.isNaN(v) || v < 10 || v > 80)) {
+            setFormError(lang === 'my' ? 'လေပေါင်ချိန် (PSI) ကို 10 မှ 80 အတွင်း ထည့်ပေးပါ' : 'Please enter PSI values between 10 and 80');
+            setIsSubmitting(false);
+            return;
+          }
+          // [v7.5.55] Motorcycles store frontPsi/rearPsi only — the
+          // 4-wheel fields are never written onto a bike log. The form's
+          // Front/Rear values travel as frontLeftPsi/rearLeftPsi and the
+          // save handler maps them to frontPsi/rearPsi for bikes.
           vehicleLinkPayload = {
             vehicleId: targetVehicleId,
             logType: 'tire',
-            frontLeftPsi: parseFloat(tireFL) || undefined,
-            frontRightPsi: parseFloat(tireFR) || undefined,
-            rearLeftPsi: parseFloat(tireRL) || undefined,
-            rearRightPsi: parseFloat(tireRR) || undefined,
+            frontLeftPsi: parseMyanmarNumber(tireFL) || undefined,
+            frontRightPsi: isBikeTire ? undefined : (parseMyanmarNumber(tireFR) || undefined),
+            rearLeftPsi: parseMyanmarNumber(tireRL) || undefined,
+            rearRightPsi: isBikeTire ? undefined : (parseMyanmarNumber(tireRR) || undefined),
             odometer: odoNum,
           };
         }
       }
 
-      let targetCategory = effectiveCategoryId;
+      // [v7.5.55] effectiveCategoryId silently falls back to the first
+      // category — a category is required instead. Vehicle models resolve
+      // to the vehicle category below, so they still pass.
+      let targetCategory = categoryId || '';
       if (entryModel === 'fuel' || entryModel === 'vehicle_service' || entryModel === 'tire_pressure' || (type === 'expense' && isVehicleLinkEnabled)) {
         const vehicleCategory = categories.find((c) => c.id === 'cat_vehicle' || c.id === 'cat_vehicle_management' || c.name.includes('ယာဉ်စီမံ') || (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management')));
         if (vehicleCategory) targetCategory = vehicleCategory.id;
+      }
+      if (!targetCategory) {
+        setFormError(lang === 'my' ? 'ကဏ္ဍ ရွေးချယ်ပေးပါ' : 'Please select a category');
+        setIsSubmitting(false);
+        return;
       }
 
       let targetSubCategory = subCategoryId || undefined;
@@ -1220,7 +1317,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       } else if (entryMode === 'unit_qty') {
         finalNote = extraNote.trim() || undefined;
         if (itemName.trim()) {
-          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseFloat(unitPrice) || 0, quantity: parseFloat(quantity) || 1, amount: finalAmount }];
+          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseMyanmarNumber(unitPrice) || 0, quantity: parseMyanmarNumber(quantity) || 1, amount: finalAmount }];
         }
       } else {
         const cleanItem = itemName.trim();
@@ -1233,13 +1330,33 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
       const isTransferTx = isTransferCategory || targetSubCategory === 'sub_tf_out' || targetSubCategory === 'sub_tf_in';
 
+      // [v7.5.55] A transfer with no destination wallet would leave a
+      // one-legged transfer_out and the money would vanish from totals.
+      if (isTransferTx && (!transferToWalletId || transferToWalletId === walletId)) {
+        setFormError(lang === 'my' ? 'ငွေလွှဲရန် အခြား Wallet ရွေးပေးပါ (Wallet တစ်ခုတည်းသာ ရှိသေးလျှင် Wallet အသစ် အရင်ထည့်ပါ)' : 'Please select a destination wallet for the transfer (add another wallet first if you only have one)');
+        setIsSubmitting(false);
+        return;
+      }
+
       if (typeof localStorage !== 'undefined' && walletId) {
         localStorage.setItem('fortune_last_used_wallet_id', walletId);
       }
 
-      // [v7.5.36] Auto-add new shop name to public_shops if not in private or public list
-      const cleanShopForAdd = shopName.trim();
-      if (cleanShopForAdd && user) {
+      // [v7.5.55] Shop name resolution (C13): fuel entries feed the shop
+      // from the gas station and service entries from the workshop name
+      // when no shop was typed, so vehicle purchases can get a cheapest
+      // shop. A NEW shop name is published to public_shops ONLY when the
+      // user explicitly ticked the opt-in checkbox (default unchecked);
+      // guests are skipped and the exact-match dedupe is kept.
+      let derivedShopName = shopName.trim();
+      if (!derivedShopName && entryModel === 'fuel') {
+        derivedShopName = fuelGasStation === 'Other' ? customGasStation.trim() : fuelGasStation.trim();
+      }
+      if (!derivedShopName && entryModel === 'vehicle_service') {
+        derivedShopName = maintWorkshopName.trim();
+      }
+      const cleanShopForAdd = derivedShopName;
+      if (cleanShopForAdd && user && publishShopOptIn) {
         const inPrivate = shops.some((s) => s.name.trim().toLowerCase() === cleanShopForAdd.toLowerCase());
         const inPublic = publicShops.some((s) => s.name.trim().toLowerCase() === cleanShopForAdd.toLowerCase());
         if (!inPrivate && !inPublic) {
@@ -1264,6 +1381,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               createdAt: Date.now(),
               helpfulCount: 0,
               items: [],
+            }).then((ok) => {
+              // [v7.5.55] safeSetDoc returns false when the write did not
+              // land (not queued for public_shops) — surface it.
+              if (ok === false) {
+                alert(lang === 'my' ? 'ဆိုင်အမည်ကို အများပြင်လမ်းညွှန်သို့ တင်ခြင်း မအောင်မြင်ပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပေးပါ' : 'Could not publish the shop to the public directory — please check your connection and try again');
+              }
             }).catch((err) => {
               console.warn('[auto-add-public-shop] failed:', err);
             });
@@ -1273,7 +1396,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         }
       }
 
-            onSubmit({
+            const saveOk = onSubmit({
         type: entryModel === 'fuel' || entryModel === 'vehicle_service' ? 'expense' : type,
         amount: finalAmount,
         category: targetCategory,
@@ -1281,16 +1404,23 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         walletId: walletId,
         date,
         note: finalNote,
-        shopName: shopName.trim() || undefined,
+        shopName: derivedShopName || undefined,
         isTransfer: isTransferTx,
         transferType: isTransferTx ? (type === 'expense' ? 'transfer_out' : 'transfer_in') : undefined,
         transferToWalletId: isTransferTx && transferToWalletId && transferToWalletId !== walletId ? transferToWalletId : undefined,
         items: txItems,
-        unitPrice: entryModel === 'general' && entryMode === 'unit_qty' && parseFloat(unitPrice) > 0 ? parseFloat(unitPrice) : undefined,
-        quantity: entryModel === 'general' && entryMode === 'unit_qty' && parseFloat(quantity) > 0 ? parseFloat(quantity) : undefined,
+        unitPrice: entryModel === 'general' && entryMode === 'unit_qty' && parseMyanmarNumber(unitPrice) > 0 ? parseMyanmarNumber(unitPrice) : undefined,
+        quantity: entryModel === 'general' && entryMode === 'unit_qty' && parseMyanmarNumber(quantity) > 0 ? parseMyanmarNumber(quantity) : undefined,
       }, vehicleLinkPayload);
+      // [v7.5.55] Close ONLY on a successful save. Validation returns
+      // above (backfill cancel / double-entry / missing fields) keep the
+      // modal open so the entry is not discarded, and a false return from
+      // the save handler (blocked save) also keeps it open.
+      if (saveOk !== false) onClose();
+    } catch (err) {
+      console.error('[TransactionModal] save failed:', err);
+      setFormError(lang === 'my' ? 'သိမ်းဆည်းခြင်း မအောင်မြင်ပါ — ထပ်ကြိုးစားပေးပါ' : 'Save failed — please try again');
     } finally {
-      onClose();
       setIsSubmitting(false);
     }
   };
@@ -1362,6 +1492,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           <div className="flex-1 overflow-y-auto overscroll-contain">
+            {formError && (
+              <div className="mx-3 mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">{formError}</div>
+            )}
+
             {entryModel !== "general" && (
               <div className="px-3 pt-3">
                 <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
@@ -1383,10 +1517,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <div className="px-4 py-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <span className="text-xl font-black text-slate-400 shrink-0">{selectedWallet?.currency || 'MMK'}</span>
-                <input type="number" step="any" value={amount} onChange={(e) => {
+                <input type="text" inputMode="decimal" value={amount} onChange={(e) => {
                   setAmount(e.target.value);
-                  const numAmt = parseFloat(e.target.value) || 0;
-                  const numPpl = parseFloat(fuelPricePerLiter) || 0;
+                  const numAmt = parseMyanmarNumber(e.target.value) || 0;
+                  const numPpl = parseMyanmarNumber(fuelPricePerLiter) || 0;
                   if (entryModel === 'fuel' && numAmt > 0 && numPpl > 0) {
                     setFuelLiters(String(Number((numAmt / numPpl).toFixed(2))));
                   }
@@ -1452,6 +1586,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <div>
                     <div className="text-[10px] font-bold text-emerald-700 mb-0.5">{lang === 'my' ? 'သို့' : 'To'}</div>
                     <select value={transferToWalletId} onChange={(e) => setTransferToWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">{wallets.filter((w) => w.id !== walletId).map((w) => (<option key={w.id} value={w.id}>{lang === 'my' ? w.name : w.nameEn}</option>))}</select>
+                    {wallets.filter((w) => w.id !== walletId).length === 0 && (
+                      <div className="text-[10px] font-bold text-rose-600 mt-1">{lang === 'my' ? 'ငွေလွှဲရန် အခြား Wallet မရှိသေးပါ — Wallet အသစ် အရင်ထည့်ပေးပါ' : 'No other wallet to transfer to — add another wallet first'}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1468,24 +1605,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     if (v?.fuelType) setFuelType(v.fuelType);
                     if (v?.walletId && wallets.some((w) => w.id === v.walletId)) setWalletId(v.walletId);
                   }} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
-                    {vehicles.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicles.map((v) => (<option key={v.id} value={v.id}>{v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}</option>))}
+                    {vehicleSelectOptions.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicleSelectOptions.map((v) => (<option key={v.id} value={v.id}>{v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}</option>))}
                   </select>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0"><Fuel className="w-5 h-5 text-emerald-600" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'ဆီပမာဏ (L)' : 'Liters (L)'}</div>
-                    <input type="number" step="any" value={fuelLiters} readOnly placeholder="0" className="w-full text-sm font-bold bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 focus:outline-none font-mono mt-0.5 text-slate-500 cursor-not-allowed" />
+                    <input type="text" inputMode="decimal" value={fuelLiters} onChange={(e) => {
+                      const v = e.target.value;
+                      setFuelLiters(v);
+                      const litersNum = parseMyanmarNumber(v) || 0;
+                      const numPpl = parseMyanmarNumber(fuelPricePerLiter) || 0;
+                      if (litersNum > 0 && numPpl > 0) setAmount(String(Number((litersNum * numPpl).toFixed(2))));
+                    }} placeholder="0" className="w-full text-sm font-bold bg-transparent border border-slate-200 rounded-xl px-2 py-1.5 focus:outline-none font-mono mt-0.5" />
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0"><span className="text-amber-600 font-black text-lg">K</span></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-slate-500">{lang === 'my' ? '၁ လီတာ ဈေး (Ks)' : 'Price per Liter (Ks)'}</div>
-                    <input type="number" value={fuelPricePerLiter} onChange={(e) => {
+                    <input type="text" inputMode="decimal" value={fuelPricePerLiter} onChange={(e) => {
                       setFuelPricePerLiter(e.target.value);
-                      const numPpl = parseFloat(e.target.value) || 0;
-                      const numAmt = parseFloat(amount) || 0;
+                      const numPpl = parseMyanmarNumber(e.target.value) || 0;
+                      const numAmt = parseMyanmarNumber(amount) || 0;
                       if (numPpl > 0 && numAmt > 0) setFuelLiters(String(Number((numAmt / numPpl).toFixed(2))));
                     }} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                     {lastFuelLogForComparison && lastFuelLogForComparison.pricePerLiter > 0 && fuelPricePerLiter && (
@@ -1532,7 +1675,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}</div>
-                    <input type="number" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                    <input type="text" inputMode="decimal" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                   </div>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
@@ -1556,35 +1699,48 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     if (v?.currentOdometer) setVehicleOdometer(String(v.currentOdometer));
                     if (v?.walletId && wallets.some((w) => w.id === v.walletId)) setWalletId(v.walletId);
                   }} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
-                    {vehicles.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicles.map((v) => (<option key={v.id} value={v.id}>{v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}</option>))}
+                    {vehicleSelectOptions.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicleSelectOptions.map((v) => (<option key={v.id} value={v.id}>{v.name} {v.plateNumber ? "(" + v.plateNumber + ")" : ""}</option>))}
                   </select>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100">
                   <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'တာယာ လေပေါင်ချိန် (PSI)' : 'Tire Pressure (PSI)'}</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
-                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ဘယ် (FL)' : 'Front Left (FL)'}</div>
-                      <input type="number" value={tireFL} onChange={(e) => setTireFL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                  {currentVehicle?.type === 'motorcycle' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                        <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ဘီး' : 'Front'}</div>
+                        <input type="text" inputMode="decimal" min={10} max={80} value={tireFL} onChange={(e) => setTireFL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                        <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ဘီး' : 'Rear'}</div>
+                        <input type="text" inputMode="decimal" min={10} max={80} value={tireRL} onChange={(e) => setTireRL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                      </div>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
-                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ညာ (FR)' : 'Front Right (FR)'}</div>
-                      <input type="number" value={tireFR} onChange={(e) => setTireFR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                        <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ဘယ် (FL)' : 'Front Left (FL)'}</div>
+                        <input type="text" inputMode="decimal" min={10} max={80} value={tireFL} onChange={(e) => setTireFL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                        <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ညာ (FR)' : 'Front Right (FR)'}</div>
+                        <input type="text" inputMode="decimal" min={10} max={80} value={tireFR} onChange={(e) => setTireFR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                        <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ဘယ် (RL)' : 'Rear Left (RL)'}</div>
+                        <input type="text" inputMode="decimal" min={10} max={80} value={tireRL} onChange={(e) => setTireRL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                        <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ညာ (RR)' : 'Rear Right (RR)'}</div>
+                        <input type="text" inputMode="decimal" min={10} max={80} value={tireRR} onChange={(e) => setTireRR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                      </div>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
-                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ဘယ် (RL)' : 'Rear Left (RL)'}</div>
-                      <input type="number" value={tireRL} onChange={(e) => setTireRL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
-                    </div>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
-                      <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ညာ (RR)' : 'Rear Right (RR)'}</div>
-                      <input type="number" value={tireRR} onChange={(e) => setTireRR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
-                    </div>
-                  </div>
+                  )}
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}</div>
-                    <input type="number" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                    <input type="text" inputMode="decimal" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                   </div>
                 </div>
               </>
@@ -1595,7 +1751,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <div className="px-4 py-3 border-b border-slate-100">
                   <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ယာဉ်' : 'Vehicle'}</div>
                   <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold">
-                    {vehicles.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicles.map((v) => (<option key={v.id} value={v.id}>{v.name}</option>))}
+                    {vehicleSelectOptions.length === 0 ? <option value="">{lang === 'my' ? '-- ယာဉ် မရှိသေး --' : '-- No vehicles --'}</option> : vehicleSelectOptions.map((v) => (<option key={v.id} value={v.id}>{v.name}</option>))}
                   </select>
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100">
@@ -1650,7 +1806,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'မိုင်တာ (km)' : 'Odometer (km)'}</div>
-                        <input type="number" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                        <input type="text" inputMode="decimal" value={vehicleOdometer} onChange={(e) => setVehicleOdometer(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
                     </div>
                   </>
@@ -1769,6 +1925,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     placeholder={lang === 'my' ? 'ဆိုင်အမည် ရိုက်ထည့်ပါ သို့မဟုတ် ရွေးပါ' : 'Type or select shop name'}
                     className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5"
                   />
+                  {isNewShopName && (
+                    <label className="flex items-start gap-2 mt-2 cursor-pointer select-none">
+                      <input type="checkbox" checked={publishShopOptIn} onChange={(e) => setPublishShopOptIn(e.target.checked)} className="w-4 h-4 accent-emerald-600 mt-0.5 shrink-0" />
+                      <span className="text-[11px] font-semibold text-slate-600">{lang === 'my' ? 'ဤဆိုင်အမည်ကို အများပြင် ဆိုင်လမ်းညွှန် (public directory) တွင် ထည့်သွင်းမည်' : 'Add this shop to the public shop directory'}</span>
+                    </label>
+                  )}
                 </div>
               </div>
             )}

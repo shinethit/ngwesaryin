@@ -1,28 +1,33 @@
 import { BudgetConfig, Category, Debt, PlanLimits, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '../types';
 
 export const DEFAULT_PLAN_LIMITS: Record<PlanType, PlanLimits> = {
+  // [v7.5.55] SINGLE SOURCE OF TRUTH for plan limits. Every handler/modal
+  // must read the CURRENT plan's row — Guest and Free each enforce their OWN
+  // numbers, never shared, never falling back to another plan's row.
+  // maxTransactions = per ROLLING 30 days (count transactions dated within
+  // the last 30 days; block the moment the count reaches the limit).
   guest: {
-    maxTransactions: 100,
-    maxDebts: 10,
-    maxWallets: 10,
-    maxBudgetCategories: 10,
+    maxTransactions: 30,
+    maxDebts: 0,
+    maxWallets: 1,
+    maxBudgetCategories: 0,
     maxRecurringTransactions: 5,
     maxCollaborators: 2,
     maxVehicles: 1,
-    hasBudgets: true,
-    hasDebts: true,
-    hasSavings: true,
+    hasBudgets: false,
+    hasDebts: false,
+    hasSavings: false,
     hasWalletSharing: false,
-    hasExport: true,
+    hasExport: false,
     hasReceipts: false,
-    hasCustomCategories: true,
-    hasAdvancedCharts: true,
+    hasCustomCategories: false,
+    hasAdvancedCharts: false,
   },
   free: {
-    maxTransactions: 5000,
-    maxDebts: 200,
-    maxWallets: 50,
-    maxBudgetCategories: 50,
+    maxTransactions: 100,
+    maxDebts: 5,
+    maxWallets: 2,
+    maxBudgetCategories: 5,
     maxRecurringTransactions: 20,
     maxCollaborators: 10,
     maxVehicles: 1,
@@ -30,9 +35,9 @@ export const DEFAULT_PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     hasDebts: true,
     hasSavings: true,
     hasWalletSharing: true,
-    hasExport: true,
+    hasExport: false,
     hasReceipts: true,
-    hasCustomCategories: true,
+    hasCustomCategories: false,
     hasAdvancedCharts: true,
   },
   premium: {

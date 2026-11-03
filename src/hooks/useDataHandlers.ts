@@ -3,6 +3,7 @@ import { doc } from 'firebase/firestore';
 import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { mergeAndCleanCategories } from '../utils/categoryCleanUp';
+import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
 import { UNBUDGETED_CATEGORY_ID } from '../types';
 import type {
   BudgetConfig,
@@ -51,7 +52,28 @@ export function useDataHandlers({
   setShops,
 }: UseDataHandlersParams) {
 
-  const handleAddShop = (shopData: Omit<ShopContact, 'id' | 'userId' | 'createdAt'>) => {
+  // [v7.5.55] safe* Firestore calls return false on failure — surface it
+  // with a toast instead of silently assuming the cloud write succeeded.
+  const reportCloudWrite = (p: Promise<boolean>) => {
+    p.then((ok) => {
+      if (!ok) {
+        showToast(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : 'Could not save to cloud — check connection and retry');
+      }
+    }).catch(() => {
+      showToast(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : 'Could not save to cloud — check connection and retry');
+    });
+  };
+  // [v7.5.55] Custom categories are Premium-only per the limits table
+  // (hasCustomCategories false for guest/free) — read the CURRENT plan's row.
+  const canUseCustomCategories = DEFAULT_PLAN_LIMITS[plan]?.hasCustomCategories === true;
+
+  // [v7.5.55 C5, private half] The private-shop saves are async and return
+  // whether the save really landed: the cloud write is awaited BEFORE the
+  // success toast, so a failed write shows an error instead of fake
+  // success. The local list is updated immediately (the user's data stays
+  // visible on this device) and safe* enqueues the write in syncQueue for
+  // retry, so a false here means "not in the cloud yet", not "lost".
+  const handleAddShop = async (shopData: Omit<ShopContact, 'id' | 'userId' | 'createdAt'>): Promise<boolean> => {
     const id = `shop_${Date.now()}`;
     const newShop: ShopContact = {
       ...shopData,
@@ -66,16 +88,21 @@ export function useDataHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'shops', id), {
+      const ok = await safeSetDoc(doc(db, 'users', targetUid, 'shops', id), {
         ...newShop,
         userId: targetUid,
       }, { merge: true });
+      if (!ok) {
+        showToast(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : 'Could not save to cloud — check connection and retry');
+        return false;
+      }
     }
 
     showToast(lang === 'my' ? 'ဆိုင်အသစ် ထည့်သွင်းပြီးပါပြီ ✓' : 'Shop added successfully ✓');
+    return true;
   };
 
-  const handleUpdateShop = (updatedShop: ShopContact) => {
+  const handleUpdateShop = async (updatedShop: ShopContact): Promise<boolean> => {
     updatedShop = { ...updatedShop, updatedAt: Date.now(), version: (updatedShop.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
     setShops((prev) =>
       prev.map((s) => (s.id === updatedShop.id ? updatedShop : s))
@@ -83,24 +110,34 @@ export function useDataHandlers({
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'shops', updatedShop.id), {
+      const ok = await safeSetDoc(doc(db, 'users', targetUid, 'shops', updatedShop.id), {
         ...updatedShop,
         userId: targetUid,
       }, { merge: true });
+      if (!ok) {
+        showToast(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : 'Could not save to cloud — check connection and retry');
+        return false;
+      }
     }
 
     showToast(lang === 'my' ? 'ဆိုင်အချက်အလက် ပြင်ဆင်ပြီးပါပြီ ✓' : 'Shop updated successfully ✓');
+    return true;
   };
 
-  const handleDeleteShop = (shopId: string) => {
+  const handleDeleteShop = async (shopId: string): Promise<boolean> => {
     setShops((prev) => prev.filter((s) => s.id !== shopId));
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeDeleteDoc(doc(db, 'users', targetUid, 'shops', shopId));
+      const ok = await safeDeleteDoc(doc(db, 'users', targetUid, 'shops', shopId));
+      if (!ok) {
+        showToast(lang === 'my' ? 'Cloud မှ ဖျက်၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : 'Could not delete from cloud — check connection and retry');
+        return false;
+      }
     }
 
     showToast(lang === 'my' ? 'ဆိုင်အချက်အလက် ဖျက်ပြီးပါပြီ ✓' : 'Shop deleted successfully ✓');
+    return true;
   };
 
   const handleAddBudget = (config: BudgetConfig) => {
@@ -110,23 +147,30 @@ export function useDataHandlers({
     });
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'budgets', config.categoryId), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'budgets', config.categoryId), {
         ...config,
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
   };
 
   const handleUpdateBudget = (config: BudgetConfig) => {
-    setBudgets((prev) =>
-      prev.map((b) => (b.categoryId === config.categoryId ? { ...config, updatedAt: Date.now(), version: (b.version || 0) + 1, lastEditedBy: user?.uid || 'guest' } : b))
-    );
+    // [v7.5.55 D7] Upsert: if no budget with this categoryId exists yet
+    // (e.g. "+ Add General Budget" pre-fills cat_general_unbudgeted),
+    // insert it instead of silently changing nothing via a pure map().
+    setBudgets((prev) => {
+      const exists = prev.some((b) => b.categoryId === config.categoryId);
+      if (!exists) {
+        return [...prev, { ...config, updatedAt: Date.now(), version: 1, lastEditedBy: user?.uid || 'guest' }];
+      }
+      return prev.map((b) => (b.categoryId === config.categoryId ? { ...config, updatedAt: Date.now(), version: (b.version || 0) + 1, lastEditedBy: user?.uid || 'guest' } : b));
+    });
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'budgets', config.categoryId), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'budgets', config.categoryId), {
         ...config,
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
   };
 
@@ -134,12 +178,12 @@ export function useDataHandlers({
     setBudgets((prev) => prev.filter((b) => b.categoryId !== categoryId));
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeDeleteDoc(doc(db, 'users', targetUid, 'budgets', categoryId));
+      reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'budgets', categoryId)));
     }
   };
 
   const handleAddCategory = (newCat: Omit<Category, 'id'>) => {
-    if (plan !== 'premium') {
+    if (!canUseCustomCategories) {
       setIsPremiumModalOpen(true);
       return;
     }
@@ -155,10 +199,10 @@ export function useDataHandlers({
     safeSetItem('ngwe_categories', JSON.stringify(nextCategories));
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'categories', cat.id), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'categories', cat.id), {
         ...cat,
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
     showToast(
       lang === 'my'
@@ -169,7 +213,7 @@ export function useDataHandlers({
 
   const handleUpdateCategory = (updatedCat: Category) => {
     updatedCat = { ...updatedCat, updatedAt: Date.now(), version: (updatedCat.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
-    if (plan !== 'premium') {
+    if (!canUseCustomCategories) {
       setIsPremiumModalOpen(true);
       return;
     }
@@ -178,10 +222,10 @@ export function useDataHandlers({
     safeSetItem('ngwe_categories', JSON.stringify(nextCategories));
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'categories', updatedCat.id), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'categories', updatedCat.id), {
         ...updatedCat,
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
     showToast(
       lang === 'my'
@@ -191,7 +235,7 @@ export function useDataHandlers({
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    if (plan !== 'premium') {
+    if (!canUseCustomCategories) {
       setIsPremiumModalOpen(true);
       return;
     }
@@ -226,7 +270,7 @@ export function useDataHandlers({
     safeSetItem('ngwe_categories', JSON.stringify(nextCategories));
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeDeleteDoc(doc(db, 'users', targetUid, 'categories', categoryId));
+      reportCloudWrite(safeDeleteDoc(doc(db, 'users', targetUid, 'categories', categoryId)));
     }
     showToast(
       lang === 'my'
@@ -262,10 +306,10 @@ export function useDataHandlers({
     safeSetItem('ngwe_categories', JSON.stringify(nextCategories));
     if (user?.uid && updatedParent) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
         ...(updatedParent as Category),
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
     showToast(
       lang === 'my'
@@ -299,10 +343,10 @@ export function useDataHandlers({
     safeSetItem('ngwe_categories', JSON.stringify(nextCategories));
     if (user?.uid && updatedParent) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
         ...(updatedParent as Category),
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
     if (deletedName) {
       showToast(
@@ -337,10 +381,10 @@ export function useDataHandlers({
     safeSetItem('ngwe_categories', JSON.stringify(nextCategories));
     if (user?.uid && updatedParent) {
       const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
+      reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'categories', categoryId), {
         ...(updatedParent as Category),
         userId: targetUid,
-      }, { merge: true });
+      }, { merge: true }));
     }
     showToast(
       lang === 'my'
@@ -382,10 +426,10 @@ export function useDataHandlers({
         const prevJson = prevCategoryMap.get(cat.id);
         const currJson = JSON.stringify(cat);
         if (prevJson !== currJson) {
-          safeSetDoc(doc(db, 'users', targetUid, 'categories', cat.id), {
+          reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'categories', cat.id), {
             ...cat,
             userId: targetUid,
-          }, { merge: true });
+          }, { merge: true }));
         }
       });
       result.updatedTransactions.forEach((tx) => {
@@ -393,10 +437,10 @@ export function useDataHandlers({
           const prevJson = prevTxMap.get(tx.id);
           const currJson = JSON.stringify(tx);
           if (prevJson !== currJson) {
-            safeSetDoc(doc(db, 'users', targetUid, 'transactions', tx.id), {
+            reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', tx.id), {
               ...tx,
               userId: targetUid,
-            }, { merge: true });
+            }, { merge: true }));
           }
         }
       });

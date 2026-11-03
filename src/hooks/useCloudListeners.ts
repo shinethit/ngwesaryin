@@ -80,7 +80,6 @@ interface UseCloudListenersParams {
  * Cloud listeners — extracted from App.tsx (Phase 8 refactor).
  * Subscribes to 10 Firestore collections (staggered by 200ms).
  */
-
 /**
  * Reconcile a local list with a cloud snapshot for vehicles / vehicle logs.
  *
@@ -92,9 +91,9 @@ interface UseCloudListenersParams {
  * - Cloud docs marked deleted on this device are never re-merged.
  * - A local doc that was previously seen in cloud (confirmed) and is now
  *   missing from a *server* snapshot was deleted elsewhere → drop it.
- * - Local docs never seen in cloud (e.g. guest / offline logs) and docs
- *   with a pending sync-queue upsert are always kept, so an empty or
- *   cached snapshot can never wipe unsynced data.
+ * - Local docs never seen in cloud (e.g. guest / offline-created logs)
+ *   and docs with a pending sync-queue upsert are always kept, so an
+ *   empty or cached snapshot can never wipe unsynced data.
  */
 function reconcileCloudList<T extends { id: string }>(
   prevLocal: T[],
@@ -117,6 +116,10 @@ function reconcileCloudList<T extends { id: string }>(
     if (isLogKind && isVehicleLogDeleted(kind as VehicleLogKind, d.id)) return false;
     return true;
   });
+  // A cloud doc that exists again was re-created — clear any stale marker.
+  if (isLogKind) {
+    filteredCloud.forEach((d) => unmarkVehicleLogDeleted(kind as VehicleLogKind, d.id));
+  }
 
   const map = new Map<string, T>();
   prevLocal.forEach((item) => {
@@ -130,6 +133,10 @@ function reconcileCloudList<T extends { id: string }>(
       // Confirmed before, gone from the server snapshot → deleted elsewhere.
       markVehicleLogDeleted(kind as VehicleLogKind, item.id);
     }
+    // Otherwise (confirmed + missing from a cached snapshot): keep it by
+    // *not* dropping — handled by the `!wasConfirmed` check above only
+    // when it was never confirmed; for a cached snapshot we must not drop
+    // confirmed docs, so re-add them here.
     if (!inCloud && wasConfirmed && isFromCache) {
       map.set(item.id, item);
     }

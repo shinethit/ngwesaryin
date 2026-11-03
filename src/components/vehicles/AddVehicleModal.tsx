@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { X, Car, Bike, Truck, Bus, Save, Trash2 } from 'lucide-react';
 import { Vehicle, Wallet } from '../../types';
+import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 
 interface AddVehicleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (vehicle: Partial<Vehicle>) => void;
   onDelete?: (id: string) => void;
+  // [v7.5.55 C6] False when this vehicle is the sole ACTIVE vehicle —
+  // the last vehicle must never be deletable from any path.
+  canDeleteVehicle?: boolean;
   editingVehicle?: Vehicle | null;
   wallets: Wallet[];
   lang: 'my' | 'en';
@@ -28,6 +32,7 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
   onClose,
   onSave,
   onDelete,
+  canDeleteVehicle = true,
   editingVehicle,
   wallets,
   lang,
@@ -74,6 +79,13 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
 
   if (!isOpen) return null;
 
+  // [v7.5.55 D3] Number inputs accept Myanmar digits (၀-၉).
+  const handleNumberInput = (val: string): number | '' => {
+    if (val.trim() === '') return '';
+    const n = parseMyanmarNumber(val);
+    return Number.isNaN(n) ? '' : n;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -93,10 +105,29 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
       recommendedTirePressureRear: rearPsi !== '' ? Number(rearPsi) : undefined,
       walletId: walletId || undefined,
       notes: notes.trim() || undefined,
+      // [v7.5.55 C6] Preserve deactivated state across edits — an edit
+      // must never silently reactivate a deactivated vehicle.
+      ...(editingVehicle ? { isActive: editingVehicle.isActive } : {}),
       createdAt: editingVehicle?.createdAt || Date.now(),
     });
 
     onClose();
+  };
+
+  // [v7.5.55 C6] Deactivate is the primary removal path: the vehicle is
+  // hidden from active lists but all logs and money records are kept.
+  const handleDeactivate = () => {
+    if (!editingVehicle) return;
+    if (
+      confirm(
+        lang === 'my'
+          ? `"${editingVehicle.name}" ကို ယာယီပိတ်ထားမည်။ မှတ်တမ်းများနှင့် ငွေစာရင်းများ အားလုံး ကျန်ရှိနေမည်ဖြစ်ပြီး နောက်မှ ပြန်ဖွင့်နိုင်ပါသည်။`
+          : `Deactivate "${editingVehicle.name}"? All logs and money records are kept and it can be reactivated later.`
+      )
+    ) {
+      onSave({ ...editingVehicle, isActive: false });
+      onClose();
+    }
   };
 
   return (
@@ -251,10 +282,9 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                 </div>
               </div>
               <input
-                type="number"
-                min="0"
+                type="text" inputMode="decimal"
                 value={currentOdometer}
-                onChange={(e) => setCurrentOdometer(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) => setCurrentOdometer(handleNumberInput(e.target.value))}
                 placeholder="0"
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
@@ -268,11 +298,9 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                 {lang === 'my' ? 'ဆီတိုင်ကီ ဆံ့ပမာဏ (L)' : 'Tank Capacity (L)'}
               </label>
               <input
-                type="number"
-                min="1"
-                step="0.1"
+                type="text" inputMode="decimal"
                 value={tankCapacity}
-                onChange={(e) => setTankCapacity(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) => setTankCapacity(handleNumberInput(e.target.value))}
                 placeholder={type === 'motorcycle' ? '5.5' : '45'}
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
@@ -283,11 +311,9 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                 {lang === 'my' ? 'ရှေ့ဘီး လေပေါင် (PSI)' : 'Front PSI'}
               </label>
               <input
-                type="number"
-                min="10"
-                max="100"
+                type="text" inputMode="decimal"
                 value={frontPsi}
-                onChange={(e) => setFrontPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) => setFrontPsi(handleNumberInput(e.target.value))}
                 placeholder="32"
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
@@ -298,11 +324,9 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                 {lang === 'my' ? 'နောက်ဘီး လေပေါင် (PSI)' : 'Rear PSI'}
               </label>
               <input
-                type="number"
-                min="10"
-                max="100"
+                type="text" inputMode="decimal"
                 value={rearPsi}
-                onChange={(e) => setRearPsi(e.target.value === '' ? '' : Number(e.target.value))}
+                onChange={(e) => setRearPsi(handleNumberInput(e.target.value))}
                 placeholder="34"
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
@@ -344,29 +368,39 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
 
           {/* Actions */}
           <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
-            {editingVehicle && onDelete ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    confirm(
-                      lang === 'my'
-                        ? 'ဤယာဉ်အချက်အလက်ကို ဖျက်ရန် သေချာပါသလား?'
-                        : 'Are you sure you want to delete this vehicle?'
-                    )
-                  ) {
-                    onDelete(editingVehicle.id);
-                    onClose();
-                  }
-                }}
-                className="px-3.5 py-2 text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>{lang === 'my' ? 'ဖျက်မည်' : 'Delete'}</span>
-              </button>
-            ) : (
-              <div />
-            )}
+            <div className="flex items-center gap-2">
+              {editingVehicle && editingVehicle.isActive !== false && (
+                <button
+                  type="button"
+                  onClick={handleDeactivate}
+                  className="px-3.5 py-2 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl font-medium transition-colors cursor-pointer"
+                  title={lang === 'my' ? 'ယာယီပိတ်ထားမည် (မှတ်တမ်းများ ကျန်မည်)' : 'Deactivate (logs are kept)'}
+                >
+                  {lang === 'my' ? '⏸ ယာယီပိတ်မည်' : '⏸ Deactivate'}
+                </button>
+              )}
+              {editingVehicle && onDelete && canDeleteVehicle && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        lang === 'my'
+                          ? 'ဤယာဉ်အချက်အလက်ကို ဖျက်ရန် သေချာပါသလား?'
+                          : 'Are you sure you want to delete this vehicle?'
+                      )
+                    ) {
+                      onDelete(editingVehicle.id);
+                      onClose();
+                    }
+                  }}
+                  className="px-3.5 py-2 text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{lang === 'my' ? 'ဖျက်မည်' : 'Delete'}</span>
+                </button>
+              )}
+            </div>
 
             <div className="flex items-center gap-2">
               <button

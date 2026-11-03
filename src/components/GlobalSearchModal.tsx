@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, X, ArrowDownLeft, HandCoins, Wallet, Tag, Layers, ChevronRight } from 'lucide-react';
-import { Category, Debt, Transaction, Wallet as WalletType } from '../types';
+import { Search, X, ArrowDownLeft, HandCoins, Wallet, Tag, Layers, ChevronRight, Store, Car } from 'lucide-react';
+import { Category, Debt, Transaction, Wallet as WalletType, ShopContact, Vehicle } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
+import { toLatinDigits } from '../utils/myanmarDigits';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -12,12 +13,31 @@ interface GlobalSearchModalProps {
   debts: Debt[];
   wallets: WalletType[];
   categories: Category[];
+  shops?: ShopContact[];
+  vehicles?: Vehicle[];
   lang: 'my' | 'en';
   onNavigateToTab: (tab: string) => void;
   onSelectDebtForRepayment?: (debt: Debt) => void;
+  onSelectTransaction?: (t: Transaction) => void;
+  onSelectWallet?: (w: WalletType) => void;
+  onSelectCategory?: (c: Category) => void;
+  onSelectShop?: (s: ShopContact) => void;
+  onSelectVehicle?: (v: Vehicle) => void;
 }
 
-type SearchCategory = 'all' | 'transactions' | 'debts' | 'wallets' | 'categories';
+type SearchCategory = 'all' | 'transactions' | 'debts' | 'wallets' | 'categories' | 'shops' | 'vehicles';
+
+// [v7.5.55 E17] "12/3" or "12/3/2026" -> match stored YYYY-MM-DD dates.
+// Without a year it matches month+day in any year (DD/MM).
+const matchDateQuery = (storedDate: string, q: string): boolean => {
+  const m = q.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (!m) return false;
+  const dd = m[1].padStart(2, '0');
+  const mm = m[2].padStart(2, '0');
+  if (!m[3]) return storedDate.endsWith(`-${mm}-${dd}`);
+  const yyyy = m[3].length === 2 ? `20${m[3]}` : m[3].padStart(4, '0');
+  return storedDate.startsWith(`${yyyy}-${mm}-${dd}`);
+};
 
 export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   isOpen,
@@ -26,12 +46,21 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   debts,
   wallets,
   categories,
+  shops = [],
+  vehicles = [],
   lang,
   onNavigateToTab,
   onSelectDebtForRepayment,
+  onSelectTransaction,
+  onSelectWallet,
+  onSelectCategory,
+  onSelectShop,
+  onSelectVehicle,
 }) => {
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<SearchCategory>('all');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [activeIdx, setActiveIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus input on open
@@ -43,6 +72,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     } else {
       setQuery('');
       setActiveFilter('all');
+      setExpanded({});
+      setActiveIdx(-1);
     }
   }, [isOpen]);
 
@@ -70,13 +101,15 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     return map;
   }, [categories]);
 
-  // Search Results computation
+  // Search Results computation (uncapped lists + capped views)
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const cleanNumbersOnly = q.replace(/,/g, '');
+    // [v7.5.55 E17] Myanmar digits (၅၀၀၀၀) must match Latin amounts/dates.
+    const qLatin = toLatinDigits(q);
+    const cleanNumbersOnly = qLatin.replace(/,/g, '');
 
     // 1. Transactions search
-    const matchedTransactions = (!q
+    const allTransactions = !q
       ? transactions.slice(0, 5)
       : transactions.filter((t) => {
           const cat = catMap.get(t.category);
@@ -101,13 +134,13 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             walletName.includes(q) ||
             walletNameEn.includes(q) ||
             amtStr.includes(cleanNumbersOnly) ||
-            dateStr.includes(q)
+            dateStr.includes(qLatin) ||
+            matchDateQuery(dateStr, qLatin)
           );
-        })
-    ).slice(0, 15);
+        });
 
     // 2. Debts search
-    const matchedDebts = (!q
+    const allDebts = !q
       ? debts.slice(0, 4)
       : debts.filter((d) => {
           const name = d.personName.toLowerCase();
@@ -128,22 +161,20 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             remainingStr.includes(cleanNumbersOnly) ||
             typeKeyword.toLowerCase().includes(q)
           );
-        })
-    ).slice(0, 10);
+        });
 
     // 3. Wallets search
-    const matchedWallets = (!q
+    const allWallets = !q
       ? wallets
       : wallets.filter((w) => {
           const name = w.name.toLowerCase();
           const nameEn = w.nameEn.toLowerCase();
           const balStr = w.balance.toString();
           return name.includes(q) || nameEn.includes(q) || balStr.includes(cleanNumbersOnly);
-        })
-    );
+        });
 
     // 4. Categories search
-    const matchedCategories = (!q
+    const allCategories = !q
       ? categories.slice(0, 6)
       : categories.filter((c) => {
           const name = c.name.toLowerCase();
@@ -152,23 +183,108 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             (s) => s.name.toLowerCase().includes(q) || s.nameEn.toLowerCase().includes(q)
           );
           return name.includes(q) || nameEn.includes(q) || subMatch;
-        })
-    ).slice(0, 8);
+        });
+
+    // 5. Shops search (E17)
+    const allShops = !q
+      ? shops.slice(0, 4)
+      : shops.filter((s) => {
+          const hay = [
+            s.name, s.nameEn || '', s.phone, ...(s.phones || []),
+            s.address || '', ...(s.addresses || []),
+            s.township || '', s.city || '', s.note || '', s.subCategory || '',
+          ].join(' ').toLowerCase();
+          return hay.includes(q);
+        });
+
+    // 6. Vehicles search (E17)
+    const allVehicles = !q
+      ? vehicles.slice(0, 4)
+      : vehicles.filter((v) => {
+          const hay = [v.name, v.plateNumber, v.fuelType, v.type, v.notes || ''].join(' ').toLowerCase();
+          return hay.includes(q);
+        });
+
+    const CAPS: Record<string, number> = {
+      transactions: 15, debts: 10, categories: 8, shops: 8, vehicles: 8,
+    };
+    const cap = (key: string, list: any[]) =>
+      expanded[key] ? list : list.slice(0, CAPS[key] ?? list.length);
 
     return {
-      transactions: matchedTransactions,
-      debts: matchedDebts,
-      wallets: matchedWallets,
-      categories: matchedCategories,
+      transactions: cap('transactions', allTransactions),
+      debts: cap('debts', allDebts),
+      wallets: allWallets,
+      categories: cap('categories', allCategories),
+      shops: cap('shops', allShops),
+      vehicles: cap('vehicles', allVehicles),
+      totals: {
+        transactions: allTransactions.length,
+        debts: allDebts.length,
+        wallets: allWallets.length,
+        categories: allCategories.length,
+        shops: allShops.length,
+        vehicles: allVehicles.length,
+      },
+      // [v7.5.55 E17] Footer counts ALL matches, not the capped slices.
       totalMatches:
-        matchedTransactions.length +
-        matchedDebts.length +
-        matchedWallets.length +
-        matchedCategories.length,
+        allTransactions.length + allDebts.length + allWallets.length +
+        allCategories.length + allShops.length + allVehicles.length,
     };
-  }, [query, transactions, debts, wallets, categories, catMap, walletMap, subCatMap]);
+  }, [query, transactions, debts, wallets, categories, shops, vehicles, catMap, walletMap, subCatMap, expanded]);
+
+  // Reset keyboard position when the result set changes.
+  useEffect(() => { setActiveIdx(-1); }, [query, activeFilter]);
 
   if (!isOpen) return null;
+
+  // [v7.5.55 E15] Seed the destination list's search box with the query.
+  // TransactionsView / ShopsView / CategoriesView consume it via the
+  // useSearchSeed hook (debts, wallets and vehicles have no search box —
+  // their rows open the record itself instead).
+  const seedQuery = (tab: string) => {
+    try {
+      sessionStorage.setItem('ngwe_search_seed', query.trim());
+      window.dispatchEvent(new CustomEvent('ngwe:search-seed', { detail: { tab, query: query.trim() } }));
+    } catch { /* ignore */ }
+  };
+  const goToTab = (tab: string) => {
+    seedQuery(tab);
+    onNavigateToTab(tab);
+    onClose();
+  };
+
+  // [v7.5.55 E25] Flat keyboard-navigable list of the visible rows,
+  // in render order. Arrow keys move, Enter activates.
+  const flatItems: { key: string; run: () => void }[] = [];
+  const pushFlat = (key: string, run: () => void) => { flatItems.push({ key, run }); };
+  const flatIndexOf = (key: string) => flatItems.findIndex((f) => f.key === key);
+  const handleListKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, flatItems.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && activeIdx >= 0 && flatItems[activeIdx]) {
+      e.preventDefault();
+      flatItems[activeIdx].run();
+    }
+  };
+  const rowCls = (key: string) =>
+    flatIndexOf(key) === activeIdx ? ' ring-2 ring-indigo-500 bg-indigo-50/60' : '';
+  const showMoreBtn = (key: string, total: number, shown: number) =>
+    total > shown ? (
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => ({ ...e, [key]: true }))}
+        className="w-full py-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50/60 rounded-b-xl cursor-pointer"
+      >
+        {lang === 'my'
+          ? `နောက်ထပ် ${total - shown} ခု ပြမည် (စုစုပေါင်း ${total} ခု)`
+          : `Show ${total - shown} more (${total} total)`}
+      </button>
+    ) : null;
 
   const popularSearches = [
     { label: 'လစာ (Salary)', query: 'လစာ' },
@@ -179,6 +295,21 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     { label: 'ဆေးဖိုး', query: 'ဆေး' },
   ];
 
+  const filterBtn = (key: SearchCategory, label: string, count?: number) => (
+    <button
+      key={key}
+      onClick={() => setActiveFilter(key)}
+      className={`px-2.5 sm:px-3 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer active:scale-95 ${
+        activeFilter === key ? 'bg-slate-900 text-white font-semibold' : 'text-slate-600 hover:bg-slate-100'
+      }`}
+    >
+      <span>{label}</span>
+      {typeof count === 'number' && (
+        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-700 font-bold">{count}</span>
+      )}
+    </button>
+  );
+
   return (
     <div
       id="global-search-modal-backdrop"
@@ -186,6 +317,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
+      onKeyDown={handleListKeyDown}
     >
       <div
         id="global-search-modal-container"
@@ -201,8 +333,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={
               lang === 'my'
-                ? 'သိလိုတာ ရှာဖွေပါ (မှတ်တမ်း၊ အကြွေး၊ လူအမည်၊ ပမာဏ၊ ပိုက်ဆံအိတ်)...'
-                : 'Search transactions, debts, person names, amounts, wallets...'
+                ? 'သိလိုတာ ရှာဖွေပါ (မှတ်တမ်း၊ အကြွေး၊ လူအမည်၊ ပမာဏ၊ ပိုက်ဆံအိတ်၊ ဆိုင်၊ ယာဉ်)...'
+                : 'Search transactions, debts, person names, amounts, wallets, shops, vehicles...'
             }
             className="w-full bg-transparent text-slate-900 placeholder:text-slate-400 text-sm sm:text-base font-medium focus:outline-none"
           />
@@ -224,68 +356,13 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
         {/* Filter Tabs - Responsive Wrap (No horizontal scroll) */}
         <div className="px-3 sm:px-4 py-2 border-b border-slate-100 flex flex-wrap items-center gap-1 sm:gap-1.5 text-xs font-medium bg-white">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-2.5 sm:px-3 py-1 rounded-lg transition-colors cursor-pointer active:scale-95 ${
-              activeFilter === 'all'
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {lang === 'my' ? 'အားလုံး' : 'All'}
-          </button>
-          <button
-            onClick={() => setActiveFilter('transactions')}
-            className={`px-2.5 sm:px-3 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer active:scale-95 ${
-              activeFilter === 'transactions'
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <span>{lang === 'my' ? 'ငွေစာရင်းများ' : 'Transactions'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-700 font-bold">
-              {results.transactions.length}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveFilter('debts')}
-            className={`px-2.5 sm:px-3 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer active:scale-95 ${
-              activeFilter === 'debts'
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <span>{lang === 'my' ? 'အကြွေးစာရင်း' : 'Debts'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-700 font-bold">
-              {results.debts.length}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveFilter('wallets')}
-            className={`px-2.5 sm:px-3 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer active:scale-95 ${
-              activeFilter === 'wallets'
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <span>{lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-700 font-bold">
-              {results.wallets.length}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveFilter('categories')}
-            className={`px-2.5 sm:px-3 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer active:scale-95 ${
-              activeFilter === 'categories'
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <span>{lang === 'my' ? 'ကဏ္ဍများ' : 'Categories'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-700 font-bold">
-              {results.categories.length}
-            </span>
-          </button>
+          {filterBtn('all', lang === 'my' ? 'အားလုံး' : 'All')}
+          {filterBtn('transactions', lang === 'my' ? 'ငွေစာရင်းများ' : 'Transactions', results.totals.transactions)}
+          {filterBtn('debts', lang === 'my' ? 'အကြွေးစာရင်း' : 'Debts', results.totals.debts)}
+          {filterBtn('wallets', lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets', results.totals.wallets)}
+          {filterBtn('categories', lang === 'my' ? 'ကဏ္ဍများ' : 'Categories', results.totals.categories)}
+          {filterBtn('shops', lang === 'my' ? 'ဆိုင်များ' : 'Shops', results.totals.shops)}
+          {filterBtn('vehicles', lang === 'my' ? 'ယာဉ်များ' : 'Vehicles', results.totals.vehicles)}
         </div>
 
         {/* Popular searches suggestions (shown when query is empty) */}
@@ -331,13 +408,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" />
-                  {lang === 'my' ? 'ဝင်ငွေ/ထွက်ငွေ စာရင်းများ' : 'Transactions'} ({results.transactions.length})
+                  {lang === 'my' ? 'ဝင်ငွေ/ထွက်ငွေ စာရင်းများ' : 'Transactions'} ({results.totals.transactions})
                 </span>
                 <button
-                  onClick={() => {
-                    onNavigateToTab('transactions');
-                    onClose();
-                  }}
+                  onClick={() => goToTab('transactions')}
                   className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5"
                 >
                   {lang === 'my' ? 'စာရင်း အကုန်ကြည့်မည်' : 'View All'}
@@ -351,15 +425,18 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                   const subCat = t.subCategoryId ? subCatMap.get(t.subCategoryId) : undefined;
                   const wallet = walletMap.get(t.walletId);
                   const isIncome = t.type === 'income';
+                  const key = `tx:${t.id}`;
+                  const open = () => {
+                    if (onSelectTransaction) { onSelectTransaction(t); onClose(); }
+                    else goToTab('transactions');
+                  };
+                  pushFlat(key, open);
 
                   return (
                     <div
                       key={t.id}
-                      onClick={() => {
-                        onNavigateToTab('transactions');
-                        onClose();
-                      }}
-                      className="p-3 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+                      onClick={open}
+                      className={`p-3 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group${rowCls(key)}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
@@ -404,6 +481,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                     </div>
                   );
                 })}
+                {showMoreBtn('transactions', results.totals.transactions, results.transactions.length)}
               </div>
             </div>
           )}
@@ -414,13 +492,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <HandCoins className="w-3.5 h-3.5 text-amber-600" />
-                  {lang === 'my' ? 'အကြွေးစာရင်းများ (ရရန်/ပေးရန်)' : 'Debts & Loans'} ({results.debts.length})
+                  {lang === 'my' ? 'အကြွေးစာရင်းများ (ရရန်/ပေးရန်)' : 'Debts & Loans'} ({results.totals.debts})
                 </span>
                 <button
-                  onClick={() => {
-                    onNavigateToTab('debts');
-                    onClose();
-                  }}
+                  onClick={() => goToTab('debts')}
                   className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-0.5"
                 >
                   {lang === 'my' ? 'အကြွေး အကုန်ကြည့်မည်' : 'View All'}
@@ -432,18 +507,18 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 {results.debts.map((d) => {
                   const remaining = d.totalAmount - d.paidAmount;
                   const isReceivable = d.type === 'receivable';
+                  const key = `debt:${d.id}`;
+                  const open = () => {
+                    if (onSelectDebtForRepayment) onSelectDebtForRepayment(d);
+                    goToTab('debts');
+                  };
+                  pushFlat(key, open);
 
                   return (
                     <div
                       key={d.id}
-                      onClick={() => {
-                        if (onSelectDebtForRepayment) {
-                          onSelectDebtForRepayment(d);
-                        }
-                        onNavigateToTab('debts');
-                        onClose();
-                      }}
-                      className="p-3 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+                      onClick={open}
+                      className={`p-3 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group${rowCls(key)}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
@@ -492,6 +567,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                     </div>
                   );
                 })}
+                {showMoreBtn('debts', results.totals.debts, results.debts.length)}
               </div>
             </div>
           )}
@@ -501,40 +577,45 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             <div className="space-y-2">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <Wallet className="w-3.5 h-3.5 text-blue-600" />
-                {lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets'} ({results.wallets.length})
+                {lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets'} ({results.totals.wallets})
               </span>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {results.wallets.map((w) => (
-                  <div
-                    key={w.id}
-                    onClick={() => {
-                      onNavigateToTab('wallets');
-                      onClose();
-                    }}
-                    className="p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between cursor-pointer shadow-2xs"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
-                        style={{ backgroundColor: w.color || '#10b981' }}
-                      >
-                        <Wallet className="w-4 h-4" />
+                {results.wallets.map((w) => {
+                  const key = `wallet:${w.id}`;
+                  const open = () => {
+                    if (onSelectWallet) { onSelectWallet(w); onClose(); }
+                    else goToTab('wallets');
+                  };
+                  pushFlat(key, open);
+                  return (
+                    <div
+                      key={w.id}
+                      onClick={open}
+                      className={`p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between cursor-pointer shadow-2xs${rowCls(key)}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                          style={{ backgroundColor: w.color || '#10b981' }}
+                        >
+                          <Wallet className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-xs sm:text-sm text-slate-900 block">
+                            {lang === 'my' ? w.name : w.nameEn}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {w.isDefault ? (lang === 'my' ? 'မူလပိုက်ဆံအိတ်' : 'Default') : ''}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-bold text-xs sm:text-sm text-slate-900 block">
-                          {lang === 'my' ? w.name : w.nameEn}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {w.isDefault ? (lang === 'my' ? 'မူလပိုက်ဆံအိတ်' : 'Default') : ''}
-                        </span>
+                      <div className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">
+                        {formatMMK(w.balance)}
                       </div>
                     </div>
-                    <div className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">
-                      {formatMMK(w.balance)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -544,37 +625,145 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             <div className="space-y-2">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                {lang === 'my' ? 'ကဏ္ဍများနှင့် ကဏ္ဍခွဲများ' : 'Categories & Sub-Categories'}
+                {lang === 'my' ? 'ကဏ္ဍများနှင့် ကဏ္ဍခွဲများ' : 'Categories & Sub-Categories'} ({results.totals.categories})
               </span>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {results.categories.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      onNavigateToTab('categories');
-                      onClose();
-                    }}
-                    className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-6 h-6 rounded-md flex items-center justify-center text-white shrink-0"
-                        style={{ backgroundColor: c.color }}
-                      >
-                        <CategoryIcon iconName={c.icon} className="w-3.5 h-3.5" />
+                {results.categories.map((c) => {
+                  const key = `cat:${c.id}`;
+                  const open = () => {
+                    if (onSelectCategory) { onSelectCategory(c); onClose(); }
+                    else goToTab('categories');
+                  };
+                  pushFlat(key, open);
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={open}
+                      className={`p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer${rowCls(key)}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-white shrink-0"
+                          style={{ backgroundColor: c.color }}
+                        >
+                          <CategoryIcon iconName={c.icon} className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-semibold text-xs text-slate-800 truncate">
+                          {lang === 'my' ? c.name : c.nameEn}
+                        </span>
                       </div>
-                      <span className="font-semibold text-xs text-slate-800 truncate">
-                        {lang === 'my' ? c.name : c.nameEn}
+                      {c.subCategories && c.subCategories.length > 0 && (
+                        <div className="text-[10px] text-slate-500 mt-1 truncate">
+                          {c.subCategories.length} {lang === 'my' ? 'ကဏ္ဍခွဲ' : 'sub-categories'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {showMoreBtn('categories', results.totals.categories, results.categories.length)}
+            </div>
+          )}
+
+          {/* Section 5: Shops (E17) */}
+          {(activeFilter === 'all' || activeFilter === 'shops') && results.shops.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Store className="w-3.5 h-3.5 text-teal-600" />
+                  {lang === 'my' ? 'ဆိုင်များ' : 'Shops'} ({results.totals.shops})
+                </span>
+                <button
+                  onClick={() => goToTab('shops')}
+                  className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-0.5"
+                >
+                  {lang === 'my' ? 'ဆိုင်အကုန်ကြည့်မည်' : 'View All'}
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+                {results.shops.map((s) => {
+                  const key = `shop:${s.id}`;
+                  const open = () => {
+                    if (onSelectShop) { onSelectShop(s); onClose(); }
+                    else goToTab('shops');
+                  };
+                  pushFlat(key, open);
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={open}
+                      className={`p-3 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer${rowCls(key)}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                          <Store className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-semibold text-xs sm:text-sm text-slate-900 truncate block">{s.name}</span>
+                          <span className="text-xs text-slate-500 truncate block">
+                            {[s.township, s.city].filter(Boolean).join(' • ')}{s.phone ? ` • 📞 ${s.phone}` : ''}
+                          </span>
+                        </div>
+                      </div>
+                      {s.note && <span className="text-[11px] text-slate-400 truncate max-w-[120px]">{s.note}</span>}
+                    </div>
+                  );
+                })}
+                {showMoreBtn('shops', results.totals.shops, results.shops.length)}
+              </div>
+            </div>
+          )}
+
+          {/* Section 6: Vehicles (E17) */}
+          {(activeFilter === 'all' || activeFilter === 'vehicles') && results.vehicles.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Car className="w-3.5 h-3.5 text-sky-600" />
+                  {lang === 'my' ? 'ယာဉ်များ' : 'Vehicles'} ({results.totals.vehicles})
+                </span>
+                <button
+                  onClick={() => goToTab('vehicles')}
+                  className="text-xs font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-0.5"
+                >
+                  {lang === 'my' ? 'ယာဉ်အကုန်ကြည့်မည်' : 'View All'}
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+                {results.vehicles.map((v) => {
+                  const key = `veh:${v.id}`;
+                  const open = () => {
+                    if (onSelectVehicle) { onSelectVehicle(v); onClose(); }
+                    else goToTab('vehicles');
+                  };
+                  pushFlat(key, open);
+                  return (
+                    <div
+                      key={v.id}
+                      onClick={open}
+                      className={`p-3 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer${rowCls(key)}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                          <Car className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-semibold text-xs sm:text-sm text-slate-900 truncate block">{v.name}</span>
+                          <span className="text-xs text-slate-500 truncate block">
+                            {v.plateNumber}{v.type ? ` • ${v.type}` : ''}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 shrink-0">
+                        {v.currentOdometer.toLocaleString()} {v.odometerUnit || 'km'}
                       </span>
                     </div>
-                    {c.subCategories && c.subCategories.length > 0 && (
-                      <div className="text-[10px] text-slate-500 mt-1 truncate">
-                        {c.subCategories.length} {lang === 'my' ? 'ကဏ္ဍခွဲ' : 'sub-categories'}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
+                {showMoreBtn('vehicles', results.totals.vehicles, results.vehicles.length)}
               </div>
             </div>
           )}
@@ -588,7 +777,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
               : `${results.totalMatches} matches found`}
           </span>
           <span className="text-[11px] text-slate-400">
-            {lang === 'my' ? 'ESC နှိပ်၍ ပိတ်ပါ' : 'Press ESC to close'}
+            {lang === 'my' ? '↑↓ ရွေးမည် • Enter ဖွင့်မည် • ESC ပိတ်မည်' : '↑↓ to move • Enter to open • ESC to close'}
           </span>
         </div>
       </div>

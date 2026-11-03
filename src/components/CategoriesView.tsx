@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Crown, Lock, Plus, Sparkles, Edit2, Trash2, Tag, Layers, ArrowUpRight, ArrowDownLeft, Search, Check, X } from 'lucide-react';
 import { Category, PlanType, SubCategory, TransactionType } from '../types';
+import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
 import { CategoryIcon, AVAILABLE_CATEGORY_ICONS } from './CategoryIcon';
+import { useSearchSeed } from '../hooks/useSearchSeed';
 
 interface CategoriesViewProps {
   categories: Category[];
@@ -47,11 +49,15 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   onUpdateSubCategory,
   onMergeCategories,
 }) => {
-  const isPremium = plan === 'premium';
+  // [v7.5.55] Custom categories are Premium-only per the limits table
+  // (hasCustomCategories false for guest/free) — read the CURRENT plan's row.
+  const isPremium = DEFAULT_PLAN_LIMITS[plan]?.hasCustomCategories === true;
 
   // Filters
   const [activeTypeTab, setActiveTypeTab] = useState<'all' | 'expense' | 'income'>('expense');
   const [searchQuery, setSearchQuery] = useState('');
+  // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
+  useSearchSeed('categories', setSearchQuery);
 
   // Add Category Modal State
   const [isAddCatModalOpen, setIsAddCatModalOpen] = useState(false);

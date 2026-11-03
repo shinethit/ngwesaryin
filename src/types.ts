@@ -65,6 +65,9 @@ export interface Debt {
   startDate: string;
   dueDate?: string;
   walletId: string;
+  // [v7.5.55] ISO currency code of the debt amount (e.g. 'MMK', 'USD').
+  // Defaults to the wallet's currency when unset. Shown in the form label.
+  currency?: string;
   note?: string;
   repayments: Repayment[];
   status: 'active' | 'settled';
@@ -197,6 +200,9 @@ export interface ActivationCode {
   usedAt?: string;
   createdAt: string;
   createdBy: string;
+  // [v7.5.55] ISO date after which the code can no longer be redeemed
+  // (codes expire 1 year after creation). Unset = no expiry (legacy codes).
+  expiresAt?: string;
 }
 
 export type AdminMessageType = 'announcement' | 'notice' | 'note';
@@ -369,6 +375,10 @@ export interface Vehicle {
   updatedAt?: number;
   version?: number;
   lastEditedBy?: string;
+  // [v7.5.55] false = deactivated: hidden from active lists/selectors, but all
+  // fuel/maintenance/tire logs and linked money records are KEPT and balances
+  // are unchanged. Undefined is treated as active (existing vehicles).
+  isActive?: boolean;
 }
 
 export interface FuelLog {

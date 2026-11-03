@@ -50,8 +50,12 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
       </div>
     );
   }
-  // Current month key for storage
-  const currentMonthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+  // [v7.5.55 D3] Current month key for storage — LOCAL month, never
+  // toISOString() (UTC: on the 1st before 06:30 local it is still last month).
+  const currentMonthKey = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+  })();
   const storageKey = `ngwe_savings_target_${currentMonthKey}`;
 
   // Whether the savings target feature is enabled (Default: false so it doesn't clutter for users who don't want it)
@@ -174,7 +178,14 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
                   {lang === 'my' ? 'လစဉ် စုဆောင်းငွေ ပန်းတိုင်' : 'Monthly Savings Goal'}
                 </h3>
                 <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 text-purple-100 shadow-2xs">
-                  {new Date().toLocaleDateString(lang === 'my' ? 'my-MM' : 'en-US', { month: 'short', year: 'numeric' })}
+                  {(() => {
+                    // [v7.5.55] Hardcoded month names — 'my-MM' is not
+                    // supported on some phones and falls back to English.
+                    const d = new Date();
+                    const monthsMy = ['ဇန်နဝါရီ', 'ဖေဖော်ဝါရီ', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်', 'ဇူလိုင်', 'သြဂုတ်', 'စက်တင်ဘာ', 'အောက်တိုဘာ', 'နိုဝင်ဘာ', 'ဒီဇင်ဘာ'];
+                    const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return lang === 'my' ? `${monthsMy[d.getMonth()]} ${d.getFullYear()}` : `${monthsEn[d.getMonth()]} ${d.getFullYear()}`;
+                  })()}
                 </span>
               </div>
               <p className="text-xs text-purple-200/90 font-medium mt-0.5">

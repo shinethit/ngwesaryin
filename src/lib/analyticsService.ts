@@ -315,8 +315,12 @@ export async function deleteVisitorDoc(visitorId: string): Promise<boolean> {
 /**
  * Real-time listener for Admin to fetch all visitors
  */
+// [v7.5.55 E18] On error the caller gets onError instead of an empty
+// list that looked like "zero visitors". The query is capped at the
+// latest 500 visitors (limit(500) below).
 export function subscribeVisitors(
-  onUpdate: (visitors: VisitorDoc[]) => void
+  onUpdate: (visitors: VisitorDoc[]) => void,
+  onError?: (err: unknown) => void
 ): () => void {
   try {
     const q = query(collection(db, 'visitors'), orderBy('lastActiveAt', 'desc'), limit(500));
@@ -331,11 +335,13 @@ export function subscribeVisitors(
       },
       (err) => {
         console.warn('Error subscribing to visitors:', err);
-        onUpdate([]);
+        if (onError) onError(err);
+        // Do NOT call onUpdate([]) here: an empty list would be read
+        // as "zero visitors" with full confidence.
       }
     );
-  } catch {
-    onUpdate([]);
+  } catch (err) {
+    if (onError) onError(err);
     return () => {};
   }
 }

@@ -20,8 +20,26 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
   const recFront = vehicle.recommendedTirePressureFront || (isTwoWheeler ? 29 : 32);
   const recRear = vehicle.recommendedTirePressureRear || (isTwoWheeler ? 33 : 34);
 
+  // [v7.5.55 C24] Parse YYYY-MM-DD as LOCAL midnight, not UTC midnight —
+  // new Date('2026-11-03') is UTC midnight, which is 6.5h early in
+  // Myanmar and makes the day count wrong around midnight.
+  const parseLocalDate = (dateStr: string): number => {
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length !== 3 || parts.some((p) => Number.isNaN(p))) {
+      return new Date(dateStr).getTime();
+    }
+    return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+  };
+
   const daysSince = latestLog?.date
-    ? Math.max(0, Math.floor((Date.now() - new Date(latestLog.date).getTime()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(
+        0,
+        Math.floor(
+          (new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime() -
+            parseLocalDate(latestLog.date)) /
+            (1000 * 60 * 60 * 24)
+        )
+      )
     : null;
 
   const isDueForCheck = daysSince !== null && daysSince > 21; // Over 3 weeks
@@ -87,6 +105,20 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
         </button>
       </div>
 
+      {/* [v7.5.55 C24] PSI status legend — the labels were computed but
+          never shown anywhere. */}
+      <div className="flex items-center gap-2 flex-wrap text-[11px] font-bold">
+        <span className="px-2 py-0.5 rounded-full border text-emerald-700 bg-emerald-50 border-emerald-300">
+          {lang === 'my' ? 'ပုံမှန်' : 'Normal'} (±2 PSI)
+        </span>
+        <span className="px-2 py-0.5 rounded-full border text-amber-700 bg-amber-50 border-amber-300">
+          {lang === 'my' ? 'လေလျော့' : 'Low'} (&lt; −2 PSI)
+        </span>
+        <span className="px-2 py-0.5 rounded-full border text-blue-700 bg-blue-50 border-blue-300">
+          {lang === 'my' ? 'လေပို' : 'High'} (&gt; +2 PSI)
+        </span>
+      </div>
+
       {/* Visualizer Frame */}
       {isTwoWheeler ? (
         /* Motorcycle View */
@@ -105,6 +137,8 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   </div>
                   <div className={`px-3 py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.frontPsi ?? '--'} <span className="text-[10px]">PSI</span>
+                    {/* [v7.5.55 C24] Show the status label, not just colour. */}
+                    <span className="block text-[10px] font-sans font-bold">{status.label}</span>
                   </div>
                 </div>
               );
@@ -130,6 +164,8 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   </div>
                   <div className={`px-3 py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.rearPsi ?? '--'} <span className="text-[10px]">PSI</span>
+                    {/* [v7.5.55 C24] Show the status label, not just colour. */}
+                    <span className="block text-[10px] font-sans font-bold">{status.label}</span>
                   </div>
                 </div>
               );
@@ -151,6 +187,8 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recFront} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.frontLeftPsi ?? '--'} <span className="text-[10px]">PSI</span>
+                    {/* [v7.5.55 C24] Show the status label, not just colour. */}
+                    <span className="block text-[10px] font-sans font-bold">{status.label}</span>
                   </div>
                 </div>
               );
@@ -167,6 +205,8 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recFront} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.frontRightPsi ?? '--'} <span className="text-[10px]">PSI</span>
+                    {/* [v7.5.55 C24] Show the status label, not just colour. */}
+                    <span className="block text-[10px] font-sans font-bold">{status.label}</span>
                   </div>
                 </div>
               );
@@ -191,6 +231,8 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recRear} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.rearLeftPsi ?? '--'} <span className="text-[10px]">PSI</span>
+                    {/* [v7.5.55 C24] Show the status label, not just colour. */}
+                    <span className="block text-[10px] font-sans font-bold">{status.label}</span>
                   </div>
                 </div>
               );
@@ -207,6 +249,8 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recRear} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.rearRightPsi ?? '--'} <span className="text-[10px]">PSI</span>
+                    {/* [v7.5.55 C24] Show the status label, not just colour. */}
+                    <span className="block text-[10px] font-sans font-bold">{status.label}</span>
                   </div>
                 </div>
               );

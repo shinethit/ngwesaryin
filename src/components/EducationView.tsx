@@ -23,6 +23,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
 
   // Widget state for 50/30/20 interactive calculator
   const [calcIncome, setCalcIncome] = useState<number>(500000);
+  const [calcError, setCalcError] = useState('');
 
   // Toggle bookmark
   const toggleBookmark = (id: string, e?: React.MouseEvent) => {
@@ -61,9 +62,20 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
         const inContent = article.contentSectionsMy.some(
           (s) =>
             s.heading?.toLowerCase().includes(q) ||
-            s.paragraphs.some((p) => p.toLowerCase().includes(q))
+            s.paragraphs.some((p) => p.toLowerCase().includes(q)) ||
+            (s.bullets || []).some((b) => b.toLowerCase().includes(q))
         );
-        return inTitle || inSub || inSummary || inContent;
+        const inContentEn = article.contentSectionsEn.some(
+          (s) =>
+            s.heading?.toLowerCase().includes(q) ||
+            s.paragraphs.some((p) => p.toLowerCase().includes(q)) ||
+            (s.bullets || []).some((b) => b.toLowerCase().includes(q))
+        );
+        // [v7.5.55] Search also covers bullets and key takeaways.
+        const inTakeaways =
+          article.keyTakeawaysMy.some((t) => t.toLowerCase().includes(q)) ||
+          article.keyTakeawaysEn.some((t) => t.toLowerCase().includes(q));
+        return inTitle || inSub || inSummary || inContent || inContentEn || inTakeaways;
       }
       return true;
     });
@@ -218,8 +230,9 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
             <button
               key={cat.id}
               onClick={() => {
+                // [v7.5.55] Tapping a category tab no longer silently
+                // clears the bookmarks-only filter.
                 setSelectedCategory(cat.id);
-                setOnlyBookmarks(false);
               }}
               className={`whitespace-nowrap px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-2xs ${
                 isActive
@@ -431,10 +444,25 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
                     <input
                       type="number"
                       step={10000}
+                      min={0}
                       value={calcIncome}
-                      onChange={(e) => setCalcIncome(Number(e.target.value) || 0)}
+                      onChange={(e) => {
+                        // [v7.5.55] Negative income showed negative splits —
+                        // clamp to >= 0 with a message.
+                        const v = Number(e.target.value);
+                        if (!isNaN(v) && v < 0) {
+                          setCalcIncome(0);
+                          setCalcError(lang === 'my' ? 'ဝင်ငွေသည် အနှုတ် ဖြစ်လို့ မရပါ — ၀ အဖြစ် သတ်မှတ်လိုက်ပါသည်' : 'Income cannot be negative — set to 0');
+                        } else {
+                          setCalcIncome(isNaN(v) ? 0 : v);
+                          setCalcError('');
+                        }
+                      }}
                       className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500"
                     />
+                    {calcError && (
+                      <p className="text-[11px] font-semibold text-amber-700 mt-1">⚠️ {calcError}</p>
+                    )}
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center text-xs">
                     <div className="bg-white p-3 rounded-xl border border-emerald-200 space-y-1">

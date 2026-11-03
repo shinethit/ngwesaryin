@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Wrench, Gauge, Shield, Save, Trash2, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { VehicleMaintenance, Vehicle, Wallet, VehicleServiceType } from '../../types';
 import { SERVICE_TYPE_CONFIG } from '../../utils/vehicleAnalytics';
+import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 
 interface AddMaintenanceModalProps {
   isOpen: boolean;
@@ -99,6 +100,26 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
     }
   }, [isOpen]);
 
+  // [v7.5.55 D3] Number inputs accept Myanmar digits (၀-၉).
+  const handleNumberInput = (val: string): number | '' => {
+    if (val.trim() === '') return '';
+    const n = parseMyanmarNumber(val);
+    return Number.isNaN(n) ? '' : n;
+  };
+
+  // [v7.5.55 C12] VehicleMaintenance has no stored expiryDate field — it is
+  // derived from date + expectedLifespanDays. Compute it in LOCAL time.
+  const deriveExpiryDate = (dateStr: string, lifespanDays: number | ''): string => {
+    if (!dateStr || lifespanDays === '' || Number(lifespanDays) <= 0) return '';
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length !== 3 || parts.some((p) => Number.isNaN(p))) return '';
+    const d = new Date(parts[0], parts[1] - 1, parts[2] + Number(lifespanDays));
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   useEffect(() => {
     if (editingMaintenance) {
       setVehicleId(editingMaintenance.vehicleId);
@@ -111,6 +132,14 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       setWorkshopName(editingMaintenance.workshopName || '');
       setExpectedLifespanKm(editingMaintenance.expectedLifespanKm ?? 5000);
       setExpectedLifespanDays(editingMaintenance.expectedLifespanDays ?? 180);
+      // [v7.5.55 C12] Prefill the expiry date on edit instead of leaving
+      // whatever a previous entry had in state.
+      setExpiryDate(
+        deriveExpiryDate(
+          editingMaintenance.date,
+          editingMaintenance.expectedLifespanDays ?? 180
+        )
+      );
       setWalletId(editingMaintenance.walletId);
       setSyncToExpense(editingMaintenance.syncToExpense ?? true);
       setNote(editingMaintenance.note || '');
@@ -127,6 +156,9 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       setWorkshopName('');
       setExpectedLifespanKm(5000);
       setExpectedLifespanDays(180);
+      // [v7.5.55 C12] Clear the expiry date on a new entry — never reuse
+      // the previous entry's date.
+      setExpiryDate('');
       const vehicleWalletExists = v?.walletId && wallets.some((w) => w.id === v.walletId);
       setWalletId(vehicleWalletExists ? v!.walletId! : (wallets[0]?.id || ''));
       setSyncToExpense(true);
@@ -142,12 +174,12 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       return;
     }
 
-    // Editing the same vehicle: odometer may stay the same (the log itself
-    // is often the current odometer). Only validate for a new log / new vehicle.
+    // ပြင်ဆင်နေချိန်မှာ မိုင်တာက လက်ရှိမိုင်တာထက် မကြီးလည်း ရပါတယ် —
+    // ပြင်နေတဲ့ မှတ်တမ်းကိုယ်တိုင်က လက်ရှိမိုင်တာ ဖြစ်နေတတ်လို့ပါ။
+    // ယာဉ်ပြောင်းပြီး ပြင်တာမျိုးဆိုရင်တော့ အသစ်ယာဉ်အတွက်ပဲ စစ်ပါတယ်။
+    // [v7.5.50] အသစ်ထည့်ချိန်မှာလည်း လက်ရှိမိုင်တာနဲ့ တူရင် ရပါတယ် —
+    // လက်ရှိထက် နည်းနေမှသာ ပိတ်ပါတယ်။ အတိအကျ ထပ်နေတာကို Double Entry စစ်ဆေးမှုက တားပါတယ်။
     const isEditingSameVehicle = !!editingMaintenance && editingMaintenance.vehicleId === vehicleId;
-    // [v7.5.50] New logs may use the current odometer (equal is allowed).
-    // Only a LOWER odometer is blocked. Exact duplicates are still caught
-    // by the double-entry check below.
     if (!isLicenseRenewal && !isEditingSameVehicle && currentVehicle && Number(odometer) < (currentVehicle.currentOdometer || 0)) {
       // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
       // odometer. Ask instead of blocking — the vehicle odometer itself stays
@@ -160,8 +192,17 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       if (!okBackfill) return;
     }
     if (!isLicenseRenewal && lastMaintLogForComparison && Number(odometer) === lastMaintLogForComparison.odometer) {
-      alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry. (Prevent Double Entry)');
-      return;
+      // [v7.5.55 C1] Block only a TRUE duplicate: same odometer AND same
+      // date AND same workshop AND same service — never the pre-filled
+      // current odometer on its own.
+      const isTrueDuplicate =
+        lastMaintLogForComparison.date === date &&
+        (lastMaintLogForComparison.workshopName || '') === workshopName.trim() &&
+        lastMaintLogForComparison.serviceType === serviceType;
+      if (isTrueDuplicate) {
+        alert(lang === 'my' ? 'ဤမှတ်တမ်းသည် ယခင်မှတ်တမ်းနှင့် အတိအကျ တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'This entry is an exact duplicate of the last entry. (Prevent Double Entry)');
+        return;
+      }
     }
 
     const maintId = editingMaintenance?.id || `maint_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -210,7 +251,17 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto overscroll-contain space-y-4 flex-1">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">{lang === 'my' ? 'ယာဉ် / ကား / ဆိုင်ကယ် ရွေးချယ်ရန် *' : 'Select Vehicle *'}</label>
-            <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer">
+            <select value={vehicleId} onChange={(e) => {
+              setVehicleId(e.target.value);
+              // [v7.5.55 C11] Refresh odometer + wallet to the NEW vehicle.
+              const selected = vehicles.find((v) => v.id === e.target.value);
+              if (selected) {
+                if (!editingMaintenance) setOdometer(selected.currentOdometer ?? 0);
+                if (selected.walletId && wallets.some((w) => w.id === selected.walletId)) {
+                  setWalletId(selected.walletId);
+                }
+              }
+            }} className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer">
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>{v.name} {v.plateNumber ? `(${v.plateNumber})` : ''} - {v.currentOdometer?.toLocaleString()} {v.odometerUnit || 'km'}</option>
               ))}
@@ -246,7 +297,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                 </div>
                 <div className="relative">
                   <Gauge className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input type="number" required={!isLicenseRenewal} min="0" value={odometer} onChange={(e) => setOdometer(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g. 45000" className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+                  <input type="text" inputMode="decimal" required={!isLicenseRenewal} value={odometer} onChange={(e) => setOdometer(handleNumberInput(e.target.value))} placeholder="e.g. 45000" className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
                 </div>
               </div>
             )}
@@ -255,7 +306,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">{lang === 'my' ? 'ကုန်ကျစရိတ် (MMK) *' : 'Cost (MMK) *'}</label>
-              <input type="number" required min="0" value={cost} onChange={(e) => setCost(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g. 120000" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-900" />
+              <input type="text" inputMode="decimal" required value={cost} onChange={(e) => setCost(handleNumberInput(e.target.value))} placeholder="e.g. 120000" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-900" />
               {lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && cost && (
                 <div className="text-[10px] mt-1 flex items-center gap-1">
                   <span className="text-slate-500">{lang === 'my' ? 'ယခင်ကုန်ကျစရိတ်:' : 'Prev Cost:'} {lastMaintLogForComparison.cost.toLocaleString()} Ks</span>
@@ -303,12 +354,12 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
               {!isLicenseRenewal && (
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">{lang === 'my' ? 'မိုင်/ကီလို သက်တမ်း (km)' : 'Distance (km)'}</label>
-                  <input type="number" min="0" step="any" value={expectedLifespanKm} onChange={(e) => setExpectedLifespanKm(e.target.value === '' ? '' : Number(e.target.value))} placeholder="5000" className="w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+                  <input type="text" inputMode="decimal" value={expectedLifespanKm} onChange={(e) => setExpectedLifespanKm(handleNumberInput(e.target.value))} placeholder="5000" className="w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
                 </div>
               )}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">{lang === 'my' ? 'ရက်ပေါင်း သက်တမ်း (Days)' : 'Duration (Days)'}</label>
-                <input type="number" readOnly={isLicenseRenewal} min="0" step="any" value={expectedLifespanDays} onChange={(e) => setExpectedLifespanDays(e.target.value === '' ? '' : Number(e.target.value))} placeholder="180" className={`w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono ${isLicenseRenewal ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`} />
+                <input type="text" inputMode="decimal" readOnly={isLicenseRenewal} value={expectedLifespanDays} onChange={(e) => setExpectedLifespanDays(handleNumberInput(e.target.value))} placeholder="180" className={`w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono ${isLicenseRenewal ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`} />
               </div>
             </div>
           </div>

@@ -10,6 +10,9 @@ import { MultiWalletSelector } from './MultiWalletSelector';
 import { FinancialSummaryTable } from './FinancialSummaryTable';
 import { TransactionSyncDetailModal } from './TransactionSyncDetailModal';
 import { getTransactionSyncStatus } from '../utils/transactionSyncStatus';
+import { useSearchSeed } from '../hooks/useSearchSeed';
+import { toLatinDigits, toMyanmarDigits } from '../utils/myanmarDigits';
+import { syncQueue } from '../lib/syncQueue';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
@@ -39,6 +42,9 @@ interface TransactionsViewProps {
   onOpenUpgradeModal: () => void;
   cloudTxIds?: Set<string>;
   onOpenDatabaseTracker?: () => void;
+  // [v7.5.55] Full cloud refresh for the sync-detail modal (e.g. App's
+  // manual sync). Optional: without it the modal retries via syncQueue.
+  onRefreshSync?: () => void | Promise<void>;
 }
 
 const getLocalDateString = (d: Date = new Date()): string => {
@@ -93,10 +99,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   onOpenUpgradeModal,
   cloudTxIds,
   onOpenDatabaseTracker,
+  onRefreshSync,
 }) => {
   const { user } = useAuth();
   const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
+  useSearchSeed('transactions', setSearchTerm);
   const [visibleDays, setVisibleDays] = useState(30);
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [timeFilter, setTimeFilterState] = useState<TimeFilterType>('all');
@@ -118,6 +127,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [showSummaryTable, setShowSummaryTable] = useState<boolean>(true);
   const [expandedShoppingTxIds, setExpandedShoppingTxIds] = useState<Record<string, boolean>>({});
   const [selectedTxForSyncModal, setSelectedTxForSyncModal] = useState<Transaction | null>(null);
+  // [v7.5.55] Delete confirmation (inline dialog — this app has no shared
+  // ConfirmModal component; native window.confirm is no longer used).
+  const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
   const [financialSystem, setFinancialSystem] = useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
 
   const hasSharedWallets = useMemo(() => {
@@ -262,9 +274,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         if (endDate && t.date > endDate) return false;
       }
 
-      // Search
+      // Search — [v7.5.55] matches item names, shop names, wallet
+      // names and amounts too (not just category/subcategory/note).
+      // The query is normalised with toLatinDigits so typing ၁၀၀၀၀
+      // matches an amount of 10000.
       if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase();
+        const rawQuery = searchTerm.trim().toLowerCase();
+        const query = toLatinDigits(rawQuery);
         const cat = catMap.get(t.category);
         const catName = (cat?.name || '').toLowerCase();
         const catNameEn = (cat?.nameEn || '').toLowerCase();
@@ -272,12 +288,23 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         const subName = (subCat?.name || '').toLowerCase();
         const subNameEn = (subCat?.nameEn || '').toLowerCase();
         const note = (t.note || '').toLowerCase();
+        const itemNames = (t.items || []).map((it) => (it.name || '').toLowerCase()).join(' ');
+        const shopName = (t.shopName || '').toLowerCase();
+        const wallet = walletMap.get(t.walletId);
+        const walletName = ((wallet?.name || '') + ' ' + (wallet?.nameEn || '')).toLowerCase();
+        const amountLatin = String(t.amount);
+        const amountMyanmar = toMyanmarDigits(amountLatin);
         if (
           !catName.includes(query) &&
           !catNameEn.includes(query) &&
           !subName.includes(query) &&
           !subNameEn.includes(query) &&
-          !note.includes(query)
+          !note.includes(query) &&
+          !itemNames.includes(query) &&
+          !shopName.includes(query) &&
+          !walletName.includes(query) &&
+          !amountLatin.includes(query) &&
+          !amountMyanmar.includes(rawQuery)
         ) {
           return false;
         }
@@ -383,9 +410,25 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     return groups;
   }, [filtered]);
 
+  // [v7.5.55] Real sync refresh for the sync-detail modal: retry any
+  // queued writes, then run the parent's full cloud refresh when provided.
+  const handleRefreshSync = async () => {
+    try {
+      await syncQueue.processQueue();
+    } catch (err) {
+      console.warn('[TransactionsView] sync retry failed:', err);
+    }
+    try {
+      await onRefreshSync?.();
+    } catch (err) {
+      console.warn('[TransactionsView] parent sync refresh failed:', err);
+    }
+  };
+
   const handleExport = () => {
-    if (plan === 'free') {
-      onOpenUpgradeModal();
+    // [v7.5.55] Premium-only: hidden entirely for other plans (no locked
+    // button, no upgrade prompt) and gated here too.
+    if (plan !== 'premium') {
       return;
     }
     const catLabels: Record<string, string> = {};
@@ -403,7 +446,18 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     exportToCSV(filtered, catLabels, walletLabels, subCatLabels);
   };
 
-  const isAtLimit = plan === 'free' && transactions.length >= maxFreeTransactions;
+  // [v7.5.55] The transaction limit is per ROLLING 30 days, so the
+  // banner counts only transactions dated within the last 30 days.
+  const rolling30StartStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    return getLocalDateString(d);
+  }, []);
+  const rolling30TxCount = useMemo(
+    () => transactions.filter((t) => t.date && t.date >= rolling30StartStr).length,
+    [transactions, rolling30StartStr]
+  );
+  const isAtLimit = (plan === 'free' || plan === 'guest') && rolling30TxCount >= maxFreeTransactions;
 
   return (
     <div className="space-y-6">
@@ -425,6 +479,27 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </p>
         </div>
 
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* [v7.5.55] C10: opens the price-history / comparison modal. */}
+          <button
+            type="button"
+            onClick={() => setIsPriceHistoryOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-all cursor-pointer active:scale-95"
+          >
+            <History className="w-4 h-4" />
+            <span>{lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'Price Compare'}</span>
+          </button>
+          {/* [v7.5.55] B10: CSV Export — Premium only, hidden entirely otherwise. */}
+          {plan === 'premium' && (
+            <button
+              type="button"
+              onClick={handleExport}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
+            >
+              <span>{lang === 'my' ? '⬇️ CSV ထုတ်ယူမည်' : '⬇️ Export CSV'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Free tier limit banner warning if reached or close */}
@@ -434,8 +509,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <Lock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
               {lang === 'my'
-                ? `Free Plan ၏ လစဉ် ကန့်သတ်ချက် (${maxFreeTransactions} ခု) ပြည့်သွားပါပြီ။ ဆက်လက်မှတ်တမ်းတင်ရန် Premium သို့ အဆင့်မြှင့်ပါ။`
-                : `You reached the Free Plan limit of ${maxFreeTransactions} transactions. Upgrade to Premium for unlimited records.`}
+                ? `${plan === 'guest' ? 'Guest Mode' : 'Free Plan'} ၏ ရက် (၃၀) အတွင်း ကန့်သတ်ချက် (${maxFreeTransactions} ခု) ပြည့်သွားပါပြီ။ ဆက်လက်မှတ်တမ်းတင်ရန် Premium သို့ အဆင့်မြှင့်ပါ။`
+                : `You reached the ${plan === 'guest' ? 'Guest Mode' : 'Free Plan'} limit of ${maxFreeTransactions} transactions within 30 days. Upgrade to Premium for unlimited records.`}
             </span>
           </div>
           <button
@@ -491,9 +566,30 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             </select>
           </div>
 
+          {/* [v7.5.55] B5: real date pickers — specific date (with
+              prev/next day shifting) and custom range. */}
+          {timeFilter === 'specific_date' && (
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-1 py-0.5 shrink-0">
+              <button type="button" onClick={() => shiftSpecificDate(-1)} className="p-1 rounded-md text-slate-600 hover:bg-slate-200 cursor-pointer" title={lang === 'my' ? 'တစ်ရက် နောက်' : 'Previous day'}>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <input type="date" value={specificDate} onChange={(e) => setSpecificDate(e.target.value)} className="bg-transparent text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer" />
+              <button type="button" onClick={() => shiftSpecificDate(1)} className="p-1 rounded-md text-slate-600 hover:bg-slate-200 cursor-pointer" title={lang === 'my' ? 'တစ်ရက် ရှေ့' : 'Next day'}>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          {timeFilter === 'custom_range' && (
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-0.5 shrink-0">
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer" />
+              <span className="text-[11px] text-slate-400 font-bold">~</span>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer" />
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || dataScope !== 'all') && (
-              <button type="button" onClick={() => { setSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); onSetDataScope?.('all'); }} className="text-[10px] text-rose-600 hover:underline font-bold px-1.5 py-1 cursor-pointer bg-rose-50 rounded-lg">↺</button>
+            {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || selectedWalletIds.length > 0 || dataScope !== 'all') && (
+              <button type="button" onClick={() => { setSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); onSetDataScope?.('all'); }} className="text-[10px] text-rose-600 hover:underline font-bold px-1.5 py-1 cursor-pointer bg-rose-50 rounded-lg">↺</button>
             )}
             <button type="button" onClick={() => setShowSummaryTable(!showSummaryTable)} className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0">
               {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းမည်' : '➖ Compact') : (lang === 'my' ? '📊 Table' : '📊 Table')}
@@ -561,6 +657,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               setSpecificDate(todayStr);
               setSelectedCategory('all');
               setSelectedWallet('all');
+              setSelectedWalletIds([]);
               onSetDataScope?.('all');
             }}
             className="px-2.5 py-1 rounded-lg bg-amber-200/80 hover:bg-amber-300/80 text-amber-950 font-bold transition-all shrink-0 cursor-pointer text-[11px]"
@@ -591,6 +688,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   setTimeFilter('all');
                   setSelectedCategory('all');
                   setSelectedWallet('all');
+                  setSelectedWalletIds([]);
                   onSetDataScope?.('all');
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer shadow-xs"
@@ -600,7 +698,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             )}
             {transactions.length === 0 && (
               <p className="text-xs text-slate-400">
-                {lang === 'my' ? 'စာရင်းအသစ် ထည့်သွင်းရန် အပေါ်ရှိ "+ မှတ်တမ်းသစ်" ခလုတ်ကို နှိပ်ပါ' : 'Click "+ New Transaction" to record your first entry.'}
+                {lang === 'my' ? 'စာရင်းအသစ် ထည့်သွင်းရန် အောက်ခြေ Menu ရှိ "+" ခလုတ်ကို နှိပ်ပါ' : 'Tap the "+" button in the bottom navigation to record your first entry.'}
               </p>
             )}
           </div>
@@ -662,7 +760,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       return (
                         <div
                           key={t.id}
-                          className="p-3.5 sm:p-4 sm:px-6 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors"
+                          onClick={() => onEditTransaction(t)}
+                          className="p-3.5 sm:p-4 sm:px-6 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                          title={lang === 'my' ? 'နှိပ်၍ ပြင်ဆင်မည်' : 'Tap to edit'}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div
@@ -719,6 +819,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                 {t.items && t.items.length > 0 && (
                                   <div className="flex items-center gap-1.5 shrink-0">
                                     {(!t.unitPrice) ? (
+                                      <>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setIsPriceHistoryOpen(true); }}
+                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-900 border border-indigo-300 hover:bg-indigo-100 cursor-pointer shadow-2xs"
+                                        title={lang === 'my' ? 'ဈေးနှိုင်းယှဉ်ကြည့်မည်' : 'Compare prices'}
+                                      >
+                                        <History className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                                        <span>{lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'Compare'}</span>
+                                      </button>
                                       <button
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); setExpandedShoppingTxIds((p) => ({ ...p, [t.id]: !p[t.id] })); }}
@@ -728,6 +838,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                         <span>{lang === 'my' ? 'စျေးဝယ်စာရင်း' : 'Shopping'}</span>
                                         <span className="text-[8px] opacity-60">{expandedShoppingTxIds[t.id] ? '▲' : '▼'}</span>
                                       </button>
+                                      </>
                                     ) : (
                                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
                                         <Package className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -774,7 +885,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               return (
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedTxForSyncModal(t)}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedTxForSyncModal(t); }}
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-transform active:scale-95 cursor-pointer shadow-2xs ${syncInfo.badgeClass}`}
                                   title={lang === 'my' ? syncInfo.labelMy : syncInfo.labelEn}
                                 >
@@ -798,7 +909,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                 <div className="flex items-center gap-0.5">
                                   {canEdit ? (
                                     <button
-                                      onClick={() => onEditTransaction(t)}
+                                      onClick={(e) => { e.stopPropagation(); onEditTransaction(t); }}
                                       className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
                                       title={lang === 'my' ? 'မှတ်တမ်း ပြင်ဆင်မည်' : 'Edit record'}
                                     >
@@ -815,11 +926,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                                   {canDelete ? (
                                     <button
-                                      onClick={() => {
-                                        if (window.confirm(lang === 'my' ? 'ဤမှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?' : 'Delete this transaction?')) {
-                                          onDeleteTransaction(t.id);
-                                        }
-                                      }}
+                                      onClick={(e) => { e.stopPropagation(); setTxToDelete(t); }}
                                       className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                                       title={lang === 'my' ? 'မှတ်တမ်း ဖျက်မည်' : 'Delete record'}
                                     >
@@ -864,6 +971,37 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
       )}
 
+      {/* [v7.5.55] B17b: delete confirmation dialog (replaces window.confirm). */}
+      {txToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setTxToDelete(null)}>
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-200 p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-base text-slate-900">
+              {lang === 'my' ? 'ဤမှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?' : 'Delete this transaction?'}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {getCategoryDisplayName(txToDelete.category, categories, lang)} · {formatMMK(txToDelete.amount)} · {txToDelete.date}
+              {txToDelete.note ? ` · "${txToDelete.note}"` : ''}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setTxToDelete(null)}
+                className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-xs cursor-pointer"
+              >
+                {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { const id = txToDelete.id; setTxToDelete(null); onDeleteTransaction(id); }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer"
+              >
+                {lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Item Price History and Comparison Modal */}
       <ItemPriceHistoryModal
         isOpen={isPriceHistoryOpen}
@@ -881,7 +1019,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         categories={categories}
         lang={lang}
         onClose={() => setSelectedTxForSyncModal(null)}
-        onRefreshSync={() => {}}
+        onRefreshSync={handleRefreshSync}
       />
     </div>
   );

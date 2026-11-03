@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { History, TrendingUp, TrendingDown, Minus, Search, Calendar, Tag, Info, X } from 'lucide-react';
 import { Category, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
-import { normalizeItemName } from '../utils/itemIntelligence';
+import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
 
@@ -17,6 +17,9 @@ interface PriceRecord {
   note?: string;
   shopName?: string; // [v7.5.54] Shop where this purchase was made
   isShoppingItem?: boolean;
+  // [v7.5.55 C9] True for sub-category / note records: amount is the
+  // WHOLE TRIP total, not a per-unit price.
+  isTripTotal?: boolean;
 }
 
 interface ItemPriceHistoryModalProps {
@@ -91,7 +94,9 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
             // "ဆန် ၁ပြည်" and "ဆန်" share one history (split by unit).
             const norm = normalizeItemName(item.name);
             if (!norm.key) return;
-            const key = `shop_${norm.key}|${norm.unit}`;
+            // [v7.5.55 C18] Same key as Analytics (normalized name + unit,
+            // no source prefix) so one item bought two ways is one card.
+            const key = `${norm.key}|${norm.unit}`;
             const unitPrice =
               item.price > 0
                 ? item.price
@@ -129,15 +134,22 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
       }
 
       // 2. Process subcategories for direct expenses (without shopping list items)
-      if ((!tx.items || tx.items.length === 0) && tx.subCategoryId) {
+      // [v7.5.55 C19] Vehicle sub-categories are costs, not purchasable
+      // items — excluded here exactly as in Compare Price.
+      // [v7.5.55 C9] This record is a TRIP TOTAL, not a per-unit price.
+      if ((!tx.items || tx.items.length === 0) && tx.subCategoryId && !tx.subCategoryId.startsWith('sub_veh_')) {
         const sub = subCategoryList.find((s) => s.id === tx.subCategoryId);
         if (sub) {
-          const key = `sub_${sub.id}`;
+          // [v7.5.55 C18] Same key as Analytics: normalized sub-category
+          // name + unit (no sub_ prefix).
+          const norm = normalizeItemName(lang === 'my' ? sub.name : sub.nameEn || sub.name);
+          if (!norm.key) return;
+          const key = `${norm.key}|${norm.unit}`;
           if (!grouped.has(key)) {
             grouped.set(key, {
               key,
-              displayName: sub.name,
-              displayNameEn: sub.nameEn,
+              displayName: norm.display + (norm.unit ? ' · ' + norm.unit : ''),
+              displayNameEn: norm.display + (norm.unit ? ' · ' + norm.unit : ''),
               categoryId: sub.categoryId,
               subCategoryId: sub.id,
               records: [],
@@ -152,13 +164,19 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
             subCategoryId: tx.subCategoryId,
             note: tx.note,
             shopName: tx.shopName,
+            isTripTotal: true,
           });
         }
       } else if ((!tx.items || tx.items.length === 0) && tx.note && tx.note.trim().length >= 1) {
         // 3. Process note if no items and no subcategory
+        // [v7.5.55 D20] Only an explicit item signal becomes an item —
+        // free-text notes must not become phantom catalog items.
+        const parsed = parseNoteAsItem(tx.note);
+        if (!parsed) return;
         const norm = normalizeItemName(tx.note);
         if (!norm.key) return;
-        const key = `note_${norm.key}|${norm.unit}`;
+        // [v7.5.55 C18] Same key as Analytics (no note_ prefix).
+        const key = `${norm.key}|${norm.unit}`;
         if (!grouped.has(key)) {
           grouped.set(key, {
             key,
@@ -176,6 +194,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
           categoryId: tx.category,
           note: tx.note,
           shopName: tx.shopName,
+          isTripTotal: true,
         });
       }
     });
@@ -186,14 +205,21 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
       const sortedRecords = [...item.records].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
-      const latest = sortedRecords[sortedRecords.length - 1];
-      const previous = sortedRecords.length > 1 ? sortedRecords[sortedRecords.length - 2] : null;
+      // [v7.5.55 C9] Price trend is computed from TRUE per-unit records
+      // only. Trip totals are shown as totals and never trended as if
+      // they were unit prices.
+      const unitRecords = sortedRecords.filter((r) => !r.isTripTotal);
+      const isTripTotalOnly = unitRecords.length === 0;
+      const trendBase = isTripTotalOnly ? sortedRecords : unitRecords;
+      const latest = trendBase[trendBase.length - 1];
+      const previous = trendBase.length > 1 ? trendBase[trendBase.length - 2] : null;
 
       let priceChange = 0;
       let priceChangePercent = 0;
       let trend: 'up' | 'down' | 'same' | 'initial' = 'initial';
 
-      if (previous) {
+      // No unit-price trend exists for totals-only items.
+      if (!isTripTotalOnly && previous) {
         priceChange = latest.amount - previous.amount;
         priceChangePercent = previous.amount > 0 ? (priceChange / previous.amount) * 100 : 0;
         if (priceChange > 0) trend = 'up';
@@ -208,6 +234,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
         priceChange,
         priceChangePercent,
         trend,
+        isTripTotalOnly,
         totalPurchases: sortedRecords.length,
       };
     });
@@ -225,14 +252,17 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
         return false;
       }
       if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase();
+        // [v7.5.55 C14f] Normalize the query (incl. Myanmar digits) the
+        // same way item names are normalized.
+        const q = normalizeItemName(searchTerm).key;
+        const rawQ = searchTerm.toLowerCase();
         const matchName =
-          item.displayName.toLowerCase().includes(q) ||
-          item.displayNameEn.toLowerCase().includes(q);
+          (q && item.displayName.toLowerCase().includes(q)) ||
+          (q && item.displayNameEn.toLowerCase().includes(q));
         const cat = catMap.get(item.categoryId);
         const matchCat =
-          (cat?.name || '').toLowerCase().includes(q) ||
-          (cat?.nameEn || '').toLowerCase().includes(q);
+          (cat?.name || '').toLowerCase().includes(rawQ) ||
+          (cat?.nameEn || '').toLowerCase().includes(rawQ);
         return matchName || matchCat;
       }
       return true;
@@ -367,6 +397,14 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
 
                       {/* Trend Badge */}
                       <div className="shrink-0">
+                        {/* [v7.5.55 C9] Totals-only items get a trip-total
+                            pill, never a price trend. */}
+                        {item.isTripTotalOnly ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <span>{lang === 'my' ? 'စုစုပေါင်း' : 'Trip Totals'}</span>
+                          </span>
+                        ) : (
+                          <>
                         {item.trend === 'up' && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
                             <TrendingUp className="w-3.5 h-3.5 text-rose-600" />
@@ -398,6 +436,8 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                             <span>{lang === 'my' ? 'ပထမအကြိမ်' : 'First record'}</span>
                           </span>
                         )}
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -408,7 +448,13 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                         <div className="flex items-center justify-between text-slate-500">
                           <span className="font-semibold text-slate-700 flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                            {lang === 'my' ? 'နောက်ဆုံး ဝယ်ယူသည့်ဈေး:' : 'Latest Purchase:'}
+                            {item.latest.isTripTotal
+                              ? lang === 'my'
+                                ? 'နောက်ဆုံး စုစုပေါင်း:'
+                                : 'Latest Trip Total:'
+                              : lang === 'my'
+                              ? 'နောက်ဆုံး ဝယ်ယူသည့်ဈေး:'
+                              : 'Latest Purchase:'}
                           </span>
                           <span className="font-mono text-slate-500 flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -429,7 +475,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                           </p>
                         )}
                         {item.latest.shopName && (
-                          <p className="text-[11px] text-emerald-700 font-bold truncate">🛍️ {item.latest.shopName}</p>
+                          <p className="text-[11px] text-emerald-700 font-bold truncate">🛍️ {item.latest.shopName.trim()}</p>
                         )}
                       </div>
 
@@ -439,7 +485,13 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                           <div className="flex items-center justify-between text-slate-500">
                             <span className="font-semibold text-slate-600 flex items-center gap-1">
                               <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
-                              {lang === 'my' ? 'အရင်တစ်ကြိမ် ဝယ်ဈေး:' : 'Previous Purchase:'}
+                              {item.previous.isTripTotal
+                                ? lang === 'my'
+                                  ? 'အရင်တစ်ကြိမ် စုစုပေါင်း:'
+                                  : 'Previous Trip Total:'
+                                : lang === 'my'
+                                ? 'အရင်တစ်ကြိမ် ဝယ်ဈေး:'
+                                : 'Previous Purchase:'}
                             </span>
                             <span className="font-mono text-slate-500 flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
@@ -460,7 +512,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                             </p>
                           )}
                           {item.previous.shopName && (
-                            <p className="text-[11px] text-emerald-700 font-bold truncate">🛍️ {item.previous.shopName}</p>
+                            <p className="text-[11px] text-emerald-700 font-bold truncate">🛍️ {item.previous.shopName.trim()}</p>
                           )}
                         </div>
                       ) : (

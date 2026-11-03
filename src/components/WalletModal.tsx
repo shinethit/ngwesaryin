@@ -21,6 +21,7 @@ import {
   formatCurrency,
   convertToMMK,
 } from '../utils/currency';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import {
   bootstrapExchangeRates,
   subscribeRates,
@@ -79,6 +80,14 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   // [v7.5.1] Live rate + manual override state.
   const [rateSnapshot, setRateSnapshot] = useState<RateSnapshot>(getRateSnapshot());
   const [overrideRate, setOverrideRate] = useState<boolean>(false);
+  // [v7.5.55] Validation message (B18) + idempotent lakh multiply (D3):
+  // the last multiplied result is remembered so a repeat tap on the same
+  // value does not multiply again.
+  const [formError, setFormError] = useState('');
+  const [lastLakhResult, setLastLakhResult] = useState<string | null>(null);
+  // [v7.5.55 D31] Message when the multiply button is refused because the
+  // field already holds a kyat-scale value (see the guard below).
+  const [lakhMsg, setLakhMsg] = useState('');
 
   // Q1=A: Currency is locked when editing an existing wallet.
   const isCurrencyLocked = Boolean(walletToEdit);
@@ -105,6 +114,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         setColor(walletToEdit.color || '#10B981');
         setIcon(walletToEdit.icon || 'wallet');
         setIncludeInTotals(walletToEdit.includeInTotals !== false);
+        setFormError('');
+        setLastLakhResult(null);
+        setLakhMsg('');
       } else {
         setName('');
         setNameEn('');
@@ -114,6 +126,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         setColor('#10B981');
         setIcon('wallet');
         setIncludeInTotals(true);
+        setFormError('');
+        setLastLakhResult(null);
+        setLakhMsg('');
         setOverrideRate(false); // [v7.5.1] New wallet: default to live rate
       }
       // [v7.5.1] On edit: auto-detect if the stored rate differs from live.
@@ -135,17 +150,28 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     setExchangeRate(String(currInfo.defaultRateToMMK));
   };
 
-  const parsedBalance = parseFloat(balance) || 0;
+  const parsedBalance = parseMyanmarNumber(balance) || 0;
   const parsedRate = parseFloat(exchangeRate) || 1;
   const convertedMMK = convertToMMK(parsedBalance, currency, parsedRate);
   const selectedCurrInfo = getCurrencyInfo(currency);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    // [v7.5.55] A whitespace-only name no longer returns silently.
+    if (!name.trim()) {
+      setFormError(lang === 'my' ? 'အကောင့် အမည် ထည့်ပေးပါ' : 'Please enter a wallet name');
+      return;
+    }
 
     if (walletToEdit) {
       // Editing existing wallet
+      // [v7.5.55] B19 — KEPT as-is deliberately: the live balance is
+      // derived as initialBalance + transactions (see
+      // utils/walletBalance calculateWalletLiveBalance), so a manual
+      // balance correction MUST move initialBalance by the same delta or
+      // syncWalletsWithTransactions recomputes the correction away. The
+      // Wallet type has no separate correction field to store it in, so
+      // keeping initialBalance unchanged is not cleanly possible here.
       const prevBal = walletToEdit.balance ?? 0;
       const prevInitial = typeof walletToEdit.initialBalance === 'number' ? walletToEdit.initialBalance : prevBal;
       const delta = parsedBalance - prevBal;
@@ -377,12 +403,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             </div>
             <div className="relative">
               <input
-                type="number"
-                step="any"
+                type="text"
+                inputMode="decimal"
                 required
                 placeholder="0"
                 value={balance}
-                onChange={(e) => setBalance(e.target.value)}
+                onChange={(e) => { setBalance(e.target.value); setLakhMsg(''); }}
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 pr-16 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
@@ -395,8 +421,22 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const num = parseFloat(balance) || 0;
-                  setBalance(String(Math.round(num * 100000)));
+                  // [v7.5.55] Idempotent: a repeat tap on the same value
+                  // must not multiply again.
+                  if (lastLakhResult !== null && balance === lastLakhResult) return;
+                  const num = parseMyanmarNumber(balance) || 0;
+                  // [v7.5.55 D31] A value already at kyat scale (a preset
+                  // like 100,000, or an edited wallet's stored balance)
+                  // must not be multiplied — one tap would turn 2,500,000
+                  // into 250,000,000,000. 100,000+ in this field is kyat.
+                  if (num >= 100000) {
+                    setLakhMsg(lang === 'my' ? 'ဒီပမာဏက ကျပ်နဲ့ ရိုက်ထားပြီးသား ဖြစ်ပါတယ် — သိန်းနဲ့ ထပ်မြှောက်စရာ မလိုပါဘူး' : 'This amount is already in kyat — no need to multiply by 100,000');
+                    return;
+                  }
+                  setLakhMsg('');
+                  const result = String(Math.round(num * 100000));
+                  setBalance(result);
+                  setLastLakhResult(result);
                 }}
                 className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all active:scale-95 cursor-pointer shadow-2xs"
                 title={lang === 'my' ? 'ရိုက်ထည့်ထားသော ဂဏန်းအား ၁ သိန်း (x 100,000) ဖြင့် မြှောက်မည်' : 'Multiply by 1 Lakh (x100,000)'}
@@ -437,6 +477,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 </span>
               )}
             </div>
+            {lakhMsg && (
+              <p className="text-[11px] font-semibold text-amber-700 pt-1">{lakhMsg}</p>
+            )}
           </div>
 
           {/* Color & Icon Picker */}
@@ -591,6 +634,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               )}
             </div>
           </div>
+
+          {formError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">{formError}</div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

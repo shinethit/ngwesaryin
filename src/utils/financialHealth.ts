@@ -1,4 +1,5 @@
 export type FinancialHealthTier =
+  | 'no_data'       // [v7.5.55 D6] no records yet — no score, no congratulations
   | 'super_surplus' // + အများကြီးထွက်နေရင် (ခရမ်းရောင်)
   | 'perfect'       // ၁၀၀% (အစိမ်း)
   | 'good'          // ၈၀-၉၉% (စိမ်းဖျော့)
@@ -53,6 +54,19 @@ export interface TierDefinition {
 }
 
 export const FINANCIAL_HEALTH_TIERS: TierDefinition[] = [
+  {
+    // [v7.5.55 D6] Shown instead of a fake 100% when there is no data at all.
+    tier: 'no_data',
+    rangeLabel: { my: 'မှတ်တမ်း မရှိသေးပါ', en: 'No data yet' },
+    colorName: { my: 'မီးခိုးရောင်', en: 'Grey' },
+    emoji: '📭',
+    colorDot: 'bg-slate-400',
+    badgeClass: 'bg-slate-500 text-white border-slate-400',
+    description: {
+      my: 'ဝင်ငွေ၊ ထွက်ငွေ၊ အကြွေး သို့မဟုတ် လက်ကျန် မှတ်တမ်း တစ်ခုမှ မရှိသေးပါ — မှတ်တမ်းထည့်ပြီးမှ ကျန်းမာမှု အဆင့် တွက်ချက်ပါမည်',
+      en: 'No income, expense, debt or balance records yet — add a record first and the health score will appear',
+    },
+  },
   {
     tier: 'super_surplus',
     rangeLabel: { my: '+ အများကြီးထွက်နေ', en: '+ Super Surplus' },
@@ -186,12 +200,20 @@ export function calculateFinancialHealth(
     score = -negativePoints;
     scoreDisplay = `${score}%`;
   }
-  // 2. Check for empty data state
+  // 2. [v7.5.55 D6] Check for empty data state — no data at all must NEVER
+  //    read as "100% perfect". Only a real payable debt still scores.
   else if (totalIncome === 0 && totalExpense === 0) {
     if (totalPayableDebt > 0) {
       tier = 'critical'; // ၄၀ အောက် (အနီ)
       score = 30;
       scoreDisplay = '30%';
+    } else if (
+      totalReceivableDebt === 0 &&
+      totalWalletBalance === 0
+    ) {
+      tier = 'no_data';
+      score = 0;
+      scoreDisplay = '—';
     } else {
       tier = 'perfect'; // ၁၀၀% (အစိမ်း)
       score = 100;
@@ -204,7 +226,8 @@ export function calculateFinancialHealth(
     tier = 'super_surplus';
     // Bonus score for super surplus!
     score = Math.min(150, 100 + Math.round((savingsRatePercent - 50) * 0.8));
-    scoreDisplay = `+${savingsRatePercent}%`;
+    // [v7.5.55 D6] Show the COMPUTED score, not the raw savings rate.
+    scoreDisplay = `+${score}%`;
   }
   // 4. Standard scoring scale
   else {
@@ -250,6 +273,51 @@ export function calculateFinancialHealth(
 
   // Define visual themes & texts for each tier
   switch (tier) {
+    case 'no_data':
+      return {
+        score: 0,
+        scoreDisplay: '—',
+        tier,
+        colorName: { my: 'မီးခိုးရောင်', en: 'Grey' },
+        statusText: {
+          my: 'မှတ်တမ်း မရှိသေးပါ',
+          en: 'No data yet',
+        },
+        badgeText: { my: '📭 မှတ်တမ်း မရှိသေးပါ', en: '📭 No data yet' },
+        shortTitle: { my: 'မှတ်တမ်း မရှိသေးပါ', en: 'No data yet' },
+        summary: {
+          my: 'ဝင်ငွေ၊ ထွက်ငွေ သို့မဟုတ် အကြွေး မှတ်တမ်း တစ်ခုမှ မရှိသေးပါ။ မှတ်တမ်းတစ်ခု ထည့်သွင်းလိုက်ပါက ငွေကြေးကျန်းမာမှု အဆင့်ကို တွက်ချက်ပြသပါမည်။',
+          en: 'No income, expense or debt records yet. Add your first record and your financial health score will appear here.',
+        },
+        advice: {
+          my: 'ပထမဆုံး ဝင်ငွေ သို့မဟုတ် ထွက်ငွေ မှတ်တမ်းတစ်ခု ထည့်သွင်းကြည့်ပါ',
+          en: 'Add your first income or expense record to get started',
+        },
+        emoji: '📭',
+        theme: {
+          cardBg: 'bg-slate-50/90 hover:bg-slate-100/90',
+          cardBorder: 'border-slate-300 hover:border-slate-400',
+          titleColor: 'text-slate-900',
+          subtitleColor: 'text-slate-600',
+          iconBg: 'bg-slate-100 text-slate-600 border border-slate-200',
+          iconColor: 'text-slate-600',
+          badgeBg: 'bg-slate-500 text-white shadow-2xs border border-slate-400',
+          badgeText: 'text-white',
+          progressFill: 'bg-slate-400',
+          glowEffect: 'ring-1 ring-slate-300/40 shadow-sm',
+          isDarkTheme: false,
+        },
+        metrics: {
+          totalIncome,
+          totalExpense,
+          netSavings,
+          savingsRatePercent,
+          totalPayableDebt,
+          totalReceivableDebt,
+          totalAssets,
+        },
+      };
+
     case 'super_surplus':
       return {
         score,
@@ -258,7 +326,7 @@ export function calculateFinancialHealth(
         colorName: { my: 'ခရမ်းရောင်', en: 'Purple' },
         statusText: {
           my: `+ အများကြီးထွက်နေပါသည် (${scoreDisplay})`,
-          en: `Super Surplus (+${savingsRatePercent}%)`,
+          en: `Super Surplus (${scoreDisplay})`,
         },
         badgeText: { my: 'ခရမ်းရောင် 💜 +အများကြီး', en: 'Purple 💜 Surplus' },
         shortTitle: { my: 'ပိုလျှံမှု အထူးကောင်း', en: 'Super Surplus' },

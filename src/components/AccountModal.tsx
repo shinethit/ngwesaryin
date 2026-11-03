@@ -4,7 +4,8 @@ import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCi
 import { useAuth } from '../context/AuthContext';
 import { resetFirestoreConnection } from '../lib/firebase';
 import { PinLockSettings, PlanType } from '../types';
-import { hashPin, generateSalt } from '../utils/pinHash';
+import { PinSetupModal } from './PinSetupModal';
+import { PinLockScreen } from './PinLockScreen';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -72,6 +73,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showVpnHint, setShowVpnHint] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
+  // [v7.5.55 E11] PIN flows no longer use window.prompt(). Enable/change
+  // go through PinSetupModal (two-step confirm + weak-PIN rejection);
+  // change/disable first verify the CURRENT PIN via PinLockScreen.
+  const [isPinSetupOpen, setIsPinSetupOpen] = useState(false);
+  const [pinVerifyFor, setPinVerifyFor] = useState<'change' | 'disable' | null>(null);
 
   const handleResetVpnConnection = async () => {
     setReconnectingVpn(true);
@@ -90,73 +96,39 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   // ============================================================
   // Secure PIN setup / change handlers (hashed with PBKDF2)
   // ============================================================
-  const handleEnablePin = async () => {
+  // Enable: two-step create flow in PinSetupModal (weak PINs rejected).
+  const handleEnablePin = () => {
     setPinError(null);
-    const newPin = window.prompt(
-      lang === 'my' ? 'ဂဏန်း ၄ လုံး ထည့်ပါ:' : 'Enter 4-digit PIN:'
-    );
-    if (newPin === null) return; // User cancelled
-
-    if (!newPin || newPin.length !== 4 || isNaN(Number(newPin))) {
-      alert(lang === 'my' ? 'ဂဏန်း ၄ လုံး အတိအကျဖြစ်ရပါမည်' : 'PIN must be exactly 4 digits');
-      return;
-    }
-
-    try {
-      const salt = generateSalt();
-      const pinHash = await hashPin(newPin, salt);
-      onUpdatePinSettings?.({
-        isEnabled: true,
-        pin: pinHash,
-        pinSalt: salt,
-        requireOnStart: true,
-      });
-    } catch (err) {
-      console.error('[AccountModal] Failed to hash PIN:', err);
-      setPinError(
-        lang === 'my'
-          ? '⚠️ PIN ကို လုံခြုံစွာ သိမ်းဆည်းရာတွင် အမှားရှိပါသည်'
-          : '⚠️ Failed to securely save PIN'
-      );
-    }
+    setIsPinSetupOpen(true);
   };
 
-  const handleChangePin = async () => {
+  // Change: current PIN must be verified first (PinLockScreen overlay).
+  const handleChangePin = () => {
     setPinError(null);
-    const newPin = window.prompt(
-      lang === 'my' ? 'ဂဏန်း ၄ လုံး အသစ်ထည့်ပါ:' : 'Enter new 4-digit PIN:'
-    );
-    if (newPin === null) return;
-
-    if (!newPin || newPin.length !== 4 || isNaN(Number(newPin))) {
-      alert(lang === 'my' ? 'ဂဏန်း ၄ လုံး အတိအကျဖြစ်ရပါမည်' : 'PIN must be exactly 4 digits');
-      return;
-    }
-
-    try {
-      const salt = generateSalt();
-      const pinHash = await hashPin(newPin, salt);
-      onUpdatePinSettings?.({
-        ...pinSettings!,
-        pin: pinHash,
-        pinSalt: salt,
-      });
-    } catch (err) {
-      console.error('[AccountModal] Failed to hash new PIN:', err);
-      setPinError(
-        lang === 'my'
-          ? '⚠️ PIN အသစ်ကို လုံခြုံစွာ သိမ်းဆည်းရာတွင် အမှားရှိပါသည်'
-          : '⚠️ Failed to securely save new PIN'
-      );
-    }
+    setPinVerifyFor('change');
   };
 
+  // Disable: confirm first, then verify the CURRENT PIN before turning
+  // the lock off — toggling the switch used to disable it immediately
+  // with no confirm and no proof the user knows the PIN.
   const handleDisablePin = () => {
     setPinError(null);
-    onUpdatePinSettings?.({
-      ...(pinSettings || { isEnabled: false, pin: '', pinSalt: '', requireOnStart: false }),
-      isEnabled: false,
-    });
+    if (!window.confirm(lang === 'my' ? 'PIN Lock ကို ပိတ်မည်လား? အက်ပ်ဖွင့်တိုင်း PIN တောင်းတော့မည် မဟုတ်ပါ။' : 'Turn off PIN Lock? The app will no longer ask for a PIN on start.')) return;
+    setPinVerifyFor('disable');
+  };
+
+  // Called by PinLockScreen after the current PIN unlocks.
+  const handleCurrentPinVerified = () => {
+    const action = pinVerifyFor;
+    setPinVerifyFor(null);
+    if (action === 'change') {
+      setIsPinSetupOpen(true);
+    } else if (action === 'disable') {
+      onUpdatePinSettings?.({
+        ...(pinSettings || { isEnabled: false, pin: '', pinSalt: '', requireOnStart: false }),
+        isEnabled: false,
+      });
+    }
   };
 
   // Calculate Days Left
@@ -875,14 +847,16 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               {lang === 'my' ? 'Manual Backup (JSON)' : 'Local File Backup'}
             </h3>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={onExportJson}
-              className="p-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs flex flex-col items-center gap-1 hover:bg-slate-50 transition-colors shadow-xs"
-            >
-              <Download className="w-4 h-4 text-slate-400" />
-              <span>{lang === 'my' ? 'Save to File' : 'Export Data'}</span>
-            </button>
+          <div className={`grid gap-3 ${plan === 'premium' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {plan === 'premium' && (
+              <button
+                onClick={onExportJson}
+                className="p-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs flex flex-col items-center gap-1 hover:bg-slate-50 transition-colors shadow-xs"
+              >
+                <Download className="w-4 h-4 text-slate-400" />
+                <span>{lang === 'my' ? 'Save to File' : 'Export Data'}</span>
+              </button>
+            )}
             <label className="p-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs flex flex-col items-center gap-1 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer">
               <Upload className="w-4 h-4 text-slate-400" />
               <span>{lang === 'my' ? 'Restore from File' : 'Import Data'}</span>
@@ -1228,6 +1202,38 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* [v7.5.55 E11] PIN setup (two-step + weak-PIN rejection). */}
+      <PinSetupModal
+        isOpen={isPinSetupOpen}
+        onClose={() => setIsPinSetupOpen(false)}
+        lang={lang}
+        onSavePin={(pinHash, pinSalt) => {
+          onUpdatePinSettings?.(
+            pinSettings?.isEnabled
+              ? { ...pinSettings, pin: pinHash, pinSalt }
+              : { isEnabled: true, pin: pinHash, pinSalt, requireOnStart: true }
+          );
+        }}
+      />
+
+      {/* [v7.5.55 E11] Verify the CURRENT PIN before change/disable. */}
+      {pinVerifyFor && pinSettings?.pin && (
+        <PinLockScreen
+          pinHash={pinSettings.pin}
+          pinSalt={pinSettings.pinSalt || ''}
+          lang={lang}
+          onUnlock={handleCurrentPinVerified}
+          onForgotPin={() => {
+            setPinVerifyFor(null);
+            setPinError(
+              lang === 'my'
+                ? 'PIN မေ့နေပါက အက်ပ်ကို လော့ခ်ချပြီး Forgot PIN မှ ပြန်ဝင်ပါ'
+                : 'If you forgot the PIN, lock the app and use Forgot PIN from the lock screen.'
+            );
+          }}
+        />
+      )}
     </div>
   );
 };

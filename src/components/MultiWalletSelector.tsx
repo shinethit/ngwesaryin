@@ -21,6 +21,8 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // [v7.5.55] Inline notice when a preset has no matching wallets (A3).
+  const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -42,15 +44,22 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
   const isAllSelected =
     selectedWalletIds.length === 0 || selectedWalletIds.length === wallets.length;
 
+  // [v7.5.55] "Separate" wallets (includeInTotals === false) are excluded
+  // from the Dashboard balance when all wallets are shown (A14).
+  const includedCount = wallets.filter((w) => w.includeInTotals !== false).length;
+  const separateCount = wallets.length - includedCount;
+
   const isSelected = (id: string) => {
     if (isAllSelected) return true;
     return selectedWalletIds.includes(id);
   };
 
   const handleToggleWallet = (id: string) => {
+    setPresetNotice(null);
     if (isAllSelected) {
-      // If currently all selected, checking one means selecting ONLY that one, or unchecking that one
-      onChangeSelectedWalletIds([id]);
+      // [v7.5.55] All selected: tapping a checked wallet unchecks JUST that
+      // one (was: selecting only the tapped wallet).
+      onChangeSelectedWalletIds(allWalletIds.filter((wId) => wId !== id));
       return;
     }
 
@@ -65,6 +74,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
   };
 
   const handleSelectAll = () => {
+    setPresetNotice(null);
     onChangeSelectedWalletIds(allWalletIds);
   };
 
@@ -72,19 +82,40 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
     const personalIds = wallets
       .filter((w) => !w.isSharedFromOther && (!w.sharedWith || w.sharedWith.length === 0))
       .map((w) => w.id);
-    onChangeSelectedWalletIds(personalIds.length > 0 ? personalIds : allWalletIds);
+    // [v7.5.55] Empty set: leave the selection unchanged and say so
+    // (was: silently selecting ALL wallets).
+    if (personalIds.length === 0) {
+      setPresetNotice(lang === 'my' ? 'ကိုယ်ပိုင် Wallet မရှိပါ' : 'No personal wallets');
+      return;
+    }
+    setPresetNotice(null);
+    onChangeSelectedWalletIds(personalIds);
   };
 
   const handleSelectSharedOnly = () => {
     const sharedIds = wallets
       .filter((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0))
       .map((w) => w.id);
-    onChangeSelectedWalletIds(sharedIds.length > 0 ? sharedIds : allWalletIds);
+    // [v7.5.55] Empty set: leave the selection unchanged and say so
+    // (was: silently selecting ALL wallets).
+    if (sharedIds.length === 0) {
+      setPresetNotice(lang === 'my' ? 'Shared Wallet မရှိပါ' : 'No shared wallets');
+      return;
+    }
+    setPresetNotice(null);
+    onChangeSelectedWalletIds(sharedIds);
   };
 
   const handleSelectIncludedOnly = () => {
     const includedIds = wallets.filter((w) => w.includeInTotals !== false).map((w) => w.id);
-    onChangeSelectedWalletIds(includedIds.length > 0 ? includedIds : allWalletIds);
+    // [v7.5.55] Empty set: leave the selection unchanged and say so
+    // (was: silently selecting ALL wallets).
+    if (includedIds.length === 0) {
+      setPresetNotice(lang === 'my' ? 'ပါဝင်သည့် Wallet မရှိပါ' : 'No included wallets');
+      return;
+    }
+    setPresetNotice(null);
+    onChangeSelectedWalletIds(includedIds);
   };
 
   // Label for trigger button
@@ -152,7 +183,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => { setIsOpen(false); setPresetNotice(null); }}
               className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -187,6 +218,13 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
               🤝 {lang === 'my' ? 'Shared သာ' : 'Shared'}
             </button>
           </div>
+
+          {/* [v7.5.55] Notice when a preset has no matching wallets (A3) */}
+          {presetNotice && (
+            <div className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+              {presetNotice}
+            </div>
+          )}
 
           {/* Search box if > 3 wallets */}
           {wallets.length > 3 && (
@@ -248,18 +286,24 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
             <span className="text-[11px] font-medium text-slate-500">
               {isAllSelected
                 ? lang === 'my'
-                  ? 'အကောင့်အားလုံး စုပေါင်းပြထားသည်'
-                  : 'All wallets selected'
+                  ? (separateCount > 0
+                      ? `ပါဝင်သည့် အကောင့် ${includedCount} ခု စုပေါင်းပြထားသည် (ခွဲထားသည့် ${separateCount} ခု မပါဝင်ပါ)`
+                      : 'အကောင့်အားလုံး စုပေါင်းပြထားသည်')
+                  : (separateCount > 0
+                      ? `${includedCount} included wallets combined (${separateCount} separate not included)`
+                      : 'All wallets selected')
                 : lang === 'my'
                 ? `${selectedWalletIds.length} ခု ရွေးချယ်ထားပါသည်`
                 : `${selectedWalletIds.length} wallets selected`}
             </span>
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => { setIsOpen(false); setPresetNotice(null); }}
               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
             >
-              {lang === 'my' ? 'ပြီးပြီ' : 'Apply'}
+              {/* [v7.5.55] Selection applies live on toggle; this button only
+                  closes the popover, so it is labelled Close, not Apply. */}
+              {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
             </button>
           </div>
         </div>

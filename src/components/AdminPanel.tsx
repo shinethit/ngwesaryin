@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   collection,
   collectionGroup,
@@ -13,6 +13,7 @@ import { db, defaultDb, safeSetDoc, safeUpdateDoc, safeDeleteDoc, trackFirestore
 import { useAuth } from '../context/AuthContext';
 import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category } from '../types';
 import { INITIAL_CATEGORIES } from '../data/initialData';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { fetchContactInfo, saveContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';
 import { subscribeVisitors, getCountryFlag, deleteVisitorDoc } from '../lib/analyticsService';
 import { QuotaDashboard } from './QuotaDashboard';
@@ -27,6 +28,7 @@ interface ActivationCode {
   usedAt?: string;
   createdAt: string;
   createdBy: string;
+  expiresAt?: string;
 }
 
 interface UserDoc {
@@ -64,6 +66,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 }) => {
   const { user, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'quota' | 'users_codes' | 'broadcast' | 'contact_info' | 'analytics'>('overview');
+  // [v7.5.55 E23] Scroll the tab strip so the active tab is visible
+  // when jumping here from an Overview shortcut.
+  const tabStripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabStripRef.current?.querySelector(`[data-tab="${activeTab}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeTab]);
 
   // Visitor & Analytics state
   const [visitorsList, setVisitorsList] = useState<VisitorDoc[]>([]);
@@ -98,6 +106,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Contact Info state
   const [contactForm, setContactForm] = useState<ContactInfo>(DEFAULT_CONTACT_INFO);
   const [contactLoading, setContactLoading] = useState(false);
+  // [v7.5.55 E16] Last successfully loaded values + load-error flag.
+  // Empty strings must never overwrite these, and a failed read must
+  // never reset the form to the hardcoded placeholder defaults.
+  const [contactSavedSnapshot, setContactSavedSnapshot] = useState<ContactInfo>(DEFAULT_CONTACT_INFO);
+  const [contactLoadError, setContactLoadError] = useState<string | null>(null);
+  const isContactDirty = JSON.stringify(contactForm) !== JSON.stringify(contactSavedSnapshot);
   const [contactSaving, setContactSaving] = useState(false);
   const [contactSuccessMsg, setContactSuccessMsg] = useState('');
 
@@ -188,6 +202,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isDeletingTxId, setIsDeletingTxId] = useState<string | null>(null);
   const [isPurgingBatch, setIsPurgingBatch] = useState(false);
   const [actionSuccessToast, setActionSuccessToast] = useState<string>('');
+
+  // [v7.5.55 E10/E18/E31] Never show confident 0s on a failed read.
+  const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
 
   // System-wide aggregated data across ALL users
   const [systemTransactions, setSystemTransactions] = useState<Transaction[]>([]);
@@ -308,8 +327,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setSystemTransactions(allTxs);
       setSystemWallets(allWallets);
       setSystemCategories(allCats);
+      // [v7.5.55 E10] A total failure must surface, not render as 0s.
+      if (allTxs.length === 0 && allWallets.length === 0 && allCats.length === 0) {
+        setOverviewError(lang === 'my' ? 'စနစ်ဒေတာ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပြီး Refresh နှိပ်ပါ' : 'Could not load system data — check connection / permissions and tap Refresh.');
+      } else {
+        setOverviewError(null);
+      }
     } catch (err) {
       console.error('Error fetching system-wide aggregated data:', err);
+      setOverviewError(lang === 'my' ? 'စနစ်ဒေတာ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပြီး Refresh နှိပ်ပါ' : 'Could not load system data — check connection / permissions and tap Refresh.');
     } finally {
       setSystemDataLoading(false);
     }
@@ -330,7 +356,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             email: user.email,
             role: 'admin',
             createdAt: new Date().toISOString(),
-          }).catch((err) => console.warn('Admin bootstrap err:', err));
+          }).then((ok) => { if (!ok) console.warn('Admin bootstrap write was rejected (rules/quota)'); }).catch((err) => console.warn('Admin bootstrap err:', err));
         }
       }).catch((e) => console.warn('Admin check err:', e));
 
@@ -424,6 +450,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     // 4. Live Visitors Listener
     const unsubVisitors = subscribeVisitors((list) => {
       setVisitorsList(list);
+      setAnalyticsError(null);
+    }, () => {
+      setAnalyticsError(lang === 'my' ? 'ဧည့်သည် မှတ်တမ်းများ ဆွဲယူ၍ မရပါ — ပြသထားသော ကိန်းဂဏန်းများသည် အမှန်မဟုတ်နိုင်ပါ' : 'Could not load visitor logs — numbers shown may be wrong.');
     });
 
 
@@ -447,7 +476,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         console.log('[admin] live txs:', txs.length);
         setSystemTransactions(txs);
       },
-      (err) => console.warn('[admin] live tx listener error:', err)
+      (err) => { console.warn('[admin] live tx listener error:', err); setListenerError('transactions'); }
     );
 
     const unsubSystemWallets = onSnapshot(
@@ -457,7 +486,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         console.log('[admin] live wallets:', wls.length);
         setSystemWallets(wls);
       },
-      (err) => console.warn('[admin] live wallet listener error:', err)
+      (err) => { console.warn('[admin] live wallet listener error:', err); setListenerError('wallets'); }
     );
 
     const unsubSystemCats = onSnapshot(
@@ -467,7 +496,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         console.log('[admin] live categories:', cats.length);
         setSystemCategories(cats);
       },
-      (err) => console.warn('[admin] live category listener error:', err)
+      (err) => { console.warn('[admin] live category listener error:', err); setListenerError('categories'); }
     );
 
     // 8. Contact Info
@@ -545,25 +574,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       'from-red-500 to-rose-600',
     ];
 
+    // [v7.5.55 E31] No expense data yet -> empty (the UI renders a
+    // "no data yet" state). Never fabricate 0-amount category rows.
     if (totalExpense <= 0) {
-      // Fallback display with registered expense categories
-      const expCats = allMergedCategories.filter((c) => c.type === 'expense').slice(0, 6);
-      if (expCats.length > 0) {
-        return expCats.map((cat, i) => ({
-          id: cat.id,
-          label: lang === 'my' ? cat.name : (cat.nameEn || cat.name),
-          amount: 0,
-          pct: 0,
-          color: colors[i % colors.length],
-        }));
-      }
-      return [
-        { id: 'cat_food', label: lang === 'my' ? '🍔 အစားအသောက်နှင့် ကုန်စုံ' : 'Food & Groceries', amount: 0, pct: 0, color: colors[0] },
-        { id: 'cat_transport', label: lang === 'my' ? '🚗 ခရီးစရိတ်နှင့် လမ်းစရိတ်' : 'Transportation & Travel', amount: 0, pct: 0, color: colors[1] },
-        { id: 'cat_vehicle', label: lang === 'my' ? '🚘 ယာဉ်စီမံခန့်ခွဲမှု' : 'Vehicle Management', amount: 0, pct: 0, color: colors[2] },
-        { id: 'cat_utilities', label: lang === 'my' ? '🏠 အိမ်စရိတ်နှင့် ဘေလ်များ' : 'Bills & Utilities', amount: 0, pct: 0, color: colors[3] },
-        { id: 'cat_shopping', label: lang === 'my' ? '🛍️ ဈေးဝယ်ခြင်း / အဝတ်အထည်' : 'Shopping', amount: 0, pct: 0, color: colors[4] },
-      ];
+      return [];
     }
 
     const catSums: { [catId: string]: number } = {};
@@ -598,20 +612,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const expenseTxs = (effectiveTransactions || []).filter((t) => t.type === 'expense');
     const colorList = ['amber', 'sky', 'indigo', 'pink', 'emerald', 'violet', 'cyan'];
 
+    // [v7.5.55 E31] No expense data yet -> empty, not fabricated rows.
     if (expenseTxs.length === 0) {
-      return [
-        {
-          catKey: 'cat_food',
-          category: lang === 'my' ? '🍔 အစားအသောက်နှင့် ကုန်စုံ (Food & Groceries)' : 'Food & Groceries',
-          color: 'amber',
-          totalAmount: 0,
-          subcats: [
-            { name: lang === 'my' ? 'မနက်စာ' : 'Breakfast', amount: 0, pct: 0, share: '0%' },
-            { name: lang === 'my' ? 'နေ့လယ်စာ / ညနေစာ' : 'Lunch & Dinner', amount: 0, pct: 0, share: '0%' },
-            { name: lang === 'my' ? 'စည်ပင်ဈေးဝယ် / ကုန်စုံ' : 'Fresh Market & Groceries', amount: 0, pct: 0, share: '0%' },
-          ],
-        },
-      ];
+      return [];
     }
 
     const catMap = new Map<string, {
@@ -728,11 +731,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const loadContactInfoData = async () => {
     setContactLoading(true);
+    setContactLoadError(null);
     try {
       const data = await fetchContactInfo();
-      setContactForm(data);
+      if (data) {
+        setContactForm(data);
+        setContactSavedSnapshot(data);
+      } else {
+        // [v7.5.55 E16] Failed read: keep the current form values.
+        setContactLoadError(lang === 'my' ? 'ဆက်သွယ်ရန် အချက်အလက် ဆွဲယူ၍ မရပါ — လက်ရှိ တန်ဖိုးများ မပြောင်းလဲထားပါ' : 'Could not load contact info — current values kept.');
+      }
     } catch (err) {
       console.error('Error loading contact info:', err);
+      setContactLoadError(lang === 'my' ? 'ဆက်သွယ်ရန် အချက်အလက် ဆွဲယူ၍ မရပါ' : 'Could not load contact info');
     } finally {
       setContactLoading(false);
     }
@@ -740,10 +751,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleSaveContactInfo = async (e: React.FormEvent) => {
     e.preventDefault();
+    // [v7.5.55 E16] Validate: phone-like fields must be digits (+,
+    // spaces, dashes allowed), 9-15 digits; telegram username must
+    // look like @name. Empty strings keep the previously saved value
+    // instead of overwriting good values with blanks.
+    const phoneOk = (v?: string) => !v || /^\+?[0-9][0-9\s\-]{7,14}$/.test(v.trim());
+    for (const [label, v] of [['Viber', contactForm.viberPhone], ['KPay', contactForm.kpayPhone], ['Wave', contactForm.wavePhone]] as const) {
+      if (v && !phoneOk(v)) {
+        alert(lang === 'my' ? `${label} ဖုန်းနံပါတ် မမှန်ပါ — ဂဏန်း ၉-၁၅ လုံး ထည့်ပါ` : `${label} phone number is invalid — enter 9-15 digits`);
+        return;
+      }
+    }
+    if (contactForm.telegramUsername && !/^@?[A-Za-z0-9_]{3,}$/.test(contactForm.telegramUsername.trim())) {
+      alert(lang === 'my' ? 'Telegram username မမှန်ပါ — ဥပမာ @ankhsam' : 'Telegram username is invalid — e.g. @ankhsam');
+      return;
+    }
+    const toSave: ContactInfo = { ...contactForm };
+    (['viberPhone', 'phone', 'kpayPhone', 'kpayName', 'wavePhone', 'waveName', 'telegramUsername'] as const).forEach((k) => {
+      if (!toSave[k]) (toSave as any)[k] = contactSavedSnapshot[k];
+    });
     setContactSaving(true);
     setContactSuccessMsg('');
     try {
-      await saveContactInfo(contactForm);
+      await saveContactInfo(toSave);
+      setContactForm(toSave);
+      setContactSavedSnapshot(toSave);
       setContactSuccessMsg(lang === 'my' ? 'ဆက်သွယ်ရန် အချက်အလက်များ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ ✓' : 'Contact details saved successfully ✓');
       setTimeout(() => setContactSuccessMsg(''), 4000);
     } catch (err) {
@@ -788,6 +820,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       await loadSystemWideData();
     } catch (err) {
       console.error('Error fetching admin data:', err);
+      setOverviewError(lang === 'my' ? 'Admin ဒေတာ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not load admin data — check connection / permissions.');
     }
     setDataLoading(false);
   };
@@ -829,31 +862,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleGenerateCodes = async () => {
     if (!user) return;
+    // [v7.5.55 E5] Quantity was unvalidated: empty -> 0, 0/-5 -> "0 codes
+    // generated", 1.5 -> 2 codes while the alert said 1.5, 200 bypassed
+    // the supposed 50 cap. Must be an integer 1-50 (Myanmar digits OK).
+    const qty = parseMyanmarNumber(String(generateCount));
+    if (!Number.isInteger(qty) || qty < 1 || qty > 50) {
+      alert(lang === 'my' ? 'ကုဒ် အရေအတွက် ၁ မှ ၅၀ အတွင်း ကိန်းပြည့်သာ ထည့်ပါ' : 'Quantity must be a whole number from 1 to 50');
+      return;
+    }
     setDataLoading(true);
     try {
       // Ensure admin doc exists in Firestore before writing activation codes
       const adminRef = doc(db, 'admins', user.uid);
       const adminSnap = await getDoc(adminRef);
       if (!adminSnap.exists() && user.email === MASTER_ADMIN_EMAIL) {
-        await safeSetDoc(adminRef, {
+        const adminOk = await safeSetDoc(adminRef, {
           email: user.email,
           createdAt: new Date().toISOString(),
         });
+        if (!adminOk) {
+          alert(lang === 'my' ? 'Admin မှတ်တမ်း ဖန်တီး၍ မရပါ — ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not create admin record — check permissions.');
+          setDataLoading(false);
+          return;
+        }
       }
 
-      for (let i = 0; i < generateCount; i++) {
+      let made = 0;
+      for (let i = 0; i < qty; i++) {
         const codeString = generateRandomCode();
+        // [v7.5.55 E30] Codes expire 1 year after creation.
         const newCode: ActivationCode = {
           code: codeString,
           months: selectedMonths,
           isUsed: false,
           createdAt: new Date().toISOString(),
           createdBy: user.uid,
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         };
-        await safeSetDoc(doc(db, 'activationCodes', codeString), newCode);
+        const ok = await safeSetDoc(doc(db, 'activationCodes', codeString), newCode);
+        if (ok) made += 1;
       }
       await fetchAllData();
-      alert(lang === 'my' ? `${generateCount} ကုဒ် အသစ်အောင်မြင်စွာ ထုတ်ပြီးပါပြီ ✓` : `Generated ${generateCount} new code(s) successfully ✓`);
+      if (made === qty) {
+        alert(lang === 'my' ? `${made} ကုဒ် အသစ်အောင်မြင်စွာ ထုတ်ပြီးပါပြီ ✓` : `Generated ${made} new code(s) successfully ✓`);
+      } else {
+        alert(lang === 'my' ? `⚠️ ကုဒ် ${made}/${qty} ခုသာ ထုတ်ယူနိုင်ခဲ့ပါသည် — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ` : `⚠️ Only ${made}/${qty} codes were created — check connection / permissions.`);
+      }
     } catch (err: any) {
       console.error('Failed to generate codes', err);
       const msg = String(err?.message || err?.code || err);
@@ -878,19 +932,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     ) {
       setDataLoading(true);
       try {
-        await safeDeleteDoc(doc(db, 'activationCodes', codeId));
-        setCodes(codes.filter((c) => c.code !== codeId));
+        const ok = await safeDeleteDoc(doc(db, 'activationCodes', codeId));
+        if (ok) {
+          setCodes(codes.filter((c) => c.code !== codeId));
+        } else {
+          alert(lang === 'my' ? 'ကုဒ် ဖျက်၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not delete the code — check connection / permissions.');
+        }
       } catch (err) {
         console.error('Failed to delete code', err);
+        alert(lang === 'my' ? 'ကုဒ် ဖျက်၍ မရပါ' : 'Failed to delete code');
       }
       setDataLoading(false);
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(text);
-    setTimeout(() => setCopiedCode(null), 2000);
+  // [v7.5.55 E26] Await the write: the green check used to show even
+  // when nothing was copied. Fallback + error on failure.
+  const copyToClipboard = async (text: string) => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch { ok = false; }
+    }
+    if (ok) {
+      setCopiedCode(text);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } else {
+      alert(lang === 'my' ? 'ကူးယူ၍ မရပါ — ကုဒ်ကို လက်ဖြင့် ရွေးပြီး ကူးပါ' : 'Copy failed — please select and copy the code manually');
+    }
   };
 
   // Helper to find assigned user for a code
@@ -926,18 +1006,54 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return null;
   };
 
+  // [v7.5.55 E19] Revoke Premium for the user a used code belongs to.
+  // Deleting the code alone never touched users/{uid}.plan.
+  const handleRevokeCode = async (code: ActivationCode) => {
+    const assigned = getAssignedUser(code);
+    if (!assigned?.id) {
+      alert(lang === 'my' ? 'ဤကုဒ်ကို သုံးထားသော အသုံးပြုသူကို ရှာမတွေ့ပါ' : 'Could not find the user who redeemed this code.');
+      return;
+    }
+    if (!window.confirm(lang === 'my' ? `ကုဒ် "${code.code}" ကို သုံးထားသော ${assigned.email} ၏ Premium ကို ရုပ်သိမ်းပြီး Free သို့ ပြန်ချမည်လား။` : `Revoke Premium from ${assigned.email} (code "${code.code}") and downgrade to Free?`)) {
+      return;
+    }
+    const ok = await safeSetDoc(doc(db, 'users', assigned.id), {
+      plan: 'free',
+      premiumExpiresAt: null,
+      premiumMonths: 0,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    if (!ok) {
+      alert(lang === 'my' ? 'Premium ရုပ်သိမ်း၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not revoke Premium — check connection / permissions.');
+      return;
+    }
+    await fetchAllData();
+    alert(lang === 'my' ? 'Premium ကို ရုပ်သိမ်းပြီး Free Plan သို့ ပြောင်းလဲပြီးပါပြီ ✓' : 'Premium revoked — user is now on Free ✓');
+  };
+
   // State for Duration Selection Modal when Granting Premium directly
   const [selectedUserForPlan, setSelectedUserForPlan] = useState<UserDoc | null>(null);
 
   // Quick toggle / Grant plan with explicit duration selection
   const handleGrantPlanWithDuration = async (u: UserDoc, monthsDuration: number) => {
+    // [v7.5.55 E19] Grant / revoke used to act immediately with no
+    // confirm. Confirm first (both directions).
+    const label = monthsDuration === 0
+      ? (lang === 'my' ? 'Free Plan သို့ ပြန်ချမည်' : 'Revoke Premium to Free')
+      : monthsDuration === 999
+      ? (lang === 'my' ? 'တစ်သက်လုံး Premium ပေးမည်' : 'Grant Lifetime Premium')
+      : (lang === 'my' ? `${monthsDuration} လ Premium ပေးမည်` : `Grant Premium for ${monthsDuration} months`);
+    if (!window.confirm(lang === 'my' ? `${u.email || u.displayName || 'အသုံးပြုသူ'} ကို ${label} — သေချာပါသလား။` : `${label} for ${u.email || u.displayName || 'this user'} — are you sure?`)) {
+      setSelectedUserForPlan(null);
+      return;
+    }
     setSelectedUserForPlan(null);
     setDataLoading(true);
     try {
       const userRef = doc(db, 'users', u.id);
       if (monthsDuration === 0) {
         // Downgrade to Free
-        await safeSetDoc(
+        const ok = await safeSetDoc(
           userRef,
           {
             plan: 'free',
@@ -947,14 +1063,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           },
           { merge: true }
         );
+        if (!ok) {
+          alert(lang === 'my' ? 'Free Plan သို့ ပြောင်းလဲ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not downgrade to Free — check connection / permissions.');
+          setDataLoading(false);
+          return;
+        }
         await fetchAllData();
         alert(lang === 'my' ? 'Free Plan သို့ ပြောင်းလဲပြီးပါပြီ ✓' : 'Downgraded to Free Plan ✓');
       } else {
         const now = new Date();
         // Calculate expiration date based on selected months
         // If 999 months (Lifetime), set to ~99 years
-        const expDays = monthsDuration === 999 ? 365 * 99 : Math.round(monthsDuration * 30.5);
-        const expiresAt = new Date(now.getTime() + expDays * 24 * 60 * 60 * 1000).toISOString();
+        // [v7.5.55 E6] A month is 30 days EVERYWHERE (was 30.5 here).
+        // Renewals stack onto the existing expiry when it is later.
+        const currentExpMs = u.premiumExpiresAt ? new Date(u.premiumExpiresAt).getTime() : NaN;
+        const baseMs = !isNaN(currentExpMs) && currentExpMs > now.getTime() ? currentExpMs : now.getTime();
+        const expDays = monthsDuration === 999 ? 365 * 99 : monthsDuration * 30;
+        const expiresAt = new Date(baseMs + expDays * 24 * 60 * 60 * 1000).toISOString();
         const durationLabel =
           monthsDuration === 999
             ? lang === 'my' ? 'တစ်သက်လုံး (Lifetime)' : 'Lifetime'
@@ -962,7 +1087,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             ? `${Math.round(monthsDuration / 12)} နှစ်`
             : `${monthsDuration} လ`;
 
-        await safeSetDoc(
+        const ok = await safeSetDoc(
           userRef,
           {
             plan: 'premium',
@@ -973,6 +1098,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           },
           { merge: true }
         );
+        if (!ok) {
+          alert(lang === 'my' ? 'Premium ပေး၍ မရပါ — ကုဒ်/အကောင့် မပြောင်းလဲပါ။ အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not grant Premium — nothing was changed. Check connection / permissions.');
+          setDataLoading(false);
+          return;
+        }
         await fetchAllData();
         alert(
           lang === 'my'
@@ -1003,9 +1133,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setSubmittingMsg(true);
     try {
       const now = new Date().toISOString();
+      let ok = false;
       if (editingMsgId) {
         const msgRef = doc(db, 'systemMessages', editingMsgId);
-        await safeUpdateDoc(msgRef, {
+        ok = await safeUpdateDoc(msgRef, {
           title: msgTitle.trim(),
           content: msgContent.trim(),
           type: msgType,
@@ -1015,7 +1146,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         });
       } else {
         const msgRef = doc(collection(db, 'systemMessages'));
-        await safeSetDoc(msgRef, {
+        ok = await safeSetDoc(msgRef, {
           title: msgTitle.trim(),
           content: msgContent.trim(),
           type: msgType,
@@ -1025,26 +1156,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           authorEmail: user?.email || 'admin',
         });
       }
-
+      // [v7.5.55 E8] On failure KEEP the form (it used to be wiped
+      // even though nothing was saved) and show a Burmese error.
+      if (!ok) {
+        alert(lang === 'my' ? 'ကြေညာချက် သိမ်းဆည်း၍ မရပါ — ဖောင်အကြောင်းအရာများ မဖျက်ထားပါ။ အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပြီး ပြန်ကြိုးစားပါ' : 'Could not save the broadcast — your text is kept. Check connection / permissions and try again.');
+        setSubmittingMsg(false);
+        return;
+      }
+      // [v7.5.55 E20] Reset ALL five form fields on save (type /
+      // marquee / active used to leak into the next new message).
       setMsgTitle('');
       setMsgContent('');
+      setMsgType('announcement');
+      setMsgIsMarquee(true);
+      setMsgIsActive(true);
       setEditingMsgId(null);
       await fetchMessages();
     } catch (err) {
       console.error('Error saving system message:', err);
-      alert('Failed to save message');
+      alert(lang === 'my' ? 'ကြေညာချက် သိမ်းဆည်း၍ မရပါ — ဖောင်အကြောင်းအရာများ မဖျက်ထားပါ' : 'Failed to save message — your text is kept');
     }
     setSubmittingMsg(false);
   };
 
   const handleDeleteMessage = async (id: string) => {
-    if (window.confirm(lang === 'my' ? 'ဤမက်ဆေ့ခ်ျကို ဖျက်မည်လား။' : 'Delete this message?'))
+    if (!window.confirm(lang === 'my' ? 'ဤမက်ဆေ့ခ်ျကို ဖျက်မည်လား။' : 'Delete this message?'))
       return;
     try {
-      await safeDeleteDoc(doc(db, 'systemMessages', id));
-      setMessages(messages.filter((m) => m.id !== id));
+      const ok = await safeDeleteDoc(doc(db, 'systemMessages', id));
+      if (ok) {
+        setMessages(messages.filter((m) => m.id !== id));
+      } else {
+        alert(lang === 'my' ? 'မက်ဆေ့ခ်ျ ဖျက်၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not delete the message — check connection / permissions.');
+      }
     } catch (err) {
       console.error('Error deleting message:', err);
+      alert(lang === 'my' ? 'မက်ဆေ့ခ်ျ ဖျက်၍ မရပါ' : 'Failed to delete message');
     }
   };
 
@@ -1055,6 +1202,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setMsgType(m.type);
     setMsgIsMarquee(m.isMarquee);
     setMsgIsActive(m.isActive);
+    // [v7.5.55 E20] On a phone nothing visibly changed before — scroll
+    // the form into view so the admin sees the edit state.
+    setTimeout(() => {
+      document.getElementById('broadcast-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   const handleCancelEdit = () => {
@@ -1069,39 +1221,51 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const handleToggleActive = async (m: AdminSystemMessage) => {
     try {
       const msgRef = doc(db, 'systemMessages', m.id);
-      await safeUpdateDoc(msgRef, {
+      const ok = await safeUpdateDoc(msgRef, {
         isActive: !m.isActive,
         updatedAt: new Date().toISOString(),
       });
+      if (!ok) {
+        alert(lang === 'my' ? 'အခြေအနေ ပြောင်း၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not change the status — check connection / permissions.');
+        return;
+      }
       setMessages(
         messages.map((item) => (item.id === m.id ? { ...item, isActive: !item.isActive } : item))
       );
     } catch (err) {
       console.error('Error toggling active status:', err);
+      alert(lang === 'my' ? 'အခြေအနေ ပြောင်း၍ မရပါ' : 'Could not change the status');
     }
   };
 
   const handleToggleMarquee = async (m: AdminSystemMessage) => {
     try {
       const msgRef = doc(db, 'systemMessages', m.id);
-      await safeUpdateDoc(msgRef, {
+      const ok = await safeUpdateDoc(msgRef, {
         isMarquee: !m.isMarquee,
         updatedAt: new Date().toISOString(),
       });
+      if (!ok) {
+        alert(lang === 'my' ? 'Marquee ပြောင်း၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not change marquee — check connection / permissions.');
+        return;
+      }
       setMessages(
         messages.map((item) => (item.id === m.id ? { ...item, isMarquee: !item.isMarquee } : item))
       );
     } catch (err) {
       console.error('Error toggling marquee:', err);
+      alert(lang === 'my' ? 'Marquee ပြောင်း၍ မရပါ' : 'Could not change marquee');
     }
   };
 
   // Filtered Codes
   const filteredCodes = codes.filter((c) => {
     const assigned = getAssignedUser(c);
+    const assignedUser = assigned?.id ? usersList.find((u) => u.id === assigned.id) : undefined;
     const matchesSearch =
       c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (assigned?.email && assigned.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (assignedUser?.displayName && assignedUser.displayName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (assigned?.id && assigned.id.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
@@ -1115,6 +1279,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const filteredUsers = usersList.filter((u) => {
     const matchesSearch =
       (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (u.displayName && u.displayName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.premiumCodeUsed && u.premiumCodeUsed.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -1125,7 +1290,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const totalCodesCount = codes.length;
   const usedCodesCount = codes.filter((c) => c.isUsed).length;
   const availableCodesCount = totalCodesCount - usedCodesCount;
-  const premiumUsersCount = usersList.filter((u) => u.plan === 'premium').length;
+  // [v7.5.55 E10] Expired Premium counts as Free everywhere.
+  const premiumUsersCount = usersList.filter((u) => getUserEffectivePlan(u) === 'premium').length;
 
   // Registered user lookup set for instant, rock-solid Member recognition
   const registeredUserSet = useMemo(() => {
@@ -1219,7 +1385,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           userId: existing.userId || v.userId,
           userEmail: existing.userEmail || v.userEmail,
           userName: resolvedName,
-          visitCount: Math.max(existing.visitCount || 1, v.visitCount || 1),
+          visitCount: Math.max(existing.visitCount || 0, v.visitCount || 0),
           firstSeenAt: Math.min(existing.firstSeenAt || existing.lastActiveAt, v.firstSeenAt || v.lastActiveAt),
           lastActiveAt: Math.max(existing.lastActiveAt, v.lastActiveAt),
           country: existing.country || v.country,
@@ -1245,8 +1411,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     let desktopCount = 0;
 
     deduplicatedVisitors.forEach((v) => {
-      const countryName = v.country || 'Myanmar';
-      const countryCode = v.countryCode || 'MM';
+      const countryName = v.country || '—';
+      const countryCode = v.countryCode || '';
 
       if (!countriesMap[countryName]) {
         countriesMap[countryName] = { code: countryCode, count: 0 };
@@ -1254,9 +1420,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       countriesMap[countryName].count += 1;
 
       if (v.device === 'mobile') mobileCount += 1;
+      else if (v.device === 'tablet') { /* counted in tabletCount */ }
       else desktopCount += 1;
     });
 
+    const tabletCount = deduplicatedVisitors.filter((v) => v.device === 'tablet').length;
     const countriesSorted = Object.entries(countriesMap)
       .map(([country, data]) => ({ country, code: data.code, count: data.count }))
       .sort((a, b) => b.count - a.count);
@@ -1268,6 +1436,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       countriesSorted,
       mobileCount,
       desktopCount,
+      tabletCount,
     };
   }, [deduplicatedVisitors]);
 
@@ -1314,7 +1483,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
     try {
       setIsDeletingTxId(tx.id);
-      await safeDeleteDoc(doc(db, docPath));
+      const ok = await safeDeleteDoc(doc(db, docPath));
+      if (!ok) {
+        alert(lang === 'my' ? 'မှတ်တမ်း ဖျက်၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not delete the record — check connection / permissions.');
+        return;
+      }
       setSystemTransactions((prev) => prev.filter((t) => t.id !== tx.id));
       setActionSuccessToast(lang === 'my' ? 'စာရင်းမှတ်တမ်းကို အောင်မြင်စွာ ဖျက်ပစ်ပြီးပါပြီ။' : 'Record deleted successfully.');
       setTimeout(() => setActionSuccessToast(''), 3000);
@@ -1351,12 +1524,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         if (docPath) {
           return safeDeleteDoc(doc(db, docPath));
         }
-        return Promise.resolve();
+        return Promise.resolve(false);
       });
-      await Promise.all(deletePromises);
+      const results = await Promise.all(deletePromises);
+      const deletedCount = results.filter(Boolean).length;
       const matchedIds = new Set(matched.map((t) => t.id));
       setSystemTransactions((prev) => prev.filter((t) => !matchedIds.has(t.id)));
-      setActionSuccessToast(lang === 'my' ? `"${catLabel}" ရှိ စာရင်း ${matched.length} ခုကို အောင်မြင်စွာ ရှင်းလင်းပြီးပါပြီ။` : `Purged ${matched.length} records in "${catLabel}".`);
+      if (deletedCount === matched.length) {
+        setActionSuccessToast(lang === 'my' ? `"${catLabel}" ရှိ စာရင်း ${matched.length} ခုကို အောင်မြင်စွာ ရှင်းလင်းပြီးပါပြီ။` : `Purged ${matched.length} records in "${catLabel}".`);
+      } else {
+        alert(lang === 'my' ? `⚠️ "${catLabel}" ရှိ စာရင်း ${deletedCount}/${matched.length} ခုသာ ဖျက်နိုင်ခဲ့ပါသည် — အချို့ ဖျက်၍ မရပါ` : `⚠️ Only ${deletedCount}/${matched.length} records in "${catLabel}" could be deleted.`);
+      }
       setTimeout(() => setActionSuccessToast(''), 4000);
     } catch (err: any) {
       console.error('Batch purge category error:', err);
@@ -1381,10 +1559,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setIsPurgingBatch(true);
       const userTxSnap = await getDocs(collection(db, 'users', userId, 'transactions'));
       const delPromises = userTxSnap.docs.map((d) => safeDeleteDoc(d.ref));
-      await Promise.all(delPromises);
+      const results = await Promise.all(delPromises);
+      const deletedCount = results.filter(Boolean).length;
 
       setSystemTransactions((prev) => prev.filter((t) => ((t as any)._userId || t.userId) !== userId));
-      setActionSuccessToast(lang === 'my' ? `User ၏ စာရင်းများကို အောင်မြင်စွာ ရှင်းလင်းပြီးပါပြီ။` : `User records cleared successfully.`);
+      if (deletedCount === userTxSnap.docs.length) {
+        setActionSuccessToast(lang === 'my' ? `User ၏ စာရင်းများကို အောင်မြင်စွာ ရှင်းလင်းပြီးပါပြီ။` : `User records cleared successfully.`);
+      } else {
+        alert(lang === 'my' ? `⚠️ User ၏ စာရင်း ${deletedCount}/${userTxSnap.docs.length} ခုသာ ဖျက်နိုင်ခဲ့ပါသည်` : `⚠️ Only ${deletedCount}/${userTxSnap.docs.length} user records could be deleted.`);
+      }
       setTimeout(() => setActionSuccessToast(''), 3000);
     } catch (err: any) {
       console.error('Purge user records error:', err);
@@ -1404,18 +1587,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setIsPurgingBatch(true);
       // 1. Purge transactions subcollection
       const txSnap = await getDocs(collection(db, 'users', userId, 'transactions'));
-      await Promise.all(txSnap.docs.map((d) => safeDeleteDoc(d.ref)));
+      const txResults = await Promise.all(txSnap.docs.map((d) => safeDeleteDoc(d.ref)));
 
       // 2. Purge wallets subcollection
       const wlSnap = await getDocs(collection(db, 'users', userId, 'wallets'));
-      await Promise.all(wlSnap.docs.map((d) => safeDeleteDoc(d.ref)));
+      const wlResults = await Promise.all(wlSnap.docs.map((d) => safeDeleteDoc(d.ref)));
 
       // 3. Purge categories subcollection
       const catSnap = await getDocs(collection(db, 'users', userId, 'categories'));
-      await Promise.all(catSnap.docs.map((d) => safeDeleteDoc(d.ref)));
+      const catResults = await Promise.all(catSnap.docs.map((d) => safeDeleteDoc(d.ref)));
 
       // 4. Delete user document
-      await safeDeleteDoc(doc(db, 'users', userId));
+      const userDocOk = await safeDeleteDoc(doc(db, 'users', userId));
+      if (!userDocOk || txResults.some((r) => !r) || wlResults.some((r) => !r) || catResults.some((r) => !r)) {
+        alert(lang === 'my' ? '⚠️ အကောင့်၏ အချို့ ဒေတာများ ဖျက်၍ မရပါ — ကျန်ရှိသော ဒေတာများ ရှိနေနိုင်ပါသည်။ အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : '⚠️ Some of the account data could not be deleted — some data may remain. Check connection / permissions.');
+        setIsPurgingBatch(false);
+        return;
+      }
 
       setUsersList((prev) => prev.filter((u) => u.id !== userId));
       setSystemTransactions((prev) => prev.filter((t) => ((t as any)._userId || t.userId) !== userId));
@@ -1441,10 +1629,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight">
                 Admin Control Center
               </h2>
-              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Super Admin
-              </span>
+              {user?.email === MASTER_ADMIN_EMAIL && (
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Super Admin
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {lang === 'my'
@@ -1454,7 +1644,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
 
           <button
-            onClick={onClose}
+            onClick={() => {
+              // [v7.5.55 E16] Dirty-check: closing with unsaved contact edits asks first.
+              if (activeTab === 'contact_info' && isContactDirty && !window.confirm(lang === 'my' ? 'ဆက်သွယ်ရန် အချက်အလက် အပြောင်းအလဲများ မသိမ်းရသေးပါ — ပိတ်မည်လား။' : 'Contact changes are not saved yet — close anyway?')) return;
+              onClose();
+            }}
             className="p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors self-end sm:self-auto cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -1463,9 +1657,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* Unified 6 Tabs Navigation */}
         <div className="relative">
-        <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 sm:pt-3 pb-2 shrink-0 border-b border-slate-100 overflow-x-auto sm:overflow-visible -mx-1 px-1">
+        <div ref={tabStripRef} className="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 sm:pt-3 pb-2 shrink-0 border-b border-slate-100 overflow-x-auto sm:overflow-visible -mx-1 px-1">
           <button
             type="button"
+            data-tab="overview"
             onClick={() => setActiveTab('overview')}
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'overview'
@@ -1481,8 +1676,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             type="button"
+            data-tab="quota"
             onClick={() => setActiveTab('quota')}
-            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center relative ${
+            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 relative ${
               activeTab === 'quota'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1496,6 +1692,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             type="button"
+            data-tab="users_codes"
             onClick={() => setActiveTab('users_codes')}
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'users_codes'
@@ -1513,6 +1710,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             type="button"
+            data-tab="broadcast"
             onClick={() => setActiveTab('broadcast')}
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'broadcast'
@@ -1530,6 +1728,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             type="button"
+            data-tab="contact_info"
             onClick={() => setActiveTab('contact_info')}
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'contact_info'
@@ -1547,6 +1746,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             type="button"
+            data-tab="analytics"
             onClick={() => setActiveTab('analytics')}
             className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'analytics'
@@ -1566,7 +1766,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         {/* Diagnostic/Bootstrap banner if codes or users is empty but we are on the users_codes tab */}
-        {activeTab === 'users_codes' && codes.length === 0 && usersList.length === 0 && (
+        {activeTab === 'users_codes' && !dataLoading && codes.length === 0 && usersList.length === 0 && (
           <div className="mx-1 mt-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
@@ -1590,11 +1790,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 onClick={async () => {
                   try {
                     const adminRef = doc(db, 'admins', user?.uid || '');
-                    await safeSetDoc(adminRef, {
+                    const ok = await safeSetDoc(adminRef, {
                       email: user?.email,
                       role: 'admin',
                       createdAt: new Date().toISOString(),
                     });
+                    if (!ok) {
+                      alert(lang === 'my' ? 'Admin အသက်သွင်း၍ မရပါ — Firestore ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not activate admin — check Firestore permissions.');
+                      return;
+                    }
                     alert(lang === 'my' ? '✓ အက်မင်အသက်သွင်းပြီးပါပြီ။ ဇယားများပေါ်ရန် ဒေတာ အသစ်ယူမည် ကို နှိပ်ပါ သို့မဟုတ် စာမျက်နှာကို reload လုပ်ပါ။' : '✓ Admin status bootstrapped! Reloading database...');
                     await fetchAllData();
                   } catch (e: any) {
@@ -1618,6 +1822,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 0: SYSTEM & FINANCIAL OVERVIEW (PRIVACY-PRESERVED AGGREGATES) */}
         {activeTab === 'overview' && (
           <div className="flex-1 overflow-y-auto pt-3 space-y-4 pr-1">
+            {overviewError && (
+              <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 text-xs font-bold text-rose-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{overviewError}</span>
+              </div>
+            )}
             {/* Privacy Architecture Highlight Card */}
             <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-indigo-900/50 flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-3">
               <div className="flex items-start sm:items-center gap-3">
@@ -1663,7 +1873,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <Users className="w-4 h-4 text-indigo-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 font-mono">
-                  {usersList.length}
+                  {dataLoading ? '—' : usersList.length}
                 </div>
                 <div className="text-[11px] text-slate-500 font-medium">
                   {lang === 'my'
@@ -1681,7 +1891,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <Crown className="w-4 h-4 text-amber-600" />
                 </div>
                 <div className="text-2xl font-black text-amber-900 font-mono">
-                  {usersList.length > 0
+                  {dataLoading ? '—' : usersList.length > 0
                     ? `${Math.round((premiumUsersCount / usersList.length) * 100)}%`
                     : '0%'}
                 </div>
@@ -1699,12 +1909,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <Key className="w-4 h-4 text-emerald-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 font-mono">
-                  {totalCodesCount}
+                  {dataLoading ? '—' : totalCodesCount}
                 </div>
                 <div className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
-                  <span>Used: {usedCodesCount}</span>
+                  <span>Used: {dataLoading ? '—' : usedCodesCount}</span>
                   <span className="text-slate-300">•</span>
-                  <span>Avail: {availableCodesCount}</span>
+                  <span>Avail: {dataLoading ? '—' : availableCodesCount}</span>
                 </div>
               </div>
 
@@ -1717,10 +1927,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <Activity className="w-4 h-4 text-purple-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 font-mono">
-                  {analyticsStats.total}
+                  {analyticsError ? '—' : analyticsStats.total}
                 </div>
                 <div className="text-[11px] text-purple-700 font-medium">
-                  {analyticsStats.countriesSorted.length} {lang === 'my' ? 'နိုင်ငံမှ ဝင်ရောက်' : 'countries recorded'}
+                  {analyticsError
+                    ? (lang === 'my' ? 'ဒေတာ ဆွဲယူ၍ မရပါ' : 'Could not load')
+                    : `${analyticsStats.countriesSorted.length} ${lang === 'my' ? 'နိုင်ငံမှ ဝင်ရောက်' : 'countries recorded'}`}
                 </div>
               </div>
             </div>
@@ -1914,9 +2126,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           <Sliders className="w-3 h-3" />
                           <span>{lang === 'my' ? '🧹 စာရင်းများ စစ်ဆေး/ရှင်းလင်းမည်' : 'Manage Records'}</span>
                         </button>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">
-                          <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${systemDataLoading ? 'animate-ping' : 'animate-pulse'}`} />
-                          {systemDataLoading
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${listenerError ? 'bg-rose-50 border-rose-300 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${listenerError ? 'bg-rose-500' : 'bg-emerald-500'} ${systemDataLoading ? 'animate-ping' : 'animate-pulse'}`} />
+                          {listenerError
+                            ? (lang === 'my' ? `⚠️ Live Sync ပြတ်တောက်နေ (${listenerError})` : `⚠️ Live sync error (${listenerError})`)
+                            : systemDataLoading
                             ? (lang === 'my' ? 'စုစည်းနေဆဲ...' : 'Syncing...')
                             : (lang === 'my' ? 'All Live Sync' : 'All Users Live Sync')}
                         </span>
@@ -1924,6 +2138,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
 
                     <div className="space-y-2.5 pt-1">
+                      {liveCategoryBenchmarks.length === 0 && !systemDataLoading && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 font-medium">
+                          {lang === 'my' ? 'အသုံးစရိတ် မှတ်တမ်း မရှိသေးပါ — ဒေတာ ရှိလာပါက ဤနေရာတွင် ပေါ်လာပါမည်' : 'No expense data yet — categories will appear here once records exist.'}
+                        </div>
+                      )}
                       {liveCategoryBenchmarks.map((cat) => (
                         <div key={cat.id} className="space-y-1 group">
                           <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
@@ -2015,6 +2234,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             </div>
                           </div>
                         ))}
+                      {liveSubCategoryBenchmarks.length === 0 && !systemDataLoading && (
+                        <div className="col-span-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 font-medium">
+                          {lang === 'my' ? 'အသုံးစရိတ် မှတ်တမ်း မရှိသေးပါ — ဒေတာ ရှိလာပါက ဤနေရာတွင် ပေါ်လာပါမည်' : 'No expense data yet — sub-categories will appear here once records exist.'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2069,6 +2293,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         {analyticsStats.total > 0 ? Math.round((analyticsStats.desktopCount / analyticsStats.total) * 100) : 0}%
                       </span>
                     </div>
+                    <div className="flex items-center justify-between text-xs text-slate-700">
+                      <span className="flex items-center gap-1">📱 Tablet</span>
+                      <span className="font-mono font-bold text-teal-600">
+                        {analyticsStats.total > 0 ? Math.round((analyticsStats.tabletCount / analyticsStats.total) * 100) : 0}%
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -2080,7 +2310,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('broadcast')}
+                    data-tab="broadcast"
+            onClick={() => setActiveTab('broadcast')}
                     className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer"
                   >
                     {lang === 'my' ? 'ကြည့်ရန် →' : 'View →'}
@@ -2098,7 +2329,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('users_codes')}
+                  data-tab="users_codes"
+            onClick={() => setActiveTab('users_codes')}
                   className="p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-xs transition-all text-left group cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
@@ -2115,7 +2347,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('broadcast')}
+                  data-tab="broadcast"
+            onClick={() => setActiveTab('broadcast')}
                   className="p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-xs transition-all text-left group cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
@@ -2132,7 +2365,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('analytics')}
+                  data-tab="analytics"
+            onClick={() => setActiveTab('analytics')}
                   className="p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-xs transition-all text-left group cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
@@ -2149,7 +2383,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('quota')}
+                  data-tab="quota"
+            onClick={() => setActiveTab('quota')}
                   className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 hover:border-amber-400 hover:shadow-xs transition-all text-left group cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
@@ -2166,7 +2401,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('contact_info')}
+                  data-tab="contact_info"
+            onClick={() => setActiveTab('contact_info')}
                   className="p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-xs transition-all text-left group cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
@@ -2389,7 +2625,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             : 'Used By (User Account)'}
                         </th>
                         <th className="py-3 px-4">Activated / Expiry</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+                        <th className="py-3 px-4 text-right sticky right-0 bg-slate-50">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
@@ -2475,7 +2711,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 {assigned ? (
                                   <div className="space-y-0.5">
                                     <div className="font-bold text-slate-900 flex items-center gap-1">
-                                      <span className="text-slate-800">{assigned.email}</span>
+                                      <span className="text-slate-800 truncate max-w-[160px]">{assigned.email}</span>
                                     </div>
                                     {assigned.id && (
                                       <div className="text-[10px] text-slate-400 font-mono">
@@ -2518,8 +2754,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               </td>
 
                               {/* Actions */}
-                              <td className="py-3 px-4 text-right">
+                              <td className="py-3 px-4 text-right sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
                                 <div className="flex items-center justify-end gap-1.5">
+                                  {c.isUsed && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRevokeCode(c)}
+                                      className="px-2 py-1 text-[10px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors cursor-pointer"
+                                      title="Revoke this user's Premium"
+                                    >
+                                      {lang === 'my' ? 'ရုပ်သိမ်းမည်' : 'Revoke'}
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteCode(c.code)}
@@ -2549,7 +2795,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <th className="py-3 px-4">Current Plan</th>
                         <th className="py-3 px-4">Records & Expenses</th>
                         <th className="py-3 px-4">Expiry Date</th>
-                        <th className="py-3 px-4 text-right">Account & Data Actions</th>
+                        <th className="py-3 px-4 text-right sticky right-0 bg-slate-50">Account & Data Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
@@ -2577,7 +2823,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 <div className="font-bold text-slate-900">
                                   {u.email || u.displayName || 'Guest User'}
                                 </div>
-                                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate max-w-[160px]">
                                   UID: {u.id}
                                 </div>
                               </td>
@@ -2634,7 +2880,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   <span className="text-slate-400">—</span>
                                 )}
                               </td>
-                              <td className="py-3 px-4 text-right">
+                              <td className="py-3 px-4 text-right sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
                                 <div className="inline-flex items-center gap-1.5 justify-end">
                                   {/* View / Manage Transactions for this User */}
                                   <button
@@ -2670,6 +2916,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                       : '✨ Grant'}
                                   </button>
 
+                                  {/* Delete the whole user account (E19) */}
+                                  <button
+                                    type="button"
+                                    disabled={isPurgingBatch}
+                                    onClick={() => handleDeleteUserAccount(u.id, u.email || u.id)}
+                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                    title={lang === 'my' ? 'အကောင့်တစ်ခုလုံး ဖျက်မည် (Delete Account)' : 'Delete entire user account'}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+
                                   {/* Purge user transactions if test account */}
                                   {userTxCount > 0 && (
                                     <button
@@ -2701,6 +2958,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="flex-1 overflow-y-auto pt-3 space-y-4 pr-1">
             {/* Create/Edit Broadcast Form */}
             <form
+              id="broadcast-form"
               onSubmit={handleSaveMessage}
               className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3.5"
             >
@@ -2827,7 +3085,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 >
                   <Check className="w-4 h-4" />
                   <span>
-                    {editingMsgId
+                    {submittingMsg
+                      ? lang === 'my'
+                        ? 'ထုတ်လွှင့်နေသည်...'
+                        : 'Publishing...'
+                      : editingMsgId
                       ? lang === 'my'
                         ? 'ပြင်ဆင်ချက် သိမ်းမည်'
                         : 'Update Message'
@@ -2866,11 +3128,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {messages.map((m) => (
+                  {messages.map((m) => {
+                    // [v7.5.55 E13] Banner shows only ONE message (first
+                    // active marquee, else first active) — mark it here.
+                    const activeMsgs = messages.filter((x) => x.isActive);
+                    const shownId = (activeMsgs.find((x) => x.isMarquee) || activeMsgs[0])?.id;
+                    const isShown = m.id === shownId;
+                    return (
                     <div
                       key={m.id}
                       className={`bg-white border rounded-2xl p-3.5 sm:p-4 transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        m.isActive
+                        editingMsgId === m.id
+                          ? 'border-indigo-500 ring-2 ring-indigo-300'
+                          : m.isActive
                           ? 'border-slate-300 ring-1 ring-slate-200'
                           : 'border-slate-200 opacity-60'
                       }`}
@@ -2910,6 +3180,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           >
                             {m.isActive ? '🟢 Active' : '⚪ Inactive'}
                           </button>
+
+                          {isShown && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                              {lang === 'my' ? '👁 ပြသနေသည်' : '👁 Currently shown'}
+                            </span>
+                          )}
 
                           {/* Marquee Badge */}
                           <button
@@ -2956,7 +3232,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -2985,12 +3262,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <button
                 type="button"
                 onClick={loadContactInfoData}
-                className="p-2 text-sky-700 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer shrink-0"
+                disabled={contactLoading}
+                className="p-2 text-sky-700 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-50"
                 title="Reload"
               >
                 <RefreshCw className={`w-4 h-4 ${contactLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
+
+            {contactLoadError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{contactLoadError}</span>
+              </div>
+            )}
 
             {contactSuccessMsg && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2 animate-fadeIn">
@@ -3017,21 +3302,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       value={contactForm.telegramUsername}
                       onChange={(e) => setContactForm({ ...contactForm, telegramUsername: e.target.value })}
                       placeholder="@ankhsam"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-sky-500 focus:bg-white transition-all"
+                      disabled={contactLoading}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-sky-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                      Telegram Link (Direct URL)
+                      Telegram Link (auto-derived from username)
                     </label>
-                    <input
-                      type="text"
-                      value={contactForm.telegramUrl}
-                      onChange={(e) => setContactForm({ ...contactForm, telegramUrl: e.target.value })}
-                      placeholder="https://t.me/ankhsam"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-sky-500 focus:bg-white transition-all"
-                    />
+                    <div className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-600">
+                      {contactForm.telegramUsername ? `https://t.me/${contactForm.telegramUsername.replace(/^@/, '').trim()}` : '—'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3051,9 +3333,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <input
                       type="text"
                       value={contactForm.viberPhone || ''}
-                      onChange={(e) => setContactForm({ ...contactForm, viberPhone: e.target.value, phone: e.target.value })}
+                      onChange={(e) => setContactForm({ ...contactForm, viberPhone: e.target.value })}
                       placeholder="09777123456"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                      disabled={contactLoading}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -3075,8 +3358,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       type="text"
                       value={contactForm.kpayPhone || ''}
                       onChange={(e) => setContactForm({ ...contactForm, kpayPhone: e.target.value })}
-                      placeholder="09777123456 (Ngwe Manager Admin)"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                      placeholder="09777123456"
+                      disabled={contactLoading}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all disabled:opacity-50"
+                    />
+                    <input
+                      type="text"
+                      value={contactForm.kpayName || ''}
+                      onChange={(e) => setContactForm({ ...contactForm, kpayName: e.target.value })}
+                      placeholder="KPay account name"
+                      disabled={contactLoading}
+                      className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
 
@@ -3088,8 +3380,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       type="text"
                       value={contactForm.wavePhone || ''}
                       onChange={(e) => setContactForm({ ...contactForm, wavePhone: e.target.value })}
-                      placeholder="09777123456 (Ngwe Manager Admin)"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                      placeholder="09777123456"
+                      disabled={contactLoading}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all disabled:opacity-50"
+                    />
+                    <input
+                      type="text"
+                      value={contactForm.waveName || ''}
+                      onChange={(e) => setContactForm({ ...contactForm, waveName: e.target.value })}
+                      placeholder="WaveMoney account name"
+                      disabled={contactLoading}
+                      className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -3151,6 +3452,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 4: VISITOR & COUNTRY ANALYTICS */}
         {activeTab === 'analytics' && (
           <div className="flex-1 overflow-y-auto pt-3 space-y-5 pr-1">
+            {analyticsError && (
+              <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 text-xs font-bold text-rose-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{analyticsError}</span>
+              </div>
+            )}
             {/* Top Stat Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-4 rounded-2xl shadow-sm space-y-1">
@@ -3304,6 +3611,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       }}
                     />
                   </div>
+
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700 pt-2">
+                    <div className="flex items-center gap-2">
+                      <span>📱</span>
+                      <span>{lang === 'my' ? 'တက်ဘလက် / Tablet' : 'Tablet'}</span>
+                    </div>
+                    <span className="font-mono">{analyticsStats.tabletCount} ({analyticsStats.total > 0 ? Math.round((analyticsStats.tabletCount / analyticsStats.total) * 100) : 0}%)</span>
+                  </div>
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
+                    <div
+                      className="h-full bg-teal-500 rounded-full transition-all"
+                      style={{
+                        width: `${analyticsStats.total > 0 ? (analyticsStats.tabletCount / analyticsStats.total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 font-medium">
@@ -3326,8 +3649,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
                     {lang === 'my'
-                      ? 'Guest နှင့် Member များ ဝင်ရောက်ကြည့်ရှုခဲ့သည့် သမိုင်းကြောင်း အချက်အလက်များကို သိမ်းဆည်းပြသပေးပါသည်'
-                      : 'Historical records of all guest visitors and registered users.'}
+                      ? 'Guest နှင့် Member များ ဝင်ရောက်ကြည့်ရှုခဲ့သည့် သမိုင်းကြောင်း အချက်အလက်များကို သိမ်းဆည်းပြသပေးပါသည် (နောက်ဆုံး ၅၀၀ ခုသာ ပြသသည်)'
+                      : 'Historical records of all guest visitors and registered users. (Showing latest 500 only.)'}
                   </p>
                 </div>
 
@@ -3457,10 +3780,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             <td className="p-2 sm:p-3">
                               <div className="flex items-center gap-1.5 font-bold text-slate-800">
                                 <span className="text-base">{flag}</span>
-                                <span>{v.country || 'Myanmar'}</span>
+                                <span>{v.country || '—'}</span>
                               </div>
                               <span className="text-[10px] text-slate-500 font-medium">
-                                📍 {v.city || 'Yangon'}
+                                📍 {v.city || '—'}
                               </span>
                             </td>
 
@@ -3471,13 +3794,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 ) : (
                                   <Monitor className="w-3.5 h-3.5 text-indigo-600" />
                                 )}
-                                <span>{v.device} ({v.browser})</span>
+                                <span>{v.device || '—'}{v.browser ? ` (${v.browser})` : ''}</span>
                               </div>
                             </td>
 
                             <td className="p-3 text-center">
                               <span className="px-2 py-1 bg-slate-100 text-slate-800 font-mono font-bold rounded-lg border border-slate-200">
-                                {v.visitCount || 1} {lang === 'my' ? 'ကြိမ်' : 'visits'}
+                                {typeof v.visitCount === 'number' ? v.visitCount : '—'} {lang === 'my' ? 'ကြိမ်' : 'visits'}
                               </span>
                             </td>
 
@@ -3642,9 +3965,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       {c.name} {c.nameEn ? `(${c.nameEn})` : ''}
                     </option>
                   ))}
-                  <option value="ကား ပြင် ထိန်း စရိတ်">ကား ပြင် ထိန်း စရိတ် (Car Maintenance)</option>
-                  <option value="ယာဉ်စီမံခန့်ခွဲမှု">ယာဉ်စီမံခန့်ခွဲမှု (Vehicle Management)</option>
-                  <option value="အထွေထွေ အသုံးစရိတ်">အထွေထွေ အသုံးစရိတ် (General Expenses)</option>
+                  {/* [v7.5.55 E33] Legacy labels only when not already in the merged list — they used to duplicate entries. */}
+                  {!allMergedCategories.some((c) => c.id === 'ကား ပြင် ထိန်း စရိတ်' || c.name === 'ကား ပြင် ထိန်း စရိတ်') && (
+                    <option value="ကား ပြင် ထိန်း စရိတ်">ကား ပြင် ထိန်း စရိတ် (Car Maintenance)</option>
+                  )}
+                  {!allMergedCategories.some((c) => c.id === 'ယာဉ်စီမံခန့်ခွဲမှု' || c.name === 'ယာဉ်စီမံခန့်ခွဲမှု' || c.id === 'cat_vehicle') && (
+                    <option value="ယာဉ်စီမံခန့်ခွဲမှု">ယာဉ်စီမံခန့်ခွဲမှု (Vehicle Management)</option>
+                  )}
+                  {!allMergedCategories.some((c) => c.id === 'အထွေထွေ အသုံးစရိတ်' || c.name === 'အထွေထွေ အသုံးစရိတ်') && (
+                    <option value="အထွေထွေ အသုံးစရိတ်">အထွေထွေ အသုံးစရိတ် (General Expenses)</option>
+                  )}
                 </select>
               </div>
 
@@ -4045,7 +4375,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               {tx.type === 'income' ? '+' : '-'}{(tx.amount || 0).toLocaleString()} MMK
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <td className="py-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
                             <button
                               type="button"
                               disabled={isDeletingTxId === tx.id}

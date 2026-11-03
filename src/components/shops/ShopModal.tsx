@@ -2,6 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { X, Store, Phone, MapPin, Plus, Globe, Lock, AlertTriangle, Check } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
 import { MYANMAR_REGIONS, PRESET_TAGS } from './shopConstants';
+import { toLatinDigits } from '../../utils/myanmarDigits';
+
+// [v7.5.55 C16] Normalize a Myanmar phone number before storing and
+// before building tel: links: Myanmar digits → Latin, strip spaces/dashes,
+// unify +95 / 95 / 09 to one 09… form.
+export function normalizeMyanmarPhone(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const cleaned = toLatinDigits(String(raw)).replace(/[^0-9+]/g, '');
+  if (cleaned.startsWith('+95')) return '0' + cleaned.slice(3);
+  if (cleaned.startsWith('95') && cleaned.length >= 11) return '0' + cleaned.slice(2);
+  if (cleaned.startsWith('0')) return cleaned;
+  if (cleaned.startsWith('9')) return '0' + cleaned;
+  return cleaned;
+}
+
+export function isValidMyanmarPhone(raw: string | null | undefined): boolean {
+  const n = normalizeMyanmarPhone(raw);
+  return /^09\d{7,9}$/.test(n);
+}
 
 interface ShopModalProps {
   isOpen: boolean;
@@ -48,8 +67,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [formCustomCategory, setFormCustomCategory] = useState('');
   const [formPhones, setFormPhones] = useState<string[]>(['']);
   const [formAddresses, setFormAddresses] = useState<string[]>(['']);
-  const [formStateRegion, setFormStateRegion] = useState('ရန်ကုန်တိုင်းဒေသကြီး');
-  const [formTownship, setFormTownship] = useState('လသာ');
+  const [formStateRegion, setFormStateRegion] = useState('');
+  const [formTownship, setFormTownship] = useState('');
   const [formCustomTownship, setFormCustomTownship] = useState('');
   const [formCity, setFormCity] = useState('');
   const [formWard, setFormWard] = useState('');
@@ -77,6 +96,10 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         setFormCustomCategory('');
       }
 
+      // [v7.5.55 C3] Restore the sub-category on edit (it was collected
+      // but never restored, so editing silently dropped it).
+      setFormSubCategory(editingShop.subCategory || '');
+
       const pList =
         editingShop.phones && editingShop.phones.length > 0
           ? editingShop.phones
@@ -93,7 +116,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           : [''];
       setFormAddresses(aList);
 
-      const region = editingShop.stateRegion || 'ရန်ကုန်တိုင်းဒေသကြီး';
+      const region = editingShop.stateRegion || '';
       setFormStateRegion(region);
 
       const foundRegion = MYANMAR_REGIONS.find((r) => r.nameMy === region);
@@ -105,7 +128,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         setFormTownship('custom');
         setFormCustomTownship(editingShop.township);
       } else {
-        setFormTownship(foundRegion?.townships[0]?.nameMy || 'လသာ');
+        // [v7.5.55 C27] No region/township default — the user must pick.
+        setFormTownship('');
         setFormCustomTownship('');
       }
 
@@ -121,8 +145,10 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       setFormSubCategory('');
       setFormPhones(['']);
       setFormAddresses(['']);
-      setFormStateRegion('ရန်ကုန်တိုင်းဒေသကြီး');
-      setFormTownship('လသာ');
+      // [v7.5.55 C27] New shops default to NO region/township (Yangon /
+      // လသာ was wrong for most users) — the user must pick.
+      setFormStateRegion('');
+      setFormTownship('');
       setFormCustomTownship('');
       setFormCity('');
       setFormWard('');
@@ -167,15 +193,21 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
   const checkDuplicates = (testPhone: string, testName: string, testTs: string) => {
     const currentId = editingShop?.id;
-    const cleanPhone = testPhone.replace(/[^0-9]/g, '');
+    // [v7.5.55 C21] Resolve the REAL township — the literal string
+    // 'custom' never matches a stored township, so name-dups were missed.
+    const effectiveTs = testTs === 'custom' ? formCustomTownship.trim() : testTs;
+    // [v7.5.55 C21/C16] Normalize phones before comparing (Myanmar digits
+    // and +95/09 unification) — raw stripping turned Myanmar-digit phones
+    // into '' so they never matched.
+    const cleanPhone = normalizeMyanmarPhone(testPhone);
 
     if (cleanPhone.length >= 7) {
       const dupPhone = existingShops.find((s) => {
         if (currentId && s.id === currentId) return false;
         const sPhones = (s.phones && s.phones.length > 0 ? s.phones : [s.phone]).map((p) =>
-          p.replace(/[^0-9]/g, '')
+          normalizeMyanmarPhone(p)
         );
-        return sPhones.some((p) => p === cleanPhone);
+        return sPhones.some((p) => p !== '' && p === cleanPhone);
       });
 
       if (dupPhone) {
@@ -188,19 +220,19 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       }
     }
 
-    if (testName.trim().length >= 3 && testTs) {
+    if (testName.trim().length >= 3 && effectiveTs) {
       const dupName = existingShops.find((s) => {
         if (currentId && s.id === currentId) return false;
         return (
           s.name.trim().toLowerCase() === testName.trim().toLowerCase() &&
-          s.township === testTs
+          s.township === effectiveTs
         );
       });
       if (dupName) {
         setDuplicateWarning(
           lang === 'my'
-            ? `သတိပေးချက်: "${testTs}" တွင် "${testName}" အမည်တူ ဆိုင်ရှိနေပါသည်။`
-            : `Warning: A shop named "${testName}" already exists in ${testTs}.`
+            ? `သတိပေးချက်: "${effectiveTs}" တွင် "${testName}" အမည်တူ ဆိုင်ရှိနေပါသည်။`
+            : `Warning: A shop named "${testName}" already exists in ${effectiveTs}.`
         );
         return;
       }
@@ -213,9 +245,31 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     e.preventDefault();
     if (!formName.trim()) return;
 
-    const cleanedPhones = formPhones.map((p) => p.trim()).filter(Boolean);
+    // [v7.5.55 C16] Normalize phones (Myanmar digits → Latin, +95/09
+    // unified) before storing, and validate — a bad number must not save.
+    const cleanedPhones = formPhones
+      .map((p) => normalizeMyanmarPhone(p.trim()))
+      .filter(Boolean);
     if (cleanedPhones.length === 0) {
       alert(lang === 'my' ? 'ဖုန်းနံပါတ် အနည်းဆုံး တစ်ခု ထည့်သွင်းပေးပါ' : 'Please provide at least one phone number');
+      return;
+    }
+    if (!cleanedPhones.every((p) => isValidMyanmarPhone(p))) {
+      alert(
+        lang === 'my'
+          ? 'ဖုန်းနံပါတ် မမှန်ကန်ပါ — 09 ဖြင့် စပြီး ဂဏန်း ၉–၁၁ လုံး ဖြစ်ရပါမည် (ဥပမာ 09123456789)'
+          : 'Invalid phone number — it must start with 09 and have 9–11 digits (e.g. 09123456789)'
+      );
+      return;
+    }
+
+    // [v7.5.55 C27] Region and township must be picked (no more Yangon/လသာ default).
+    if (!formStateRegion || !formTownship) {
+      alert(
+        lang === 'my'
+          ? 'ပြည်နယ်/တိုင်း နှင့် မြို့နယ် ရွေးချယ်ပေးပါ'
+          : 'Please pick a state/region and a township'
+      );
       return;
     }
 
@@ -234,7 +288,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       township: finalTownship,
       city: formCity.trim() || finalTownship,
       ward: formWard.trim(),
-      kpayNumber: formKpayNumber.trim(),
+      kpayNumber: normalizeMyanmarPhone(formKpayNumber.trim()),
       generalNotes: formGeneralNotes.trim(),
       targetDirectory: formDirectoryType,
     });
@@ -245,7 +299,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     }
   };
 
-  const currentRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === formStateRegion) || MYANMAR_REGIONS[0];
+  const currentRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === formStateRegion);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
@@ -292,8 +346,9 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
         {/* MODAL BODY FORM */}
         <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[75vh] overflow-y-auto">
-          {/* DIRECTORY TARGET SELECTOR (Only when creating new) */}
-          {!editingShop && (
+          {/* DIRECTORY TARGET SELECTOR — shown for create AND edit so a shop
+              can move between Public / Private (v7.5.55 C27). */}
+          {(
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 {lang === 'my' ? 'သိမ်းဆည်းမည့် နေရာရွေးချယ်ရန် *' : 'Save Location *'}
@@ -479,12 +534,14 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     const regionObj = MYANMAR_REGIONS.find((r) => r.nameMy === e.target.value);
                     if (regionObj && regionObj.townships.length > 0) {
                       setFormTownship(regionObj.townships[0].nameMy);
-                      setFormCity(regionObj.townships[0].nameMy);
                       checkDuplicates(formPhones[0] || '', formName, regionObj.townships[0].nameMy);
+                    } else {
+                      setFormTownship('');
                     }
                   }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:bg-white cursor-pointer"
                 >
+                  <option value="">{lang === 'my' ? '-- ပြည်နယ်/တိုင်း ရွေးပါ --' : '-- Pick a state / region --'}</option>
                   {MYANMAR_REGIONS.map((r) => (
                     <option key={r.id} value={r.nameMy}>
                       {lang === 'my' ? r.nameMy : r.nameEn}
@@ -500,16 +557,18 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 </label>
                 <select
                   value={formTownship}
+                  disabled={!formStateRegion}
                   onChange={(e) => {
                     setFormTownship(e.target.value);
                     if (e.target.value !== 'custom') {
-                      setFormCity(e.target.value);
+                      // [v7.5.55 C27] Never overwrite an already-typed city.
                       checkDuplicates(formPhones[0] || '', formName, e.target.value);
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:bg-white cursor-pointer"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:bg-white cursor-pointer disabled:opacity-50"
                 >
-                  {currentRegionObj.townships.map((t) => (
+                  <option value="">{lang === 'my' ? '-- မြို့နယ် ရွေးပါ --' : '-- Pick a township --'}</option>
+                  {(currentRegionObj?.townships || []).map((t) => (
                     <option key={t.id} value={t.nameMy}>
                       {lang === 'my' ? t.nameMy : t.nameEn}
                     </option>
@@ -530,7 +589,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formCustomTownship}
                   onChange={(e) => {
                     setFormCustomTownship(e.target.value);
-                    setFormCity(e.target.value);
+                    // [v7.5.55 C27] Never overwrite an already-typed city.
                     checkDuplicates(formPhones[0] || '', formName, e.target.value);
                   }}
                   placeholder={lang === 'my' ? 'ဥပမာ - နောင်ချို' : 'e.g. Naungcho'}

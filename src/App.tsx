@@ -135,6 +135,14 @@ const validateImportPayload = (parsed: any): { valid: boolean; error?: string } 
     if (parsed[field] !== undefined && !Array.isArray(parsed[field])) {
       return { valid: false, error: 'field "' + field + '" must be an array' };
     }
+    // [v7.5.55 E4] {"transactions": [null, 42, "x"]} used to pass.
+    if (Array.isArray(parsed[field])) {
+      for (const item of parsed[field]) {
+        if (!item || typeof item !== 'object' || typeof item.id !== 'string' || !item.id) {
+          return { valid: false, error: 'field "' + field + '" must contain objects with an "id"' };
+        }
+      }
+    }
   }
   // [v7.4.0] Now accepts 4 languages.
   if (
@@ -236,6 +244,26 @@ export default function App() {
   const [overlayPickerOpen, setOverlayPickerOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  // [v7.5.55 E14] Tabs stay MOUNTED (hidden with CSS) so in-tab
+  // filters/search survive a switch. Scroll position is saved per
+  // tab when leaving and restored when returning; a tab never
+  // visited before starts at the top.
+  const tabScrollRef = useRef<Record<string, number>>({});
+  const visitedTabsRef = useRef<Set<string>>(new Set(['dashboard']));
+  const prevTabRef = useRef<string>('dashboard');
+  useEffect(() => {
+    const prev = prevTabRef.current;
+    if (prev === activeTab) return;
+    tabScrollRef.current[prev] = window.scrollY;
+    const savedY = tabScrollRef.current[activeTab];
+    if (visitedTabsRef.current.has(activeTab) && typeof savedY === 'number') {
+      requestAnimationFrame(() => window.scrollTo(0, savedY));
+    } else {
+      visitedTabsRef.current.add(activeTab);
+      window.scrollTo(0, 0);
+    }
+    prevTabRef.current = activeTab;
+  }, [activeTab]);
 
   const [dataScope, setDataScope] = usePersistedState<DataScope>('ngwe_data_scope', 'all');
 
@@ -264,6 +292,8 @@ export default function App() {
   const [txModalInitialModel, setTxModalInitialModel] = useState<'general' | 'fuel' | 'vehicle_service'>('general');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  // [v7.5.55 D28] Debt being edited in DebtModal (null = adding new).
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [isRepaymentModalOpen, setIsRepaymentModalOpen] = useState(false);
   const [selectedDebtForRepayment, setSelectedDebtForRepayment] = useState<Debt | null>(null);
   const [editingRepayment, setEditingRepayment] = useState<{ id: string; amount: number; date: string; walletId: string; note?: string } | null>(null);
@@ -273,6 +303,9 @@ export default function App() {
   const [isReconcileModalOpen, setIsReconcileModalOpen] = useState(false);
   const [selectedWalletForReconcile, setSelectedWalletForReconcile] = useState<string | undefined>(undefined);
   const [isPinSetupModalOpen, setIsPinSetupModalOpen] = useState(false);
+  // [v7.5.55 E1] Forgot-PIN recovery: stays locked until a FRESH
+  // sign-in succeeds (the login modal is shown non-dismissible).
+  const [isForgotPinRecovery, setIsForgotPinRecovery] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isUserGuideModalOpen, setIsUserGuideModalOpen] = useState(false);
   const [isShareAppModalOpen, setIsShareAppModalOpen] = useState(false);
@@ -904,10 +937,14 @@ export default function App() {
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;
         updatedDebts.forEach((d) => {
+          // [v7.5.55 E5] Background migration write — local state is
+          // already updated; log a warning instead of fake success.
           safeSetDoc(doc(db, 'users', targetUid, 'debts', d.id), {
             ...d,
             userId: targetUid,
-          }, { merge: true });
+          }, { merge: true }).then((ok) => {
+            if (!ok) console.warn('[v6.1.11] Debt migration cloud write rejected for', d.id);
+          });
         });
       }
     }
@@ -992,7 +1029,9 @@ export default function App() {
             deletedTxIds.forEach((id) => {
               markTxDeleted(id);
               if (user?.uid) {
-                safeDeleteDoc(doc(db, 'users', user.uid, 'transactions', id)).catch(() => null);
+                safeDeleteDoc(doc(db, 'users', user.uid, 'transactions', id))
+                  .then((ok) => { if (!ok) console.warn('[sync] Prune cloud delete rejected for', id); })
+                  .catch(() => null);
               }
             });
           }
@@ -1042,6 +1081,8 @@ export default function App() {
   }, [wallets.map((w) => `${w.id}:${w.sharedWith?.length || 0}:${w.isSharedFromOther}:${w.sharedDocId || ''}`).join(','), user?.uid]);
 
   const limits = DEFAULT_PLAN_LIMITS[plan];
+  const guestLimits = DEFAULT_PLAN_LIMITS.guest;
+  const freeLimits = DEFAULT_PLAN_LIMITS.free;
 
   // [v7.0.5] Force-pull vehicles when local empty. Retries on failure (no ref lock).
   useEffect(() => {
@@ -1249,6 +1290,29 @@ export default function App() {
   }, []);
 
   const handleExportJson = () => {
+    // [v7.5.55 Decision 2] Export is Premium-only. The pre-delete
+    // auto-backup in handleClearAllData is NOT gated (safety net).
+    if (plan !== 'premium') {
+      showToast(lang === 'my' ? 'Export သည် Premium အဆင့်အတွက်သာ ဖြစ်ပါသည်' : 'Export is available on Premium only');
+      return;
+    }
+    // [v7.5.55 E4] Include monthly savings targets + deletion markers
+    // (previously lost on export); NEVER include the PIN.
+    const savingsTargets: Record<string, string> = {};
+    const deletedMarkers: Record<string, string[]> = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith('ngwe_savings_target_') || k === 'ngwe_savings_target_enabled' || k === 'ngwe_savings_target_default') {
+          const v = safeGetItem(k);
+          if (v !== null) savingsTargets[k] = v;
+        } else if (k.startsWith('ngwe_deleted_') && k.endsWith('_ids')) {
+          const v = safeGetItem(k);
+          if (v) { try { deletedMarkers[k] = JSON.parse(v); } catch { /* ignore */ } }
+        }
+      }
+    } catch { /* ignore */ }
     const data = {
       transactions,
       debts,
@@ -1260,6 +1324,8 @@ export default function App() {
       fuelLogs,
       vehicleMaintenance,
       tirePressureLogs,
+      savingsTargets,
+      deletedMarkers,
       plan,
       lang,
     };
@@ -1268,7 +1334,11 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ngwesaryin_backup_${getTodayLocalStr()}.json`;
+    // [v7.5.55 E29] Time in the filename so two same-day exports
+    // do not overwrite each other.
+    const now = new Date();
+    const hhmm = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+    a.download = `ngwesaryin_backup_${getTodayLocalStr()}_${hhmm}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1279,17 +1349,12 @@ export default function App() {
   const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    if (!window.confirm(lang === 'my' ? 'ဒေတာများကို အစားထိုး သိမ်းဆည်းမည်မှာ သေချာပါသလား?' : 'Are you sure you want to restore from backup? This will replace current data.')) {
-      e.target.value = '';
-      return;
-    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        // [v6.7f] Validate schema before applying
+        // [v7.5.55 E4/E29] Validate FIRST, confirm only a valid file.
         const validation = validateImportPayload(parsed);
         if (!validation.valid) {
           alert(lang === 'my'
@@ -1297,18 +1362,96 @@ export default function App() {
             : `Invalid backup file: ${validation.error}`);
           return;
         }
+        // Import is a PER-COLLECTION PATCH, not a full replace:
+        // collections missing from the file are left as-is.
+        const counts = ['transactions', 'debts', 'wallets', 'categories', 'budgets', 'shops', 'vehicles']
+          .filter((f) => Array.isArray((parsed as any)[f]))
+          .map((f) => `${f}: ${(parsed as any)[f].length}`).join(', ');
+        if (!window.confirm(lang === 'my' ? `Backup ဖိုင်မှ ဒေတာများကို ထည့်သွင်းမည် (ဖိုင်တွင် မပါသော စာရင်းများ ပြောင်းလဲမည် မဟုတ်ပါ) — ${counts} — သေချာပါသလား?` : `Import data from this backup? Collections not in the file are left unchanged — ${counts} — Continue?`)) {
+          return;
+        }
+        // [v7.5.55 Decision 1] Guest may not restore debts/budgets/
+        // savings (the table forbids them for guest).
+        const allowDebts = limits.hasDebts;
+        const allowBudgets = limits.hasBudgets;
+        const allowSavings = limits.hasSavings;
+        const importedTxs: Transaction[] = Array.isArray(parsed.transactions) ? parsed.transactions : [];
         if (parsed.transactions) setTransactions(parsed.transactions);
-        if (parsed.debts) setDebts(parsed.debts);
+        if (parsed.debts && allowDebts) setDebts(parsed.debts);
         if (parsed.wallets) setWallets(parsed.wallets);
         if (parsed.categories) setCategories(parsed.categories);
-        if (parsed.budgets) setBudgets(parsed.budgets);
+        if (parsed.budgets && allowBudgets) setBudgets(parsed.budgets);
         if (parsed.shops) setShops(parsed.shops);
         if (parsed.vehicles) setVehicles(parsed.vehicles);
         if (parsed.fuelLogs) setFuelLogs(parsed.fuelLogs);
         if (parsed.vehicleMaintenance) setVehicleMaintenance(parsed.vehicleMaintenance);
         if (parsed.tirePressureLogs) setTirePressureLogs(parsed.tirePressureLogs);
+        if (parsed.savingsTargets && allowSavings) {
+          try {
+            Object.entries(parsed.savingsTargets as Record<string, string>).forEach(([k, v]) => {
+              if (typeof k === 'string' && k.startsWith('ngwe_savings_target_') && typeof v === 'string') safeSetItem(k, v);
+            });
+          } catch { /* ignore */ }
+        }
+        if (parsed.deletedMarkers) {
+          try {
+            Object.entries(parsed.deletedMarkers as Record<string, string[]>).forEach(([k, v]) => {
+              if (typeof k === 'string' && k.startsWith('ngwe_deleted_') && Array.isArray(v)) safeSetItem(k, JSON.stringify(v));
+            });
+          } catch { /* ignore */ }
+        }
         if (parsed.lang) setLangRaw(parsed.lang as Lang);
-        showToast(t('toast.backupRestored', lang));
+        // [v7.5.55 E4] Imported transactions used to vanish for
+        // signed-in users: the cloud listener is cloud-authoritative
+        // and drops local txs that are neither confirmed nor pending.
+        // Enqueue them and push them to the cloud so they survive.
+        if (user && importedTxs.length > 0) {
+          const targetUid = activeWorkspaceId || user.uid;
+          importedTxs.forEach((tx) => { if (tx && tx.id) unmarkTxDeleted(tx.id); });
+          syncQueue.enqueueBatch(importedTxs.filter((tx) => tx && tx.id).map((tx) => ({
+            entityType: 'transactions' as const,
+            entityId: tx.id,
+            operation: 'upsert' as const,
+            targetUid,
+            data: { ...tx, userId: targetUid },
+          })));
+          const importedDebts: Debt[] = allowDebts && Array.isArray(parsed.debts) ? parsed.debts : [];
+          const importedWallets: Wallet[] = Array.isArray(parsed.wallets) ? parsed.wallets : [];
+          const importedCategories: Category[] = Array.isArray(parsed.categories) ? parsed.categories : [];
+          const importedBudgets: BudgetConfig[] = allowBudgets && Array.isArray(parsed.budgets) ? parsed.budgets : [];
+          const importedShops: ShopContact[] = Array.isArray(parsed.shops) ? parsed.shops : [];
+          const importedVehicles: Vehicle[] = Array.isArray(parsed.vehicles) ? parsed.vehicles : [];
+          const importedFuel: FuelLog[] = Array.isArray(parsed.fuelLogs) ? parsed.fuelLogs : [];
+          const importedMaint: VehicleMaintenance[] = Array.isArray(parsed.vehicleMaintenance) ? parsed.vehicleMaintenance : [];
+          const importedTires: TirePressureLog[] = Array.isArray(parsed.tirePressureLogs) ? parsed.tirePressureLogs : [];
+          syncDataToCloud(
+            importedTxs.length ? importedTxs : transactions,
+            importedDebts.length ? importedDebts : debts,
+            importedWallets.length ? importedWallets : computedWallets,
+            importedCategories.length ? importedCategories : categories,
+            importedBudgets.length ? importedBudgets : budgets,
+            plan,
+            targetUid,
+            importedShops.length ? importedShops : shops,
+            importedVehicles.length ? importedVehicles : vehicles,
+            importedFuel.length ? importedFuel : fuelLogs,
+            importedMaint.length ? importedMaint : vehicleMaintenance,
+            importedTires.length ? importedTires : tirePressureLogs,
+            false,
+            cloudTxIds
+          ).then((ok) => {
+            if (!ok) {
+              showToast(lang === 'my' ? '⚠️ ဒေတာ ထည့်သွင်းပြီး Cloud သို့ ပို့ဆောင်၍ မရသေးပါ — Sync ထပ်ကြိုးစားပါ' : '⚠️ Imported locally, but cloud upload did not finish — please sync again');
+            }
+          }).catch(() => {
+            showToast(lang === 'my' ? '⚠️ Cloud သို့ ပို့ဆောင်၍ မရပါ — Sync ထပ်ကြိုးစားပါ' : '⚠️ Could not upload to cloud — please sync again');
+          });
+        }
+        if (!allowDebts && parsed.debts) {
+          showToast(lang === 'my' ? 'Guest Mode တွင် အကြွေးစာရင်း ပြန်ထည့်၍ မရပါ' : 'Debts were not imported in Guest Mode');
+        } else {
+          showToast(t('toast.backupRestored', lang));
+        }
       } catch (err) {
         alert(t('errors.fileRead', lang));
       }
@@ -1398,6 +1541,7 @@ export default function App() {
 
   const {
     handleAddDebt,
+    handleUpdateDebt,
     handleDeleteDebt,
     handleToggleDebtStatus,
     handleRecordRepaymentSubmit,
@@ -1568,23 +1712,48 @@ export default function App() {
   // App Main Content
   if (isLocked && pinSettings?.isEnabled && pinSettings?.pin) {
     return (
-            <PinLockScreen
-        pinHash={pinSettings.pin}
-        pinSalt={pinSettings.pinSalt || ''}
-        lang={lang}
-        onUnlock={() => setIsLocked(false)}
-        onLegacyPinVerified={handleLegacyPinMigration}
-        onForgotPin={() => {
-          // [v6.7e] PIN recovery requires re-auth; do NOT just unlock
-          const msg = lang === 'my'
-            ? 'PIN ပြန်လည်သတ်မှတ်ရန် Google Account ပြန်ဝင်ရန် (သို့) ဒေတာအားလုံး ဖျက်ရန် လိုအပ်ပါသည်။\n\nဆက်လုပ်မလား?'
-            : 'PIN recovery requires signing in with Google again or clearing all data.\n\nContinue?';
-          if (!window.confirm(msg)) return;
-          setIsLocked(false);
-          setIsAuthModalOpen(true);
-          setShowLoginModal(true);
-        }}
-      />
+      <>
+        <PinLockScreen
+          pinHash={pinSettings.pin}
+          pinSalt={pinSettings.pinSalt || ''}
+          lang={lang}
+          onUnlock={() => setIsLocked(false)}
+          onLegacyPinVerified={handleLegacyPinMigration}
+          onForgotPin={() => {
+            // [v7.5.55 E1] PIN recovery requires a FRESH sign-in. The
+            // app stays LOCKED until that sign-in succeeds — unlocking
+            // first (the old code did setIsLocked(false) here) let
+            // anyone past the PIN with no re-auth at all.
+            const msg = lang === 'my'
+              ? 'PIN ပြန်လည်သတ်မှတ်ရန် Google/Email အကောင့် ပြန်ဝင်ရန် လိုအပ်ပါသည်။ App ကို လော့ခ်ဖွင့်ရန် အကောင့် ပြန်ဝင်ရပါမည်။\n\nဆက်လုပ်မလား?'
+              : 'PIN recovery requires signing in again. The app stays locked until a fresh sign-in succeeds.\n\nContinue?';
+            if (!window.confirm(msg)) return;
+            setIsForgotPinRecovery(true);
+          }}
+        />
+        {isForgotPinRecovery && (
+          <div className="fixed inset-0 z-[110] overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+            <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg">
+              <LoginScreen
+                lang={lang}
+                onToggleLang={handleToggleLang}
+                allowClose={false}
+                logoStyle={logoStyle}
+                onOpenPrivacy={() => setIsPrivacyModalOpen(true)}
+                onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
+                onClose={() => {
+                  // Only reachable after a successful sign-in
+                  // (LoginScreen calls onClose only on success, and
+                  // its X button is hidden when allowClose is false).
+                  setIsForgotPinRecovery(false);
+                  setIsLocked(false);
+                  setShowLoginModal(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -1598,29 +1767,35 @@ export default function App() {
         onOpenShareApp={() => setIsShareAppModalOpen(true)}
         currentPlan={plan}
         onOpenSidebar={() => setIsSidebarOpen(true)}
-        onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-        onOpenAddModal={() => handleOpenAddTx('expense')}
         onOpenSearch={() => setIsSearchModalOpen(true)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
-        onOpenLogin={() => setIsAuthModalOpen(true)}
         onLockApp={handleLockApp}
         lang={lang}
         onToggleLang={handleToggleLang}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        transactionsCount={transactions.length}
-        maxFreeTransactions={limits.maxTransactions}
         logoStyle={logoStyle}
         onSelectLogoStyle={handleSelectLogoStyle}
-        onManualSync={handleFullManualSync}
         onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
         unreadNotificationCount={unreadNotificationCount}
         onOpenAdminPanel={handleOpenAdminPanel}
-        onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
-        pendingCloudCount={transactions.filter((t) => t && t.id && !cloudTxIds.has(t.id)).length}
       />
 
       <AdminBroadcastBanner lang={lang} />
+      {plan === 'premium' && userProfile?.premiumExpiresAt && (() => {
+        const daysLeft = Math.ceil((new Date(userProfile.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        if (daysLeft > 3 || daysLeft < 0) return null;
+        return (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
+            <div className="bg-amber-50 border border-amber-300 rounded-2xl px-4 py-2.5 text-xs font-bold text-amber-900 flex items-center justify-between gap-3">
+              <span>{lang === 'my' ? `⚠️ Premium သက်တမ်း ${daysLeft} ရက်သာ ကျန်ပါသည် — သက်တမ်းတိုးရန် Code အသစ် ထည့်ပါ` : `⚠️ Premium expires in ${daysLeft} day(s) — redeem a new code to renew`}</span>
+              <button type="button" onClick={() => setIsPremiumModalOpen(true)} className="px-3 py-1 rounded-lg bg-amber-600 text-white text-[11px] font-bold cursor-pointer shrink-0">
+                {lang === 'my' ? 'သက်တမ်းတိုးမည်' : 'Renew'}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <Sidebar
         isOpen={isSidebarOpen}
@@ -1629,14 +1804,12 @@ export default function App() {
         setActiveTab={setActiveTab}
         currentPlan={plan}
         transactionsCount={transactions.length}
-        maxFreeTransactions={limits.maxTransactions}
         debtsCount={debts.length}
         walletsCount={computedWallets.length}
         vehiclesCount={vehicles.length}
         lang={lang}
         onToggleLang={handleToggleLang}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
-        onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
         onOpenSearch={() => setIsSearchModalOpen(true)}
         onOpenLogin={() => setIsAuthModalOpen(true)}
         onOpenAdminPanel={handleOpenAdminPanel}
@@ -1657,7 +1830,7 @@ export default function App() {
             <span className="text-xs font-medium">{t('loading.component', lang)}</span>
           </div>
         }>
-        {activeTab === 'dashboard' && (
+        <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
           <div className="space-y-6">
             <Dashboard
               transactions={transactions}
@@ -1667,8 +1840,6 @@ export default function App() {
               budgets={budgets}
               plan={plan}
               lang={lang}
-              dataScope={dataScope}
-              onSetDataScope={handleSetDataScope}
               onAddTransaction={(type) => handleOpenAddTx(type)}
               onAddDebt={handleOpenAddDebt}
               onSelectTab={setActiveTab}
@@ -1679,19 +1850,18 @@ export default function App() {
               onExportJson={handleExportJson}
               onImportJson={handleImportJson}
               onManualSync={handleFullManualSync}
-              onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
-              cloudTxIds={cloudTxIds}
+                    cloudTxIds={cloudTxIds}
             />
             <AdBanner
               plan={plan}
               lang={lang}
               slot="dashboard-bottom"
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            />
+                  />
           </div>
-        )}
+        </div>
 
-        {activeTab === 'transactions' && (
+        <div className={activeTab === 'transactions' ? '' : 'hidden'}>
           <div className="space-y-6">
             <TransactionsView
               transactions={transactions}
@@ -1699,32 +1869,32 @@ export default function App() {
               wallets={computedWallets}
               plan={plan}
               maxFreeTransactions={limits.maxTransactions}
-              lang={lang}
+                    lang={lang}
               dataScope={dataScope}
               onSetDataScope={handleSetDataScope}
               onAddTransaction={handleOpenAddTx}
               onDeleteTransaction={handleDeleteTransaction}
               onEditTransaction={handleOpenEditTx}
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-              cloudTxIds={cloudTxIds}
-              onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
+                    cloudTxIds={cloudTxIds}
+                    onRefreshSync={handleFullManualSync}
             />
             <AdBanner
               plan={plan}
               lang={lang}
               slot="inline-compact"
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            />
+                  />
           </div>
-        )}
+        </div>
 
-        {activeTab === 'categories' && (
+        <div className={activeTab === 'categories' ? '' : 'hidden'}>
           <div className="space-y-6">
             <CategoriesView
               categories={categories}
               plan={plan}
               lang={lang}
-              onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
+                    onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
               onAddCategory={handleAddCategory}
               onUpdateCategory={handleUpdateCategory}
               onDeleteCategory={handleDeleteCategory}
@@ -1738,11 +1908,11 @@ export default function App() {
               lang={lang}
               slot="inline-compact"
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            />
+                  />
           </div>
-        )}
-        {activeTab === 'education' && <EducationView lang={lang} />}
-        {activeTab === 'debts' && (
+        </div>
+        <div className={activeTab === 'education' ? '' : 'hidden'}><EducationView lang={lang} /></div>
+        <div className={activeTab === 'debts' ? '' : 'hidden'}>
           <div className="space-y-6">
             {plan === 'guest' || !limits.hasDebts ? (
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs max-w-lg mx-auto my-6">
@@ -1775,6 +1945,7 @@ export default function App() {
                 maxFreeDebts={limits.maxDebts}
                 lang={lang}
                 onAddDebt={handleOpenAddDebt}
+                onEditDebt={(debt) => { setEditingDebt(debt); setIsDebtModalOpen(true); }}
                 onRecordRepayment={(debt) => {
                   setSelectedDebtForRepayment(debt);
                   setEditingRepayment(null);
@@ -1789,18 +1960,18 @@ export default function App() {
                 onDeleteRepayment={handleDeleteRepayment}
                 onToggleStatus={handleToggleDebtStatus}
                 onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-              />
+                      />
             )}
             <AdBanner
               plan={plan}
               lang={lang}
               slot="inline-compact"
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            />
+                  />
           </div>
-        )}
+        </div>
 
-        {activeTab === 'wallets' && (
+        <div className={activeTab === 'wallets' ? '' : 'hidden'}>
           <div className="space-y-6">
             <WalletsView
               wallets={computedWallets}
@@ -1814,7 +1985,7 @@ export default function App() {
               onDeleteWallet={handleDeleteWallet}
               onTransferFunds={handleTransferFunds}
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-              onOpenReconcileModal={(walletId) => {
+                    onOpenReconcileModal={(walletId) => {
                 setSelectedWalletForReconcile(walletId);
                 setIsReconcileModalOpen(true);
               }}
@@ -1829,11 +2000,11 @@ export default function App() {
               lang={lang}
               slot="inline-compact"
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            />
+                  />
           </div>
-        )}
+        </div>
 
-        {(activeTab === 'analytics' || activeTab === 'budgets') && (
+        <div className={(activeTab === 'analytics' || activeTab === 'budgets') ? '' : 'hidden'}>
           <div className="space-y-6">
             {plan === 'guest' || !limits.hasBudgets ? (
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs max-w-lg mx-auto my-6">
@@ -1872,7 +2043,7 @@ export default function App() {
                 onUpdateBudget={handleUpdateBudget}
                 onDeleteBudget={handleDeleteBudget}
                 onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-                onSelectTab={setActiveTab}
+                        onSelectTab={setActiveTab}
               />
             )}
             <AdBanner
@@ -1880,17 +2051,19 @@ export default function App() {
               lang={lang}
               slot="inline-compact"
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            />
+                  />
           </div>
-        )}
+        </div>
 
-        {activeTab === 'data_management' && (
+        <div className={activeTab === 'data_management' ? '' : 'hidden'}>
           <DataManagementView
             transactions={transactions}
             debts={debts}
             wallets={computedWallets}
             categories={categories}
             budgets={budgets}
+            vehicles={vehicles}
+            shops={shops}
             plan={plan}
             lang={lang}
             cloudTxIds={cloudTxIds}
@@ -1900,9 +2073,9 @@ export default function App() {
             onOpenAccountModal={() => setIsAccountModalOpen(true)}
             onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
           />
-        )}
+        </div>
 
-        {activeTab === 'plans' && (
+        <div className={activeTab === 'plans' ? '' : 'hidden'}>
           <div className="max-w-5xl mx-auto py-6">
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
               <div className="text-center max-w-xl mx-auto mb-8">
@@ -1936,8 +2109,8 @@ export default function App() {
                     </div>
 
                     <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? 'လစဉ် မှတ်တမ်း ၃၀ ခု' : '30 tx / month'}</li>
-                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? 'Wallet ၁ ခုသာ (Cash)' : '1 Wallet only'}</li>
+                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? `ရက် ၃၀ အတွင်း မှတ်တမ်း ${guestLimits.maxTransactions} ခု` : `${guestLimits.maxTransactions} tx / rolling 30 days`}</li>
+                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? `Wallet ${guestLimits.maxWallets} ခုသာ (Cash)` : `${guestLimits.maxWallets} Wallet only`}</li>
                       <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'အကြွေး စာရင်း (မရပါ)' : 'No Debt Tracking'}</li>
                       <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'စုငွေ ပန်းတိုင် (မရပါ)' : 'No Savings Target'}</li>
                       <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'ဘတ်ဂျက် စီမံခြင်း (မရပါ)' : 'No Budgeting'}</li>
@@ -1980,13 +2153,13 @@ export default function App() {
                     </div>
 
                     <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'လစဉ် မှတ်တမ်း ၁၀၀ ခု' : '100 tx / month'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'အကြွေးစာရင်း ၅ ခု' : 'Up to 5 Debts'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'Wallet ၂ ခု' : '2 Wallets'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700">✓ {lang === 'my' ? 'Wallet မျှဝေခြင်း (၂ ယောက်)' : 'Share Wallet (2 members)'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `ရက် ၃၀ အတွင်း မှတ်တမ်း ${freeLimits.maxTransactions} ခု` : `${freeLimits.maxTransactions} tx / rolling 30 days`}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `အကြွေးစာရင်း ${freeLimits.maxDebts} ခု` : `Up to ${freeLimits.maxDebts} Debts`}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `Wallet ${freeLimits.maxWallets} ခု` : `${freeLimits.maxWallets} Wallets`}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700">✓ {lang === 'my' ? `Wallet မျှဝေခြင်း (${freeLimits.maxCollaborators} ယောက်)` : `Share Wallet (${freeLimits.maxCollaborators} members)`}</li>
                       <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'စုငွေ ပန်းတိုင် ရရှိမည်' : 'Savings Target'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'ဘတ်ဂျက် ကဏ္ဍ ၅ ခု' : '5 Budget Categories'}</li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? 'ယာဉ်စီမံခန့်ခွဲမှု (ယာဉ် ၁ စီး)' : 'Vehicle Tracking (1 Vehicle)'}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `ဘတ်ဂျက် ကဏ္ဍ ${freeLimits.maxBudgetCategories} ခု` : `${freeLimits.maxBudgetCategories} Budget Categories`}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `ယာဉ်စီမံခန့်ခွဲမှု (ယာဉ် ${freeLimits.maxVehicles} စီး)` : `Vehicle Tracking (${freeLimits.maxVehicles} Vehicle)`}</li>
                       <li className="flex items-center gap-1.5 text-slate-500">✕ {lang === 'my' ? 'Custom Categories (မပါ)' : 'No Custom Categories'}</li>
                       <li className="flex items-center gap-1.5 text-slate-400">✕ {lang === 'my' ? 'Excel Export (မပါ)' : 'No Excel Export'}</li>
                     </ul>
@@ -2114,14 +2287,16 @@ export default function App() {
                     <span>{lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည် (Clear All Data)' : 'Clear All Data'}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleExportJson}
-                    className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Download className="w-4 h-4 text-slate-500" />
-                    <span>{lang === 'my' ? 'JSON Backup သိမ်းမည်' : 'Export Backup'}</span>
-                  </button>
+                  {plan === 'premium' && (
+                    <button
+                      type="button"
+                      onClick={handleExportJson}
+                      className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-slate-500" />
+                      <span>{lang === 'my' ? 'JSON Backup သိမ်းမည်' : 'Export Backup'}</span>
+                    </button>
+                  )}
 
                   <label className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer">
                     <Upload className="w-4 h-4 text-slate-500" />
@@ -2137,29 +2312,29 @@ export default function App() {
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {activeTab === 'feedback' && (
+        <div className={activeTab === 'feedback' ? '' : 'hidden'}>
           <FeedbackView
             lang={lang}
             currentPlan={plan}
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-          />
-        )}
+              />
+        </div>
 
-        {activeTab === 'shops' && (
+        <div className={activeTab === 'shops' ? '' : 'hidden'}>
           <ShopsView
             shops={shops}
             lang={lang}
             plan={plan}
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            onAddShop={handleAddShop}
+                onAddShop={handleAddShop}
             onUpdateShop={handleUpdateShop}
             onDeleteShop={handleDeleteShop}
           />
-        )}
+        </div>
 
-        {activeTab === 'vehicles' && (
+        <div className={activeTab === 'vehicles' ? '' : 'hidden'}>
           <VehiclesView
             vehicles={vehicles}
             fuelLogs={fuelLogs}
@@ -2168,7 +2343,7 @@ export default function App() {
             wallets={computedWallets}
             plan={plan}
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
-            onSaveVehicle={(v) => handleSaveVehicle(v as Vehicle)}
+                onSaveVehicle={(v) => handleSaveVehicle(v as Vehicle)}
             onDeleteVehicle={handleDeleteVehicle}
             onSaveFuelLog={(f) => handleSaveFuelLog(f as FuelLog)}
             onDeleteFuelLog={handleDeleteFuelLog}
@@ -2178,7 +2353,7 @@ export default function App() {
             onDeleteTirePressure={handleDeleteTirePressure}
             lang={lang}
           />
-        )}
+        </div>
         </React.Suspense>
       </main>
 
@@ -2237,13 +2412,12 @@ export default function App() {
           <div className="-mt-6">
             <ClayFloatingCoinButton
               onClick={() => handleOpenAddTx('expense')}
-              label={lang === 'my' ? 'စာရင်းသစ်' : 'Add'}
             />
           </div>
 
           <button
             onClick={() => setActiveTab('debts')}
-            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
+            className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
               activeTab === 'debts'
                 ? 'text-emerald-700 font-semibold'
                 : 'text-slate-400 hover:text-slate-700'
@@ -2252,6 +2426,9 @@ export default function App() {
           >
             <HandCoins className="w-6 h-6" />
             <span className="text-[10px]">{lang === 'my' ? 'အကြွေး' : 'Debts'}</span>
+            {plan === 'guest' && (
+              <span className="absolute -top-0.5 right-0.5 px-1 py-px rounded text-[8px] font-bold bg-slate-200 text-slate-700 border border-slate-300">🔒 LOCK</span>
+            )}
           </button>
 
           <button
@@ -2307,7 +2484,9 @@ export default function App() {
         isOpen={isDebtModalOpen}
         wallets={computedWallets}
         lang={lang}
-        onClose={() => setIsDebtModalOpen(false)}
+        editingDebt={editingDebt}
+        onUpdate={handleUpdateDebt}
+        onClose={() => { setIsDebtModalOpen(false); setEditingDebt(null); }}
         onSubmit={handleAddDebt}
       />
 
@@ -2402,6 +2581,7 @@ export default function App() {
             readNotificationIds={readNotificationIds}
             onMarkAsRead={handleMarkNotificationAsRead}
             onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+            wallets={computedWallets}
           />
         )}
 
@@ -2431,10 +2611,39 @@ export default function App() {
         debts={debts}
         wallets={computedWallets}
         categories={categories}
+        shops={shops}
+        vehicles={vehicles}
         lang={lang}
         onNavigateToTab={(tab) => {
           setIsSearchModalOpen(false);
           setActiveTab(tab);
+        }}
+        onSelectDebtForRepayment={(debt) => {
+          setSelectedDebtForRepayment(debt);
+          setEditingRepayment(null);
+          setIsRepaymentModalOpen(true);
+        }}
+        onSelectTransaction={(t) => {
+          // Opens the record itself (edit modal) — the destination
+          // list's own search/highlight is owned by TransactionsView.
+          setIsSearchModalOpen(false);
+          handleOpenEditTx(t);
+        }}
+        onSelectWallet={(w) => {
+          setIsSearchModalOpen(false);
+          setActiveTab('wallets');
+        }}
+        onSelectCategory={(c) => {
+          setIsSearchModalOpen(false);
+          setActiveTab('categories');
+        }}
+        onSelectShop={(shop) => {
+          setIsSearchModalOpen(false);
+          setActiveTab('shops');
+        }}
+        onSelectVehicle={(v) => {
+          setIsSearchModalOpen(false);
+          setActiveTab('vehicles');
         }}
       />
 
@@ -2504,7 +2713,6 @@ export default function App() {
         activeWorkspaceId={activeWorkspaceId || undefined}
         onForcePushAll={handleForcePushAll}
         onForcePullAll={handleForcePullAll}
-        onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
         onUpdateCloudTxIds={handleUpdateConfirmedCloudTxIds}
       />
 

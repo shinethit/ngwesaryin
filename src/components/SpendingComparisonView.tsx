@@ -62,10 +62,14 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   onOpenUpgradeModal,
 }) => {
   // Helper dates
+  // [v7.5.55 D1] Build YYYY-MM / YYYY-MM-DD from LOCAL getFullYear() /
+  // getMonth() / getDate() — toISOString() is UTC, so on 2026-11-03 the
+  // "previous month" came out as 2026-09 instead of 2026-10 (Myanmar +06:30).
+  const toMonthStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   const today = new Date();
-  const currentMonthStr = today.toISOString().slice(0, 7); // YYYY-MM
+  const currentMonthStr = toMonthStr(today); // YYYY-MM
   const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const prevMonthStr = prevMonthDate.toISOString().slice(0, 7);
+  const prevMonthStr = toMonthStr(prevMonthDate);
 
   // Default dates for custom range (last 30 days vs prior 30 days)
   const dToday = new Date(today);
@@ -76,7 +80,8 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   const d60DaysAgo = new Date(today);
   d60DaysAgo.setDate(dToday.getDate() - 59);
 
-  const toDateInput = (d: Date) => d.toISOString().split('T')[0];
+  const toDateInput = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   // State
   const [periodType, setPeriodType] = useState<'monthly' | 'custom_range'>('monthly');
@@ -105,40 +110,53 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   }, [categories]);
 
   // Stable random 2 category IDs for Free Plan
+  // [v7.5.55 D26] The pool is EXPENSE categories only. The old fallback was
+  // ALL categories, so when transactions were still empty at mount the pool
+  // could contain income categories like cat_salary.
   const [randomFreeCatIds, setRandomFreeCatIds] = useState<string[]>(() => {
     const activeExpenseCatIds = Array.from(
       new Set(transactions.filter((t) => t.type === 'expense').map((t) => t.category))
     );
-    const pool = activeExpenseCatIds.length >= 2 ? activeExpenseCatIds : categories.map((c) => c.id);
+    const expenseCatIds = categories.filter((c) => c.type === 'expense').map((c) => c.id);
+    const pool = activeExpenseCatIds.length >= 2 ? activeExpenseCatIds : expenseCatIds;
     const shuffled = [...pool].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 2);
   });
 
-  // Ensure randomFreeCatIds has 2 items if categories change
-  useEffect(() => {
-    if (randomFreeCatIds.length < 2 && categories.length > 0) {
-      const activeExpenseCatIds = Array.from(
-        new Set(transactions.filter((t) => t.type === 'expense').map((t) => t.category))
-      );
-      const pool = activeExpenseCatIds.length >= 2 ? activeExpenseCatIds : categories.map((c) => c.id);
-      const shuffled = [...pool].sort(() => 0.5 - Math.random());
-      setRandomFreeCatIds(shuffled.slice(0, 2));
-    }
-  }, [categories, transactions, randomFreeCatIds.length]);
-
-  const handleShuffleRandomCats = () => {
-    if (plan !== 'free') return;
+  // The expense-only pool, recomputed when transactions/categories arrive.
+  const expenseCategoryPool = useMemo(() => {
     const activeExpenseCatIds = Array.from(
       new Set(transactions.filter((t) => t.type === 'expense').map((t) => t.category))
     );
-    const pool = activeExpenseCatIds.length >= 2 ? activeExpenseCatIds : categories.map((c) => c.id);
-    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    const expenseCatIds = categories.filter((c) => c.type === 'expense').map((c) => c.id);
+    if (activeExpenseCatIds.length >= 2) return activeExpenseCatIds;
+    return expenseCatIds.length >= 2 ? expenseCatIds : activeExpenseCatIds;
+  }, [transactions, categories]);
+
+  // Re-draw the random 2 once transactions first become non-empty (the old
+  // effect never re-drew once 2 ids existed, so a mount-time fallback draw
+  // from an empty transaction list stuck forever) and whenever the current
+  // ids fall outside the expense pool.
+  useEffect(() => {
+    if (expenseCategoryPool.length < 2) return;
+    const poolSet = new Set(expenseCategoryPool);
+    const allInPool =
+      randomFreeCatIds.length === 2 && randomFreeCatIds.every((id) => poolSet.has(id));
+    if (!allInPool) {
+      const shuffled = [...expenseCategoryPool].sort(() => 0.5 - Math.random());
+      setRandomFreeCatIds(shuffled.slice(0, 2));
+    }
+  }, [expenseCategoryPool, randomFreeCatIds]);
+
+  const handleShuffleRandomCats = () => {
+    if (plan === 'premium') return;
+    const shuffled = [...expenseCategoryPool].sort(() => 0.5 - Math.random());
     setRandomFreeCatIds(shuffled.slice(0, 2));
   };
 
   // Swap periods button
   const handleSwapPeriods = () => {
-    if (plan === 'free') {
+    if (plan !== 'premium') {
       onOpenUpgradeModal();
       return;
     }
@@ -158,7 +176,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
   // Preset Handlers
   const handleApplyPreset = (preset: 'this_vs_last_month' | 'last_month_vs_two_ago' | 'last_30_vs_prior_30' | 'half_month') => {
-    if (plan === 'free') {
+    if (plan !== 'premium') {
       onOpenUpgradeModal();
       return;
     }
@@ -169,7 +187,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
     } else if (preset === 'last_month_vs_two_ago') {
       setPeriodType('monthly');
       const twoAgoDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-      const twoAgoStr = twoAgoDate.toISOString().slice(0, 7);
+      const twoAgoStr = toMonthStr(twoAgoDate);
       setMonthA(prevMonthStr);
       setMonthB(twoAgoStr);
     } else if (preset === 'last_30_vs_prior_30') {
@@ -190,9 +208,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   };
 
   // Enforce Free plan single-month baseline: This month vs Last month
-  const effectivePeriodType = plan === 'free' ? 'monthly' : periodType;
-  const effectiveMonthA = plan === 'free' ? currentMonthStr : monthA;
-  const effectiveMonthB = plan === 'free' ? prevMonthStr : monthB;
+  const effectivePeriodType = plan !== 'premium' ? 'monthly' : periodType;
+  const effectiveMonthA = plan !== 'premium' ? currentMonthStr : monthA;
+  const effectiveMonthB = plan !== 'premium' ? prevMonthStr : monthB;
 
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
 
@@ -208,8 +226,15 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
     let lA = '';
     let lB = '';
 
+    // [v7.5.55 D21] "All" means all INCLUDED wallets (includeInTotals !==
+    // false), matching the Dashboard scope — separate wallets are excluded.
+    // Transactions whose wallet is unknown are kept (scope cannot be judged).
     const filterWallet = (t: Transaction) => {
-      if (walletFilter === 'all') return true;
+      if (walletFilter === 'all') {
+        const w = walletMap.get(t.walletId);
+        if (!w) return true;
+        return w.includeInTotals !== false;
+      }
       const targetW = walletMap.get(walletFilter);
       if (targetW) return isWalletMatch(targetW, t.walletId);
       return t.walletId === walletFilter;
@@ -304,6 +329,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       const amtA = catExpensesA[catId] || 0;
       const amtB = catExpensesB[catId] || 0;
       const diff = amtA - amtB;
+      // [v7.5.55 D15] Baseline 0 with current spending is a NEW category —
+      // "New", not a meaningless +100% whatever the amount.
+      const isNew = amtB === 0 && amtA > 0;
       const pctChange =
         amtB > 0
           ? Math.round(((amtA - amtB) / amtB) * 1000) / 10
@@ -321,6 +349,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         amountB: amtB,
         diff,
         pctChange,
+        isNew,
         pctOfTotalA,
         pctOfTotalB,
       };
@@ -374,6 +403,8 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       const amtA = itemA?.amount || 0;
       const amtB = itemB?.amount || 0;
       const diff = amtA - amtB;
+      // [v7.5.55 D15] New sub-category (baseline 0, current > 0).
+      const isNew = amtB === 0 && amtA > 0;
       const pctChange =
         amtB > 0
           ? Math.round(((amtA - amtB) / amtB) * 1000) / 10
@@ -394,6 +425,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         amountB: amtB,
         diff,
         pctChange,
+        isNew,
         pctOfTotalA: expenseA > 0 ? Math.round((amtA / expenseA) * 100) : 0,
         pctOfTotalB: expenseB > 0 ? Math.round((amtB / expenseB) * 100) : 0,
       };
@@ -433,9 +465,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   }, [txA, txB, categoryMap, lang]);
 
   // All unique comparisons computed from transactions
-  // When plan === 'free', only the 2 random categories are exposed
+  // When plan !== 'premium', only the 2 random categories are exposed
   const displayedCategoryComparisons = useMemo(() => {
-    if (plan === 'free') {
+    if (plan !== 'premium') {
       const existingMap = new Map(stats.categoryComparisons.map((c) => [c.categoryId, c]));
       const list = randomFreeCatIds.map((id) => {
         if (existingMap.has(id)) {
@@ -449,6 +481,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
           amountB: 0,
           diff: 0,
           pctChange: 0,
+          isNew: false,
           pctOfTotalA: 0,
           pctOfTotalB: 0,
         };
@@ -459,17 +492,18 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   }, [plan, stats.categoryComparisons, randomFreeCatIds, categoryMap]);
 
   const totalCategoriesCount = useMemo(() => {
-    return Math.max(stats.categoryComparisons.length, categories.length);
-  }, [stats.categoryComparisons.length, categories.length]);
+    // [v7.5.55] Expense categories only — income categories were counted too.
+    return Math.max(stats.categoryComparisons.length, categories.filter((c) => c.type === 'expense').length);
+  }, [stats.categoryComparisons.length, categories]);
 
   const hiddenCategoriesCount = useMemo(() => {
-    if (plan !== 'free') return 0;
+    if (plan === 'premium') return 0;
     return Math.max(0, totalCategoriesCount - displayedCategoryComparisons.length);
   }, [plan, totalCategoriesCount, displayedCategoryComparisons.length]);
 
   // Active highlights (for Free, reflects the random 2 categories)
   const activeHighlights = useMemo(() => {
-    if (plan === 'free') {
+    if (plan !== 'premium') {
       const sortedByDiff = [...displayedCategoryComparisons].sort((a, b) => b.diff - a.diff);
       return {
         highestIncreaseCat: sortedByDiff.find((c) => c.diff > 0),
@@ -516,7 +550,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
   // SubCategory comparisons displayed according to plan & filters
   const displayedSubCategoryComparisons = useMemo(() => {
-    if (plan === 'free') {
+    if (plan !== 'premium') {
       // Return subcategories belonging to the 2 random free categories
       const setCats = new Set(randomFreeCatIds);
       return stats.subCategoryComparisons.filter((s) => setCats.has(s.categoryId)).slice(0, 4);
@@ -550,6 +584,15 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
     return list;
   }, [displayedSubCategoryComparisons, searchCategory, sortBy, plan]);
 
+  // [v7.5.55 D14] Chart shows the TOP 8 categories by amount (was the
+  // first 8 in arbitrary first-seen order, with no note).
+  const chartCategoryComparisons = useMemo(() => {
+    const sorted = [...displayedCategoryComparisons].sort(
+      (a, b) => Math.max(b.amountA, b.amountB) - Math.max(a.amountA, a.amountB)
+    );
+    return sorted.slice(0, 8);
+  }, [displayedCategoryComparisons]);
+
   // Maximum amount in comparison for bar width scaling
   const maxBarAmount = useMemo(() => {
     let max = 1;
@@ -561,8 +604,42 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
     return max;
   }, [comparisonLevel, displayedCategoryComparisons, displayedSubCategoryComparisons]);
 
+  // [v7.5.55 D16] Period validation: same month for A and B, or a start
+  // date after its end date, warns instead of silently showing empty or
+  // all-time totals. (Clearing a month/date input keeps the previous valid
+  // value — see the onChange guards above — so startsWith('') can never
+  // silently match everything.)
+  const periodWarning = useMemo(() => {
+    if (effectivePeriodType === 'monthly') {
+      if (effectiveMonthA && effectiveMonthB && effectiveMonthA === effectiveMonthB) {
+        return lang === 'my'
+          ? 'ကာလ (က) နှင့် (ခ) သည် တူညီနေပါသည် — ကွာခြားချက် အားလုံး ၀ ဖြစ်ပါမည်'
+          : 'Period A and Period B are the same month — all differences will be zero';
+      }
+      return null;
+    }
+    if (startA && endA && startA > endA) {
+      return lang === 'my'
+        ? 'ကာလ (က) ၏ စတင်ရက်သည် ပြီးဆုံးရက်ထက် နောက်ကျနေပါသည်'
+        : 'Period A start date is after its end date';
+    }
+    if (startB && endB && startB > endB) {
+      return lang === 'my'
+        ? 'ကာလ (ခ) ၏ စတင်ရက်သည် ပြီးဆုံးရက်ထက် နောက်ကျနေပါသည်'
+        : 'Period B start date is after its end date';
+    }
+    return null;
+  }, [effectivePeriodType, effectiveMonthA, effectiveMonthB, startA, endA, startB, endB, lang]);
+
   // Export or copy summary
+  // [v7.5.55 D9] Copy Summary is Premium-only (like CSV) and its highlights
+  // come from the DISPLAYED categories (activeHighlights — the Free random 2
+  // for non-premium), never from all-category stats.
   const handleCopySummary = () => {
+    if (plan !== 'premium') {
+      onOpenUpgradeModal();
+      return;
+    }
     const text = [
       `📊 ${lang === 'my' ? 'ကာလအလိုက် သုံးစွဲမှု နှိုင်းယှဉ်ချက် အကျဉ်းချုပ်' : 'Spending Comparison Summary'}`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
@@ -581,19 +658,19 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       }${formatMMK(stats.diffExpense)} (${stats.percentDiffExpense >= 0 ? '+' : ''}${
         stats.percentDiffExpense
       }%)`,
-      stats.highestIncreaseCat
+      activeHighlights.highestIncreaseCat
         ? `⚠️ ${lang === 'my' ? 'အများဆုံး တိုးလာသော ကဏ္ဍ' : 'Highest Increase'}: ${
             lang === 'my'
-              ? stats.highestIncreaseCat.category?.name
-              : stats.highestIncreaseCat.category?.nameEn
-          } (+${formatMMK(stats.highestIncreaseCat.diff)})`
+              ? activeHighlights.highestIncreaseCat.category?.name
+              : activeHighlights.highestIncreaseCat.category?.nameEn
+          } (+${formatMMK(activeHighlights.highestIncreaseCat.diff)})`
         : '',
-      stats.highestSavingsCat
+      activeHighlights.highestSavingsCat
         ? `✅ ${lang === 'my' ? 'အများဆုံး လျော့ချနိုင်သော ကဏ္ဍ' : 'Highest Savings'}: ${
             lang === 'my'
-              ? stats.highestSavingsCat.category?.name
-              : stats.highestSavingsCat.category?.nameEn
-          } (${formatMMK(stats.highestSavingsCat.diff)})`
+              ? activeHighlights.highestSavingsCat.category?.name
+              : activeHighlights.highestSavingsCat.category?.nameEn
+          } (${formatMMK(activeHighlights.highestSavingsCat.diff)})`
         : '',
     ]
       .filter(Boolean)
@@ -605,7 +682,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   };
 
   const handleExportCSV = () => {
-    if (plan === 'free') {
+    // [v7.5.55] CSV export is Premium-only (plan !== 'premium' is blocked;
+    // the button itself is hidden for non-premium below).
+    if (plan !== 'premium') {
       onOpenUpgradeModal();
       return;
     }
@@ -649,7 +728,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       {/* Control Panel: Mode Selector, Date Picker, and Wallet Filter */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-7">
         {/* Free Plan Restrictive Notice Banner */}
-        {plan === 'free' && (
+        {plan !== 'premium' && (
           <div className="mb-5 bg-amber-50/90 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-start sm:items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
@@ -657,7 +736,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-2 font-bold text-amber-950">
-                  <span>{lang === 'my' ? 'Free Plan ကန့်သတ်ချက်' : 'Free Plan Constraints'}</span>
+                  <span>{lang === 'my' ? (plan === 'guest' ? 'Guest ကန့်သတ်ချက်' : 'Free Plan ကန့်သတ်ချက်') : (plan === 'guest' ? 'Guest Constraints' : 'Free Plan Constraints')}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200/80 text-amber-900">
                     {lang === 'my' ? '၁ လစာ + Random ၂ ခုသာ' : '1 Month + 2 Random Categories'}
                   </span>
@@ -718,26 +797,26 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               id="preset-last-month-two-ago"
               onClick={() => handleApplyPreset('last_month_vs_two_ago')}
               className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                plan === 'free'
+                plan !== 'premium'
                   ? 'bg-slate-100 text-slate-400 cursor-pointer hover:bg-amber-50 hover:text-amber-800'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
-              title={plan === 'free' ? 'Premium required' : undefined}
+              title={plan !== 'premium' ? 'Premium required' : undefined}
             >
-              {plan === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
+              {plan !== 'premium' && <Lock className="w-3 h-3 text-amber-500" />}
               <span>{lang === 'my' ? 'လွန်ခဲ့သော ၂ လ vs ၃ လ' : '2 Mo vs 3 Mo Ago'}</span>
             </button>
             <button
               id="preset-last-30-days"
               onClick={() => handleApplyPreset('last_30_vs_prior_30')}
               className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                plan === 'free'
+                plan !== 'premium'
                   ? 'bg-slate-100 text-slate-400 cursor-pointer hover:bg-amber-50 hover:text-amber-800'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
-              title={plan === 'free' ? 'Premium required' : undefined}
+              title={plan !== 'premium' ? 'Premium required' : undefined}
             >
-              {plan === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
+              {plan !== 'premium' && <Lock className="w-3 h-3 text-amber-500" />}
               <span>{lang === 'my' ? 'ရက် ၃၀ vs ယခင် ရက် ၃၀' : 'Last 30 vs Prior 30d'}</span>
             </button>
           </div>
@@ -765,7 +844,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (plan === 'free') {
+                  if (plan !== 'premium') {
                     onOpenUpgradeModal();
                   } else {
                     setPeriodType('custom_range');
@@ -778,7 +857,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 }`}
               >
                 <span>{lang === 'my' ? 'စိတ်ကြိုက် ရက်စွဲ' : 'Custom Dates'}</span>
-                {plan === 'free' && <Lock className="w-3 h-3 text-amber-500" />}
+                {plan !== 'premium' && <Lock className="w-3 h-3 text-amber-500" />}
               </button>
             </div>
           </div>
@@ -791,7 +870,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 {lang === 'my' ? 'ကာလ (က) [ယခု အခြေအနေ]' : 'Period A [Current]'}
               </span>
               <span className="text-[10px] text-emerald-700 font-semibold truncate max-w-[150px] flex items-center gap-1">
-                {plan === 'free' && <Lock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />}
+                {plan !== 'premium' && <Lock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />}
                 <span>{labelA}</span>
               </span>
             </div>
@@ -801,13 +880,13 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                   type="month"
                   id="select-month-a"
                   value={effectiveMonthA}
-                  disabled={plan === 'free'}
-                  onChange={(e) => setMonthA(e.target.value)}
+                  disabled={plan !== 'premium'}
+                  onChange={(e) => { if (e.target.value) setMonthA(e.target.value); }}
                   className={`w-full text-xs font-bold px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    plan === 'free' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''
+                    plan !== 'premium' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''
                   }`}
                 />
-                {plan === 'free' && (
+                {plan !== 'premium' && (
                   <button
                     type="button"
                     onClick={onOpenUpgradeModal}
@@ -821,14 +900,14 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 <input
                   type="date"
                   value={startA}
-                  onChange={(e) => setStartA(e.target.value)}
+                  onChange={(e) => { if (e.target.value) setStartA(e.target.value); }}
                   className="w-full text-[11px] font-bold px-2 py-1.5 bg-white border border-emerald-300 rounded-lg text-slate-900 focus:outline-none"
                   title="Start Date A"
                 />
                 <input
                   type="date"
                   value={endA}
-                  onChange={(e) => setEndA(e.target.value)}
+                  onChange={(e) => { if (e.target.value) setEndA(e.target.value); }}
                   className="w-full text-[11px] font-bold px-2 py-1.5 bg-white border border-emerald-300 rounded-lg text-slate-900 focus:outline-none"
                   title="End Date A"
                 />
@@ -843,17 +922,17 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               id="swap-periods-btn"
               onClick={handleSwapPeriods}
               title={
-                plan === 'free'
+                plan !== 'premium'
                   ? (lang === 'my' ? 'ကာလလဲလှယ်ရန် Premium လိုအပ်ပါသည်' : 'Upgrade to swap periods')
                   : (lang === 'my' ? 'ကာလ (က) နှင့် (ခ) အပြန်အလှန် လဲလှယ်ရန်' : 'Swap Period A & B')
               }
               className={`w-9 h-9 rounded-full border flex items-center justify-center transition-colors active:scale-95 shadow-xs ${
-                plan === 'free'
+                plan !== 'premium'
                   ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-pointer hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300'
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600'
               }`}
             >
-              {plan === 'free' ? <Lock className="w-3.5 h-3.5 text-amber-500" /> : <ArrowUpDown className="w-4 h-4" />}
+              {plan !== 'premium' ? <Lock className="w-3.5 h-3.5 text-amber-500" /> : <ArrowUpDown className="w-4 h-4" />}
             </button>
           </div>
 
@@ -865,7 +944,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 {lang === 'my' ? 'ကာလ (ခ) [ယခင် အခြေအနေ]' : 'Period B [Comparison]'}
               </span>
               <span className="text-[10px] text-indigo-700 font-semibold truncate max-w-[150px] flex items-center gap-1">
-                {plan === 'free' && <Lock className="w-2.5 h-2.5 text-indigo-600 shrink-0" />}
+                {plan !== 'premium' && <Lock className="w-2.5 h-2.5 text-indigo-600 shrink-0" />}
                 <span>{labelB}</span>
               </span>
             </div>
@@ -875,13 +954,13 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                   type="month"
                   id="select-month-b"
                   value={effectiveMonthB}
-                  disabled={plan === 'free'}
-                  onChange={(e) => setMonthB(e.target.value)}
+                  disabled={plan !== 'premium'}
+                  onChange={(e) => { if (e.target.value) setMonthB(e.target.value); }}
                   className={`w-full text-xs font-bold px-3 py-1.5 bg-white border border-indigo-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                    plan === 'free' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''
+                    plan !== 'premium' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''
                   }`}
                 />
-                {plan === 'free' && (
+                {plan !== 'premium' && (
                   <button
                     type="button"
                     onClick={onOpenUpgradeModal}
@@ -895,14 +974,14 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 <input
                   type="date"
                   value={startB}
-                  onChange={(e) => setStartB(e.target.value)}
+                  onChange={(e) => { if (e.target.value) setStartB(e.target.value); }}
                   className="w-full text-[11px] font-bold px-2 py-1.5 bg-white border border-indigo-300 rounded-lg text-slate-900 focus:outline-none"
                   title="Start Date B"
                 />
                 <input
                   type="date"
                   value={endB}
-                  onChange={(e) => setEndB(e.target.value)}
+                  onChange={(e) => { if (e.target.value) setEndB(e.target.value); }}
                   className="w-full text-[11px] font-bold px-2 py-1.5 bg-white border border-indigo-300 rounded-lg text-slate-900 focus:outline-none"
                   title="End Date B"
                 />
@@ -910,6 +989,13 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             )}
           </div>
         </div>
+
+        {periodWarning && (
+          <div className="mt-4 p-3 rounded-2xl bg-amber-50 border border-amber-300 text-xs font-semibold text-amber-900 flex items-start gap-2">
+            <span className="shrink-0">⚠️</span>
+            <span>{periodWarning}</span>
+          </div>
+        )}
 
         {/* Secondary Filter Row: Wallet selector & Export Buttons */}
         <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
@@ -924,7 +1010,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 onChange={(e) => setWalletFilter(e.target.value)}
                 className="text-xs font-semibold px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="all">{lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး' : 'All Wallets'}</option>
+                <option value="all">{lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး (ရောထားသည်များသာ)' : 'All Wallets (included only)'}</option>
                 {wallets.map((w) => (
                   <option key={w.id} value={w.id}>
                     {lang === 'my' ? w.name : w.nameEn}
@@ -934,7 +1020,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             </div>
 
             {/* Free plan Shuffle 2 random categories button */}
-            {plan === 'free' && (
+            {plan !== 'premium' && (
               <button
                 type="button"
                 id="shuffle-random-cats-btn"
@@ -966,18 +1052,17 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               )}
             </button>
 
-            <button
-              onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{lang === 'my' ? 'Excel / CSV ထုတ်ယူမည်' : 'Export CSV'}</span>
-              {plan === 'free' && (
-                <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
-                  PRO
-                </span>
-              )}
-            </button>
+            {/* [v7.5.55] Export button renders ONLY for Premium — no locked
+                button, no upgrade prompt in its place. */}
+            {plan === 'premium' && (
+              <button
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{lang === 'my' ? 'Excel / CSV ထုတ်ယူမည်' : 'Export CSV'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1143,7 +1228,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                 <span>{lang === 'my' ? 'အဓိက သုံးသပ်ချက်' : 'Key Highlights'}</span>
               </div>
-              {plan === 'free' && (
+              {plan !== 'premium' && (
                 <span className="text-[10px] font-bold text-amber-800 bg-amber-100/90 px-1.5 py-0.5 rounded">
                   {lang === 'my' ? 'Random ၂ ခု' : '2 Random Cats'}
                 </span>
@@ -1200,7 +1285,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               <h3 className="text-base font-bold text-slate-900">
                 {lang === 'my' ? 'ကဏ္ဍအလိုက် နှိုင်းယှဉ် ဘားဇယား' : 'Visual Category Comparison Chart'}
               </h3>
-              {plan === 'free' && (
+              {plan !== 'premium' && (
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
                   {lang === 'my' ? 'Random ၂ ခုသာ' : '2 Random Cats'}
                 </span>
@@ -1211,6 +1296,13 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 ? 'ကာလနှစ်ခုကြား ကဏ္ဍတစ်ခုချင်းစီ၏ သုံးစွဲငွေပမာဏကို မျက်မြင် နှိုင်းယှဉ်ချက်'
                 : 'Side-by-side spending comparison for each category'}
             </p>
+            {displayedCategoryComparisons.length > 8 && (
+              <p className="text-[11px] font-semibold text-indigo-700 mt-1">
+                {lang === 'my'
+                  ? `ပမာဏ အများဆုံး ကဏ္ဍ ၈ ခုကို ပြသနေသည် (စုစုပေါင်း ${displayedCategoryComparisons.length} ခု)`
+                  : `Showing top 8 categories by amount (of ${displayedCategoryComparisons.length})`}
+              </p>
+            )}
           </div>
 
           {/* Chart Legend */}
@@ -1241,7 +1333,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {displayedCategoryComparisons.slice(0, 8).map((c) => {
+            {chartCategoryComparisons.map((c) => {
               const widthPctA = maxBarAmount > 0 ? (c.amountA / maxBarAmount) * 100 : 0;
               const widthPctB = maxBarAmount > 0 ? (c.amountB / maxBarAmount) * 100 : 0;
 
@@ -1270,7 +1362,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                             : 'bg-slate-200 text-slate-700'
                         }`}
                       >
-                        {c.diff > 0 ? `+${formatMMK(c.diff)} (+${c.pctChange}%)` : c.diff < 0 ? `${formatMMK(c.diff)} (${c.pctChange}%)` : '0 MMK (0%)'}
+                        {c.isNew ? `+${formatMMK(c.diff)} (${lang === 'my' ? 'အသစ်' : 'New'})` : c.diff > 0 ? `+${formatMMK(c.diff)} (+${c.pctChange}%)` : c.diff < 0 ? `${formatMMK(c.diff)} (${c.pctChange}%)` : '0 MMK (0%)'}
                       </span>
                     </div>
                   </div>
@@ -1314,7 +1406,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             })}
 
             {/* Teaser for remaining categories on Free plan */}
-            {plan === 'free' && hiddenCategoriesCount > 0 && (
+            {plan !== 'premium' && hiddenCategoriesCount > 0 && (
               <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
@@ -1356,7 +1448,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                   ? lang === 'my' ? 'ကဏ္ဍ အလိုက် အသေးစိတ် နှိုင်းယှဉ်ချက်' : 'Detailed Category Breakdown'
                   : lang === 'my' ? 'ကဏ္ဍခွဲ အလိုက် အသေးစိတ် နှိုင်းယှဉ်ချက်' : 'Detailed Sub-Category Breakdown'}
               </h3>
-              {plan === 'free' && (
+              {plan !== 'premium' && (
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
                   {lang === 'my' ? 'Free Plan ကန့်သတ်ချက်' : 'Free Limited'}
                 </span>
@@ -1406,10 +1498,10 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               <input
                 type="text"
                 value={searchCategory}
-                disabled={plan === 'free'}
+                disabled={plan !== 'premium'}
                 onChange={(e) => setSearchCategory(e.target.value)}
                 placeholder={
-                  plan === 'free'
+                  plan !== 'premium'
                     ? lang === 'my'
                       ? '🔒 Free: Random ၂ ခုသာ (ရွေးခွင့်မရှိ)'
                       : '🔒 Free: 2 Random categories'
@@ -1422,10 +1514,10 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                     : 'Search sub-category...'
                 }
                 className={`text-xs pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  plan === 'free' ? 'cursor-not-allowed opacity-75' : ''
+                  plan !== 'premium' ? 'cursor-not-allowed opacity-75' : ''
                 }`}
               />
-              {plan === 'free' && (
+              {plan !== 'premium' && (
                 <button
                   type="button"
                   onClick={onOpenUpgradeModal}
@@ -1439,10 +1531,10 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
               <select
                 value={sortBy}
-                disabled={plan === 'free'}
+                disabled={plan !== 'premium'}
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className={`text-xs font-semibold px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none ${
-                  plan === 'free' ? 'opacity-75 cursor-not-allowed' : ''
+                  plan !== 'premium' ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
               >
                 <option value="amountA">{lang === 'my' ? 'ကာလ (က) အသုံးစရိတ် အများဆုံး' : 'Period A (High to Low)'}</option>
@@ -1558,7 +1650,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                   : 'bg-slate-100 text-slate-600'
                               }`}
                             >
-                              {item.diff > 0 ? `+${item.pctChange}%` : item.diff < 0 ? `${item.pctChange}%` : '0%'}
+                              {item.isNew ? (lang === 'my' ? 'အသစ်' : 'New') : item.diff > 0 ? `+${item.pctChange}%` : item.diff < 0 ? `${item.pctChange}%` : '0%'}
                             </span>
                           </td>
 
@@ -1623,7 +1715,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                                 : 'bg-slate-200 text-slate-700'
                                             }`}
                                           >
-                                            {sub.diff > 0 ? `+${sub.pctChange}%` : sub.diff < 0 ? `${sub.pctChange}%` : '0%'}
+                                            {sub.isNew ? (lang === 'my' ? 'အသစ်' : 'New') : sub.diff > 0 ? `+${sub.pctChange}%` : sub.diff < 0 ? `${sub.pctChange}%` : '0%'}
                                           </span>
                                         </div>
 
@@ -1783,7 +1875,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                               : 'bg-slate-100 text-slate-600'
                           }`}
                         >
-                          {item.diff > 0 ? `+${item.pctChange}%` : item.diff < 0 ? `${item.pctChange}%` : '0%'}
+                          {item.isNew ? (lang === 'my' ? 'အသစ်' : 'New') : item.diff > 0 ? `+${item.pctChange}%` : item.diff < 0 ? `${item.pctChange}%` : '0%'}
                         </span>
                       </td>
 
@@ -1815,7 +1907,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         )}
 
         {/* Premium Upgrade CTA Card when on Free Plan */}
-        {plan === 'free' && (
+        {plan !== 'premium' && (
           <div className="mt-6 p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 text-white border border-indigo-900/60 shadow-lg relative overflow-hidden">
             <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-44 h-44 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">

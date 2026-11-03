@@ -287,6 +287,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // [v7.5.55 E30] Live listener on the user's own profile doc.
+  // A grant / revocation / expiry must take effect mid-session,
+  // without a reload (the profile used to load once on sign-in).
+  useEffect(() => {
+    if (!user) return;
+    const userRef = doc(db, 'users', user.uid);
+    const unsub = onSnapshot(
+      userRef,
+      () => { refreshUserProfile(); },
+      (err) => { console.warn('Profile listener error:', err); }
+    );
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const claimFreeTrial = async (): Promise<{ success: boolean; error?: string }> => {
     if (!auth.currentUser) {
       return { success: false, error: 'Please sign in first to claim free trial' };
@@ -311,8 +326,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const nowTime = Date.now();
       const diffDays = (nowTime - createdTime) / (1000 * 60 * 60 * 24);
 
-      // Generous 31 days check from registration
-      if (diffDays > 31) {
+      // [v7.5.55 E30] Trial eligibility is 30 days everywhere
+      // (PremiumModal already uses 30; AuthContext used 31).
+      if (diffDays > 30) {
         return {
           success: false,
           error: 'အကောင့်ဖွင့်ပြီး ၁ လ (ရက် ၃၀) အတွင်းသာ ၃ လ အခမဲ့ လက်ဆောင် ရယူနိုင်ပါသည် (Trial eligibility expired)'

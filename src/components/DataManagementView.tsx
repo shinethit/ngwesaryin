@@ -1,6 +1,6 @@
 import React from 'react';
 import { Database, Trash2, Download, Upload, KeyRound, AlertTriangle, Crown, Cloud, CloudOff, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
-import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet } from '../types';
+import { BudgetConfig, Category, Debt, PlanType, ShopContact, Transaction, Vehicle, Wallet } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 interface DataManagementViewProps {
@@ -9,6 +9,8 @@ interface DataManagementViewProps {
   wallets: Wallet[];
   categories: Category[];
   budgets?: BudgetConfig[];
+  vehicles?: Vehicle[];
+  shops?: ShopContact[];
   plan: PlanType;
   lang: 'my' | 'en';
   cloudTxIds?: Set<string>;
@@ -25,6 +27,8 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   wallets,
   categories,
   budgets = [],
+  vehicles = [],
+  shops = [],
   plan,
   lang,
   cloudTxIds,
@@ -72,7 +76,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         </div>
 
         {/* Live Stored Data Counts Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-6 border-t border-slate-100">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mt-6 pt-6 border-t border-slate-100">
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
             <span className="text-slate-400 block text-[11px] font-medium">
               {lang === 'my' ? 'စာရင်းမှတ်တမ်း' : 'Transactions'}
@@ -113,7 +117,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             <span className="text-[10px] text-slate-400">categories</span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 col-span-2 sm:col-span-1">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
             <span className="text-slate-400 block text-[11px] font-medium">
               {lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်ချက်' : 'Budgets'}
             </span>
@@ -121,6 +125,26 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               {budgets.length}
             </span>
             <span className="text-[10px] text-slate-400">targets</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+            <span className="text-slate-400 block text-[11px] font-medium">
+              {lang === 'my' ? 'ယာဉ်များ' : 'Vehicles'}
+            </span>
+            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
+              {vehicles.length}
+            </span>
+            <span className="text-[10px] text-slate-400">vehicles</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+            <span className="text-slate-400 block text-[11px] font-medium">
+              {lang === 'my' ? 'ဆိုင်များ' : 'Shops'}
+            </span>
+            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
+              {shops.length}
+            </span>
+            <span className="text-[10px] text-slate-400">shops</span>
           </div>
         </div>
       </div>
@@ -307,7 +331,8 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             : 'Safeguard your dataset by exporting to a JSON file, or restore data from a previous export file.'}
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${plan === 'premium' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+          {plan === 'premium' && (
           <button
             type="button"
             id="btn-export-backup"
@@ -326,6 +351,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               </span>
             </div>
           </button>
+          )}
 
           <label
             id="lbl-import-backup"

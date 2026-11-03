@@ -476,19 +476,19 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
       {/* Selected Day Details Card with Clean Structured Table */}
       {selectedDayStr && (
         <div className="bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 rounded-2xl p-4 border border-indigo-200/90 shadow-2xs space-y-3.5">
-          <div className="flex items-center justify-between border-b border-indigo-100 pb-2.5">
-            <div className="flex items-center gap-2.5">
-              <span className="font-black text-xs sm:text-sm text-indigo-950 font-mono bg-white px-2.5 py-1 rounded-xl border border-indigo-200 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-2.5">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <span className="font-black text-xs sm:text-sm text-indigo-950 font-mono bg-white px-2.5 py-1 rounded-xl border border-indigo-200 shadow-2xs min-w-0 truncate">
                 📅 {formatSelectedDay(selectedDayStr)}
               </span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 shrink-0">
                 {selectedDayTxs.length} {lang === 'my' ? 'မှတ်တမ်း' : 'records'}
               </span>
             </div>
             <button
               type="button"
               onClick={() => setSelectedDayStr(null)}
-              className="text-slate-400 hover:text-slate-700 text-xs font-bold px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+              className="text-slate-400 hover:text-slate-700 text-xs font-bold px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer shrink-0"
             >
               ✕ {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
             </button>
@@ -526,11 +526,11 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200/90 overflow-x-auto shadow-2xs">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full table-fixed text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
                     <th className="py-2.5 px-3">{lang === 'my' ? 'အမျိုးအစား / မှတ်ချက်' : 'Category / Note'}</th>
-                    <th className="py-2.5 px-3 text-right">{lang === 'my' ? 'ပမာဏ' : 'Amount'}</th>
+                    <th className="py-2.5 px-3 text-right w-24">{lang === 'my' ? 'ပမာဏ (သိန်း)' : 'Amount (lakh)'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -570,8 +570,8 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                             </div>
                           </div>
                         </td>
-                        <td className={`py-3 px-3 text-right font-mono font-bold text-xs sm:text-sm shrink-0 ${isInc ? 'text-emerald-700' : 'text-rose-600'}`}>
-                          {isInc ? `+${formatMMK(t.amount)}` : `-${formatMMK(t.amount)}`}
+                        <td className={`py-3 px-3 text-right font-mono font-bold text-xs sm:text-sm shrink-0 whitespace-nowrap ${isInc ? 'text-emerald-700' : 'text-rose-600'}`} title={isInc ? `+${formatMMK(t.amount)}` : `-${formatMMK(t.amount)}`}>
+                          {isInc ? `+${formatShortLakhs(t.amount)}` : `-${formatShortLakhs(t.amount)}`}
                         </td>
                       </tr>
                     );

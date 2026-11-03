@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.58';
-export const CURRENT_BUILD_NUMBER = 273;
+export const CURRENT_APP_VERSION = 'v7.5.59';
+export const CURRENT_BUILD_NUMBER = 274;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.59',
+    buildNumber: 274,
+    releaseDate: '2026-11-03',
+    releaseTime: '9:00 PM (MMT)',
+    titleMy: 'Smart Calendar မှာ ပမာဏ သိန်းနဲ့ ပြခြင်း',
+    titleEn: 'Smart Calendar Amounts Now Shown in Lakhs',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Smart Calendar အောက်က ရွေးထားတဲ့နေ့ရဲ့ မှတ်တမ်းစာရင်းမှာ ပမာဏတွေ ပြတ်ထွက်နေတဲ့ ပြဿနာကို ပြင်လိုက်ပါသည် — အကြောင်းရင်းက ပမာဏကို ကျပ်အပြည့်အစုံ (-48,000 MMK) နဲ့ ပြထားလို့ စာရင်းက ဖုန်းအကျယ်ထက် ကျယ်သွားတာပါ။ အခု ပမာဏကို သိန်းနဲ့ ပြတော့မည် (-0.48) — Dashboard နဲ့ အပေါ်က အကျဉ်းချုပ်တွေမှာလိုပဲ။ ဂဏန်းတွေ တိုသွားတော့ စာရင်းက ဖုန်းထဲ အပြည့်အစုံ ဝင်တော့မည်။ အတိအကျ ကျပ်ပမာဏကိုတော့ ပမာဏကို ကြာကြာဖိထားရင် ကြည့်နိုင်ပါသည်။ ရက်စွဲခေါင်းစဉ်ကလည်း ဖုန်းမှာ ၂ ကြောင်းမကွဲတော့ပါ။',
+    descriptionEn: 'Fixed the amounts in the Smart Calendar selected-day list cutting off on phones — the amounts were shown in full kyat (-48,000 MMK), making the table wider than the phone. Amounts are now shown in lakhs (-0.48), like the Dashboard and the summary chips above. Shorter numbers mean the table now fits fully on the phone. The exact kyat amount is still available by long-pressing the amount. The date header no longer splits across two lines on phones.',
+    changesMy: [
+      '📅 ရွေးထားတဲ့နေ့ရဲ့ ပမာဏတွေ သိန်းနဲ့ ပြတော့မည် — ၁ သိန်းဆို -၁၊ ၂ ထောင်ဆို ၀.၀၂',
+      '📏 ပမာဏတွေ ပြတ်ထွက်မသွားတော့ပါ — စာရင်းက ဖုန်းထဲ အပြည့်အစုံ ဝင်တော့မည်',
+      '🔍 ပမာဏကို ကြာကြာဖိထားရင် အတိအကျ ကျပ်ပမာဏ ကြည့်နိုင်ပါသည်',
+      '📆 ရက်စွဲခေါင်းစဉ် ဖုန်းမှာ ၂ ကြောင်းမကွဲတော့ပါ',
+    ],
+    changesEn: [
+      '📅 Selected-day amounts now shown in lakhs — 1 lakh shows as -1, 2 thousand as 0.02',
+      '📏 Amounts no longer cut off — the table now fits fully on the phone',
+      '🔍 Long-press an amount to see the exact kyat value',
+      '📆 Date header no longer splits across two lines on phones',
+    ],
+  },
   {
     version: 'v7.5.58',
     buildNumber: 273,

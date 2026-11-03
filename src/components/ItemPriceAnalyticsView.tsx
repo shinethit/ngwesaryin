@@ -723,7 +723,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
           </div>
 
           {/* List of Available Items to Pick */}
-          <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1 divide-y divide-slate-100">
+          <div className="space-y-1.5 max-h-[380px] overflow-y-auto overflow-x-hidden pr-1 divide-y divide-slate-100">
             {displayedItems.length === 0 ? (
               <div className="p-6 text-center text-slate-400 text-xs">
                 {lang === 'my' ? 'ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်း မရှိပါ' : 'No items found'}
@@ -1030,7 +1030,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                               ? formatDateDisplay(new Date(label).toISOString().slice(0, 10))
                               : String(label ?? '');
                           return (
-                            <div className="bg-slate-900/95 text-white p-3 rounded-2xl shadow-xl text-xs space-y-1.5 border border-slate-700">
+                            <div className="bg-slate-900/95 text-white p-3 rounded-2xl shadow-xl text-xs space-y-1.5 border border-slate-700 max-w-[280px]">
                               <div className="text-[11px] text-slate-400 font-semibold border-b border-slate-800 pb-1 flex items-center justify-between gap-2">
                                 <span>{labelStr}</span>
                                 <span className="text-[10px] text-indigo-400">📅 ဝယ်ယူမှုမှတ်တမ်း</span>
@@ -1042,16 +1042,16 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                                 if (!matchedItem || entry.value === undefined) return null;
                                 return (
                                   <div key={i} className="flex items-center justify-between gap-4 py-0.5">
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1.5 min-w-0">
                                       <span
                                         className="w-2 h-2 rounded-full"
                                         style={{ backgroundColor: entry.stroke }}
                                       />
-                                      <span className="font-bold text-slate-200">
+                                      <span className="font-bold text-slate-200 truncate">
                                         {matchedItem.name}:
                                       </span>
                                     </div>
-                                    <span className="font-mono font-bold text-emerald-300">
+                                    <span className="font-mono font-bold text-emerald-300 shrink-0">
                                       {formatMMK(entry.value)}
                                     </span>
                                   </div>
@@ -1175,7 +1175,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                   : 'Select items from the catalog to inspect their purchase history'}
               </div>
             ) : (
-              <div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-100 divide-y divide-slate-100">
+              <div className="max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-100 divide-y divide-slate-100">
                 {selectedItemsPurchaseLogs.map((log, i) => {
                   const wallet = walletMap.get(log.walletId);
                   return (

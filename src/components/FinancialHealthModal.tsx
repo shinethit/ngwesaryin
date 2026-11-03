@@ -28,7 +28,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
   const { theme, metrics } = health;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
       <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Header with Dynamic Tier Gradient / Ambient Color */}
         <div
@@ -69,7 +69,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
               {health.emoji}
             </div>
 
-            <div className="space-y-1 pr-6">
+            <div className="space-y-1 pr-6 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/20">
                   {lang === 'my' ? health.colorName.my : health.colorName.en}
@@ -89,7 +89,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
         </div>
 
         {/* Scrollable Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 text-slate-800">
+        <div className="p-5 sm:p-6 overflow-y-auto overflow-x-hidden space-y-6 text-slate-800">
           {/* Real-time Financial Metrics Grid */}
           <div className="space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -98,25 +98,25 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 min-w-0">
                 <span className="text-[11px] text-slate-500 font-semibold block mb-0.5">
                   {lang === 'my' ? 'စုစုပေါင်း ဝင်ငွေ' : 'Total Income'}
                 </span>
-                <span className="text-sm font-bold text-emerald-600">
+                <span className="text-sm font-bold text-emerald-600 break-words">
                   {formatMMK(metrics.totalIncome)}
                 </span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 min-w-0">
                 <span className="text-[11px] text-slate-500 font-semibold block mb-0.5">
                   {lang === 'my' ? 'စုစုပေါင်း အသုံး' : 'Total Expense'}
                 </span>
-                <span className="text-sm font-bold text-rose-600">
+                <span className="text-sm font-bold text-rose-600 break-words">
                   {formatMMK(metrics.totalExpense)}
                 </span>
               </div>
 
-              <div className={`p-3 rounded-2xl border ${
+              <div className={`p-3 rounded-2xl border min-w-0 ${
                 metrics.netSavings < 0
                   ? 'bg-rose-50 border-rose-200'
                   : 'bg-emerald-50 border-emerald-200'
@@ -124,18 +124,18 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 <span className="text-[11px] text-slate-600 font-semibold block mb-0.5">
                   {lang === 'my' ? 'ပိုလျှံ / အရှုံး' : 'Net Savings'}
                 </span>
-                <span className={`text-sm font-black ${
+                <span className={`text-sm font-black break-words ${
                   metrics.netSavings < 0 ? 'text-rose-700' : 'text-emerald-700'
                 }`}>
                   {metrics.netSavings < 0 ? '-' : '+'}{formatMMK(Math.abs(metrics.netSavings))}
                 </span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 min-w-0">
                 <span className="text-[11px] text-slate-500 font-semibold block mb-0.5">
                   {lang === 'my' ? 'ပေးရန် အကြွေး' : 'Payable Debt'}
                 </span>
-                <span className={`text-sm font-bold ${
+                <span className={`text-sm font-bold break-words ${
                   metrics.totalPayableDebt > 0 ? 'text-amber-700' : 'text-slate-700'
                 }`}>
                   {formatMMK(metrics.totalPayableDebt)}
@@ -245,10 +245,10 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 onClose();
                 onNavigateToAnalytics?.();
               }}
-              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer min-w-0 text-left"
             >
               <span>{lang === 'my' ? 'ဘတ်ဂျက်နှင့် စာရင်းအင်းသို့ သွားမည်' : 'View Budgets & Analytics'}</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 shrink-0" />
             </button>
           ) : onNavigateToBudgets ? (
             <button
@@ -256,10 +256,10 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 onClose();
                 onNavigateToBudgets?.();
               }}
-              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer min-w-0 text-left"
             >
               <span>{lang === 'my' ? 'ဘတ်ဂျက်သို့ သွားမည်' : 'View Budgets'}</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 shrink-0" />
             </button>
           ) : (
             <span />
@@ -267,7 +267,7 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
 
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
+            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
           >
             {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
           </button>

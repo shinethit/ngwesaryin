@@ -334,12 +334,12 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                 {/* Card Top Header: User Name, Plan Badge, Stars, Category Badge */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold flex items-center justify-center text-sm shadow-xs uppercase">
+                    <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold flex items-center justify-center text-sm shadow-xs uppercase shrink-0">
                       {item.userName.charAt(0)}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-900 text-sm">
+                        <span className="font-bold text-slate-900 text-sm truncate">
                           {item.userName}
                         </span>
                         {item.userPlan === 'premium' && (
@@ -385,7 +385,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                 </div>
 
                 {/* Comment Body */}
-                <p className="text-slate-800 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium">
+                <p className="text-slate-800 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium break-words">
                   {item.comment}
                 </p>
 
@@ -403,7 +403,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-indigo-900 font-semibold leading-relaxed">
+                    <p className="text-xs text-indigo-900 font-semibold leading-relaxed break-words">
                       {item.adminReply}
                     </p>
                   </div>

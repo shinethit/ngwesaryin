@@ -246,7 +246,7 @@ Those records and their linked wallet transactions will be deleted.`
       {/* Limit Notice if Free and close to limit */}
       {isAtLimit && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-900 font-medium">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-900 font-medium min-w-0">
             <Lock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
               {lang === 'my'
@@ -455,11 +455,11 @@ Those records and their linked wallet transactions will be deleted.`
               {/* [v7.5.55 D32] Per-person group header (only when one person
                   has several debts in the current filter). */}
               {group.debts.length > 1 && (
-                <div className="flex items-center justify-between px-1 pt-1">
-                  <span className="text-xs font-bold text-slate-700">
+                <div className="flex items-center justify-between gap-2 px-1 pt-1">
+                  <span className="text-xs font-bold text-slate-700 min-w-0 truncate">
                     👤 {group.personName} · {group.debts.length} {lang === 'my' ? 'ခု' : 'debts'}
                   </span>
-                  <span className="text-xs font-bold text-slate-500">
+                  <span className="text-xs font-bold text-slate-500 shrink-0">
                     {lang === 'my' ? 'စုစုပေါင်း ကျန်ငွေ:' : 'Total remaining:'} {formatMMK(group.totalRemainingMMK)}
                   </span>
                 </div>
@@ -577,7 +577,7 @@ Those records and their linked wallet transactions will be deleted.`
 
                   {/* Note if present */}
                   {debt.note && (
-                    <div className="mt-3 p-2.5 rounded-lg bg-slate-50 text-xs text-slate-600 border border-slate-100 italic">
+                    <div className="mt-3 p-2.5 rounded-lg bg-slate-50 text-xs text-slate-600 border border-slate-100 italic break-words">
                       "{debt.note}"
                     </div>
                   )}
@@ -702,9 +702,9 @@ Those records and their linked wallet transactions will be deleted.`
                               key={rep.id}
                               className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/70 text-xs"
                             >
-                              <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${isReceivable ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                <div>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${isReceivable ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                <div className="min-w-0 truncate">
                                   <span className="font-semibold text-slate-900">{formatShortDate(rep.date)}</span>
                                   {rep.note && (
                                     <span className="text-slate-500 ml-2 italic">"{rep.note}"</span>
@@ -712,8 +712,8 @@ Those records and their linked wallet transactions will be deleted.`
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-500">
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-slate-500 truncate">
                                   {repWallet
                                     ? (lang === 'my' ? repWallet.name : repWallet.nameEn)
                                     : (lang === 'my' ? 'ဖျက်လိုက်သော ပိုက်ဆံအိတ်' : 'Deleted wallet')}

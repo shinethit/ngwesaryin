@@ -284,16 +284,16 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${article.badgeColor}`}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border min-w-0 ${article.badgeColor}`}
                     >
                       {renderIcon(article.iconName, 'w-3.5 h-3.5')}
-                      <span>{lang === 'my' ? article.categoryTitleMy : article.categoryTitleEn}</span>
+                      <span className="truncate">{lang === 'my' ? article.categoryTitleMy : article.categoryTitleEn}</span>
                     </span>
 
                     <button
                       onClick={(e) => toggleBookmark(article.id, e)}
                       title={isSaved ? 'Unbookmark' : 'Bookmark'}
-                      className={`p-2 rounded-full transition-all ${
+                      className={`p-2 rounded-full transition-all shrink-0 ${
                         isSaved
                           ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
                           : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100'
@@ -343,12 +343,12 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
 
       {/* ARTICLE READER MODAL */}
       {activeArticle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto overflow-x-hidden animate-fade-in">
           <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
             {/* Modal Header Bar */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 sticky top-0 z-20 backdrop-blur-md">
               <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${activeArticle.badgeColor}`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold border min-w-0 truncate ${activeArticle.badgeColor}`}>
                   {lang === 'my' ? activeArticle.categoryTitleMy : activeArticle.categoryTitleEn}
                 </span>
                 <span className="text-xs text-slate-400 font-medium hidden sm:inline-flex items-center gap-1">
@@ -358,7 +358,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
               </div>
 
               {/* Reader Controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {/* Font Size Toggle */}
                 <button
                   onClick={() => setFontSize(fontSize === 'normal' ? 'large' : 'normal')}
@@ -396,7 +396,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
 
             {/* Modal Body Content (Scrollable) */}
             <div
-              className={`p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800 ${
+              className={`p-6 sm:p-8 overflow-y-auto overflow-x-hidden space-y-6 text-slate-800 ${
                 fontSize === 'large' ? 'text-base leading-relaxed' : 'text-sm leading-relaxed'
               }`}
             >

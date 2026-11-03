@@ -221,12 +221,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {lang === 'my' ? 'ငွေစာရင်း' : 'NgweSarYin'}
               </span>
               {currentPlan === 'premium' ? (
-                <span className="inline-flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300/80 whitespace-nowrap shrink-0 shadow-2xs">
+                <span className="hidden sm:inline-flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300/80 whitespace-nowrap shrink-0 shadow-2xs">
                   <Crown className="w-2.5 h-2.5 text-amber-600 fill-amber-500 shrink-0" />
                   <span>VIP</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
+                <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
                   Free
                 </span>
               )}

@@ -224,7 +224,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 flex flex-col max-h-[90vh] sm:max-h-[88vh] my-auto overflow-hidden pointer-events-auto animate-scaleUp">
         {/* Sticky Header */}
         <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-          <div>
+          <div className="min-w-0">
             <h3 className="font-bold text-base sm:text-lg text-slate-900">
               {walletToEdit
                 ? lang === 'my'
@@ -249,7 +249,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs sm:text-sm overflow-y-auto flex-1 min-h-0 overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs sm:text-sm overflow-y-auto overflow-x-hidden flex-1 min-h-0 overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
           {/* [v7.5.56] Shared-wallet guard notice — shown whenever this
               modal is opened on a shared wallet; saving is refused. */}
           {walletToEdit && (walletToEdit.isSharedFromOther || (walletToEdit.sharedWith && walletToEdit.sharedWith.length > 0)) && (
@@ -261,7 +261,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           )}
           {/* Wallet Name (MM & EN) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-bold mb-1">
                 {lang === 'my' ? 'အကောင့် အမည် *:' : 'Wallet Name *:'}
               </label>
@@ -275,7 +275,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none font-medium text-slate-900"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-semibold mb-1">
                 {lang === 'my' ? 'အင်္ဂလိပ် အမည် (ရွေးချယ်ရန်):' : 'English Name (Optional):'}
               </label>
@@ -293,8 +293,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
             <div>
               <label className="block text-slate-900 font-bold mb-1.5 flex items-center justify-between">
-                <span>{lang === 'my' ? 'ငွေကြေး အမျိုးအစား (Currency):' : 'Wallet Currency:'}</span>
-                <span className="text-[11px] font-semibold text-emerald-700">
+                <span className="min-w-0">{lang === 'my' ? 'ငွေကြေး အမျိုးအစား (Currency):' : 'Wallet Currency:'}</span>
+                <span className="text-[11px] font-semibold text-emerald-700 shrink-0">
                   {selectedCurrInfo.flag} {selectedCurrInfo.code} ({selectedCurrInfo.symbol})
                 </span>
               </label>
@@ -409,13 +409,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           {/* Balance Input */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-slate-700 font-bold">
+              <label className="block text-slate-700 font-bold min-w-0">
                 {lang === 'my'
                   ? `လက်ကျန်ငွေ (${selectedCurrInfo.code}):`
                   : `Balance (${selectedCurrInfo.code}):`}
               </label>
               {currency !== 'MMK' && parsedBalance > 0 && (
-                <span className="text-xs font-bold text-emerald-700">
+                <span className="text-xs font-bold text-emerald-700 shrink-0">
                   ≈ {convertedMMK.toLocaleString()} MMK
                 </span>
               )}
@@ -504,7 +504,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           {/* Color & Icon Picker */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             {/* Color */}
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-bold mb-1.5">
                 {lang === 'my' ? 'အရောင် ရွေးချယ်ရန်:' : 'Card Color:'}
               </label>
@@ -526,7 +526,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             </div>
 
             {/* Icon */}
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-bold mb-1.5">
                 {lang === 'my' ? 'ပုံစံ သင်္ကေတ (Icon):' : 'Account Icon:'}
               </label>
@@ -557,8 +557,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           {/* Include in Totals Option (စုစုပေါင်းထဲ ရောပြမည် / မရောပါ) */}
           <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2.5">
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs sm:text-sm">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap font-bold text-slate-800 text-xs sm:text-sm">
                   <span>{lang === 'my' ? 'စုစုပေါင်း စာရင်းတွက်ချက်မှု:' : 'Total Calculation Setting:'}</span>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
@@ -594,7 +594,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <Check className={`w-3.5 h-3.5 ${includeInTotals ? 'opacity-100' : 'opacity-0'}`} />
+                <Check className={`w-3.5 h-3.5 shrink-0 ${includeInTotals ? 'opacity-100' : 'opacity-0'}`} />
                 <span>{lang === 'my' ? 'စုစုပေါင်းထဲ ရောပြမည်' : 'Include in Totals'}</span>
               </button>
               <button
@@ -606,7 +606,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <Check className={`w-3.5 h-3.5 ${!includeInTotals ? 'opacity-100' : 'opacity-0'}`} />
+                <Check className={`w-3.5 h-3.5 shrink-0 ${!includeInTotals ? 'opacity-100' : 'opacity-0'}`} />
                 <span>{lang === 'my' ? 'စုစုပေါင်းထဲ မရောပါ' : 'Exclude / Separate'}</span>
               </button>
             </div>
@@ -614,15 +614,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
           {/* Live Preview Card */}
           <div className="p-3.5 rounded-2xl text-white shadow-sm flex items-center justify-between" style={{ backgroundColor: color }}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
                 {(() => {
                   const IconItem = WALLET_ICONS.find((i) => i.id === icon) || WALLET_ICONS[0];
                   const Comp = IconItem.icon;
                   return <Comp className="w-5 h-5 text-white" />;
                 })()}
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] uppercase tracking-wider font-semibold opacity-80">
                     {selectedCurrInfo.flag} {selectedCurrInfo.code}
@@ -637,13 +637,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                       : 'Separate'}
                   </span>
                 </div>
-                <h4 className="font-bold text-base leading-tight mt-0.5">
+                <h4 className="font-bold text-base leading-tight mt-0.5 truncate">
                   {name || (lang === 'my' ? 'အကောင့် အမည်' : 'Wallet Name')}
                 </h4>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-base font-bold">
+            <div className="text-right shrink-0">
+              <div className="text-base font-bold break-words">
                 {formatCurrency(parsedBalance, currency)}
               </div>
               {currency !== 'MMK' && (

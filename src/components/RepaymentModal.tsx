@@ -97,30 +97,30 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
       <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[95vh] flex flex-col">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-emerald-600" />
-            <h2 className="font-bold text-lg text-slate-900">
+          <div className="flex items-center gap-2 min-w-0">
+            <CreditCard className="w-5 h-5 text-emerald-600 shrink-0" />
+            <h2 className="font-bold text-lg text-slate-900 min-w-0">
               {lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း သွင်းခြင်း' : 'Record Debt Payment'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center font-bold"
+            className="w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center font-bold shrink-0"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 text-xs sm:text-sm">
           {/* Target Debt Snapshot */}
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-900">{debt.personName}</span>
+              <span className="font-bold text-sm text-slate-900 min-w-0 truncate">{debt.personName}</span>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                   isReceivable ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                 }`}
               >
@@ -131,13 +131,13 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
-              <span>{lang === 'my' ? 'မူလပမာဏ:' : 'Total Debt:'} {formatCurrency(debt.totalAmount, debtCurrency)}</span>
-              <span>{lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatCurrency(debt.paidAmount, debtCurrency)}</span>
+              <span className="min-w-0">{lang === 'my' ? 'မူလပမာဏ:' : 'Total Debt:'} {formatCurrency(debt.totalAmount, debtCurrency)}</span>
+              <span className="min-w-0 text-right">{lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatCurrency(debt.paidAmount, debtCurrency)}</span>
             </div>
 
             <div className="flex items-center justify-between text-xs font-bold text-slate-900 border-t border-slate-200/80 pt-1">
-              <span>{lang === 'my' ? 'လက်ကျန်ငွေ:' : 'Current Remaining:'}</span>
-              <span className={isReceivable ? 'text-emerald-700' : 'text-rose-700'}>
+              <span className="min-w-0">{lang === 'my' ? 'လက်ကျန်ငွေ:' : 'Current Remaining:'}</span>
+              <span className={isReceivable ? 'text-emerald-700 shrink-0' : 'text-rose-700 shrink-0'}>
                 {formatCurrency(remaining, debtCurrency)}
               </span>
             </div>
@@ -194,7 +194,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
 
           {/* Payment Account and Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-semibold mb-1">
                 {lang === 'my' ? 'ငွေလွှဲပြောင်း/လက်ခံသည့် အကောင့်:' : 'Wallet / Account:'}
               </label>
@@ -211,7 +211,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
               </select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-semibold mb-1">
                 {lang === 'my' ? 'ရက်စွဲ:' : 'Date:'}
               </label>

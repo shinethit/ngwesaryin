@@ -1340,19 +1340,19 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               return (
                 <div key={c.categoryId} className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 transition-all">
                   <div className="flex items-center justify-between text-xs mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span
                         className="w-6 h-6 rounded-md flex items-center justify-center text-white shrink-0"
                         style={{ backgroundColor: c.category?.color || '#94A3B8' }}
                       >
                         <CategoryIcon name={c.category?.icon || 'ShoppingCart'} className="w-3.5 h-3.5" />
                       </span>
-                      <span className="font-bold text-slate-900">
+                      <span className="font-bold text-slate-900 truncate">
                         {lang === 'my' ? c.category?.name : c.category?.nameEn}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
                       <span
                         className={`font-bold text-[11px] px-2 py-0.5 rounded-md ${
                           c.diff > 0
@@ -1683,15 +1683,15 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                               {subList.length > 0 && (
                                 <div className="bg-white p-3.5 rounded-2xl border border-indigo-100 shadow-2xs space-y-2.5">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
-                                      <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                                    <h4 className="font-bold text-xs text-indigo-950 flex items-center gap-1.5 min-w-0">
+                                      <Tag className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                                       <span>
                                         {lang === 'my'
                                           ? `"${item.category?.name}" အတွင်း ကဏ္ဍခွဲများ နှိုင်းယှဉ်ချက်`
                                           : `Sub-Category Breakdown for "${item.category?.nameEn || item.category?.name}"`}
                                       </span>
                                     </h4>
-                                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md shrink-0">
                                       {subList.length} {lang === 'my' ? 'မျိုး' : 'sub-items'}
                                     </span>
                                   </div>
@@ -1742,14 +1742,14 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                   {matchingTxA.length === 0 ? (
                                     <p className="text-[11px] text-slate-400 py-1">{lang === 'my' ? 'စာရင်းမရှိပါ' : 'No records'}</p>
                                   ) : (
-                                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                    <div className="space-y-1.5 max-h-40 overflow-y-auto overflow-x-hidden pr-1">
                                       {matchingTxA.map((t) => (
-                                        <div key={t.id} className="flex items-center justify-between py-1 border-b border-slate-100 last:border-0 text-[11px]">
-                                          <div>
-                                            <span className="font-medium text-slate-800">{t.note || item.category?.name}</span>
+                                        <div key={t.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-100 last:border-0 text-[11px]">
+                                          <div className="min-w-0">
+                                            <span className="block truncate font-medium text-slate-800">{t.note || item.category?.name}</span>
                                             <span className="block text-[10px] text-slate-400">{formatDateDisplay(t.date)}</span>
                                           </div>
-                                          <span className="font-bold text-slate-900">{formatMMK(t.amount)}</span>
+                                          <span className="font-bold text-slate-900 shrink-0">{formatMMK(t.amount)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1767,14 +1767,14 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                   {matchingTxB.length === 0 ? (
                                     <p className="text-[11px] text-slate-400 py-1">{lang === 'my' ? 'စာရင်းမရှိပါ' : 'No records'}</p>
                                   ) : (
-                                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                    <div className="space-y-1.5 max-h-40 overflow-y-auto overflow-x-hidden pr-1">
                                       {matchingTxB.map((t) => (
-                                        <div key={t.id} className="flex items-center justify-between py-1 border-b border-slate-100 last:border-0 text-[11px]">
-                                          <div>
-                                            <span className="font-medium text-slate-800">{t.note || item.category?.name}</span>
+                                        <div key={t.id} className="flex items-center justify-between gap-2 py-1 border-b border-slate-100 last:border-0 text-[11px]">
+                                          <div className="min-w-0">
+                                            <span className="block truncate font-medium text-slate-800">{t.note || item.category?.name}</span>
                                             <span className="block text-[10px] text-slate-400">{formatDateDisplay(t.date)}</span>
                                           </div>
-                                          <span className="font-bold text-slate-900">{formatMMK(t.amount)}</span>
+                                          <span className="font-bold text-slate-900 shrink-0">{formatMMK(t.amount)}</span>
                                         </div>
                                       ))}
                                     </div>

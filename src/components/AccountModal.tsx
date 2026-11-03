@@ -313,7 +313,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 relative overflow-y-auto max-h-[90vh]">
+      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 relative overflow-y-auto overflow-x-hidden max-h-[90vh]">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -327,7 +327,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-xs">
             <Cloud className="w-6 h-6 stroke-[2]" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
               {lang === 'my' ? 'အကောင့်နှင့် Cloud Sync' : 'Account & Cloud Sync'}
             </h2>
@@ -357,10 +357,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm text-slate-900 truncate">
+                  <span className="font-bold text-sm text-slate-900 truncate min-w-0">
                     {user.displayName || 'User'}
                   </span>
-                  <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     {lang === 'my' ? 'ချိတ်ဆက်ပြီး' : 'Connected'}
                   </span>
@@ -370,7 +370,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         onClose();
                         onOpenAdminPanel?.();
                       }}
-                      className="ml-auto px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 hover:bg-indigo-200"
+                      className="ml-auto px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 hover:bg-indigo-200 shrink-0"
                     >
                       Admin Panel
                     </button>
@@ -387,12 +387,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-slate-800">
                     {lang === 'my' ? 'ဧည့်သည်အဆင့် (Guest Mode)' : 'Guest Mode (Local Storage)'}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-900 border border-amber-200">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
                     {lang === 'my' ? 'စက်ထဲတွင်သာ' : 'Offline / Local'}
                   </span>
                 </div>
@@ -409,13 +409,13 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         {/* Premium Status Box */}
         <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/80 to-emerald-50/50 border border-amber-200/80 mb-5 shadow-2xs">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
                 plan === 'premium' ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'
               }`}>
                 <Crown className="w-5 h-5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h4 className="font-bold text-xs sm:text-sm text-slate-900">
                     {plan === 'premium'
@@ -470,11 +470,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         {onClearAllData && (
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 mb-5 shadow-2xs">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
                   <Trash2 className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h4 className="font-bold text-xs sm:text-sm text-rose-950">
                     {lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည် (Clear All Data)' : 'Clear All Data (Reset)'}
                   </h4>
@@ -506,11 +506,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           <div className="mb-5 space-y-3">
             <div className="p-4 rounded-2xl bg-white border border-slate-200">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>{lang === 'my' ? 'ပူးပေါင်းအသုံးပြုခြင်း (Workspace Sharing)' : 'Workspace Sharing'}</span>
+                <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 min-w-0">
+                  <Users className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span className="truncate">{lang === 'my' ? 'ပူးပေါင်းအသုံးပြုခြင်း (Workspace Sharing)' : 'Workspace Sharing'}</span>
                 </h3>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                   plan === 'premium'
                     ? 'bg-amber-100 text-amber-800 border border-amber-300'
                     : 'bg-slate-100 text-slate-700 border border-slate-200'
@@ -536,7 +536,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     {lang === 'my' ? 'သင့် Workspace ID (အခြားသူသို့ပေးရန်)' : 'Your Workspace ID'}
                   </label>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs font-mono text-slate-700 truncate select-all">
+                    <code className="flex-1 min-w-0 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs font-mono text-slate-700 truncate select-all">
                       {user?.uid}
                     </code>
                   </div>
@@ -606,7 +606,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                                   });
                                   await onManualSyncDown(user?.uid);
                                 }}
-                                className="px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-100 shadow-2xs cursor-pointer"
+                                className="px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-100 shadow-2xs cursor-pointer shrink-0"
                               >
                                 {lang === 'my' ? 'မူလသို့ပြန်မည်' : 'Switch Back'}
                               </button>
@@ -621,7 +621,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                                   });
                                   await onManualSyncDown(ws.uid);
                                 }}
-                                className="px-3 py-1 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-2xs cursor-pointer"
+                                className="px-3 py-1 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-2xs cursor-pointer shrink-0"
                               >
                                 {lang === 'my' ? 'ချိတ်ဆက်မည်' : 'Connect'}
                               </button>
@@ -643,11 +643,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       value={workspaceInput}
                       onChange={(e) => setWorkspaceInput(e.target.value)}
                       placeholder={lang === 'my' ? 'Workspace ID ထည့်ပါ (အလွတ်ထားပါက မူလသို့ပြန်ရောက်မည်)' : 'Workspace ID (Leave empty to reset)'}
-                      className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                      className="flex-1 min-w-0 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
                     />
                     <button
                       onClick={handleSwitchWorkspace}
-                      className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-200"
+                      className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-200 shrink-0"
                     >
                       {lang === 'my' ? 'ပြောင်းမည်' : 'Switch'}
                     </button>
@@ -660,7 +660,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 </div>
 
                 {workspaceMsg.text && (
-                  <div className={`text-xs p-2 rounded-lg ${workspaceMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                  <div className={`text-xs p-2 rounded-lg break-words ${workspaceMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                     {workspaceMsg.text}
                   </div>
                 )}
@@ -670,13 +670,13 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         )}
 
         {syncError && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium break-words">
             ⚠️ {syncError}
           </div>
         )}
 
         {pinError && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium break-words">
             {pinError}
           </div>
         )}
@@ -711,7 +711,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-1.5">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span className="font-semibold leading-relaxed">{loginError}</span>
+                  <span className="font-semibold leading-relaxed break-words">{loginError}</span>
                 </div>
                 {showVpnHint && (
                   <p className="text-[11px] text-rose-800 pl-6">
@@ -786,7 +786,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
             <div className="p-3 rounded-2xl bg-indigo-50/80 border border-indigo-200/80 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
                   <span className="text-xs font-bold text-slate-800">
                     {lang === 'my' ? 'VPN / လိုင်း မငြိမ်ပါက ချိတ်ဆက်မှု ပြန်စမည်' : 'VPN / Network Reconnect'}
@@ -796,7 +796,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   type="button"
                   onClick={handleResetVpnConnection}
                   disabled={reconnectingVpn}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-60 shadow-xs"
+                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-60 shadow-xs shrink-0"
                 >
                   <RefreshCw className={`w-3 h-3 ${reconnectingVpn ? 'animate-spin' : ''}`} />
                   <span>{reconnectingVpn ? (lang === 'my' ? 'ချိတ်နေသည်...' : 'Connecting...') : (lang === 'my' ? 'ပြန်လည်ချိတ်မည်' : 'Reconnect')}</span>
@@ -938,7 +938,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="min-w-0">
                   <div className="font-semibold text-sm text-slate-900">
                     {lang === 'my' ? 'လျှို့ဝှက်နံပါတ် ဖွင့်မည်' : 'App PIN Lock'}
                   </div>
@@ -946,7 +946,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     {lang === 'my' ? 'အက်ပ်ဖွင့်တိုင်း ၄ လုံး PIN တောင်းမည်' : 'Require 4-digit PIN on start'}
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input
                     type="checkbox"
                     className="sr-only peer"
@@ -1022,7 +1022,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
         {/* PWA Install Option */}
         <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 flex items-center justify-between gap-3">
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 min-w-0">
             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-950">
               <Smartphone className="w-4 h-4 text-emerald-600" />
               <span>
@@ -1053,11 +1053,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         {/* User Guide Banner */}
         {onOpenUserGuide && (
           <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm border border-emerald-700/50">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
                 <BookOpen className="w-5 h-5 text-emerald-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h4 className="font-bold text-xs sm:text-sm text-white">
                   {lang === 'my'
                     ? 'အသုံးပြုပုံ လမ်းညွှန်နှင့် Features များ'
@@ -1087,11 +1087,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         {/* Privacy Policy Banner */}
         {onOpenPrivacy && (
           <div className="mt-5 p-4 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h4 className="font-bold text-xs sm:text-sm text-white">
                   {lang === 'my'
                     ? 'ဒေတာ လုံခြုံရေးနှင့် သီးသန့်မူဝါဒများ'
@@ -1127,10 +1127,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-slate-900">
+                  <span className="font-bold text-sm text-slate-900 truncate">
                     {lang === 'my' ? 'ဗားရှင်းမှတ်တမ်းနှင့် ပြင်ဆင်မှုများ' : 'Version History & Changelog'}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white shadow-2xs">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white shadow-2xs shrink-0">
                     v4.2.0
                   </span>
                 </div>
@@ -1166,10 +1166,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             </div>
             <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                     <span>{lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည်' : 'Clear All Data'}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200/80 text-rose-800">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200/80 text-rose-800 shrink-0">
                       Reset
                     </span>
                   </div>
@@ -1202,10 +1202,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             {!isGuest && user && (
               <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 mt-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                       <span>{lang === 'my' ? 'အကောင့် ဖျက်မည်' : 'Delete Account'}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200/80 text-rose-800">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200/80 text-rose-800 shrink-0">
                         {lang === 'my' ? 'အပြီးတိုင်' : 'Permanent'}
                       </span>
                     </div>
@@ -1241,13 +1241,13 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         }}
                         placeholder={lang === 'my' ? 'စကားဝှက်' : 'Password'}
                         autoComplete="current-password"
-                        className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-rose-500 bg-white"
+                        className="flex-1 min-w-0 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-rose-500 bg-white"
                       />
                       <button
                         type="button"
                         onClick={() => void handleDeleteAccount(deletePassword)}
                         disabled={!deletePassword || deletingAccount}
-                        className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold rounded-lg disabled:opacity-50 cursor-pointer"
+                        className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold rounded-lg disabled:opacity-50 cursor-pointer shrink-0"
                       >
                         {lang === 'my' ? 'အတည်ပြုပြီး ဖျက်မည်' : 'Confirm Delete'}
                       </button>
@@ -1255,7 +1255,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                 )}
                 {deleteMsg.text && (
-                  <div className={`mt-3 text-xs p-2 rounded-lg ${deleteMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-100 text-rose-800'}`}>
+                  <div className={`mt-3 text-xs p-2 rounded-lg break-words ${deleteMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-100 text-rose-800'}`}>
                     {deleteMsg.text}
                   </div>
                 )}

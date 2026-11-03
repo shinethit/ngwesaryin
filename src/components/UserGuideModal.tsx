@@ -457,11 +457,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       <div className="relative w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         {/* Modal Top Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 shrink-0">
               <FortuneLogo size="sm" style={logoStyle} />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-base sm:text-xl font-extrabold flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-emerald-400" />
                 <span>
@@ -526,7 +526,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                     }`}
                   >
                     <IconComp className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-emerald-600'}`} />
-                    <span className="truncate">{cat.title}</span>
+                    <span className="truncate min-w-0">{cat.title}</span>
                   </button>
                 );
               })}
@@ -535,17 +535,17 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
         )}
 
         {/* Main Content Area */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-slate-700">
+        <div className="p-5 sm:p-6 overflow-y-auto overflow-x-hidden space-y-6 flex-1 text-slate-700">
           {searchQuery && (
-            <div className="text-xs text-slate-500 font-semibold mb-2 flex items-center justify-between">
-              <span>
+            <div className="text-xs text-slate-500 font-semibold mb-2 flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate">
                 {lang === 'my'
                   ? `"${searchQuery}" အတွက် ရှာဖွေတွေ့ရှိချက်များ (${filteredTopics.length})`
                   : `Search results for "${searchQuery}" (${filteredTopics.length})`}
               </span>
               <button
                 onClick={() => setSearchQuery('')}
-                className="text-emerald-700 hover:underline cursor-pointer"
+                className="text-emerald-700 hover:underline cursor-pointer shrink-0"
               >
                 {lang === 'my' ? 'အားလုံး ပြန်ပြပါ' : 'Clear search'}
               </button>

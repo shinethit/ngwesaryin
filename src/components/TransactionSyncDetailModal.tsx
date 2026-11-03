@@ -80,7 +80,7 @@ export const TransactionSyncDetailModal: React.FC<TransactionSyncDetailModalProp
             <h3 className="font-bold text-slate-900 text-base">
               {lang === 'my' ? 'မှတ်တမ်း Database စင့်ခ် အခြေအနေ' : 'Transaction Sync Status'}
             </h3>
-            <p className="text-xs text-slate-500 font-mono">ID: {transaction.id}</p>
+            <p className="text-xs text-slate-500 font-mono break-all">ID: {transaction.id}</p>
           </div>
         </div>
 

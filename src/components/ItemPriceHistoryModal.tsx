@@ -276,11 +276,11 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
       <div className="bg-white rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl border border-slate-200/80 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-5 sm:px-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 text-emerald-400 flex items-center justify-center border border-white/10">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-white/10 text-emerald-400 flex items-center justify-center border border-white/10 shrink-0">
               <History className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-base sm:text-lg text-white">
                   {lang === 'my' ? 'ပစ္စည်းများ၏ ယခင်ဝယ်ဈေးနှင့် ဈေးနှုန်းပြောင်းလဲမှု' : 'Item Price History & Trends'}
@@ -298,7 +298,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center font-bold transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center font-bold transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -342,7 +342,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
         </div>
 
         {/* Content list */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3 divide-y divide-slate-100">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 space-y-3 divide-y divide-slate-100">
           {filteredItems.length === 0 ? (
             <div className="py-12 text-center text-slate-400 space-y-2">
               <History className="w-10 h-10 mx-auto text-slate-300 opacity-60" />
@@ -366,16 +366,16 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                   <div className="bg-white hover:bg-slate-50/60 p-4 rounded-2xl border border-slate-200/80 transition-all shadow-2xs space-y-3">
                     {/* Top Row: Item name, Category, Trend Badge */}
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div
                           className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
                           style={{ backgroundColor: cat?.color || '#EF4444' }}
                         >
                           <CategoryIcon name={cat?.icon || 'Tag'} className="w-4 h-4" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm sm:text-base text-slate-900">
+                            <span className="font-bold text-sm sm:text-base text-slate-900 truncate min-w-0">
                               {lang === 'my' ? item.displayName : item.displayNameEn}
                             </span>
                             <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold border border-slate-200">
@@ -456,16 +456,16 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                               ? 'နောက်ဆုံး ဝယ်ယူသည့်ဈေး:'
                               : 'Latest Purchase:'}
                           </span>
-                          <span className="font-mono text-slate-500 flex items-center gap-1">
+                          <span className="font-mono text-slate-500 flex items-center gap-1 shrink-0">
                             <Calendar className="w-3 h-3" />
                             {item.latest.date}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pt-0.5">
-                          <span className="text-base font-bold text-slate-900 font-mono">
+                          <span className="text-base font-bold text-slate-900 font-mono shrink-0">
                             {formatMMK(item.latest.amount)}
                           </span>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-[11px] text-slate-500 min-w-0 truncate">
                             {lang === 'my' ? latestWallet?.name : latestWallet?.nameEn}
                           </span>
                         </div>
@@ -493,16 +493,16 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                                 ? 'အရင်တစ်ကြိမ် ဝယ်ဈေး:'
                                 : 'Previous Purchase:'}
                             </span>
-                            <span className="font-mono text-slate-500 flex items-center gap-1">
+                            <span className="font-mono text-slate-500 flex items-center gap-1 shrink-0">
                               <Calendar className="w-3 h-3" />
                               {item.previous.date}
                             </span>
                           </div>
                           <div className="flex items-center justify-between pt-0.5">
-                            <span className="text-base font-bold text-slate-700 font-mono">
+                            <span className="text-base font-bold text-slate-700 font-mono shrink-0">
                               {formatMMK(item.previous.amount)}
                             </span>
-                            <span className="text-[11px] text-slate-500">
+                            <span className="text-[11px] text-slate-500 min-w-0 truncate">
                               {lang === 'my' ? prevWallet?.name : prevWallet?.nameEn}
                             </span>
                           </div>
@@ -534,9 +534,9 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 sm:px-6 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>
+            <span className="truncate">
               {lang === 'my'
                 ? 'တူညီသော ပစ္စည်းများကို အလိုအလျောက် တွက်ချက်စိစစ်ပေးထားခြင်းဖြစ်ပါသည်'
                 : 'Automatically grouped by sub-categories and item descriptions'}
@@ -545,7 +545,7 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold transition-colors cursor-pointer shrink-0"
           >
             {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
           </button>

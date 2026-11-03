@@ -19,11 +19,11 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
       <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xs shrink-0">
               <Fuel className="w-5 h-5 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-bold text-base flex items-center gap-1.5">
                 <span>{lang === 'my' ? 'ဆီဖိုး ဘယ်နေရာမှာ ထည့်ရမလဲ?' : 'Where Should You Log Fuel?'}</span>
                 <span className="px-2 py-0.5 rounded-full bg-white/25 text-white text-[10px] font-bold">
@@ -39,14 +39,14 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-slate-700 leading-relaxed flex-1">
+        <div className="p-5 sm:p-6 overflow-y-auto overflow-x-hidden space-y-5 text-xs sm:text-sm text-slate-700 leading-relaxed flex-1">
           {/* Top Golden Rule Banner */}
           <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl shadow-2xs space-y-1.5">
             <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
@@ -70,7 +70,7 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
             {/* Option 1: Quick Expense */}
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-indigo-300 transition-all space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                     ၁
                   </span>
@@ -78,7 +78,7 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
                     {lang === 'my' ? 'နည်းလမ်း (၁) - အလွယ်ဆုံး & အမြန်ဆုံးနည်း' : 'Method 1 - Quickest & Easiest'}
                   </strong>
                 </div>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold flex items-center gap-1 shrink-0">
                   <Zap className="w-3 h-3 text-indigo-600" />
                   <span>{lang === 'my' ? '၁၀ စက္ကန့်' : '10 Seconds'}</span>
                 </span>
@@ -95,7 +95,7 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
                   )}
                 </p>
                 <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span className="text-emerald-600 font-bold shrink-0">✓</span>
                   <span>
                     {lang === 'my'
                       ? 'ဆီစားနှုန်း (km/L) တွက်ရန်မလိုဘဲ ငွေစာရင်းသာ အမြန်ထည့်လိုသူများအတွက် အကောင်းဆုံး ဖြစ်ပါသည်။'
@@ -108,7 +108,7 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
             {/* Option 2: Full Mileage Calculation */}
             <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 hover:border-amber-400 transition-all space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="w-6 h-6 rounded-lg bg-amber-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                     ၂
                   </span>
@@ -116,7 +116,7 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
                     {lang === 'my' ? 'နည်းလမ်း (၂) - ဆီစားနှုန်း (km/L) ပါ တွက်လိုသောနည်း' : 'Method 2 - Full Mileage (km/L) Calculation'}
                   </strong>
                 </div>
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold flex items-center gap-1 shrink-0">
                   <Sparkles className="w-3 h-3 text-amber-600" />
                   <span>{lang === 'my' ? 'ဆီစားနှုန်း အပြည့်အစုံ' : 'Full Analytics'}</span>
                 </span>
@@ -133,7 +133,7 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
                   )}
                 </p>
                 <div className="p-2.5 bg-white rounded-xl border border-amber-200 text-xs text-slate-600 flex items-center gap-2">
-                  <span className="text-amber-600 font-bold">✓</span>
+                  <span className="text-amber-600 font-bold shrink-0">✓</span>
                   <span>
                     {lang === 'my'
                       ? '၁ လီတာ မည်မျှ ကီလိုမီတာ မောင်းနိုင်သလဲ (km/L) နှင့် ၁ ကီလိုမီတာ ကုန်ကျငွေကိုပါ အလိုအလျောက် တွက်ချက်ပေးပါသည်။ ပင်မ ထွက်ငွေစာရင်းထဲလည်း တပြိုင်နက် ရောက်ရှိပါမည်။'

@@ -401,15 +401,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Top Header */}
         <div className="px-5 py-4 bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-inner">
               <Bell className="w-5 h-5 text-amber-300 animate-bounce" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                <span>{lang === 'my' ? 'အသိပေးချက်များ' : 'Notifications & Alerts'}</span>
+                <span className="truncate">{lang === 'my' ? 'အသိပေးချက်များ' : 'Notifications & Alerts'}</span>
                 {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 text-xs font-black bg-rose-500 text-white rounded-full shadow-xs">
+                  <span className="px-2 py-0.5 text-xs font-black bg-rose-500 text-white rounded-full shadow-xs shrink-0">
                     {unreadCount} {lang === 'my' ? 'ခု မဖတ်ရသေး' : 'Unread'}
                   </span>
                 )}
@@ -547,7 +547,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         </div>
 
         {/* Notification List Container */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[250px]">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-h-[250px]">
           {filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
               <div className="w-16 h-16 rounded-3xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-3">
@@ -618,14 +618,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm font-bold text-slate-900 leading-snug">
+                        <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
                           {notif.title}
                         </h4>
                         {!isRead && (
                           <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                      <p className="text-xs text-slate-600 mt-0.5 leading-relaxed break-words">
                         {notif.message}
                       </p>
                     </div>

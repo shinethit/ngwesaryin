@@ -1876,7 +1876,7 @@ export default function App() {
           }}
         />
         {isForgotPinRecovery && (
-          <div className="fixed inset-0 z-[110] overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 z-[110] overflow-y-auto overflow-x-hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
             <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg">
               <LoginScreen
                 lang={lang}
@@ -1934,7 +1934,7 @@ export default function App() {
         return (
           <div key={inv.docId} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
             <div className="bg-indigo-50 border border-indigo-300 rounded-2xl px-4 py-2.5 text-xs font-bold text-indigo-900 flex items-center justify-between gap-3">
-              <span>
+              <span className="min-w-0 break-words">
                 {lang === 'my'
                   ? `${ownerLabel} မှ ${inv.walletName ? `“${inv.walletName}” ` : ''}မျှဝေထားသည် — လက်ခံမည် / ငြင်းပယ်မည်`
                   : `${ownerLabel} shared ${inv.walletName ? `“${inv.walletName}” ` : ''}with you — Accept / Decline`}
@@ -1967,7 +1967,7 @@ export default function App() {
         return (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
             <div className="bg-amber-50 border border-amber-300 rounded-2xl px-4 py-2.5 text-xs font-bold text-amber-900 flex items-center justify-between gap-3">
-              <span>{lang === 'my' ? `⚠️ Premium သက်တမ်း ${daysLeft} ရက်သာ ကျန်ပါသည် — သက်တမ်းတိုးရန် Code အသစ် ထည့်ပါ` : `⚠️ Premium expires in ${daysLeft} day(s) — redeem a new code to renew`}</span>
+              <span className="min-w-0">{lang === 'my' ? `⚠️ Premium သက်တမ်း ${daysLeft} ရက်သာ ကျန်ပါသည် — သက်တမ်းတိုးရန် Code အသစ် ထည့်ပါ` : `⚠️ Premium expires in ${daysLeft} day(s) — redeem a new code to renew`}</span>
               <button type="button" onClick={() => setIsPremiumModalOpen(true)} className="px-3 py-1 rounded-lg bg-amber-600 text-white text-[11px] font-bold cursor-pointer shrink-0">
                 {lang === 'my' ? 'သက်တမ်းတိုးမည်' : 'Renew'}
               </button>
@@ -2956,7 +2956,7 @@ export default function App() {
       )}
 
             {(isAuthModalOpen || showLoginModal) && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
           <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg">
             <LoginScreen
               lang={lang}

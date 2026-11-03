@@ -16,10 +16,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.57';
-export const CURRENT_BUILD_NUMBER = 272;
+export const CURRENT_APP_VERSION = 'v7.5.58';
+export const CURRENT_BUILD_NUMBER = 273;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.58',
+    buildNumber: 273,
+    releaseDate: '2026-11-03',
+    releaseTime: '6:00 PM (MMT)',
+    titleMy: 'ဖုန်းမှာ စာပြတ်ထွက်ခြင်း ပြင်ဆင်ခြင်း',
+    titleEn: 'Fixed Text Cut Off on Phones',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Version History ကြည့်တဲ့အခါ စာတွေ ဘယ်ဘက်မှာ ပြတ်ထွက်သွားတဲ့ ပြဿနာကို ပြင်လိုက်ပါသည် — အကြောင်းရင်းက ရှည်လွန်းတဲ့ စာတန်းတွေ (ဥပမာ ၅၄၀px ရှိတဲ့ စာတန်း) ကြောင့် စာရင်းက ဘေးတိုက်ရွှေ့လို့ရသွားတာပါ။ တခြားနေရာတွေပါ သေချာစစ်ပြီး Navbar မှာ အကောင့်ခလုတ် ပြတ်တာ၊ ဈေးဝယ်စာရင်း ထည့်တဲ့နေရာမှာ အကွက်တွေ လျှံတာ၊ နာမည်/အီးမေးလ်/လင့်ခ် ရှည်တာတွေ ပြတ်တာတွေ အကုန်လုံးကို ပြင်ထားပါသည်။',
+    descriptionEn: 'Fixed the Version History list cutting off text on the left on phones — long unbreakable tokens (e.g. a 540px token) had made the list horizontally scrollable. Also checked the rest of the app and fixed the Navbar clipping the account button, shopping-list inputs overflowing, and long names, emails and links cutting off.',
+    changesMy: [
+      '📜 Version History စာရင်း ဘေးတိုက်ရွှေ့မသွားတော့ပါ — စာတွေ ပြတ်ထွက်မသွားတော့ပါ',
+      '🔝 Navbar မှာ အကောင့်ခလုတ် ပြတ်ထွက်မသွားတော့ပါ',
+      '🛒 ဈေးဝယ်စာရင်း ဈေး/အရေအတွက်/စုစုပေါင်း ထည့်တဲ့ အကွက်တွေ အကွက်ထဲ ဝင်တော့မည်',
+      '✂️ နာမည်/အီးမေးလ်/လင့်ခ် ရှည်တာတွေ ဖြတ်ပြခြင်း သို့မဟုတ် စာကြောင်းကျိုးပြခြင်း',
+      '🔒 စာရင်းရှည်တွေ ဘေးတိုက်ရွှေ့မရအောင် ကာကွယ်ထားခြင်း',
+    ],
+    changesEn: [
+      '📜 Version History list no longer scrolls sideways — text no longer cuts off on the left',
+      '🔝 Navbar no longer clips the account button',
+      '🛒 Shopping-list price/qty/total inputs now fit inside their cells',
+      '✂️ Long names, emails and links now truncate or wrap instead of cutting off',
+      '🔒 Long lists are now locked against horizontal scrolling',
+    ],
+  },
   {
     version: 'v7.5.57',
     buildNumber: 272,

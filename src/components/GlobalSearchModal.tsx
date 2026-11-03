@@ -313,7 +313,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   return (
     <div
       id="global-search-modal-backdrop"
-      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-start justify-center p-3 sm:p-6 pt-12 sm:pt-16 overflow-y-auto animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-start justify-center p-3 sm:p-6 pt-12 sm:pt-16 overflow-y-auto overflow-x-hidden animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -341,14 +341,14 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60"
+              className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
           )}
           <button
             onClick={onClose}
-            className="text-xs font-semibold px-2 py-1 rounded bg-slate-200/80 text-slate-600 hover:bg-slate-300"
+            className="text-xs font-semibold px-2 py-1 rounded bg-slate-200/80 text-slate-600 hover:bg-slate-300 shrink-0"
           >
             ESC
           </button>
@@ -386,12 +386,12 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         )}
 
         {/* Results Scroll Area */}
-        <div className="p-4 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 overflow-y-auto overflow-x-hidden space-y-6 flex-1">
           {/* Empty Results state */}
           {results.totalMatches === 0 && query && (
             <div className="text-center py-10 text-slate-500 space-y-2">
               <Search className="w-8 h-8 mx-auto text-slate-300" />
-              <p className="text-sm font-semibold text-slate-700">
+              <p className="text-sm font-semibold text-slate-700 break-words">
                 {lang === 'my' ? `"${query}" နှင့် ပတ်သက်သော စာရင်း ရှာမတွေ့ပါ` : `No matches found for "${query}"`}
               </p>
               <p className="text-xs text-slate-400">
@@ -412,7 +412,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 </span>
                 <button
                   onClick={() => goToTab('transactions')}
-                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5"
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5 shrink-0"
                 >
                   {lang === 'my' ? 'စာရင်း အကုန်ကြည့်မည်' : 'View All'}
                   <ChevronRight className="w-3 h-3" />
@@ -496,7 +496,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 </span>
                 <button
                   onClick={() => goToTab('debts')}
-                  className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-0.5"
+                  className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-0.5 shrink-0"
                 >
                   {lang === 'my' ? 'အကြွေး အကုန်ကြည့်မည်' : 'View All'}
                   <ChevronRight className="w-3 h-3" />
@@ -594,15 +594,15 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                       onClick={open}
                       className={`p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between cursor-pointer shadow-2xs${rowCls(key)}`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
                           style={{ backgroundColor: w.color || '#10b981' }}
                         >
                           <Wallet className="w-4 h-4" />
                         </div>
-                        <div>
-                          <span className="font-bold text-xs sm:text-sm text-slate-900 block">
+                        <div className="min-w-0">
+                          <span className="font-bold text-xs sm:text-sm text-slate-900 block truncate">
                             {lang === 'my' ? w.name : w.nameEn}
                           </span>
                           <span className="text-[10px] text-slate-400">
@@ -610,7 +610,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                           </span>
                         </div>
                       </div>
-                      <div className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">
+                      <div className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight shrink-0">
                         {formatMMK(w.balance)}
                       </div>
                     </div>
@@ -676,7 +676,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 </span>
                 <button
                   onClick={() => goToTab('shops')}
-                  className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-0.5"
+                  className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-0.5 shrink-0"
                 >
                   {lang === 'my' ? 'ဆိုင်အကုန်ကြည့်မည်' : 'View All'}
                   <ChevronRight className="w-3 h-3" />
@@ -726,7 +726,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 </span>
                 <button
                   onClick={() => goToTab('vehicles')}
-                  className="text-xs font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-0.5"
+                  className="text-xs font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-0.5 shrink-0"
                 >
                   {lang === 'my' ? 'ယာဉ်အကုန်ကြည့်မည်' : 'View All'}
                   <ChevronRight className="w-3 h-3" />
@@ -770,13 +770,13 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         </div>
 
         {/* Footer info */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>
+        <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 text-xs text-slate-500">
+          <span className="shrink-0">
             {lang === 'my'
               ? `ရှာဖွေမှုရလဒ် စုစုပေါင်း ${results.totalMatches} ခု`
               : `${results.totalMatches} matches found`}
           </span>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[11px] text-slate-400 min-w-0 truncate">
             {lang === 'my' ? '↑↓ ရွေးမည် • Enter ဖွင့်မည် • ESC ပိတ်မည်' : '↑↓ to move • Enter to open • ESC to close'}
           </span>
         </div>

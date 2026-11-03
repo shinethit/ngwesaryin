@@ -546,7 +546,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       {/* Free tier limit banner warning if reached or close */}
       {isAtLimit && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-900 font-medium">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-900 font-medium min-w-0">
             <Lock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
               {lang === 'my'
@@ -681,7 +681,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             {/* Active Filter Notice Bar if filtered is less than total */}
       {transactions.length > 0 && filtered.length < transactions.length && (
         <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
-          <div className="flex items-center gap-2 font-medium">
+          <div className="flex items-center gap-2 font-medium min-w-0">
             <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
             <span>
               {lang === 'my'
@@ -935,15 +935,15 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   </div>
                                   <div className="space-y-1">
                                     {t.items.map((item, idx) => (
-                                      <div key={idx} className="flex items-center justify-between font-medium text-slate-800">
-                                        <span className="flex items-center gap-1">
+                                      <div key={idx} className="flex items-center justify-between gap-2 font-medium text-slate-800">
+                                        <span className="flex items-center gap-1 min-w-0">
                                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-                                          <span>{item.name}</span>
+                                          <span className="truncate">{item.name}</span>
                                           <span className="text-[11px] text-slate-500 font-mono">
                                             ({formatMMK(item.price)} × {item.quantity})
                                           </span>
                                         </span>
-                                        <span className="font-bold font-mono text-slate-900">
+                                        <span className="font-bold font-mono text-slate-900 shrink-0">
                                           {formatMMK(item.amount)}
                                         </span>
                                       </div>

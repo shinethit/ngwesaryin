@@ -90,11 +90,11 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
       <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between relative">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-inner">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-inner shrink-0">
               <Scale className="w-5 h-5 text-indigo-300" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-lg sm:text-xl font-bold tracking-tight">
                 {lang === 'my' ? 'လက်ကျန်ငွေ စာရင်းညှိခြင်း (Reconcile)' : 'Balance Reconciliation'}
               </h2>
@@ -109,14 +109,14 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 overflow-y-auto overflow-x-hidden flex-1">
           {/* Step 1: Select Wallet */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
@@ -134,7 +134,7 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                       setSelectedWalletId(w.id);
                       setActualBalanceInput(w.balance.toString());
                     }}
-                    className={`p-2.5 rounded-xl text-left border transition-all flex flex-col justify-between cursor-pointer active:scale-95 ${
+                    className={`p-2.5 rounded-xl text-left border transition-all flex flex-col justify-between min-w-0 cursor-pointer active:scale-95 ${
                       isSelected
                         ? 'bg-indigo-50/80 border-indigo-600 ring-2 ring-indigo-500/20'
                         : 'bg-white border-slate-200 hover:border-slate-300'
@@ -145,11 +145,11 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                         className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: w.color || '#6366F1' }}
                       />
-                      <span className="text-xs font-bold text-slate-900 truncate">
+                      <span className="text-xs font-bold text-slate-900 truncate min-w-0">
                         {lang === 'my' ? w.name : w.nameEn}
                       </span>
                     </div>
-                    <div className="text-[11px] font-semibold text-slate-500 mt-1 font-mono">
+                    <div className="text-[11px] font-semibold text-slate-500 mt-1 font-mono break-words">
                       {formatMMK(w.balance)}
                     </div>
                   </button>
@@ -161,18 +161,18 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
           {/* Current vs Actual Balance Card */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
-              <span className="text-xs text-slate-500 font-medium">
+              <span className="text-xs text-slate-500 font-medium min-w-0">
                 {lang === 'my' ? 'စာရင်းတွင် မှတ်ထားသော လက်ကျန်ငွေ:' : 'Currently Recorded Balance:'}
               </span>
-              <span className="text-sm font-bold text-slate-800 font-mono">
+              <span className="text-sm font-bold text-slate-800 font-mono shrink-0">
                 {formatMMK(currentBalance)}
               </span>
             </div>
 
             {/* Input Real Amount */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-slate-800">
+              <div className="flex items-center justify-between flex-wrap gap-x-2 gap-y-1 mb-1">
+                <label className="block text-xs font-bold text-slate-800 min-w-0">
                   {lang === 'my'
                     ? 'လက်ထဲရှိ အမှန်တကယ် လက်ကျန်ငွေ (Actual Amount):'
                     : 'Actual Real-World Cash / Bank Amount:'}
@@ -180,10 +180,10 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setActualBalanceInput(calculatedBalanceFromTxs.toString())}
-                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors"
+                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors min-w-0"
                   title={lang === 'my' ? 'မှတ်တမ်းများအရ တွက်ချက်ထားသော လက်ကျန်ငွေဖြင့် အစားထိုးထည့်မည်' : 'Autofill calculated sum of transactions'}
                 >
-                  <Calculator className="w-3 h-3" />
+                  <Calculator className="w-3 h-3 shrink-0" />
                   <span>
                     {lang === 'my' ? 'မှတ်တမ်းများအရ:' : 'From Records:'} {formatMMK(calculatedBalanceFromTxs)}
                   </span>
@@ -263,15 +263,15 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                   : 'bg-rose-50 border-rose-300 text-rose-900'
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 {isExact ? (
-                  <Check className="w-4 h-4 text-slate-500" />
+                  <Check className="w-4 h-4 text-slate-500 shrink-0" />
                 ) : isSurplus ? (
-                  <ArrowUpRight className="w-4 h-4 text-emerald-600" />
+                  <ArrowUpRight className="w-4 h-4 text-emerald-600 shrink-0" />
                 ) : (
-                  <ArrowDownRight className="w-4 h-4 text-rose-600" />
+                  <ArrowDownRight className="w-4 h-4 text-rose-600 shrink-0" />
                 )}
-                <div>
+                <div className="min-w-0">
                   <div className="font-bold">
                     {isExact
                       ? lang === 'my'
@@ -324,8 +324,8 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-1.5 text-xs font-bold">
-                    <span>✨ {lang === 'my' ? 'လက်ကျန်ငွေ တိုက်ရိုက်ညှိမည်' : 'Direct Balance Set'}</span>
-                    {!recordTx && <span className="text-emerald-600 ml-auto">✓</span>}
+                    <span className="min-w-0">✨ {lang === 'my' ? 'လက်ကျန်ငွေ တိုက်ရိုက်ညှိမည်' : 'Direct Balance Set'}</span>
+                    {!recordTx && <span className="text-emerald-600 ml-auto shrink-0">✓</span>}
                   </div>
                   <div className="text-[11px] font-normal text-slate-500 mt-1">
                     {lang === 'my'
@@ -345,8 +345,8 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-1.5 text-xs font-bold">
-                    <span>📝 {lang === 'my' ? 'စာရင်းမှတ်တမ်းပါ ထည့်မည်' : 'Record Transaction'}</span>
-                    {recordTx && <span className="text-indigo-600 ml-auto">✓</span>}
+                    <span className="min-w-0">📝 {lang === 'my' ? 'စာရင်းမှတ်တမ်းပါ ထည့်မည်' : 'Record Transaction'}</span>
+                    {recordTx && <span className="text-indigo-600 ml-auto shrink-0">✓</span>}
                   </div>
                   <div className="text-[11px] font-normal text-slate-500 mt-1">
                     {lang === 'my'
@@ -387,7 +387,7 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
               disabled={isNaN(actualBalance) || actualBalance < 0}
               className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
             >
-              <Check className="w-4 h-4 stroke-[2.5]" />
+              <Check className="w-4 h-4 stroke-[2.5] shrink-0" />
               <span>{lang === 'my' ? 'စာရင်းညှိချက် အတည်ပြုမည်' : 'Confirm Reconciliation'}</span>
             </button>
           </div>

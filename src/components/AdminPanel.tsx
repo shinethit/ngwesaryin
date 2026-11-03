@@ -1630,7 +1630,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 Admin Control Center
               </h2>
               {user?.email === MASTER_ADMIN_EMAIL && (
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1 shrink-0">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Super Admin
                 </span>
@@ -1821,7 +1821,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 0: SYSTEM & FINANCIAL OVERVIEW (PRIVACY-PRESERVED AGGREGATES) */}
         {activeTab === 'overview' && (
-          <div className="flex-1 overflow-y-auto pt-3 space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
             {overviewError && (
               <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 text-xs font-bold text-rose-900 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -1830,7 +1830,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             )}
             {/* Privacy Architecture Highlight Card */}
             <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-indigo-900/50 flex flex-col sm:flex-row sm:items-start sm:items-center justify-between gap-3">
-              <div className="flex items-start sm:items-center gap-3">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 </div>
@@ -1839,7 +1839,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <h3 className="font-bold text-sm text-white">
                       {lang === 'my' ? '🛡️ Privacy-First Zero-Trust Architecture' : '🛡️ Zero-Trust Privacy Protected'}
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold font-mono">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold font-mono shrink-0">
                       ACTIVE & ENFORCED
                     </span>
                   </div>
@@ -2159,7 +2159,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               <span>{cat.label}</span>
                               <Sliders className="w-3 h-3 opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
                             </button>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               {cat.amount > 0 && (
                                 <span className="text-[11px] font-mono text-slate-500">
                                   {cat.amount.toLocaleString()} MMK
@@ -2423,7 +2423,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 0.5: FIRESTORE QUOTA & CAPACITY DASHBOARD */}
         {activeTab === 'quota' && (
-          <div className="flex-1 overflow-y-auto pt-3 space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
             <QuotaDashboard
               lang={lang}
               usersCount={usersList.length}
@@ -2439,7 +2439,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 1: UNIFIED USERS & PREMIUM CODES */}
         {activeTab === 'users_codes' && (
-          <div className="flex-1 overflow-y-auto pt-3 space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
             {/* Summary Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-center">
@@ -2955,7 +2955,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 2: BROADCAST & MARQUEE ANNOUNCEMENTS */}
         {activeTab === 'broadcast' && (
-          <div className="flex-1 overflow-y-auto pt-3 space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
             {/* Create/Edit Broadcast Form */}
             <form
               id="broadcast-form"
@@ -2963,7 +2963,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3.5"
             >
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 min-w-0">
                   <Megaphone className="w-4 h-4 text-indigo-600" />
                   <span>
                     {editingMsgId
@@ -2980,7 +2980,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="text-xs text-rose-600 hover:underline font-bold cursor-pointer"
+                    className="text-xs text-rose-600 hover:underline font-bold cursor-pointer shrink-0"
                   >
                     {lang === 'my' ? 'ပြင်ဆင်မှု ပယ်ဖျက်မည်' : 'Cancel Edit'}
                   </button>
@@ -3209,7 +3209,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <h5 className="font-bold text-xs sm:text-sm text-slate-800 truncate">
                           {m.title}
                         </h5>
-                        <p className="text-xs text-slate-600 line-clamp-2">{m.content}</p>
+                        <p className="text-xs text-slate-600 line-clamp-2 break-words">{m.content}</p>
                       </div>
 
                       {/* Action buttons */}
@@ -3242,13 +3242,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 3: CONTACT US & PAYMENT CONFIGURATION */}
         {activeTab === 'contact_info' && (
-          <div className="flex-1 overflow-y-auto pt-4 space-y-5 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-4 space-y-5 pr-1">
             <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Phone className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-bold text-sm text-sky-950">
                     {lang === 'my' ? 'Contact Us & Payment Accounts စီမံခန့်ခွဲရန်' : 'Manage Contact Us & Payment Accounts'}
                   </h3>
@@ -3311,7 +3311,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">
                       Telegram Link (auto-derived from username)
                     </label>
-                    <div className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-600">
+                    <div className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 break-all">
                       {contactForm.telegramUsername ? `https://t.me/${contactForm.telegramUsername.replace(/^@/, '').trim()}` : '—'}
                     </div>
                   </div>
@@ -3451,7 +3451,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 4: VISITOR & COUNTRY ANALYTICS */}
         {activeTab === 'analytics' && (
-          <div className="flex-1 overflow-y-auto pt-3 space-y-5 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-5 pr-1">
             {analyticsError && (
               <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 text-xs font-bold text-rose-900 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -3535,7 +3535,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </span>
                 </div>
 
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-56 overflow-y-auto overflow-x-hidden pr-1">
                   {analyticsStats.countriesSorted.length === 0 ? (
                     <div className="text-center py-6 text-slate-400 text-xs">
                       {lang === 'my' ? 'မည်သည့် ဒေတာမှ မရှိသေးပါ' : 'No country data logged yet'}
@@ -3846,10 +3846,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-amber-500/20 shrink-0">
                   <Crown className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-extrabold text-slate-900 text-base">
                     {lang === 'my' ? 'Premium သက်တမ်း ရွေးချယ်ရန်' : 'Select Premium Duration'}
                   </h3>
@@ -3861,7 +3861,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedUserForPlan(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3924,10 +3924,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
                   <Sliders className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-extrabold text-slate-900 text-base">
                     {lang === 'my' ? 'စနစ်တွင်း စာရင်းမှတ်တမ်းများ စစ်ဆေးခြင်း & သန့်ရှင်းရေး' : 'System Database Records & Cleanup'}
                   </h3>
@@ -3941,7 +3941,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <button
                 type="button"
                 onClick={() => setShowTxManagerModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>

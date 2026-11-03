@@ -294,7 +294,7 @@ Code: ${err.errorCode || 'N/A'}`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden animate-fadeIn">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Modal Header with Dynamic Gradient */}
         <div className={`p-5 sm:p-6 bg-gradient-to-r ${tier.gradient} text-white relative shrink-0 shadow-inner`}>
@@ -342,7 +342,7 @@ Code: ${err.errorCode || 'N/A'}`;
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-slate-800">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-5 text-slate-800">
           {actionMessage && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -353,7 +353,7 @@ Code: ${err.errorCode || 'N/A'}`;
           {/* 1. Health Score Progress Gauge Card */}
           <div className="p-5 bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-slate-200 rounded-3xl space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   {lang === 'my' ? 'စင့်ခ်ကျန်းမာရေး ရမှတ်' : 'Overall Sync Health Score'}
                 </span>
@@ -367,7 +367,7 @@ Code: ${err.errorCode || 'N/A'}`;
                 </div>
               </div>
 
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold ${tier.bgLight} ${tier.textColor} border ${tier.borderColor}`}>
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>{tier.badge}</span>
@@ -553,13 +553,13 @@ Code: ${err.errorCode || 'N/A'}`;
               </div>
 
               {/* Items List */}
-              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+              <div className="max-h-36 overflow-y-auto overflow-x-hidden space-y-1.5 pr-1">
                 {queueItems.map((item) => (
                   <div
                     key={item.id}
                     className="p-2 bg-white/80 border border-amber-200 rounded-xl flex items-center justify-between text-[11px]"
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex items-center gap-2 truncate min-w-0">
                       <span className="font-bold font-mono text-slate-700 uppercase px-1.5 py-0.5 bg-slate-100 rounded">
                         {item.entityType}
                       </span>
@@ -635,7 +635,7 @@ Code: ${err.errorCode || 'N/A'}`;
             </div>
 
             {errorHistory.length > 0 ? (
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-56 overflow-y-auto overflow-x-hidden pr-1">
                 {errorHistory.slice(0, 10).map((err, idx) => (
                   <div
                     key={err.id || idx}
@@ -718,12 +718,12 @@ Code: ${err.errorCode || 'N/A'}`;
                   : 'bg-rose-50 border border-rose-200 text-rose-900'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Zap className={`w-4 h-4 ${pingResult.success ? 'text-emerald-600' : 'text-rose-600'}`} />
-                <span>{pingResult.message}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Zap className={`w-4 h-4 shrink-0 ${pingResult.success ? 'text-emerald-600' : 'text-rose-600'}`} />
+                <span className="break-words">{pingResult.message}</span>
               </div>
               {pingResult.success && (
-                <span className="font-mono font-bold text-emerald-700">
+                <span className="font-mono font-bold text-emerald-700 shrink-0">
                   {pingResult.latencyMs} ms
                 </span>
               )}

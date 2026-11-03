@@ -117,11 +117,11 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
       <div className="bg-white w-full max-w-lg h-full shadow-2xl border-l border-slate-200 flex flex-col overflow-hidden">
         {/* Drawer Header */}
         <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
               <Layers className="w-4 h-4 stroke-[2.5]" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="font-bold text-sm sm:text-base text-slate-900">
                 {lang === 'my' ? 'Database Sync Status & Error Tracker' : 'Sync Status & Error Tracker'}
               </h2>
@@ -135,7 +135,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -144,13 +144,13 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
         {/* Action Notice Banner */}
         {actionNotice && (
           <div className="mx-4 mt-4 p-3 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 font-medium flex items-center justify-between shrink-0">
-            <span>{actionNotice}</span>
-            <button onClick={() => setActionNotice(null)} className="text-indigo-600 font-bold ml-2">×</button>
+            <span className="min-w-0">{actionNotice}</span>
+            <button onClick={() => setActionNotice(null)} className="text-indigo-600 font-bold ml-2 shrink-0">×</button>
           </div>
         )}
 
         {/* Drawer Body - Failed / Pending Queue Items */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 space-y-3.5">
           {queueItems.length === 0 && pendingOrFailedTransactions.length === 0 ? (
             <div className="py-20 text-center text-slate-400 space-y-3">
               <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-500" />
@@ -195,13 +195,13 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2.5 h-2.5 rounded-full ${isFailed ? 'bg-rose-500 animate-ping' : 'bg-amber-500'}`} />
-                          <span className="font-bold text-xs text-slate-900 uppercase">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isFailed ? 'bg-rose-500 animate-ping' : 'bg-amber-500'}`} />
+                          <span className="font-bold text-xs text-slate-900 uppercase truncate">
                             {item.entityType} ({item.operation})
                           </span>
                         </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/80 border text-slate-600 font-semibold">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/80 border text-slate-600 font-semibold shrink-0">
                           {isFailed ? (lang === 'my' ? '❌ မအောင်မြင် (Failed)' : 'Failed') : (lang === 'my' ? '⏳ စောင့်ဆိုင်းဆဲ' : 'Pending')}
                         </span>
                       </div>
@@ -210,8 +210,8 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                       {txData && (
                         <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200 text-xs space-y-1">
                           <div className="flex items-center justify-between font-bold text-slate-900">
-                            <span>{getCategoryDisplayName(txData.category, categories, lang)}</span>
-                            {amt && <span className="font-mono text-emerald-700">{amt}</span>}
+                            <span className="min-w-0 truncate">{getCategoryDisplayName(txData.category, categories, lang)}</span>
+                            {amt && <span className="font-mono text-emerald-700 shrink-0">{amt}</span>}
                           </div>
                           {txData.note && <p className="text-slate-600 italic text-[11px]">"{txData.note}"</p>}
                         </div>
@@ -262,13 +262,13 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
 
         {/* Drawer Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 text-xs">
-          <span className="text-slate-500 font-medium">
+          <span className="text-slate-500 font-medium min-w-0 truncate">
             {lang === 'my' ? 'စက်တွင်း ဒေတာများ လုံခြုံစွာ ရှိနေပါသည်' : 'Local data is safely stored on device'}
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition-all cursor-pointer shrink-0"
           >
             {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
           </button>

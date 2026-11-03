@@ -22,11 +22,11 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
       <div className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 shrink-0">
               <FortuneLogo size="sm" style={logoStyle} />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 <span>
@@ -45,14 +45,14 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Content */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 text-xs sm:text-sm text-slate-700 leading-relaxed">
+        <div className="p-5 sm:p-6 overflow-y-auto overflow-x-hidden space-y-6 text-xs sm:text-sm text-slate-700 leading-relaxed">
           {/* Intro Banner */}
           <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -158,7 +158,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
 
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <div className="text-[11px] text-slate-500 font-medium">
+          <div className="text-[11px] text-slate-500 font-medium min-w-0">
             {lang === 'my'
               ? 'အမြဲတမ်း လုံခြုံစိတ်ချရသော စာရင်းကိုင် စနစ်'
               : 'Secure & Confidential Bookkeeping System'}
@@ -167,7 +167,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-xs"
+            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
           >
             {lang === 'my' ? 'နားလည်ပါပြီ' : 'I Understand'}
           </button>

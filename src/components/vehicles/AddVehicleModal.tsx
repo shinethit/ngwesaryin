@@ -138,11 +138,11 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-amber-300 backdrop-blur-md">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-amber-300 backdrop-blur-md shrink-0">
               <Car className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-bold text-base">
                 {editingVehicle
                   ? lang === 'my'
@@ -159,14 +159,14 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1">
           {/* Vehicle Type Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -367,7 +367,7 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
+          <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100 flex-wrap">
             <div className="flex items-center gap-2">
               {editingVehicle && editingVehicle.isActive !== false && (
                 <button

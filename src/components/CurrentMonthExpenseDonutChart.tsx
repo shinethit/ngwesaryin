@@ -183,7 +183,7 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
           </div>
 
           {/* Category Breakdown Legend / List */}
-          <div className="md:col-span-7 space-y-2 max-h-60 overflow-y-auto pr-1">
+          <div className="md:col-span-7 space-y-2 max-h-60 overflow-y-auto overflow-x-hidden pr-1">
             {categoryBreakdown.map((item) => (
               <div
                 key={item.categoryId}

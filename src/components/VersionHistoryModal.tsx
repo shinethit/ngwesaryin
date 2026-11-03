@@ -282,7 +282,12 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         </div>
 
         {/* Timeline Content List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        {/* [v7.5.58] overflow-x-hidden: long unbreakable tokens in old
+            entries (e.g. a 540px permission-helper token, 422px Firebase
+            project id) made this container horizontally scrollable, and a
+            diagonal swipe left it scrolled right — content cut off on the
+            left. break-words below makes the tokens wrap instead. */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4">
           <div className="relative border-l-2 border-emerald-200/80 ml-3 sm:ml-4 space-y-6 pb-2">
             {filteredVersions.map((item, idx) => {
               const isCurrent = item.version === CURRENT_APP_VERSION;
@@ -336,10 +341,10 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                     </div>
 
                     {/* Title & Short Description */}
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-1">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-1 break-words">
                       {lang === 'my' ? item.titleMy : item.titleEn}
                     </h3>
-                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed break-words">
                       {lang === 'my' ? item.descriptionMy : item.descriptionEn}
                     </p>
 
@@ -348,7 +353,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                       {(lang === 'my' ? item.changesMy : item.changesEn).map((change, cIdx) => (
                         <div key={cIdx} className="flex items-start gap-2 text-xs text-slate-700">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                          <span className="leading-snug">{change}</span>
+                          <span className="leading-snug min-w-0 break-words">{change}</span>
                         </div>
                       ))}
                     </div>

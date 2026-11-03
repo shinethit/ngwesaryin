@@ -155,15 +155,15 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   const isSelectedGeneral = categoryId === UNBUDGETED_CATEGORY_ID;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
       <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[95vh] flex flex-col">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
               <PieChart className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="font-bold text-base sm:text-lg text-slate-900">
                 {isEditing
                   ? (lang === 'my' ? 'ဘတ်ဂျက် ကန့်သတ်ချက် ပြင်ဆင်ခြင်း' : 'Edit Budget Limit')
@@ -178,14 +178,14 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center font-bold"
+            className="w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center font-bold shrink-0"
           >
             ✕
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1 text-xs sm:text-sm">
           {/* Category Selector */}
           <div>
             <label className="block text-slate-700 font-semibold mb-1.5">
@@ -194,12 +194,12 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
             {isEditing ? (
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
                 {isSelectedGeneral ? (
-                  <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
                     <Layers className="w-4 h-4" />
                   </div>
                 ) : (
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
                     style={{
                       backgroundColor:
                         categories.find((c) => c.id === categoryId)?.color || '#6366F1',
@@ -211,8 +211,8 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                     />
                   </div>
                 )}
-                <div>
-                  <div className="font-bold text-slate-900">
+                <div className="min-w-0">
+                  <div className="font-bold text-slate-900 break-words">
                     {isSelectedGeneral
                       ? (lang === 'my' ? 'အထွေထွေ (အခြား သီးသန့်မရှိသော ကဏ္ဍများ)' : 'General & Others (Unbudgeted)')
                       : lang === 'my'
@@ -268,7 +268,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Percent className="w-4 h-4" />
+                <Percent className="w-4 h-4 shrink-0" />
                 <span>{lang === 'my' ? 'ဝင်ငွေ၏ ရာခိုင်နှုန်း (%)' : '% of Monthly Income'}</span>
               </button>
               <button
@@ -280,7 +280,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Banknote className="w-4 h-4" />
+                <Banknote className="w-4 h-4 shrink-0" />
                 <span>{lang === 'my' ? 'သတ်မှတ်ပမာဏ (MMK)' : 'Fixed Amount (MMK)'}</span>
               </button>
             </div>
@@ -329,16 +329,16 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               {/* Dynamic Calculation Helper */}
               <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
                 <div className="flex items-center justify-between font-semibold">
-                  <span>{lang === 'my' ? 'ယခုလ ဝင်ငွေ:' : 'Current Month Income:'}</span>
-                  <span className="font-bold">{formatMMK(monthlyIncome)}</span>
+                  <span className="min-w-0">{lang === 'my' ? 'ယခုလ ဝင်ငွေ:' : 'Current Month Income:'}</span>
+                  <span className="font-bold min-w-0 text-right break-words">{formatMMK(monthlyIncome)}</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-emerald-200/60 pt-1">
-                  <span>
+                  <span className="min-w-0">
                     {lang === 'my'
                       ? `တွက်ချက်ရရှိသော ဘတ်ဂျက် (${numValue}%):`
                       : `Calculated Limit (${numValue}%):`}
                   </span>
-                  <span className="text-sm font-black text-emerald-700">
+                  <span className="text-sm font-black text-emerald-700 min-w-0 text-right break-words">
                     {formatMMK(calculatedMMK)}
                   </span>
                 </div>

@@ -20,13 +20,15 @@ const getLocalDateString = (d: Date = new Date()): string => {
 };
 
 // [v6.1.7] Compact number format for tight calendar cells
-// Converts to lakhs (÷ 100,000) with up to 5 decimals, strips trailing zeros
+// [v7.5.58] Capped at 4 decimals so the longest token stays short
+// (e.g. "12.3456") and cannot overflow the tiny day cells.
+// Converts to lakhs (÷ 100,000) with up to 4 decimals, strips trailing zeros
 // Examples: 100000 → "1" | 50000 → "0.5" | 63000 → "0.63"
-//           72300 → "0.723" | 72350 → "0.7235" | 85015 → "0.85015"
+//           72300 → "0.723" | 72350 → "0.7235" | 85015 → "0.8502"
 const formatShortLakhs = (amount: number): string => {
   if (!Number.isFinite(amount) || amount === 0) return '0';
   const lakhs = Math.abs(amount) / 100000;
-  return lakhs.toFixed(5).replace(/\.?0+$/, '');
+  return lakhs.toFixed(4).replace(/\.?0+$/, '');
 };
 
 export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
@@ -328,7 +330,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                   </button>
                 </div>
 
-                <div className="max-h-64 overflow-y-auto py-1">
+                <div className="max-h-64 overflow-y-auto overflow-x-hidden py-1">
                   {wallets.map((w) => {
                     const isSelected = selectedWalletIds.includes(w.id);
                     // [v7.5.56] Shared badge + owner name (finding 25).
@@ -523,7 +525,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
               {lang === 'my' ? 'ဤနေ့တွင် မှတ်တမ်း မရှိပါ။' : 'No transactions recorded on this date.'}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200/90 overflow-x-auto shadow-2xs">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-[11px]">

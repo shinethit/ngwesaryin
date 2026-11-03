@@ -375,7 +375,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
       {/* Secondary Controls: Category Filter (when in category_cost) & Range / Chart Type */}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         {viewMode === 'category_cost' ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <Filter className="w-3.5 h-3.5 text-indigo-600" />
               <span>{lang === 'my' ? 'ကဏ္ဍ ရွေးချယ်ပါ:' : 'Filter Category:'}</span>
@@ -384,7 +384,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
               id="select-category-cost-filter"
               value={selectedCategoryId}
               onChange={(e) => setSelectedCategoryId(e.target.value)}
-              className="text-xs font-bold px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+              className="text-xs font-bold px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer max-w-[200px] truncate"
             >
               <option value="all">
                 {lang === 'my' ? '📁 ကဏ္ဍ အားလုံး (All Categories)' : '📁 All Categories'}

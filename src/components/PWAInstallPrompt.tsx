@@ -145,7 +145,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
                   className="w-full h-full object-contain drop-shadow"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                     PWA Fast App
@@ -286,7 +286,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ lang }) => {
               <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shrink-0">
                 <Apple className="w-6 h-6" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-base font-black text-slate-900">
                   {lang === 'my' ? 'iPhone / iPad တွင် ထည့်သွင်းနည်း' : 'Install on iPhone / iPad'}
                 </h3>

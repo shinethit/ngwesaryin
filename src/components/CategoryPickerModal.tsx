@@ -149,7 +149,7 @@ export const CategoryPickerModal: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-2 space-y-2">
           {onManageCategories && (
             <button type="button"
               onClick={() => { onClose(); onManageCategories(); }}
@@ -255,14 +255,14 @@ export const CategoryPickerModal: React.FC<Props> = ({
                             onChange={(e) => setNewSubName(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreateSub(cat.id); } }}
                             placeholder={lang === 'my' ? 'ကဏ္ဍခွဲ အမည်...' : 'New sub...'}
-                            className="flex-1 px-2.5 py-1.5 text-xs bg-white border border-emerald-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                            className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-white border border-emerald-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500" />
                           <button type="button" onClick={() => handleCreateSub(cat.id)}
-                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold">
+                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold shrink-0">
                             {lang === 'my' ? 'ထည်' : 'Add'}
                           </button>
                           <button type="button"
                             onClick={() => { setAddingSubForCatId(null); setNewSubName(''); }}
-                            className="px-2 py-1.5 text-slate-500 text-xs">{'✕'}</button>
+                            className="px-2 py-1.5 text-slate-500 text-xs shrink-0">{'✕'}</button>
                         </div>
                       ) : (
                         <button type="button" onClick={() => setAddingSubForCatId(cat.id)}

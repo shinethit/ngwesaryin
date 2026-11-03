@@ -114,15 +114,15 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden animate-fadeIn">
       <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto relative">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-white/20 backdrop-blur-md rounded-2xl">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-white/20 backdrop-blur-md rounded-2xl shrink-0">
               <MessageSquareHeart className="w-5 h-5 text-amber-200" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-bold text-base sm:text-lg">
                 {lang === 'my'
                   ? 'သုံးသပ်ချက်နှင့် အကြံပြုချက် ပေးပို့ရန်'
@@ -138,7 +138,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -224,7 +224,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                       }`}
                     >
                       <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-amber-300' : 'text-slate-500'}`} />
-                      <span className="text-xs truncate">
+                      <span className="text-xs truncate min-w-0">
                         {lang === 'my' ? cat.labelMy : cat.labelEn}
                       </span>
                     </button>

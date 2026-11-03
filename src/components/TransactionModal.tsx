@@ -1430,30 +1430,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       <div className="bg-white w-full sm:max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0">
-            <button type="button" onClick={onClose} className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 -ml-2">
+            <button type="button" onClick={onClose} className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 -ml-2 shrink-0">
               {lang === 'my' ? 'မလုပ်တော့' : 'Cancel'}
             </button>
-            <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
+            <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate min-w-0">
               {isEditing ? (lang === 'my' ? 'စာရင်းပြင်ဆင်ခြင်း' : 'Edit Transaction') : (lang === 'my' ? 'စာရင်းအသစ်' : 'New Transaction')}
             </h2>
-            <button type="submit" disabled={isSubmitting || !isActionAllowed} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer">
-              {isSubmitting ? (lang === 'my' ? 'သိမ်းနေသည်...' : 'Saving...') : (<><Check className="w-4 h-4" strokeWidth={3} /><span>{lang === 'my' ? 'သိမ်းမည်' : 'Save'}</span></>)}
+            <button type="submit" disabled={isSubmitting || !isActionAllowed} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer shrink-0">
+              {isSubmitting ? (lang === 'my' ? 'သိမ်းနေသည်...' : 'Saving...') : (<><Check className="w-4 h-4 shrink-0" strokeWidth={3} /><span>{lang === 'my' ? 'သိမ်းမည်' : 'Save'}</span></>)}
             </button>
           </div>
 
           <div className="px-3 py-2 border-b border-slate-100 shrink-0">
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setMoreOpen(!moreOpen)} className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>
+              <button type="button" onClick={() => setMoreOpen(!moreOpen)} className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
+                <span className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span className="truncate">
                     {entryModel === 'tire_pressure' ? (lang === 'my' ? '🛞 လေချိန်' : '🛞 Tire Pressure') : entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : entryMode === 'unit_qty' ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty') : entryMode === 'shopping_list' ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List') : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
                   </span>
                 </span>
-                {moreOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                {moreOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
               </button>
               {isVehicleRelatedCategory && (
-                <button type="button" onClick={() => setShowFuelGuideModal(true)} className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200" title={lang === "my" ? "ဆီဖိုး လမ်းညွှန်" : "Fuel Guide"}>
+                <button type="button" onClick={() => setShowFuelGuideModal(true)} className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 shrink-0" title={lang === "my" ? "ဆီဖိုး လမ်းညွှန်" : "Fuel Guide"}>
                   <HelpCircle className="w-4 h-4" />
                 </button>
               )}
@@ -1491,7 +1491,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
             {formError && (
               <div className="mx-3 mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">{formError}</div>
             )}
@@ -1499,13 +1499,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             {entryModel !== "general" && (
               <div className="px-3 pt-3">
                 <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
-                  <span className="text-xs font-bold text-emerald-800">
+                  <span className="text-xs font-bold text-emerald-800 min-w-0">
                     {entryModel === 'fuel' && (lang === 'my' ? '⛽ ဆီဖိုး Mode' : '⛽ Fuel Mode')}
                     {entryModel === 'tire_pressure' && (lang === 'my' ? '🛞 လေချိန် Mode' : '🛞 Tire Pressure Mode')}
                     {entryModel === 'vehicle_service' && maintServiceType === 'tires' && (lang === 'my' ? '🛞 တာယာ Mode' : '🛞 Tire Mode')}
                     {entryModel === 'vehicle_service' && maintServiceType !== 'tires' && (lang === 'my' ? '🔧 ဝန်ဆောင်မှု Mode' : '🔧 Service Mode')}
                   </span>
-                  <button type="button" onClick={() => { setEntryModel("general"); setIsVehicleLinkEnabled(false); }} className="text-[10px] font-bold text-slate-500 hover:text-slate-800">✕ {lang === 'my' ? 'ပိတ်' : 'Close'}</button>
+                  <button type="button" onClick={() => { setEntryModel("general"); setIsVehicleLinkEnabled(false); }} className="text-[10px] font-bold text-slate-500 hover:text-slate-800 shrink-0">✕ {lang === 'my' ? 'ပိတ်' : 'Close'}</button>
                 </div>
               </div>
             )}
@@ -1579,11 +1579,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div className="px-4 py-3 border-b border-slate-100 space-y-2">
                 <div className="text-xs font-bold text-indigo-900">{lang === 'my' ? 'ငွေလွှဲပြောင်းမှု' : 'Transfer'}</div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-[10px] font-bold text-rose-700 mb-0.5">{lang === 'my' ? 'မှ' : 'From'}</div>
                     <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">{wallets.map((w) => (<option key={w.id} value={w.id}>{lang === 'my' ? w.name : w.nameEn}</option>))}</select>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-[10px] font-bold text-emerald-700 mb-0.5">{lang === 'my' ? 'သို့' : 'To'}</div>
                     <select value={transferToWalletId} onChange={(e) => setTransferToWalletId(e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">{wallets.filter((w) => w.id !== walletId).map((w) => (<option key={w.id} value={w.id}>{lang === 'my' ? w.name : w.nameEn}</option>))}</select>
                     {wallets.filter((w) => w.id !== walletId).length === 0 && (
@@ -1706,30 +1706,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'တာယာ လေပေါင်ချိန် (PSI)' : 'Tire Pressure (PSI)'}</div>
                   {currentVehicle?.type === 'motorcycle' ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 min-w-0">
                         <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ဘီး' : 'Front'}</div>
                         <input type="text" inputMode="decimal" min={10} max={80} value={tireFL} onChange={(e) => setTireFL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 min-w-0">
                         <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ဘီး' : 'Rear'}</div>
                         <input type="text" inputMode="decimal" min={10} max={80} value={tireRL} onChange={(e) => setTireRL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 min-w-0">
                         <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ဘယ် (FL)' : 'Front Left (FL)'}</div>
                         <input type="text" inputMode="decimal" min={10} max={80} value={tireFL} onChange={(e) => setTireFL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 min-w-0">
                         <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'ရှေ့ ညာ (FR)' : 'Front Right (FR)'}</div>
                         <input type="text" inputMode="decimal" min={10} max={80} value={tireFR} onChange={(e) => setTireFR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 min-w-0">
                         <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ဘယ် (RL)' : 'Rear Left (RL)'}</div>
                         <input type="text" inputMode="decimal" min={10} max={80} value={tireRL} onChange={(e) => setTireRL(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 min-w-0">
                         <div className="text-[10px] font-bold text-slate-500">{lang === 'my' ? 'နောက် ညာ (RR)' : 'Rear Right (RR)'}</div>
                         <input type="text" inputMode="decimal" min={10} max={80} value={tireRR} onChange={(e) => setTireRR(e.target.value)} placeholder="32" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
                       </div>
@@ -1796,11 +1796,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                      <input type="text" value={maintTitle} onChange={(e) => setMaintTitle(e.target.value)} placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'} className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none" />
+                      <input type="text" value={maintTitle} onChange={(e) => setMaintTitle(e.target.value)} placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'} className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none" />
                     </div>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
-                      <input type="text" value={maintWorkshopName} onChange={(e) => setMaintWorkshopName(e.target.value)} placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'} className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none" />
+                      <input type="text" value={maintWorkshopName} onChange={(e) => setMaintWorkshopName(e.target.value)} placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'} className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none" />
                     </div>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>
@@ -1818,15 +1818,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input type="text" list="db-item-suggestions" autoComplete="off" value={itemName} onChange={(e) => { setItemName(e.target.value); setItemInput(e.target.value); }} placeholder={lang === 'my' ? 'ပစ္စည်းအမည် (ဥပမာ - ဆန်)' : 'Item name (e.g. Rice)'} className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none" />
+                  <input type="text" list="db-item-suggestions" autoComplete="off" value={itemName} onChange={(e) => { setItemName(e.target.value); setItemInput(e.target.value); }} placeholder={lang === 'my' ? 'ပစ္စည်းအမည် (ဥပမာ - ဆန်)' : 'Item name (e.g. Rice)'} className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none" />
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "ဈေးနှုန်း" : "Unit Price"}</span>
-                  <input type="number" value={unitPrice} onChange={(e) => handleUnitQtyChange("price", e.target.value)} placeholder="0" className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
+                  <input type="number" value={unitPrice} onChange={(e) => handleUnitQtyChange("price", e.target.value)} placeholder="0" className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "အရေအတွက်" : "Quantity"}</span>
-                  <input type="number" step="any" value={quantity} onChange={(e) => handleUnitQtyChange("qty", e.target.value)} placeholder="1" className="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
+                  <input type="number" step="any" value={quantity} onChange={(e) => handleUnitQtyChange("qty", e.target.value)} placeholder="1" className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
               </>
             )}
@@ -1840,19 +1840,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <button type="button" onClick={autoGenerateShoppingNote} className="text-[10px] font-bold text-amber-800 hover:underline">✨ {lang === 'my' ? 'မှတ်ချက်ရေး' : 'Note'}</button>
                   </div>
                 </div>
-                <div ref={shoppingListContainerRef} className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                <div ref={shoppingListContainerRef} className="space-y-2 max-h-72 overflow-y-auto overflow-x-hidden pr-1">
                   {shoppingItems.map((item, idx) => {
                     const pastPurchase = getPastPriceForItem(item.name);
                     return (
                       <div key={item.id || idx} className="bg-slate-50 rounded-xl p-2.5 space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <input type="text" list="db-item-suggestions" value={item.name} onChange={(e) => updateShoppingItem(item.id || "", "name", e.target.value)} placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'} className="flex-1 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none" />
+                          <input type="text" list="db-item-suggestions" value={item.name} onChange={(e) => updateShoppingItem(item.id || "", "name", e.target.value)} placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'} className="flex-1 min-w-0 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none" />
                           <button type="button" onClick={() => removeShoppingItemRow(item.id || "")} className="p-1 text-slate-400 hover:text-rose-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                         <div className="grid grid-cols-3 gap-1.5">
-                          <input type="number" value={item.price || ""} onChange={(e) => updateShoppingItem(item.id || "", "price", e.target.value)} placeholder="ဈေး" className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
-                          <input type="number" step="any" value={item.quantity || ""} onChange={(e) => updateShoppingItem(item.id || "", "quantity", e.target.value)} placeholder="Qty" className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
-                          <input type="number" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
+                          <input type="number" value={item.price || ""} onChange={(e) => updateShoppingItem(item.id || "", "price", e.target.value)} placeholder="ဈေး" className="min-w-0 w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
+                          <input type="number" step="any" value={item.quantity || ""} onChange={(e) => updateShoppingItem(item.id || "", "quantity", e.target.value)} placeholder="Qty" className="min-w-0 w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
+                          <input type="number" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="min-w-0 w-full text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
                         </div>
                         {pastPurchase && item.price > 0 && (<div className="text-[10px] text-slate-500">{lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})</div>)}
                       </div>
@@ -1948,7 +1948,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
             {!isActionAllowed && (
               <div className="mx-3 my-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-800 text-xs font-bold">
-                <Lock className="w-4 h-4 text-amber-600 shrink-0" /><span>{lang === 'my' ? 'ဤ Wallet ပိုင်ရှင်မှ ခွင့်မပြုထားပါ' : 'Permission denied by wallet owner'}</span>
+                <Lock className="w-4 h-4 text-amber-600 shrink-0" /><span className="min-w-0">{lang === 'my' ? 'ဤ Wallet ပိုင်ရှင်မှ ခွင့်မပြုထားပါ' : 'Permission denied by wallet owner'}</span>
               </div>
             )}
 

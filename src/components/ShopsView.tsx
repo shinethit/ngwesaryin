@@ -902,7 +902,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               >
                 <MapPin className="w-3.5 h-3.5" />
                 {selectedStateRegionFilter !== 'all' && (
-                  <span className="text-[10px] font-black">
+                  <span className="text-[10px] font-black truncate max-w-[110px]">
                     {selectedTownshipFilter !== 'all' ? selectedTownshipFilter : selectedStateRegionFilter.replace('တိုင်းဒေသကြီး', '').replace('ပြည်နယ်', '').trim()}
                   </span>
                 )}
@@ -1147,10 +1147,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   <div className="flex items-center gap-2 px-1">
                     <div className="h-px flex-1 bg-slate-200" />
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-lg border border-slate-200/60">
-                      <span className="text-[11px] font-black text-slate-700">
+                      <span className="text-[11px] font-black text-slate-700 truncate min-w-0 max-w-[220px]">
                         {group.label}
                       </span>
-                      <span className="px-1.5 py-0.2 rounded-full bg-white text-[9px] font-bold text-slate-600 border border-slate-200">
+                      <span className="px-1.5 py-0.2 rounded-full bg-white text-[9px] font-bold text-slate-600 border border-slate-200 shrink-0">
                         {group.shops.length}
                       </span>
                     </div>
@@ -1250,11 +1250,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           onClick={() => setIsPolicyOpen(!isPolicyOpen)}
           className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-all text-left cursor-pointer"
         >
-          <div className="flex items-center gap-2.5">
-            <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100 shrink-0">
               <Info className="w-4 h-4" />
             </span>
-            <div>
+            <div className="min-w-0">
               <span className="text-xs font-bold text-slate-800">
                 {lang === 'my'
                   ? 'ပြည်သူ့လမ်းညွှန်၏ မူဝါဒနှင့် လမ်းညွှန်ချက်များ (Usage Policy & Guidelines)'
@@ -1267,7 +1267,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </p>
             </div>
           </div>
-          <span className="text-xs font-bold text-indigo-600 flex items-center gap-1">
+          <span className="text-xs font-bold text-indigo-600 flex items-center gap-1 shrink-0">
             {isPolicyOpen ? (
               <>
                 <span>{lang === 'my' ? 'ပိတ်မည်' : 'Collapse'}</span>

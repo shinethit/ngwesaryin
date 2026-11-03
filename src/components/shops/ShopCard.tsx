@@ -172,7 +172,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-bold text-slate-900 text-sm truncate">{shop.name}</h4>
+                <h4 className="font-bold text-slate-900 text-sm truncate min-w-0">{shop.name}</h4>
                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
                   {tagLabel}
                   {shop.subCategory && <span className="opacity-70 ml-1">({shop.subCategory})</span>}
@@ -185,13 +185,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
                 {locationString && (
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 min-w-0">
                     <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span className="truncate">{locationString}</span>
+                    <span className="truncate min-w-0">{locationString}</span>
                   </span>
                 )}
                 {isPublic && pub?.addedBy && (
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[11px] text-slate-400 break-all">
                     👤 {pub.addedBy.split('@')[0]}
                   </span>
                 )}
@@ -200,7 +200,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           </div>
 
           {/* Quick Actions & Phones */}
-          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap justify-end">
             {primaryPhone && (
               <a
                 href={`tel:${primaryPhone}`}
@@ -313,7 +313,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             {primaryAddress && (
               <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-150">
                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                <span className="line-clamp-2">{primaryAddress}</span>
+                <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
               </div>
             )}
             {secondaryPhones.length > 0 && (
@@ -394,9 +394,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {(shop.items || []).map((item, idx) => (
                   <div key={idx} className="p-2 bg-slate-50 rounded-xl border border-slate-150 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-slate-800 text-xs block">{item.name}</span>
-                      <span className="text-[10px] text-slate-400">{item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
+                    <div className="min-w-0">
+                      <span className="font-bold text-slate-800 text-xs block truncate">{item.name}</span>
+                      <span className="text-[10px] text-slate-400 break-all">{item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
@@ -541,7 +541,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         </div>
 
         {/* Shop Name */}
-        <h3 className="font-extrabold text-slate-900 text-base tracking-tight leading-snug">
+        <h3 className="font-extrabold text-slate-900 text-base tracking-tight leading-snug break-words">
           {shop.name}
         </h3>
 
@@ -549,7 +549,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         {locationString && (
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 font-medium">
             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="truncate">{locationString}</span>
+            <span className="truncate min-w-0">{locationString}</span>
           </div>
         )}
 
@@ -558,15 +558,15 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           <div className="mt-3.5 p-2 bg-emerald-50/60 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
             <a
               href={`tel:${primaryPhone}`}
-              className="flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-bold text-xs transition-colors"
+              className="flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-bold text-xs transition-colors min-w-0"
             >
               <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
                 <Phone className="w-3 h-3" />
               </span>
-              <span className="tracking-wide text-xs sm:text-sm font-black">{primaryPhone}</span>
+              <span className="tracking-wide text-xs sm:text-sm font-black truncate">{primaryPhone}</span>
             </a>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <a
                 href={`tel:${primaryPhone}`}
                 className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold rounded-lg transition-all"
@@ -652,7 +652,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         {primaryAddress && (
           <div className="mt-2.5 text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-150">
             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-            <span className="line-clamp-2">{primaryAddress}</span>
+            <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
           </div>
         )}
 
@@ -711,7 +711,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 {lang === 'my' ? 'ပစ္စည်းစာရင်း မထည့်ရသေးပါ။ အောက်တွင် ထည့်သွင်းနိုင်ပါသည်။' : 'No items listed yet. Add one below.'}
               </div>
             ) : (
-              <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-44 overflow-y-auto overflow-x-hidden pr-1">
                 {(shop.items || []).map((item, idx) => (
                   <div
                     key={idx}
@@ -720,7 +720,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     <div className="min-w-0 pr-2">
                       <div className="font-bold text-slate-900 truncate">{item.name}</div>
                       <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                        <span>👤 {item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
+                        <span className="truncate min-w-0">👤 {item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
                         <span>•</span>
                         <span>{new Date(item.updatedAt).toLocaleDateString('en-GB')}</span>
                       </div>

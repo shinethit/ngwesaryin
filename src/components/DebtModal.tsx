@@ -183,9 +183,9 @@ export const DebtModal: React.FC<DebtModalProps> = ({
       <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[90vh] sm:max-h-[88vh] flex flex-col pointer-events-auto animate-scaleUp">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white z-10">
-          <div className="flex items-center gap-2">
-            <HandCoins className="w-5 h-5 text-indigo-600" />
-            <h2 className="font-bold text-lg text-slate-900">
+          <div className="flex items-center gap-2 min-w-0">
+            <HandCoins className="w-5 h-5 text-indigo-600 shrink-0" />
+            <h2 className="font-bold text-lg text-slate-900 min-w-0">
               {isEditing
                 ? (lang === 'my' ? 'အကြွေး ပြင်ဆင်ခြင်း' : 'Edit Debt / Loan')
                 : (lang === 'my' ? 'အကြွေး စာရင်းသစ် မှတ်တမ်းတင်ခြင်း' : 'Record New Debt / Loan')}
@@ -193,14 +193,14 @@ export const DebtModal: React.FC<DebtModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center font-bold"
+            className="w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center font-bold shrink-0"
           >
             ✕
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 min-h-0 text-xs sm:text-sm overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1 min-h-0 text-xs sm:text-sm overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
           {/* Debt Type Toggle: ရရန်ရှိ vs ပေးရန်ရှိ */}
           <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
             <button
@@ -212,7 +212,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ArrowDownLeft className="w-4 h-4" />
+              <ArrowDownLeft className="w-4 h-4 shrink-0" />
               <span>{lang === 'my' ? 'သူများဆီက ရရန်ရှိ (Lent)' : 'Receivable (Lent)'}</span>
             </button>
             <button
@@ -224,7 +224,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4 shrink-0" />
               <span>{lang === 'my' ? 'သူများကို ပေးရန်ရှိ (Debt)' : 'Payable (Borrowed)'}</span>
             </button>
           </div>
@@ -278,7 +278,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
 
           {/* Person Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-semibold mb-1">
                 {lang === 'my' ? 'လူအမည် / ဆိုင်အမည်:' : 'Person / Business Name:'}
               </label>
@@ -292,7 +292,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-semibold mb-1">
                 {lang === 'my' ? 'ဖုန်းနံပါတ် (ရွေးချယ်ရန်):' : 'Phone Number (Optional):'}
               </label>
@@ -308,7 +308,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
 
           {/* Dates: Start date & Due Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-semibold mb-1">
                 {lang === 'my' ? 'စတင်သည့်ရက်စွဲ:' : 'Start Date:'}
               </label>
@@ -320,7 +320,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="block text-slate-700 font-semibold mb-1">
                 {lang === 'my' ? 'ပြန်ဆပ်ရမည့်ရက် (Due Date):' : 'Due Date (Optional):'}
               </label>

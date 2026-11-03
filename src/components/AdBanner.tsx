@@ -107,16 +107,16 @@ export const AdBanner: React.FC<AdBannerProps> = ({
       >
         {/* Subtle Top Indicator Bar */}
         <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-50/90 border-b border-slate-100 text-[10px] text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="font-bold tracking-wider uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-bold tracking-wider uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 shrink-0">
               {lang === 'my' ? 'ကြော်ငြာ' : 'AD'}
             </span>
-            <span className="text-slate-400 font-medium">
+            <span className="text-slate-400 font-medium truncate">
               {lang === 'my' ? currentAd.categoryMy : currentAd.categoryEn}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Guide on how to monetize */}
             <button
               type="button"
@@ -160,7 +160,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
         {/* Ad Body: Compact & Minimal */}
         <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Brand Logo/Icon */}
             <div
               className={`w-10 h-10 rounded-xl ${currentAd.iconBg} text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0`}
@@ -168,9 +168,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({
               {currentAd.iconText}
             </div>
 
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
+                <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-tight truncate min-w-0">
                   {lang === 'my' ? currentAd.brandMy : currentAd.brandEn}
                 </h4>
                 <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
@@ -208,14 +208,14 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
       {/* Educational Modal: How real monetization ads work */}
       {showHowToMonetizeModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
           <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[90vh] flex flex-col">
             <div className="p-5 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-bold text-sm sm:text-base">
                     {lang === 'my' ? 'ငွေရနိုင်သော Ads ချိတ်ဆက်နည်း လမ်းညွှန်' : 'How to Connect Earning Ads Guide'}
                   </h3>
@@ -228,18 +228,18 @@ export const AdBanner: React.FC<AdBannerProps> = ({
               <button
                 type="button"
                 onClick={() => setShowHowToMonetizeModal(false)}
-                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-700">
+            <div className="p-5 overflow-y-auto overflow-x-hidden space-y-4 text-xs text-slate-700">
               {/* Option 1: Google AdSense */}
               <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-slate-900 text-sm">၁။ Google AdSense (ဝဘ်ဆိုဒ်များအတွက် အသုံးအများဆုံး)</span>
-                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">Standard Web</span>
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <span className="font-bold text-slate-900 text-sm min-w-0">၁။ Google AdSense (ဝဘ်ဆိုဒ်များအတွက် အသုံးအများဆုံး)</span>
+                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold shrink-0">Standard Web</span>
                 </div>
                 <p className="text-slate-600 mt-1 leading-relaxed">
                   Google AdSense (adsense.google.com) တွင် အခမဲ့ အကောင့်ဖွင့်ပြီး သင့် Domain (ဥပမာ- yourname.com) ကို ထည့်သွင်း အတည်ပြုချက် (Approval) ယူရပါမည်။ Approval ရပါက Google က ထုတ်ပေးသော Ad Client Script Tag ကို index.html တွင် ထည့်သွင်းရုံဖြင့် ကြော်ငြာများ အလိုအလျောက်ပေါ်လာပြီး ကြည့်ရှုသူ/နှိပ်သူအလိုက် ဒေါ်လာဖြင့် ဝင်ငွေရရှိမည်ဖြစ်ပါသည်။
@@ -248,9 +248,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
               {/* Option 2: Direct Local Sponsors */}
               <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-amber-950 text-sm">၂။ Direct Sponsor / ပြည်တွင်း စီးပွားရေးလုပ်ငန်းများနှင့် ချိတ်ဆက်ခြင်း</span>
-                  <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold">အသင့်တော်ဆုံး</span>
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <span className="font-bold text-amber-950 text-sm min-w-0">၂။ Direct Sponsor / ပြည်တွင်း စီးပွားရေးလုပ်ငန်းများနှင့် ချိတ်ဆက်ခြင်း</span>
+                  <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold shrink-0">အသင့်တော်ဆုံး</span>
                 </div>
                 <p className="text-amber-900/90 mt-1 leading-relaxed">
                   မြန်မာပြည်တွင်း အသုံးပြုသူများအတွက် အထိရောက်ဆုံးနည်းလမ်းဖြစ်ပါသည်။ ကုန်ပစ္စည်းအရောင်းဆိုင်များ၊ ဘဏ်များ၊ အွန်လိုင်းဆိုင်များ သို့မဟုတ် သင်တန်းကျောင်းများနှင့် တိုက်ရိုက်ဆက်သွယ်ပြီး သင့် App ၏ Banner နေရာတွင် သူတို့၏ ကြော်ငြာကို လစဉ်ကြေး (ဥပမာ- ၁ လ ၃ သောင်း / ၅ သောင်း ကျပ်) ဖြင့် ကပ်ပေးနိုင်ပါသည်။
@@ -259,9 +259,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
               {/* Option 3: Affiliate Marketing */}
               <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-slate-900 text-sm">၃။ Affiliate Marketing (ကော်မရှင်စား ချိတ်ဆက်ခြင်း)</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Commission</span>
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <span className="font-bold text-slate-900 text-sm min-w-0">၃။ Affiliate Marketing (ကော်မရှင်စား ချိတ်ဆက်ခြင်း)</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0">Commission</span>
                 </div>
                 <p className="text-slate-600 mt-1 leading-relaxed">
                   အွန်လိုင်းစျေးဝယ်ပလက်ဖောင်းများ သို့မဟုတ် Financial Software များ၏ Referral Link များကို Ad Banner တွင် ထည့်သွင်းထားပြီး အသုံးပြုသူများ ၎င်း Link မှတစ်ဆင့် ဝယ်ယူ/စာရင်းသွင်းပါက ကော်မရှင် % ရရှိမည်ဖြစ်ပါသည်။
@@ -270,9 +270,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
               {/* Option 4: Google AdMob (For Mobile App) */}
               <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-slate-900 text-sm">၄။ Google AdMob (Android / iOS App အဖြစ် ထုတ်လုပ်ပါက)</span>
-                  <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">Mobile App</span>
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <span className="font-bold text-slate-900 text-sm min-w-0">၄။ Google AdMob (Android / iOS App အဖြစ် ထုတ်လုပ်ပါက)</span>
+                  <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold shrink-0">Mobile App</span>
                 </div>
                 <p className="text-slate-600 mt-1 leading-relaxed">
                   အကယ်၍ နောင်တွင် ဤစနစ်ကို Play Store ပေါ်တွင် Android APK အဖြစ် တင်ပါက Google AdMob SDK ဖြင့် ချိတ်ဆက်ပြီး Banner Ads, Interstitial Ads (မျက်နှာပြင်ပြည့်) သို့မဟုတ် Reward Ads များကို ထည့်သွင်းနိုင်ပါသည်။

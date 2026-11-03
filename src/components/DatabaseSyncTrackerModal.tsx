@@ -446,20 +446,20 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-5 py-4 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 shadow-inner">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 shadow-inner shrink-0">
               <Database className="w-5 h-5 text-indigo-300" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="font-extrabold text-base sm:text-lg tracking-tight">
+                <h2 className="font-extrabold text-base sm:text-lg tracking-tight truncate min-w-0">
                   {lang === 'my' ? 'Database ရောက်/မရောက် စောင့်ကြည့် Tracker' : 'Cloud Database Delivery Tracker'}
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0">
                   Live
                 </span>
               </div>
@@ -472,14 +472,14 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1">
           {/* Firestore Write Quota Exhaustion Diagnostic Banner */}
           {isQuotaExhausted() && (
             <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl space-y-2 text-rose-950 animate-fadeIn">
@@ -506,7 +506,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
               <div className="flex items-center gap-2">
                 <Server className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="font-semibold text-slate-700">Firestore DB:</span>
-                <span className="font-mono text-[11px] text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                <span className="font-mono text-[11px] text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 break-all">
                   {firebaseConfig.firestoreDatabaseId || '(default)'}
                 </span>
               </div>
@@ -531,9 +531,9 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-slate-700">{lang === 'my' ? 'အကောင့်:' : 'Account:'}</span>
                 {user ? (
-                  <span className="font-bold text-slate-900 flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{user.email || user.displayName || user.uid}</span>
+                  <span className="font-bold text-slate-900 flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 min-w-0">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="truncate min-w-0">{user.email || user.displayName || user.uid}</span>
                   </span>
                 ) : (
                   <span className="text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded border border-amber-300 flex items-center gap-1">
@@ -639,10 +639,10 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
           {/* Action Notification Banner if any */}
           {actionNotice && (
             <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl text-xs font-bold text-indigo-900 flex items-center justify-between gap-2 animate-fadeIn">
-              <span>{actionNotice}</span>
+              <span className="min-w-0">{actionNotice}</span>
               <button
                 onClick={() => setActionNotice(null)}
-                className="text-indigo-600 hover:text-indigo-800 font-bold text-xs"
+                className="text-indigo-600 hover:text-indigo-800 font-bold text-xs shrink-0"
               >
                 ✕
               </button>
@@ -715,7 +715,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
           {queueItems.length > 0 && (
             <div className="p-3 bg-amber-500/10 border border-amber-300 rounded-2xl text-xs space-y-2.5 animate-fadeIn">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 font-bold text-amber-950">
+                <div className="flex items-center gap-2 font-bold text-amber-950 min-w-0">
                   <ListRestart className={`w-4 h-4 text-amber-600 ${isQueueProcessing ? 'animate-spin' : ''}`} />
                   <span>
                     {lang === 'my'
@@ -766,7 +766,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
                 </button>
 
                 {showQueueDetails && (
-                  <div className="mt-2 max-h-40 overflow-y-auto space-y-1.5 bg-white/60 p-2 rounded-xl border border-amber-200">
+                  <div className="mt-2 max-h-40 overflow-y-auto overflow-x-hidden space-y-1.5 bg-white/60 p-2 rounded-xl border border-amber-200">
                     {queueItems.map((item, index) => (
                       <div key={item.id} className="flex items-start justify-between gap-2 p-1.5 rounded-lg bg-amber-50/50 hover:bg-amber-50 text-[10.5px] border border-amber-100">
                         <div className="space-y-0.5 min-w-0 flex-1">
@@ -914,7 +914,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
                 </div>
 
                 {/* List Table / Cards */}
-                <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-2xl bg-white text-xs">
+                <div className="max-h-56 overflow-y-auto overflow-x-hidden divide-y divide-slate-100 border border-slate-200 rounded-2xl bg-white text-xs">
                   {filteredList.length === 0 ? (
                     <div className="p-6 text-center text-slate-400 font-medium">
                       {lang === 'my' ? 'ရှာဖွေမှုနှင့် ကိုက်ညီသည့် မှတ်တမ်း မရှိပါ' : 'No matching records found'}
@@ -1032,7 +1032,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
                 </div>
 
                 {/* Logs List Container */}
-                <div className="max-h-60 overflow-y-auto space-y-2 border border-slate-200 rounded-2xl p-2 bg-slate-50/50 text-xs">
+                <div className="max-h-60 overflow-y-auto overflow-x-hidden space-y-2 border border-slate-200 rounded-2xl p-2 bg-slate-50/50 text-xs">
                   {filteredLogs.length === 0 ? (
                     <div className="p-8 text-center space-y-2">
                       <History className="w-8 h-8 text-slate-300 mx-auto" />
@@ -1112,7 +1112,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
 
                           {/* Middle row: Operation details & stats */}
                           <div className="flex items-start justify-between gap-2 mt-1">
-                            <div className="font-semibold text-slate-900 text-xs">
+                            <div className="font-semibold text-slate-900 text-xs min-w-0 break-words">
                               {log.details || `${log.type} operation`}
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-mono font-bold text-slate-600">
@@ -1178,7 +1178,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
 
         {/* Modal Footer */}
         <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <div className="text-[11px] text-slate-500 font-mono">
+          <div className="text-[11px] text-slate-500 font-mono min-w-0 truncate">
             {lastSyncedAt ? (
               <span>{lang === 'my' ? 'နောက်ဆုံး Sync ချိန်:' : 'Last Sync:'} {lastSyncedAt.toLocaleTimeString()}</span>
             ) : (
@@ -1187,7 +1187,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
           </div>
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer shrink-0"
           >
             {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
           </button>

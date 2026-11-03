@@ -77,13 +77,13 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto overflow-x-hidden">
           <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 my-8">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-                <h3 className="text-sm font-bold text-slate-900">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <h3 className="text-sm font-bold text-slate-900 truncate">
                   {lang === 'my' ? 'Conflict Resolution' : 'Conflict Resolution'}
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900">
@@ -93,7 +93,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -109,17 +109,17 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
             </div>
 
             {/* List */}
-            <div className="px-4 py-2 max-h-[55vh] overflow-y-auto space-y-3">
+            <div className="px-4 py-2 max-h-[55vh] overflow-y-auto overflow-x-hidden space-y-3">
               {unresolved.map((c) => (
                 <div
                   key={c.id}
                   className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 truncate min-w-0">
                       {c.entityType}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-400 font-mono truncate min-w-0">
                       {c.entityId}
                     </span>
                   </div>
@@ -129,7 +129,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
                       <div className="text-[10px] font-bold text-rose-700 mb-1">
                         {lang === 'my' ? 'သင့် (Discarded)' : 'Your (Discarded)'}
                       </div>
-                      <pre className="text-[9px] font-mono text-rose-900 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
+                      <pre className="text-[9px] font-mono text-rose-900 whitespace-pre-wrap break-all max-h-24 overflow-y-auto overflow-x-hidden">
 {JSON.stringify(c.localSnapshot, null, 1)}
                       </pre>
                       <div className="text-[9px] text-rose-600 mt-1">
@@ -140,7 +140,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
                       <div className="text-[10px] font-bold text-emerald-700 mb-1">
                         {lang === 'my' ? 'Cloud (Applied)' : 'Cloud (Applied)'}
                       </div>
-                      <pre className="text-[9px] font-mono text-emerald-900 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
+                      <pre className="text-[9px] font-mono text-emerald-900 whitespace-pre-wrap break-all max-h-24 overflow-y-auto overflow-x-hidden">
 {JSON.stringify(c.cloudSnapshot, null, 1)}
                       </pre>
                       <div className="text-[9px] text-emerald-600 mt-1">

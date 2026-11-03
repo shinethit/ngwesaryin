@@ -444,16 +444,16 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
               <div>
                 {/* Category Header */}
                 <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div
                       className="w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
                       style={{ backgroundColor: category.color }}
                     >
                       <CategoryIcon name={category.icon} className="w-5 h-5" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-sm sm:text-base text-slate-900">
+                        <h3 className="font-bold text-sm sm:text-base text-slate-900 truncate">
                           {lang === 'my' ? category.name : category.nameEn}
                         </h3>
                         {category.isCustom && (
@@ -478,7 +478,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                             : (lang === 'my' ? 'ထွက်ငွေ' : 'Expense')}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-400 mt-0.5 break-words">
                         {lang === 'my' ? category.nameEn : category.name}
                       </p>
                     </div>
@@ -613,7 +613,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                             onClick={() => openEditSubModal(category, sub)}
                             title={lang === 'my' ? 'ကဏ္ဍခွဲ ပြင်ဆင်ရန် နှိပ်ပါ' : 'Click to edit sub-category'}
                           >
-                            <span>{lang === 'my' ? sub.name : (sub.nameEn || sub.name)}</span>
+                            <span className="max-w-[180px] truncate">{lang === 'my' ? sub.name : (sub.nameEn || sub.name)}</span>
 
                             {/* Sub category actions: Edit & Delete */}
                             <div
@@ -682,13 +682,13 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                         handleAddInlineSub(category.id);
                       }
                     }}
-                    className="flex-1 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
                   />
                   <button
                     type="button"
                     onClick={() => handleAddInlineSub(category.id)}
                     disabled={isPremium && !inlineInputVal.trim()}
-                    className={`px-2.5 py-1.5 text-white text-xs font-bold rounded-lg transition-colors shadow-2xs cursor-pointer ${
+                    className={`px-2.5 py-1.5 text-white text-xs font-bold rounded-lg transition-colors shadow-2xs cursor-pointer shrink-0 ${
                       isPremium
                         ? 'bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40'
                         : 'bg-amber-600 hover:bg-amber-700'
@@ -712,7 +712,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
       {/* Add / Edit Category Modal */}
       {isAddCatModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
           <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
@@ -743,7 +743,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSaveCategory} className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
+            <form onSubmit={handleSaveCategory} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1 text-xs sm:text-sm">
               {/* Type toggle */}
               {!editingCategory && (
                 <div>
@@ -819,7 +819,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 <label className="block text-slate-700 font-semibold mb-1.5">
                   {lang === 'my' ? 'အိုင်ကွန် ရွေးချယ်ရန်:' : 'Select Icon:'}
                 </label>
-                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-36 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-36 overflow-y-auto overflow-x-hidden p-2 bg-slate-50 rounded-xl border border-slate-200">
                   {AVAILABLE_CATEGORY_ICONS.map((iconName) => {
                     const isSelected = catIcon === iconName;
                     return (
@@ -889,7 +889,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                           }
                         }
                       }}
-                      className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                      className="flex-1 min-w-0 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                     />
                     <button
                       type="button"
@@ -899,7 +899,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                           setNewSubInput('');
                         }
                       }}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold"
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shrink-0"
                     >
                       {lang === 'my' ? 'ထည့်မည်' : 'Add'}
                     </button>
@@ -947,7 +947,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
       {/* Dedicated Sub-Category Edit Modal */}
       {editingSubModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
           <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">

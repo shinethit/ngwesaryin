@@ -704,7 +704,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           {/* Fuel Logs Table / Cards */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="min-w-0">
                 <h4 className="font-bold text-slate-800 text-sm">
                   {lang === 'my' ? 'ဆီထည့်စာရင်း မှတ်တမ်းများ' : 'Fuel Fill-up History'}
                 </h4>
@@ -720,7 +720,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                   setEditingFuelLog(null);
                   setIsFuelModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all cursor-pointer shrink-0"
               >
                 {lang === 'my' ? '+ ဆီထည့်စာရင်း အသစ်' : '+ Add Record'}
               </button>
@@ -746,7 +746,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                       <div className="w-10 h-10 rounded-2xl bg-amber-100/70 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
                         <Fuel className="w-5 h-5" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-bold text-sm text-slate-900">
                             {log.liters} L ({log.fuelType})
@@ -757,7 +757,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                             </span>
                           )}
                           {log.gasStation && (
-                            <span className="text-[11px] text-slate-500">📍 {log.gasStation}</span>
+                            <span className="text-[11px] text-slate-500 break-words">📍 {log.gasStation}</span>
                           )}
                         </div>
 
@@ -774,7 +774,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         </div>
 
                         {log.note && (
-                          <p className="text-[11px] text-slate-500 mt-1 italic">"{log.note}"</p>
+                          <p className="text-[11px] text-slate-500 mt-1 italic break-words">"{log.note}"</p>
                         )}
                       </div>
                     </div>
@@ -894,7 +894,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
+                      <div className="min-w-0">
                         <span className="font-bold text-xs text-slate-800 block">
                           {lang === 'my' ? item.labelMy : item.labelEn}
                         </span>
@@ -909,7 +909,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
                       {/* Status Pill */}
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                           isOverdue
                             ? 'bg-rose-100 text-rose-800'
                             : isDueSoon
@@ -1002,7 +1002,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           {/* Maintenance Logs List */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="min-w-0">
                 <h4 className="font-bold text-slate-800 text-sm">
                   {lang === 'my'
                     ? 'အပိုပစ္စည်းလဲလှယ်မှုနှင့် ပြုပြင်မှတ်တမ်းများ'
@@ -1020,7 +1020,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                   setEditingMaintenance(null);
                   setIsMaintenanceModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer shrink-0"
               >
                 {lang === 'my' ? '+ အပိုပစ္စည်းလဲလှယ်မှု အသစ်' : '+ Add Service Log'}
               </button>
@@ -1045,9 +1045,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                       <div className="w-10 h-10 rounded-2xl bg-blue-100/70 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
                         <Wrench className="w-5 h-5" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm text-slate-900">{log.title}</span>
+                          <span className="font-bold text-sm text-slate-900 break-words">{log.title}</span>
                           {log.sparePartBrand && (
                             <span className="text-xs bg-slate-200/70 text-slate-700 px-2 py-0.5 rounded-lg font-medium">
                               {log.sparePartBrand}
@@ -1064,7 +1064,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                           {log.workshopName && (
                             <>
                               <span>•</span>
-                              <span>🏢 {log.workshopName}</span>
+                              <span className="break-words">🏢 {log.workshopName}</span>
                             </>
                           )}
                         </div>
@@ -1154,7 +1154,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           {/* Tire Logs History */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="min-w-0">
                 <h4 className="font-bold text-slate-800 text-sm">
                   {lang === 'my' ? 'တာယာ လေပေါင်စစ်ဆေးမှု မှတ်တမ်းများ' : 'Tire Check History'}
                 </h4>
@@ -1170,7 +1170,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                   setEditingTireLog(null);
                   setIsTireModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer shrink-0"
               >
                 {lang === 'my' ? '+ မှတ်တမ်းအသစ်' : '+ Log Pressure'}
               </button>
@@ -1195,7 +1195,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                       <div className="w-10 h-10 rounded-2xl bg-teal-100/70 text-teal-700 flex items-center justify-center shrink-0 mt-0.5">
                         <Disc className="w-5 h-5" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-xs text-slate-800">
                             {log.date}
@@ -1214,7 +1214,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                             </span>
                           )}
                           {log.servicePlace && (
-                            <span className="text-xs text-slate-500">📍 {log.servicePlace}</span>
+                            <span className="text-xs text-slate-500 break-words">📍 {log.servicePlace}</span>
                           )}
                         </div>
 
@@ -1236,7 +1236,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         </div>
 
                         {log.note && (
-                          <p className="text-[11px] text-slate-500 mt-1 italic">"{log.note}"</p>
+                          <p className="text-[11px] text-slate-500 mt-1 italic break-words">"{log.note}"</p>
                         )}
                       </div>
                     </div>

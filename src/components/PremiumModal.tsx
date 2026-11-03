@@ -357,7 +357,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden animate-fadeIn">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="relative bg-gradient-to-r from-amber-500 via-amber-600 to-emerald-600 text-white p-5 sm:p-6 text-center shrink-0">
@@ -412,7 +412,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <KeyRound className="w-4 h-4 text-amber-600" />
+            <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
             <span>{lang === 'my' ? 'Activation Code ထည့်မည်' : 'Enter Code'}</span>
           </button>
 
@@ -425,7 +425,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <CreditCard className="w-4 h-4 text-emerald-600" />
+            <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{lang === 'my' ? 'ငွေလွှဲ၍ Code တောင်းရန်' : 'Get / Buy Code'}</span>
           </button>
 
@@ -438,13 +438,13 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <ListCheck className="w-4 h-4 text-slate-600" />
+            <ListCheck className="w-4 h-4 text-slate-600 shrink-0" />
             <span>{lang === 'my' ? 'အင်္ဂါရပ်များ' : 'Features'}</span>
           </button>
         </div>
 
         {/* Modal Body Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1">
           {/* TAB 1: Activation Code Entry */}
           {activeTab === 'code' && (
             <div className="space-y-4">
@@ -468,10 +468,10 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     {daysLeft !== null && (
                       <div className="p-4 rounded-xl bg-white border border-emerald-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-100/70 text-emerald-800 flex items-center justify-center font-bold text-base">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-100/70 text-emerald-800 flex items-center justify-center font-bold text-base shrink-0">
                             <Clock className="w-5 h-5 text-emerald-700" />
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <div className="text-xs font-medium text-slate-500">
                               {lang === 'my' ? 'ကျန်ရှိသော သက်တမ်း' : 'Subscription Time Left'}
                             </div>
@@ -483,7 +483,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
 
                         {expiryIso && (
                           <div className="text-xs text-slate-500 flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>
                               {lang === 'my' ? 'သက်တမ်းကုန်ဆုံးမည့်ရက်:' : 'Expires on:'}{' '}
                               <strong className="text-slate-700 font-semibold">
@@ -508,7 +508,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                         placeholder="ဥပမာ - AB12-CD34"
                         value={promoCode}
                         onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs tracking-wider uppercase font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-amber-500"
+                        className="flex-1 min-w-0 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs tracking-wider uppercase font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-amber-500"
                       />
                       <button
                         type="submit"
@@ -530,7 +530,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                         <div className="w-9 h-9 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
                           <LogIn className="w-5 h-5" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-1 min-w-0">
                           <h4 className="font-bold text-sm text-amber-950">
                             {lang === 'my' ? 'အကောင့်ဝင်ရန် လိုအပ်ပါသည်' : 'Sign In Required'}
                           </h4>
@@ -557,12 +557,12 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                       )}
                     </div>
                   ) : (
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-                      <div>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
                         <span className="text-slate-500">{lang === 'my' ? 'ချိတ်ဆက်ထားသော အကောင့်:' : 'Signed in as:'}</span>{' '}
-                        <span className="font-bold text-slate-800">{user.email || user.displayName || 'User'}</span>
+                        <span className="font-bold text-slate-800 truncate inline-block max-w-full align-middle">{user.email || user.displayName || 'User'}</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 shrink-0">
                         Ready
                       </span>
                     </div>
@@ -577,7 +577,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
                           <Gift className="w-5 h-5 fill-white/20 stroke-[2.5]" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-black text-sm sm:text-base text-slate-900">
                               {lang === 'my'
@@ -621,7 +621,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     ) : isTrialClaimed ? (
                       <div className="p-3 bg-emerald-100/70 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-900 flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                        <span>
+                        <span className="min-w-0">
                           {lang === 'my'
                             ? '✅ ဤအကောင့်ဖြင့် ၃ လ အခမဲ့ Premium စမ်းသုံးခွင့် ရယူအသုံးပြုပြီး ဖြစ်ပါသည်'
                             : '✅ 3 Months Free Premium trial has already been claimed for this account.'}
@@ -630,7 +630,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     ) : !isEligibleForTrial ? (
                       <div className="p-3 bg-slate-100 border border-slate-300 rounded-xl text-xs font-medium text-slate-600 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span>
+                        <span className="min-w-0">
                           {lang === 'my'
                             ? 'အကောင့်သက်တမ်း ၁ လ (ရက် ၃၀) ကျော်လွန်သွားသဖြင့် အခမဲ့ စမ်းသုံးခွင့် လက်ဆောင် သက်တမ်းကုန်ဆုံးသွားပါပြီ'
                             : 'Trial eligibility expired (account is older than 30 days). You can still activate via Activation Code below.'}
@@ -639,13 +639,13 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     ) : (
                       <div className="space-y-2 pt-1">
                         <div className="flex items-center justify-between text-xs text-slate-600 px-1">
-                          <span className="flex items-center gap-1 font-semibold text-amber-900">
-                            <Timer className="w-3.5 h-3.5 text-amber-600" />
+                          <span className="flex items-center gap-1 font-semibold text-amber-900 min-w-0">
+                            <Timer className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                             <span>
                               {lang === 'my' ? 'ရယူရန် လက်ကျန်ရက်:' : 'Days left to claim:'}
                             </span>
                           </span>
-                          <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                          <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md shrink-0">
                             {lang === 'my' ? `${trialDaysLeft} ရက် အတွင်း` : `${trialDaysLeft} days remaining`}
                           </span>
                         </div>
@@ -704,7 +704,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                           placeholder="ဥပမာ - AB12-CD34"
                           value={promoCode}
                           onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm tracking-wider uppercase font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
+                          className="flex-1 min-w-0 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm tracking-wider uppercase font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
                         />
                         <button
                           type="submit"
@@ -736,13 +736,13 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     </form>
 
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">
+                      <span className="text-slate-500 min-w-0">
                         {lang === 'my' ? 'Activation Code မရှိသေးပါက' : "Don't have a code yet?"}
                       </span>
                       <button
                         type="button"
                         onClick={() => setActiveTab('payment')}
-                        className="text-amber-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-amber-700 font-bold hover:underline flex items-center gap-1 cursor-pointer shrink-0"
                       >
                         <span>{lang === 'my' ? 'ငွေလွှဲ၍ Code တောင်းရန် နှိပ်ပါ →' : 'Get / Buy Code →'}</span>
                       </button>
@@ -782,7 +782,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
 
               {/* Amount Highlight */}
               <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs font-medium text-amber-800">
                     {lang === 'my' ? `${PRICING[planDuration].my} အတွက် ကျသင့်ငွေ:` : `Total for ${PRICING[planDuration].en}:`}
                   </div>
@@ -791,7 +791,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                   </div>
                 </div>
                 {PRICING[planDuration].original && (
-                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/70 text-amber-900">
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/70 text-amber-900 shrink-0">
                     {lang === 'my' ? 'သက်သာသော နှုန်းထား' : 'Best Value'}
                   </span>
                 )}
@@ -810,13 +810,13 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                   rel="noopener noreferrer"
                   className="p-3.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 hover:bg-sky-100/90 transition-all flex items-center justify-between group shadow-2xs"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                       TG
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-xs font-bold text-sky-950">Telegram Admin</div>
-                      <div className="text-xs font-semibold text-sky-700">
+                      <div className="text-xs font-semibold text-sky-700 break-all">
                         {contactInfo.telegramUsername ? (contactInfo.telegramUsername.startsWith('@') ? contactInfo.telegramUsername : `@${contactInfo.telegramUsername}`) : '@ankhsam'}
                       </div>
                     </div>
@@ -832,10 +832,10 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                   <div className="p-3 bg-slate-50 border border-slate-200/90 rounded-xl space-y-2 text-xs">
                     {contactInfo.viberPhone && (
                       <div className="flex items-center justify-between gap-2 text-slate-700">
-                        <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600">
-                          <Phone className="w-3.5 h-3.5 text-purple-600" /> Phone / Viber:
+                        <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600 min-w-0">
+                          <Phone className="w-3.5 h-3.5 text-purple-600 shrink-0" /> Phone / Viber:
                         </span>
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5 shrink-0">
                           <a href={`tel:${contactInfo.viberPhone}`} className="font-bold text-indigo-900 underline underline-offset-2">{contactInfo.viberPhone}</a>
                           <button type="button" onClick={() => copyToClipboard(contactInfo.viberPhone || '', 'viber')} className="px-2 py-1 rounded-lg bg-white border border-slate-300 text-[10px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
                             {copiedAccount === 'viber' ? '✓ ကူးပြီး' : 'ကူးမည်'}
@@ -845,10 +845,10 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     )}
                     {contactInfo.kpayPhone && (
                       <div className="flex items-center justify-between gap-2 text-slate-700">
-                        <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600">
+                        <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600 min-w-0 truncate">
                           💳 KBZPay{contactInfo.kpayName ? ` (${contactInfo.kpayName})` : ''}:
                         </span>
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5 shrink-0">
                           <a href={`tel:${contactInfo.kpayPhone}`} className="font-bold text-emerald-800 underline underline-offset-2">{contactInfo.kpayPhone}</a>
                           <button type="button" onClick={() => copyToClipboard(contactInfo.kpayPhone || '', 'kpay')} className="px-2 py-1 rounded-lg bg-white border border-slate-300 text-[10px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
                             {copiedAccount === 'kpay' ? '✓ ကူးပြီး' : 'ကူးမည်'}
@@ -858,10 +858,10 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     )}
                     {contactInfo.wavePhone && (
                       <div className="flex items-center justify-between gap-2 text-slate-700">
-                        <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600">
+                        <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600 min-w-0 truncate">
                           🌊 WaveMoney{contactInfo.waveName ? ` (${contactInfo.waveName})` : ''}:
                         </span>
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5 shrink-0">
                           <a href={`tel:${contactInfo.wavePhone}`} className="font-bold text-amber-800 underline underline-offset-2">{contactInfo.wavePhone}</a>
                           <button type="button" onClick={() => copyToClipboard(contactInfo.wavePhone || '', 'wave')} className="px-2 py-1 rounded-lg bg-white border border-slate-300 text-[10px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
                             {copiedAccount === 'wave' ? '✓ ကူးပြီး' : 'ကူးမည်'}
@@ -902,12 +902,12 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
 
                 {features.map((feat, idx) => (
                   <div key={idx} className="grid grid-cols-12 p-3 items-center hover:bg-slate-50/60 transition-colors">
-                    <div className="col-span-6 font-medium text-slate-800">
+                    <div className="col-span-6 font-medium text-slate-800 min-w-0 break-words">
                       {lang === 'my' ? feat.titleMy : feat.titleEn}
                     </div>
 
                     {/* Free Column */}
-                    <div className="col-span-3 text-center text-slate-600">
+                    <div className="col-span-3 text-center text-slate-600 min-w-0">
                       {typeof feat.free === 'boolean' ? (
                         feat.free ? (
                           <Check className="w-4 h-4 text-emerald-600 mx-auto" />
@@ -915,12 +915,12 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                           <X className="w-4 h-4 text-slate-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-xs text-slate-600">{feat.free}</span>
+                        <span className="text-xs text-slate-600 break-words">{feat.free}</span>
                       )}
                     </div>
 
                     {/* Premium Column */}
-                    <div className="col-span-3 text-center font-semibold text-amber-800 bg-amber-50/50 py-1 rounded-lg">
+                    <div className="col-span-3 text-center font-semibold text-amber-800 bg-amber-50/50 py-1 rounded-lg min-w-0">
                       {typeof feat.premium === 'boolean' ? (
                         feat.premium ? (
                           <Check className="w-4 h-4 text-emerald-600 font-extrabold mx-auto stroke-[3]" />
@@ -928,7 +928,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                           <X className="w-4 h-4 text-slate-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-xs text-amber-900 font-bold">{feat.premium}</span>
+                        <span className="text-xs text-amber-900 font-bold break-words">{feat.premium}</span>
                       )}
                     </div>
                   </div>
@@ -940,14 +940,14 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
 
         {/* Modal Footer */}
         <div className="bg-slate-50 p-4 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 min-w-0">
             {lang === 'my' ? 'လုံခြုံသော စနစ်ဖြင့် ကာကွယ်ထားပါသည်' : 'Secure activation guaranteed'}
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
           >
             {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
           </button>

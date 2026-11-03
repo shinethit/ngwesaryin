@@ -270,7 +270,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
               ) : (
                 <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
               )}
-              <span>{pingResult.message}</span>
+              <span className="min-w-0 break-words">{pingResult.message}</span>
             </div>
             <div className="text-[11px] font-mono opacity-80 shrink-0">
               Latency: {pingResult.latencyMs}ms ({pingResult.testedAt})
@@ -281,7 +281,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
         {networkResumeMsg && (
           <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-900/80 border border-emerald-500/50 text-emerald-200 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>{networkResumeMsg}</span>
+            <span className="min-w-0 break-words">{networkResumeMsg}</span>
           </div>
         )}
 

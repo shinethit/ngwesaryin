@@ -211,14 +211,14 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
         <div className="absolute z-50 left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-80 bg-white rounded-2xl border border-slate-200 shadow-2xl p-3.5 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900">
-              <WalletIcon className="w-4 h-4 text-emerald-600" />
-              <span>{lang === 'my' ? 'Wallet များ စိတ်ကြိုက် တွဲဖက် ရွေးရန်' : 'Multi-Wallet Selector'}</span>
+            <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 min-w-0">
+              <WalletIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="truncate">{lang === 'my' ? 'Wallet များ စိတ်ကြိုက် တွဲဖက် ရွေးရန်' : 'Multi-Wallet Selector'}</span>
             </div>
             <button
               type="button"
               onClick={() => { setIsOpen(false); setPresetNotice(null); }}
-              className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+              className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -275,7 +275,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
           )}
 
           {/* Wallet List with Checkboxes */}
-          <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+          <div className="max-h-60 overflow-y-auto overflow-x-hidden space-y-1 pr-1 custom-scrollbar">
             {filteredWallets.map((w) => {
               const checked = isSelected(w.id);
               const isShared = isSharedWallet(w);
@@ -331,7 +331,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
 
           {/* Footer Done Button */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-            <span className="text-[11px] font-medium text-slate-500">
+            <span className="text-[11px] font-medium text-slate-500 min-w-0">
               {/* [v7.5.56] Distinguish the untouched default ([]) from an
                   explicit Select All (full list): the default combines
                   included wallets only, Select All combines ALL wallets
@@ -355,7 +355,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
             <button
               type="button"
               onClick={() => { setIsOpen(false); setPresetNotice(null); }}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
             >
               {/* [v7.5.55] Selection applies live on toggle; this button only
                   closes the popover, so it is labelled Close, not Apply. */}

@@ -58,21 +58,21 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <Share2 className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-base text-slate-900">
+            <h3 className="font-bold text-base text-slate-900 truncate">
               {lang === 'my' ? 'အက်ပ်လင့်ခ်နှင့် မျှဝေရန်' : 'Share App'}
             </h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1">
+        <div className="p-5 overflow-y-auto overflow-x-hidden space-y-5 flex-1">
           
           {/* QR Code & Link Section */}
           <div className="flex flex-col items-center justify-center space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
@@ -84,7 +84,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
                 {lang === 'my' ? 'ဖုန်းကင်မရာဖြင့် စကန်ဖတ်ပါ' : 'Scan with phone camera'}
               </p>
               <div className="flex items-center justify-between gap-2 p-1.5 bg-white border border-slate-300 rounded-xl w-full max-w-[280px]">
-                <span className="text-xs font-mono text-slate-600 truncate pl-2 select-all">
+                <span className="text-xs font-mono text-slate-600 truncate pl-2 select-all min-w-0">
                   {officialUrl}
                 </span>
                 <button
@@ -103,15 +103,15 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
 
           {/* Shareable Text Summary */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                {lang === 'my' ? 'App အကြောင်း အတိုချုပ် (Copy ကူးရန်)' : 'App Summary (Copy to share)'}
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 min-w-0">
+                <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span className="truncate">{lang === 'my' ? 'App အကြောင်း အတိုချုပ် (Copy ကူးရန်)' : 'App Summary (Copy to share)'}</span>
               </label>
               <button
                 type="button"
                 onClick={handleCopyText}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
                   copiedText ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
                 }`}
               >
@@ -119,7 +119,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
                 <span>{copiedText ? (lang === 'my' ? 'ကူးပြီး' : 'Copied') : (lang === 'my' ? 'အကုန်ကူးမည်' : 'Copy All')}</span>
               </button>
             </div>
-            <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-600 whitespace-pre-wrap select-all leading-relaxed">
+            <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-600 whitespace-pre-wrap break-words select-all leading-relaxed">
               {shareText}
             </div>
           </div>

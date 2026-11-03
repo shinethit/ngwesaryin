@@ -418,7 +418,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
       {isAtLimit && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-900 font-medium">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-900 font-medium min-w-0">
             <Lock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
               {lang === 'my'
@@ -866,7 +866,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
                   {/* Wallet Info */}
                   <div className="mt-3.5">
-                    <h3 className="font-bold text-base text-slate-900 tracking-tight">
+                    <h3 className="font-bold text-base text-slate-900 tracking-tight break-words">
                       {lang === 'my' ? wallet.name : wallet.nameEn || wallet.name}
                     </h3>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
@@ -907,7 +907,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                       {wallet.isSharedFromOther && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
                           <span>🤝</span>
-                          <span>
+                          <span className="break-words">
                             {lang === 'my'
                               ? `${sharedByLabel(wallet)} မှ မျှဝေထားသည်`
                               : `Shared by ${sharedByLabel(wallet)}`}

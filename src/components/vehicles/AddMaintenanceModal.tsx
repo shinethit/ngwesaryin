@@ -234,21 +234,21 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 overscroll-none touch-none" onWheel={(e) => e.stopPropagation()}>
       <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-700 via-indigo-600 to-sky-600 text-white">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md shadow-xs shrink-0">
               <Wrench className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-bold text-base">
                 {editingMaintenance ? (lang === 'my' ? 'အပိုပစ္စည်း/ဝန်ဆောင်မှု ပြင်ဆင်ရန်' : 'Edit Maintenance Record') : (lang === 'my' ? 'အပိုပစ္စည်းလဲလှယ်ခြင်း/ဝန်ဆောင်မှု မှတ်တမ်း' : 'Log Part Replacement & Service')}
               </h3>
               <p className="text-xs text-blue-100">{lang === 'my' ? 'သက်တမ်းသုံးစွဲနိုင်မှုနှင့် နောက်တစ်ကြိမ် လဲရမည့်အချိန် သိရှိရန်' : 'Track part lifespan & service due'}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"><X className="w-4 h-4" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto overscroll-contain space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto overflow-x-hidden overscroll-contain space-y-4 flex-1">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">{lang === 'my' ? 'ယာဉ် / ကား / ဆိုင်ကယ် ရွေးချယ်ရန် *' : 'Select Vehicle *'}</label>
             <select value={vehicleId} onChange={(e) => {

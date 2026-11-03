@@ -302,15 +302,15 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const currentRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === formStateRegion);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto overflow-x-hidden animate-fade-in">
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xl w-full max-w-xl my-8 overflow-hidden">
         {/* MODAL HEADER */}
         <div className="p-5 border-b border-slate-150 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <Store className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-extrabold text-slate-900 text-base">
                 {editingShop
                   ? isEditingPublic
@@ -338,14 +338,14 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-xl transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* MODAL BODY FORM */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden">
           {/* DIRECTORY TARGET SELECTOR — shown for create AND edit so a shop
               can move between Public / Private (v7.5.55 C27). */}
           {(
@@ -365,11 +365,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="flex items-center gap-1.5 font-bold text-slate-900 text-xs">
+                    <span className="flex items-center gap-1.5 font-bold text-slate-900 text-xs min-w-0">
                       <Globe className="w-4 h-4 text-emerald-600" />
                       <span>{lang === 'my' ? 'ပြည်သူ့လမ်းညွှန်' : 'Public Directory'}</span>
                     </span>
-                    {formDirectoryType === 'public' && <Check className="w-4 h-4 text-emerald-600" />}
+                    {formDirectoryType === 'public' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
                   </div>
                   <p className="text-[11px] text-slate-500 leading-tight">
                     {lang === 'my' ? 'လူတိုင်း ကြည့်ရှုအသုံးပြုနိုင်မည့် အများပိုင်စာရင်း' : 'Visible to all community users'}
@@ -398,11 +398,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="flex items-center gap-1.5 font-bold text-slate-900 text-xs">
+                    <span className="flex items-center gap-1.5 font-bold text-slate-900 text-xs min-w-0">
                       <Lock className="w-4 h-4 text-amber-600" />
                       <span>{lang === 'my' ? 'ကိုယ်ပိုင်စာရင်း ⭐️' : 'Private List ⭐️'}</span>
                     </span>
-                    {formDirectoryType === 'private' && <Check className="w-4 h-4 text-amber-600" />}
+                    {formDirectoryType === 'private' && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
                   </div>
                   <p className="text-[11px] text-slate-500 leading-tight">
                     {lang === 'my' ? 'မိမိတစ်ဦးတည်းသာ လုံခြုံစွာ သီးသန့်သိမ်းဆည်းမည့်စာရင်း' : 'Visible only to your account'}

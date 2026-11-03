@@ -201,7 +201,7 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
                 getTypeTheme(selectedMessage.type).bg
               }`}
             >
-              <div className="space-y-1">
+              <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
@@ -219,7 +219,7 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
                     </span>
                   )}
                 </div>
-                <h3 className="text-lg sm:text-xl font-black text-white pt-1 tracking-tight">
+                <h3 className="text-lg sm:text-xl font-black text-white pt-1 tracking-tight break-words">
                   {selectedMessage.title}
                 </h3>
               </div>
@@ -234,13 +234,13 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
-              <div className="text-sm leading-relaxed text-slate-700 whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-200/80 font-normal">
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1">
+              <div className="text-sm leading-relaxed text-slate-700 whitespace-pre-line break-words bg-slate-50 p-4 rounded-xl border border-slate-200/80 font-normal">
                 {selectedMessage.content}
               </div>
 
               <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 shrink-0">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
                   {(() => {
                     const dt = new Date(selectedMessage.createdAt);
@@ -251,7 +251,7 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
                   })()}
                 </span>
                 {selectedMessage.authorEmail && (
-                  <span className="text-[11px] text-slate-500 font-medium">
+                  <span className="text-[11px] text-slate-500 font-medium min-w-0 truncate">
                     By Admin: {selectedMessage.authorEmail}
                   </span>
                 )}

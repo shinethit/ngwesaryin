@@ -106,7 +106,7 @@ export const QuotaExceededNotificationBanner: React.FC<QuotaExceededNotification
                 ? (lang === 'my' ? '❌ ဒေတာ မရောက်သေးပါ' : '❌ Data Not Delivered')
                 : (lang === 'my' ? '⚠️ ကွန်ရက် / ယာယီ ချိတ်ဆက်မှု အကန့်အသတ်ရှိနေပါသည်' : '⚠️ Temporary Connection / Quota Limit Notice')}
             </h4>
-            <p className="text-[11px] sm:text-xs text-rose-100 opacity-95">
+            <p className="text-[11px] sm:text-xs text-rose-100 opacity-95 break-words">
               {successMsg || errorMsg || (lang === 'my'
                 ? 'အချက်အလက်များကို Cloud သို့ ပို့ဆောင်ရာတွင် အကန့်အသတ်ရှိနေပါသည်။ Retry ဖြင့် ထပ်မံကြိုးစားနိုင်ပါသည်။'
                 : 'Some records are pending delivery. Click Retry & Verify or check Sync Status for details.')}

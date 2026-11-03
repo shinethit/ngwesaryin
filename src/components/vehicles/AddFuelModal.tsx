@@ -250,11 +250,11 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 overscroll-none touch-none" onWheel={(e) => e.stopPropagation()}>
       <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 text-white">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md shadow-xs shrink-0">
               <Fuel className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-bold text-base">
                 {editingLog ? (lang === 'my' ? 'ဆီထည့်စာရင်း ပြင်ဆင်ရန်' : 'Edit Fuel Entry') : (lang === 'my' ? 'ဆီထည့်စာရင်း အသစ်မှတ်ရန်' : 'Log Fuel Fill-up')}
               </h3>
@@ -263,12 +263,12 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer">
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto overscroll-contain space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto overflow-x-hidden overscroll-contain space-y-4 flex-1">
           {/* Vehicle Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -462,11 +462,11 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
                   <button type="button" onClick={handleAddStation} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer">+ Add</button>
                 </div>
                 {customStations.length > 0 && (
-                  <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                  <div className="space-y-1 max-h-32 overflow-y-auto overflow-x-hidden pr-1">
                     {customStations.map((s) => (
                       <div key={s} className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-amber-200/70 text-xs">
-                        <span className="text-slate-800 truncate">{s}</span>
-                        <button type="button" onClick={() => handleDeleteStation(s)} className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"><X className="w-3 h-3" /></button>
+                        <span className="text-slate-800 truncate min-w-0">{s}</span>
+                        <button type="button" onClick={() => handleDeleteStation(s)} className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer shrink-0"><X className="w-3 h-3" /></button>
                       </div>
                     ))}
                   </div>

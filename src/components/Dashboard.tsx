@@ -12,6 +12,8 @@ import { MultiWalletSelector } from './MultiWalletSelector';
 import { SmartCalendarCard } from './SmartCalendarCard';
 import { useAuth } from '../context/AuthContext';
 import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { calculateFinancialHealth, type FinancialHealthTier } from '../utils/financialHealth';
+import { FinancialHealthModal } from './FinancialHealthModal';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -73,6 +75,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // [v7.5.2] Currency-breakdown drill-down modal (Q4a=C)
   const [showCurrencyBreakdown, setShowCurrencyBreakdown] = useState<boolean>(false);
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState<boolean>(false);
 
   const handleSetTimeFilter = (f: TimeFilterOption) => {
     setTimeFilter(f);
@@ -304,6 +307,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const activeDebts = debts.filter((d) => d.status === 'active');
 
+  // [v7.5.57] Hero financial-health badge: all-time, scoped to the same
+  // wallets as the balance above (so the badge always explains the number
+  // it sits under). Reuses the Analytics health tiers — no new scoring.
+  const heroHealth = useMemo(() => {
+    const allTimeIncome = scopedTransactions
+      .filter((t) => t.type === 'income' && !isTransferTransaction(t))
+      .reduce((s, t) => s + convertTxToMMK(t), 0);
+    const allTimeExpense = scopedTransactions
+      .filter((t) => t.type === 'expense' && !isTransferTransaction(t))
+      .reduce((s, t) => s + convertTxToMMK(t), 0);
+    const totalPayable = activeDebts
+      .filter((d) => d.type === 'payable')
+      .reduce((s, d) => s + convertDebtToMMK(d), 0);
+    const totalReceivable = activeDebts
+      .filter((d) => d.type === 'receivable')
+      .reduce((s, d) => s + convertDebtToMMK(d), 0);
+    return calculateFinancialHealth(allTimeIncome, allTimeExpense, totalPayable, totalReceivable, totalWalletBalance);
+  }, [scopedTransactions, activeDebts, convertTxToMMK, convertDebtToMMK, totalWalletBalance]);
+
+  // [v7.5.57] Balance number color on the dark hero, by health tier.
+  const heroHealthText: Record<FinancialHealthTier, string> = {
+    super_surplus: 'text-purple-300',
+    perfect: 'text-emerald-300',
+    good: 'text-lime-300',
+    moderate: 'text-amber-300',
+    caution: 'text-orange-300',
+    critical: 'text-rose-400',
+    negative: 'text-rose-400',
+    no_data: 'text-white',
+  };
+
   const urgentDebts = activeDebts
     .filter((d) => d.dueDate)
     .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
@@ -424,11 +458,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <button
           type="button"
           onClick={() => setShowCurrencyBreakdown(true)}
-          className="text-3xl sm:text-4xl font-black mt-1.5 tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left"
+          className={`text-3xl sm:text-4xl font-black mt-1.5 tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left ${heroHealthText[heroHealth.tier]}`}
           title={(lang === 'my' ? 'ငွေကြေး အလိုက် ကြည့်ရန် နှိပ်ပါ • ' : 'Tap for currency breakdown • ') + formatMMK(totalWalletBalance)}
         >
           <span>{formatLakhs(totalWalletBalance, lang)}</span>
           <ChevronRight className="w-5 h-5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+        </button>
+        {/* [v7.5.57] Health badge + one-line advice; taps open the full health detail. */}
+        <button
+          type="button"
+          onClick={() => setIsHealthModalOpen(true)}
+          className="mt-2 flex flex-col items-start gap-1 text-left cursor-pointer group"
+          title={lang === 'my' ? 'ငွေကြေးကျန်းမာမှု အသေးစိတ်ကြည့်ရန် နှိပ်ပါ' : 'Tap to view financial health details'}
+        >
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${heroHealth.theme.badgeBg}`}>
+            {heroHealth.emoji} {lang === 'my' ? heroHealth.shortTitle.my : heroHealth.shortTitle.en}
+            {heroHealth.scoreDisplay !== '—' ? ` • ${heroHealth.scoreDisplay}` : ''}
+          </span>
+          <span className="text-[11px] text-slate-300 font-medium leading-snug">
+            {lang === 'my' ? heroHealth.advice.my : heroHealth.advice.en}
+          </span>
         </button>
         {/* [v7.5.56] Hero shared split (finding 24). */}
         {sharedWalletsInScope.length > 0 && (
@@ -703,6 +752,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* [v7.5.57] Financial health detail, opened from the hero badge. */}
+      <FinancialHealthModal
+        isOpen={isHealthModalOpen}
+        onClose={() => setIsHealthModalOpen(false)}
+        health={heroHealth}
+        lang={lang}
+        onNavigateToAnalytics={() => onSelectTab('analytics')}
+      />
 
     </div>
   );

@@ -2622,7 +2622,7 @@ export default function App() {
           <button
             onClick={() => setIsSidebarOpen(true)}
             className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-slate-500 hover:text-slate-900 transition-all cursor-pointer active:scale-95"
-            title="Menu & All Tabs"
+            title={lang === 'my' ? 'မီနူး' : 'Menu'}
           >
             <Menu className="w-6 h-6 text-slate-700" />
             <span className="text-[10px] font-bold text-slate-700">{lang === 'my' ? 'မီနူး' : 'Menu'}</span>

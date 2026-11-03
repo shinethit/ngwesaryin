@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.56';
-export const CURRENT_BUILD_NUMBER = 271;
+export const CURRENT_APP_VERSION = 'v7.5.57';
+export const CURRENT_BUILD_NUMBER = 272;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.57',
+    buildNumber: 272,
+    releaseDate: '2026-11-03',
+    releaseTime: '11:00 AM (MMT)',
+    titleMy: 'Sidebar ရှင်းလင်းခြင်း နှင့် လက်ကျန်မှာ ငွေကြေးကျန်းမာမှု ပြခြင်း',
+    titleEn: 'Cleaner Sidebar and Financial Health on the Dashboard Balance',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Sidebar မှာ အဓိက ၆ ခုသာ ကျန်တော့မည် — ဘတ်ဂျက်/ဇယား၊ ဒေတာ၊ အစီအစဉ်၊ ဆိုင်လိပ်စာ၊ ပညာပေး၊ အကြံပြုချက် ၆ ခုကို Dashboard ပေါ်က "အမြန် ဝင်ရောက်ရန်" grid ကနေသာ ဝင်တော့မည်။ စုစုပေါင်း လက်ကျန်ဂဏန်းကလည်း ငွေကြေးကျန်းမာမှု အဆင့်အလိုက် အရောင်ပြောင်းတော့မည် — အဆင့်ပြတဲ့ badge လေးနဲ့ အကြံပြုချက်တစ်ကြောင်း ပါလာပြီး နှိပ်လိုက်လျှင် အသေးစိတ် ကြည့်နိုင်ပါသည်။',
+    descriptionEn: 'The Sidebar now shows only the 6 main sections — Budgets & Analytics, Data, Plans, Shops, Education and Feedback now live only on the Dashboard Quick Access grid, as requested. The total balance number now takes the financial-health tier color, with a status badge and a one-line tip underneath; tapping it opens the full health detail.',
+    changesMy: [
+      '📋 Sidebar မှာ အဓိက ၆ ခုသာ ပြတော့မည် (Dashboard၊ ပိုက်ဆံအိတ်၊ ကဏ္ဍ၊ ဝင်ငွေ/ထွက်ငွေ၊ အကြွေး၊ ယာဉ်) — ကျန် ၆ ခုကို Dashboard grid ကနေသာ ဝင်မည်',
+      '💰 စုစုပေါင်း လက်ကျန်ဂဏန်း ငွေကြေးကျန်းမာမှု အဆင့်အလိုက် အရောင်ပြောင်းတော့မည် (အစိမ်း/အဝါ/လိမ္မော်/အနီ)',
+      '🏷️ လက်ကျန်အောက်မှာ အဆင့် badge နဲ့ အကြံပြုချက်တစ်ကြောင်း ပါလာမည် — နှိပ်လိုက်လျှင် အသေးစိတ် ကြည့်နိုင်ပါသည်',
+    ],
+    changesEn: [
+      '📋 Sidebar now shows only the 6 main sections (Dashboard, Wallets, Categories, Transactions, Debts, Vehicles) — the other 6 live only on the Dashboard grid',
+      '💰 The total balance number now changes color with the financial-health tier (green / yellow / orange / red)',
+      '🏷️ A status badge and one-line tip now appear under the balance — tap it for the full detail',
+    ],
+  },
   {
     version: 'v7.5.56',
     buildNumber: 271,

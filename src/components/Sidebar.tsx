@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, PieChart, HandCoins, Database, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, MessageSquareHeart, BookOpen, GraduationCap, Share2, Store, Car, History } from 'lucide-react';
+import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
@@ -114,6 +114,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
+  // [v7.5.57] Sidebar keeps 6 items only. Analytics / Data / Plans /
+  // Shops / Feedback / Education live on the Dashboard Quick Access grid
+  // (the user wanted that grid kept) — they are not duplicated here.
   const navItems = [
     {
       id: 'dashboard',
@@ -143,56 +146,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       count: transactionsCount,
     },
     {
-      id: 'analytics',
-      labelMy: '၅ - ဘတ်ဂျက်နှင့် စာရင်းဇယား',
-      labelEn: '5 - Budgets & Analytics',
-      icon: PieChart,
-    },
-    {
       id: 'debts',
-      labelMy: '၆ - အကြွေးစာရင်း',
-      labelEn: '6 - Debt & Loan Tracking',
+      labelMy: '၅ - အကြွေးစာရင်း',
+      labelEn: '5 - Debt & Loan Tracking',
       icon: HandCoins,
       count: debtsCount,
     },
     {
       id: 'vehicles',
-      labelMy: '၇ - ယာဉ်စီမံခန့်ခွဲမှု',
-      labelEn: '7 - Vehicle Management',
+      labelMy: '၆ - ယာဉ်စီမံခန့်ခွဲမှု',
+      labelEn: '6 - Vehicle Management',
       icon: Car,
       count: vehiclesCount,
-    },
-    {
-      id: 'shops',
-      labelMy: '၈ - ဆိုင်လိပ်စာနှင့် ဖုန်းများ',
-      labelEn: '8 - Shop Directory',
-      icon: Store,
-    },
-    {
-      id: 'data_management',
-      labelMy: '၉ - ဒေတာ စီမံခန့်ခွဲမှု',
-      labelEn: '9 - Data Management',
-      icon: Database,
-    },
-    {
-      id: 'plans',
-      labelMy: '၁၀ - Free / Premium',
-      labelEn: '10 - Plans & Premium VIP',
-      icon: Crown,
-      highlight: currentPlan === 'free',
-      isPlanTab: true,
-    },
-    {
-      id: 'feedback',
-      labelMy: '၁၁ - သုံးသပ်ချက်နှင့် အကြံပြုချက်',
-      labelEn: '11 - Reviews & Feedback',
-      icon: MessageSquareHeart,
-    },
-    {
-      id: 'education',
-      labelMy: '၁၂ - ပညာပေးကဏ္ဍ',
-      labelEn: '12 - Educational Corner',
-      icon: GraduationCap,
     },
   ];
 
@@ -534,8 +499,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
                       isActive
                         ? 'bg-white/20 text-white'
-                        : item.isPlanTab
-                        ? 'bg-amber-100 text-amber-800 group-hover:bg-amber-200'
                         : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-900'
                     }`}
                   >
@@ -545,14 +508,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {currentPlan === 'guest' && (item.id === 'debts' || item.id === 'analytics') && (
+                  {currentPlan === 'guest' && item.id === 'debts' && (
                     <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-slate-200 text-slate-700 border border-slate-300 flex items-center gap-0.5">
                       <Lock className="w-2.5 h-2.5" />
                       <span>LOCK</span>
                     </span>
-                  )}
-                  {item.highlight && (
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                   )}
                   {typeof item.count === 'number' && (
                     <span

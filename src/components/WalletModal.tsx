@@ -172,6 +172,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       setFormError(lang === 'my' ? 'အကောင့် အမည် ထည့်ပေးပါ' : 'Please enter a wallet name');
       return;
     }
+    // [v7.5.60 S-50] A negative balance is not allowed — it would drag
+    // the Dashboard totals down and is never a deliberate opening
+    // balance (a loan is tracked as a debt, not a negative wallet).
+    if (parsedBalance < 0) {
+      setFormError(lang === 'my' ? 'လက်ကျန်ငွေ အနှုတ် မဖြစ်နိုင်ပါ — ၀ သို့မဟုတ် အပေါင်း ပမာဏသာ ထည့်ပါ' : 'Balance cannot be negative — please enter 0 or a positive amount');
+      return;
+    }
 
     if (walletToEdit) {
       // Editing existing wallet
@@ -249,7 +256,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs sm:text-sm overflow-y-auto overflow-x-hidden flex-1 min-h-0 overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-base sm:text-sm overflow-y-auto overflow-x-hidden flex-1 min-h-0 overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
           {/* [v7.5.56] Shared-wallet guard notice — shown whenever this
               modal is opened on a shared wallet; saving is refused. */}
           {walletToEdit && (walletToEdit.isSharedFromOther || (walletToEdit.sharedWith && walletToEdit.sharedWith.length > 0)) && (

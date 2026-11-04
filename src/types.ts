@@ -377,6 +377,11 @@ export interface Vehicle {
   fuelType: string;
   currentOdometer: number;
   odometerUnit?: 'km' | 'mi';
+  // [v7.5.60 D-N9] Odometer when the vehicle was added. When every log
+  // is deleted the odometer falls back to this value instead of staying
+  // at a reading no log supports. Older vehicles lack it — then the
+  // previous behaviour (keep the last value) applies.
+  initialOdometer?: number;
   tankCapacity?: number;
   recommendedTirePressureFront?: number;
   recommendedTirePressureRear?: number;

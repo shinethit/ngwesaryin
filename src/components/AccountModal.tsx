@@ -4,6 +4,11 @@ import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCi
 import { useAuth } from '../context/AuthContext';
 import { resetFirestoreConnection } from '../lib/firebase';
 import { PinLockSettings, PlanType } from '../types';
+// [v7.5.60 G-M8] Version badge reads the live version, never hardcoded.
+import { CURRENT_APP_VERSION } from '../data/versionHistory';
+// [v7.5.60 G-M3] Google sign-in errors go through the same mapper as
+// the login screen — no raw Firebase codes shown to the user.
+import { getAuthErrorDetails, VPN_ADVICE_MY, VPN_ADVICE_EN } from '../utils/authErrorMapper';
 import { PinSetupModal } from './PinSetupModal';
 import { PinLockScreen } from './PinLockScreen';
 
@@ -267,29 +272,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
       await onManualSyncUp();
     } catch (err: any) {
       console.error(err);
-      const code = String(err?.code || err?.message || err || '').toLowerCase();
-      if (
-        code.includes('network-request-failed') ||
-        code.includes('refused') ||
-        code.includes('connection') ||
-        code.includes('failed to fetch')
-      ) {
-        setShowVpnHint(true);
-        setLoginError(
-          lang === 'my'
-            ? 'ချိတ်ဆက်မှု မအောင်မြင်ပါ (ERR_CONNECTION_REFUSED)။ မြန်မာနိုင်ငံ တယ်လီကွန်းလိုင်းများတွင် 1.1.1.1 WARP သို့မဟုတ် VPN ဖွင့်ရန် လိုအပ်ပါသည် (သို့မဟုတ် အောက်ပါ "Email ဖြင့် အကောင့်ဝင်ရန်" ကို သုံးပါ)'
-            : 'Connection refused. Please turn on 1.1.1.1 WARP or VPN in Myanmar, or use Email login.'
-        );
-      } else if (code.includes('popup-closed-by-user')) {
-        setShowVpnHint(true);
-        setLoginError(
-          lang === 'my'
-            ? 'Google Pop-up ပိတ်သွားပါသည် (refused to connect ဖြစ်ပါက VPN ဖွင့်ရန် သို့မဟုတ် Email စနစ်သုံးရန် လိုအပ်ပါသည်)'
-            : 'Google popup was closed or refused connection. Try VPN or Email login.'
-        );
-      } else {
-        setLoginError(err?.message || (lang === 'my' ? 'Google ဖြင့် ဝင်ရောက်မှု မအောင်မြင်ပါ' : 'Google sign-in failed'));
-      }
+      // [v7.5.60 G-M3/G-M4] Same friendly mapper as the login screen:
+      // no raw codes, one VPN message everywhere.
+      const details = getAuthErrorDetails(err, lang);
+      if (details.isVpnRelated) setShowVpnHint(true);
+      setLoginError(`${details.title}: ${details.message}`);
     }
   };
 
@@ -317,7 +304,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
@@ -466,40 +453,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </div>
         </div>
 
-        {/* Quick Data Management banner */}
-        {onClearAllData && (
-          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 mb-5 shadow-2xs">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-bold text-xs sm:text-sm text-rose-950">
-                    {lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည် (Clear All Data)' : 'Clear All Data (Reset)'}
-                  </h4>
-                  <p className="text-[11px] text-rose-800 leading-tight mt-0.5">
-                    {lang === 'my'
-                      ? 'စာရင်းမှတ်တမ်းအားလုံးကို ရှင်းလင်းပြီး Cash ပိုက်ဆံအိတ်တစ်ခုသာ ထားမည်'
-                      : 'Reset all transactions, debts and categories (Keeps Cash wallet)'}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                id="btn-account-quick-clear-data"
-                onClick={() => {
-                  onClearAllData();
-                  onClose();
-                }}
-                className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>{lang === 'my' ? 'ဒေတာဖျက်မည်' : 'Clear Data'}</span>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* [v7.5.60 G-S9] The duplicate "Clear All Data" button that used
+            to sit here is removed — the Danger Zone copy at the bottom
+            of this modal is the only one, so a stray tap can't wipe
+            data twice as easily. */}
 
         {/* Workspace Sharing Panel */}
         {!isGuest && (
@@ -715,9 +672,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 </div>
                 {showVpnHint && (
                   <p className="text-[11px] text-rose-800 pl-6">
-                    {lang === 'my'
-                      ? 'အကြံပြုချက်: Cloudflare 1.1.1.1 WARP / VPN ဖွင့်ပါ သို့မဟုတ် အောက်ပါ Email & Password ဖြင့် ဝင်ရောက်ပါ'
-                      : 'Tip: Turn on Cloudflare 1.1.1.1 WARP or VPN, or use Email & Password below.'}
+                    {lang === 'my' ? VPN_ADVICE_MY : VPN_ADVICE_EN}
                   </p>
                 )}
               </div>
@@ -757,7 +712,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 <span>
                   {isSyncing
                     ? (lang === 'my' ? 'ချိတ်ဆက်နေသည်...' : 'Connecting...')
-                    : (lang === 'my' ? 'Google Account ဖြင့် ဝင်မည် (VPN လိုအပ်ပါသည်)' : 'Continue with Google (VPN needed)')}
+                    : (lang === 'my' ? 'Google ဖြင့် ဝင်မည် (VPN လိုအပ်နိုင်ပါသည် — မရလျှင် Email ဖြင့် ဝင်ပါ)' : 'Continue with Google (VPN may be needed — use Email if it fails)')}
                 </span>
               </button>
             </div>
@@ -879,8 +834,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">
                     {lang === 'my'
-                      ? 'ည ၉ နာရီတွင် ဒီနေ့၏ စာရင်းများ သွင်းရန် သတိပေးမည်'
-                      : 'Get a reminder at 9 PM to record daily transactions'}
+                      ? 'ည ၉ နာရီတွင် ဒီနေ့၏ စာရင်းများ သွင်းရန် သတိပေးမည် — အက်ပ်ဖွင့်ထားမှသာ သတိပေးပါမည်'
+                      : 'Reminder at 9 PM to record daily transactions — only while the app is open'}
                   </div>
                   <div className="mt-1.5">
                     {Notification.permission === 'granted' && (
@@ -962,6 +917,30 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
                 </label>
               </div>
+              {/* [v7.5.60 G-M2/M-25] Guests have no account: a forgotten
+                  PIN cannot be recovered by email, so link an account
+                  BEFORE turning the lock on. */}
+              {isGuest && !pinSettings.isEnabled && (
+                <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
+                  <p className="text-[11px] text-amber-900 font-semibold leading-relaxed">
+                    {lang === 'my'
+                      ? '⚠️ သတိပေးချက် — ဧည့်သည်အဖြစ် သုံးနေပါသည်။ PIN မေ့သွားလျှင် Email ဖြင့် ပြန်ယူ၍ မရပါ — ဒေတာ အပြီးတိုင် ပျောက်နိုင်ပါသည်။ PIN မဖွင့်မီ အကောင့် ချိတ်ဆက်ထားပါ။'
+                      : '⚠️ Warning — you are using Guest Mode. If you forget the PIN there is no email recovery — your data may be lost for good. Link an account before turning on the PIN lock.'}
+                  </p>
+                  {onOpenLoginScreen && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenLoginScreen();
+                      }}
+                      className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer active:scale-95"
+                    >
+                      {lang === 'my' ? 'အရင် Google / Email အကောင့် ချိတ်ဆက်မည်' : 'Link a Google / Email account first'}
+                    </button>
+                  )}
+                </div>
+              )}
               {pinSettings.isEnabled && (
                 <div className="mt-3 pt-3 border-t border-slate-200 flex justify-end">
                   <button
@@ -1131,7 +1110,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     {lang === 'my' ? 'ဗားရှင်းမှတ်တမ်းနှင့် ပြင်ဆင်မှုများ' : 'Version History & Changelog'}
                   </span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white shadow-2xs shrink-0">
-                    v4.2.0
+                    {CURRENT_APP_VERSION}
                   </span>
                 </div>
                 <div className="text-xs text-slate-500 truncate">
@@ -1270,6 +1249,16 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         isOpen={isPinSetupOpen}
         onClose={() => setIsPinSetupOpen(false)}
         lang={lang}
+        isGuest={isGuest}
+        onLinkAccount={
+          onOpenLoginScreen
+            ? () => {
+                setIsPinSetupOpen(false);
+                onClose();
+                onOpenLoginScreen();
+              }
+            : undefined
+        }
         onSavePin={(pinHash, pinSalt) => {
           onUpdatePinSettings?.(
             pinSettings?.isEnabled

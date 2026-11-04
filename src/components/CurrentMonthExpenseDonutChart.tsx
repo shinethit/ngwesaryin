@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PieChart, Tag } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 import { CategoryIcon } from './CategoryIcon';
@@ -34,6 +34,10 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
     return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
   };
   const currentYearMonth = useMemo(() => getLocalDateString(new Date()).slice(0, 7), []);
+  // [v7.5.60 A-S19] Phone has no hover — tapping an amount toggles it
+  // between lakhs and the exact kyat value.
+  const [showExact, setShowExact] = useState(false);
+  const displayAmount = (v: number) => (showExact ? formatMMK(v) : formatLakhs(v, lang));
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
@@ -43,6 +47,9 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
       if (t.type !== 'expense') return false;
       if (isTransferTransaction(t)) return false;
       if (!t.date || !t.date.startsWith(currentYearMonth)) return false;
+      // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope).
+      const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
+      if (w && w.includeInTotals === false) return false;
       return true;
     });
   }, [transactions, currentYearMonth]);
@@ -130,9 +137,14 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
             </p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-800 font-mono text-xs font-bold border border-rose-200">
-          -{formatMMK(totalExpense)}
-        </span>
+        <button
+          type="button"
+          onClick={() => setShowExact((v) => !v)}
+          className="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-800 font-mono text-xs font-bold border border-rose-200 cursor-pointer"
+          title={formatMMK(totalExpense)}
+        >
+          -{displayAmount(totalExpense)}
+        </button>
       </div>
 
       {categoryBreakdown.length === 0 ? (
@@ -174,9 +186,14 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
               {/* Center Total Info */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{lang === 'my' ? 'စုစုပေါင်း' : 'Total'}</span>
-                <span className="font-black text-xs sm:text-sm font-mono text-slate-900 truncate max-w-[100px]" title={formatMMK(totalExpense)}>
-                  {formatMMK(totalExpense)}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowExact((v) => !v)}
+                  className="font-black text-xs sm:text-sm font-mono text-slate-900 truncate max-w-[120px] cursor-pointer"
+                  title={formatMMK(totalExpense)}
+                >
+                  {displayAmount(totalExpense)}
+                </button>
                 <span className="text-[9px] text-rose-600 font-bold mt-0.5">{categoryBreakdown.length} {lang === 'my' ? 'ကဏ္ဍ' : 'categories'}</span>
               </div>
             </div>
@@ -203,7 +220,7 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="font-mono font-black text-xs text-slate-900">{formatMMK(item.amount)}</div>
+                    <button type="button" onClick={() => setShowExact((v) => !v)} className="font-mono font-black text-xs text-slate-900 cursor-pointer" title={formatMMK(item.amount)}>{displayAmount(item.amount)}</button>
                     <div className="text-[10px] font-bold font-mono text-rose-600">{item.percentage}%</div>
                   </div>
                 </div>

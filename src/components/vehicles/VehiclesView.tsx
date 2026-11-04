@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle, EyeOff, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle, EyeOff, RotateCcw, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { Vehicle, FuelLog, VehicleMaintenance, TirePressureLog, Wallet, PlanType } from '../../types';
 import { DEFAULT_PLAN_LIMITS } from '../../data/initialData';
+import { formatLakhs, formatShortDate } from '../../utils/formatters';
 import {
   enrichFuelLogs,
   calculateFuelStats,
@@ -39,6 +40,9 @@ interface VehiclesViewProps {
 }
 
 type SubTab = 'fuel' | 'maintenance' | 'tires';
+
+// [v7.5.60 D-S11] Service types that do not apply to motorcycles.
+const MOTORCYCLE_HIDDEN_TYPES = ['transmission_fluid', 'coolant', 'wheel_alignment'];
 
 export const VehiclesView: React.FC<VehiclesViewProps> = ({
   vehicles,
@@ -101,14 +105,17 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
     setIsVehicleModalOpen(true);
   };
 
-  const handleDeleteVehicleAndClean = (vehicleId: string) => {
+  // [v7.5.60 D-M1] Returns true only when the vehicle was actually
+  // deleted (user confirmed the full-impact warning). Callers that
+  // opened a modal (e.g. AddVehicleModal) close it only on true.
+  const handleDeleteVehicleAndClean = (vehicleId: string): boolean => {
     // [v7.5.55 C6] Delete is allowed ONLY behind a full-impact
     // confirmation: counts of every log type + linked expense
     // transactions + the balance impact, with explicit confirmation.
     // The handler itself deletes the vehicle, all logs and linked
     // transactions (useVehicleHandlers.handleDeleteVehicle).
     const target = vehicles.find((v) => v.id === vehicleId);
-    if (!target) return;
+    if (!target) return false;
     const fLogs = fuelLogs.filter((f) => f.vehicleId === vehicleId);
     const mLogs = vehicleMaintenance.filter((m) => m.vehicleId === vehicleId);
     const tLogs = tirePressureLogs.filter((t) => t.vehicleId === vehicleId);
@@ -116,11 +123,13 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
       fLogs.filter((f) => f.syncToExpense !== false).reduce((s, f) => s + (Number(f.totalCost) || 0), 0) +
       mLogs.filter((m) => m.syncToExpense !== false).reduce((s, m) => s + (Number(m.cost) || 0), 0) +
       tLogs.filter((t) => t.syncToExpense !== false).reduce((s, t) => s + (Number(t.cost) || 0), 0);
+    // [v7.5.60 D-S1] Linked expense shown in lakhs, exact kyat in brackets.
+    const linkedExpenseText = `${formatLakhs(linkedExpenseTotal, lang)} (${linkedExpenseTotal.toLocaleString()} MMK)`;
     const impactMsg =
       lang === 'my'
-        ? `"${target.name}" ကို အပြီးဖျက်မည် — ပြန်မရပါ။\n• ဆီမှတ်တမ်း: ${fLogs.length} ကြိမ်\n• ပြုပြင်မှတ်တမ်း: ${mLogs.length} ကြိမ်\n• တာယာမှတ်တမ်း: ${tLogs.length} ကြိမ်\n• ဆက်စပ်ထွက်ငွေစာရင်း: ${linkedExpenseTotal.toLocaleString()} MMK ပါ ဖျက်မည် (ငွေစာရင်းစုစုပေါင်းမှ နုတ်မည်)\n\nသေချာပါသလား? ယာယီပိတ်ထားရုံ (Deactivate) ဆိုရင် မှတ်တမ်းများ အားလုံး ကျန်ရှိနေပါမည်။`
-        : `Permanently delete "${target.name}"? This cannot be undone.\n• Fuel logs: ${fLogs.length}\n• Maintenance logs: ${mLogs.length}\n• Tire logs: ${tLogs.length}\n• Linked expenses: ${linkedExpenseTotal.toLocaleString()} MMK will also be removed from totals\n\nAre you sure? Deactivating instead keeps all records.`;
-    if (!confirm(impactMsg)) return;
+        ? `"${target.name}" ကို အပြီးဖျက်မည် — ပြန်မရပါ။\n• ဆီမှတ်တမ်း: ${fLogs.length} ကြိမ်\n• ပြုပြင်မှတ်တမ်း: ${mLogs.length} ကြိမ်\n• တာယာမှတ်တမ်း: ${tLogs.length} ကြိမ်\n• ဆက်စပ်ထွက်ငွေစာရင်း: ${linkedExpenseText} ပါ ဖျက်မည် (ငွေစာရင်းစုစုပေါင်းမှ နုတ်မည်)\n\nသေချာပါသလား? ယာယီပိတ်ထားရုံ (Deactivate) ဆိုရင် မှတ်တမ်းများ အားလုံး ကျန်ရှိနေပါမည်။`
+        : `Permanently delete "${target.name}"? This cannot be undone.\n• Fuel logs: ${fLogs.length}\n• Maintenance logs: ${mLogs.length}\n• Tire logs: ${tLogs.length}\n• Linked expenses: ${linkedExpenseText} will also be removed from totals\n\nAre you sure? Deactivating instead keeps all records.`;
+    if (!confirm(impactMsg)) return false;
     onDeleteVehicle(vehicleId);
     const remaining = vehicles.filter((v) => v.id !== vehicleId && v.isActive !== false);
     if (remaining.length > 0) {
@@ -128,6 +137,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
     } else {
       setSelectedVehicleId('');
     }
+    return true;
   };
 
   // [v7.5.55 C6] Deactivate is the PRIMARY removal path: the vehicle is
@@ -201,7 +211,48 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
   // Analytics
   const enrichedFuel = useMemo(() => enrichFuelLogs(vehicleFuelLogs), [vehicleFuelLogs]);
-  const fuelStats = useMemo(() => calculateFuelStats(vehicleFuelLogs), [vehicleFuelLogs]);
+  // [v7.5.60 D-S7] The metric cards used to be all-time while the cost
+  // summary below followed the selected range — two different "ဆီဖိုး"
+  // totals on one screen. The metrics now follow the SAME range as the
+  // cost summary (all-time when preset is 'all' or no custom dates).
+  const toLocalDateStr = (d: Date): string => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const costRange = useMemo(() => {
+    if (costRangePreset === 'all') return { start: '', end: '' };
+    if (costRangePreset === 'custom') {
+      return { start: costRangeCustomStart || '', end: costRangeCustomEnd || '' };
+    }
+    const now = new Date();
+    const end = toLocalDateStr(now);
+    const start = new Date(now);
+    if (costRangePreset === '1m') start.setMonth(start.getMonth() - 1);
+    else if (costRangePreset === '3m') start.setMonth(start.getMonth() - 3);
+    else if (costRangePreset === '6m') start.setMonth(start.getMonth() - 6);
+    else if (costRangePreset === '1y') start.setFullYear(start.getFullYear() - 1);
+    return { start: toLocalDateStr(start), end };
+  }, [costRangePreset, costRangeCustomStart, costRangeCustomEnd]);
+  const isCustomRangeEmpty = costRangePreset === 'custom' && !costRange.start && !costRange.end;
+  const rangedFuelLogs = useMemo(() => {
+    if (isCustomRangeEmpty) return vehicleFuelLogs;
+    return vehicleFuelLogs.filter(
+      (l) => (!costRange.start || l.date >= costRange.start) && (!costRange.end || l.date <= costRange.end)
+    );
+  }, [vehicleFuelLogs, costRange, isCustomRangeEmpty]);
+  const fuelStats = useMemo(() => calculateFuelStats(rangedFuelLogs), [rangedFuelLogs]);
+  // [v7.5.60 D-S7] Caption so the reader always knows which range the
+  // metric cards cover.
+  const metricRangeCaption =
+    costRangePreset === 'all' || isCustomRangeEmpty
+      ? lang === 'my'
+        ? 'ဆီစာရင်း — အချိန်အားလုံး'
+        : 'Fuel figures — all time'
+      : lang === 'my'
+      ? `ဆီစာရင်း — ${formatShortDate(costRange.start)} → ${formatShortDate(costRange.end)}`
+      : `Fuel figures — ${formatShortDate(costRange.start)} → ${formatShortDate(costRange.end)}`;
   const maintenanceLifespans = useMemo(
     () => calculateMaintenanceLifespans(vehicleMaintenanceLogs),
     [vehicleMaintenanceLogs]
@@ -210,6 +261,26 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
     if (!currentVehicle) return [];
     return calculateServiceHealthStatuses(currentVehicle, vehicleMaintenanceLogs);
   }, [currentVehicle, vehicleMaintenanceLogs]);
+
+  // [v7.5.60 D-S11] Hide motorcycle-irrelevant types, show recorded /
+  // due-soon / overdue cards first, and collapse the "မမှတ်ရသေး" rest
+  // behind a toggle instead of 14 grey cards in a row.
+  const [showAllHealth, setShowAllHealth] = useState(false);
+  const visibleHealthStatuses = useMemo(
+    () =>
+      healthStatuses.filter(
+        (h) => !(currentVehicle?.type === 'motorcycle' && MOTORCYCLE_HIDDEN_TYPES.includes(h.serviceType))
+      ),
+    [healthStatuses, currentVehicle]
+  );
+  const prominentHealthStatuses = useMemo(
+    () => visibleHealthStatuses.filter((h) => h.status !== 'not_recorded'),
+    [visibleHealthStatuses]
+  );
+  const unrecordedHealthStatuses = useMemo(
+    () => visibleHealthStatuses.filter((h) => h.status === 'not_recorded'),
+    [visibleHealthStatuses]
+  );
 
   const latestTireLog = useMemo(() => {
     // [v7.5.55 C24] Date tiebreak by createdAt so same-day logs pick the
@@ -254,7 +325,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleReactivateVehicle(v)}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>{lang === 'my' ? 'ပြန်ဖွင့်မည်' : 'Reactivate'}</span>
@@ -262,7 +333,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleDeleteVehicleAndClean(v.id)}
-                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   {lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
                 </button>
@@ -425,7 +496,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 setSelectedVehicleId(e.target.value);
               }
             }}
-            className="font-bold text-slate-900 text-sm bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-slate-900 cursor-pointer transition-colors max-w-[170px] truncate"
+            className="font-bold text-slate-900 text-sm bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-slate-900 cursor-pointer transition-colors max-w-[240px] truncate"
           >
             {activeVehicles.map((v) => (
               <option key={v.id} value={v.id}>
@@ -442,7 +513,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
               setEditingVehicle(currentVehicle);
               setIsVehicleModalOpen(true);
             }}
-            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
+            className="p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
             title={lang === 'my' ? 'ပြင်ဆင်ရန်' : 'Edit'}
           >
             <Edit className="w-3.5 h-3.5" />
@@ -452,7 +523,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             <button
               type="button"
               onClick={() => handleDeactivateVehicle(currentVehicle)}
-              className="p-1.5 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
+              className="p-2.5 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
               title={lang === 'my' ? 'ယာယီပိတ်ထားမည် (မှတ်တမ်းများ ကျန်မည်)' : 'Deactivate (logs are kept)'}
             >
               <EyeOff className="w-3.5 h-3.5" />
@@ -465,7 +536,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             <button
               type="button"
               onClick={() => handleDeleteVehicleAndClean(currentVehicle.id)}
-              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
+              className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-slate-200/80 shrink-0"
               title={lang === 'my' ? 'ဖျက်ရန်' : 'Delete'}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -497,39 +568,42 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
         {/* Row 2: Actions + Fleet pills (combined) */}
         <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-100">
+          {/* [v7.5.60 D-S5] Quick actions ≥40px tall. [v7.5.60 D-N6] Action
+              verbs, not bare nouns — "+ ဆီထည့်မည်" says what it does. */}
           <button
             onClick={() => { setEditingFuelLog(null); setIsFuelModalOpen(true); }}
-            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+            className="px-2.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
           >
             <Fuel className="w-3 h-3" />
-            <span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>
+            <span>{lang === 'my' ? '+ ဆီထည့်မည်' : '+ Add Fuel'}</span>
           </button>
           <button
             onClick={() => { setEditingMaintenance(null); setIsMaintenanceModalOpen(true); }}
-            className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+            className="px-2.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
           >
             <Wrench className="w-3 h-3" />
-            <span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span>
+            <span>{lang === 'my' ? '+ ဝန်ဆောင်မှု' : '+ Add Service'}</span>
           </button>
           <button
             onClick={() => { setEditingTireLog(null); setIsTireModalOpen(true); }}
-            className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+            className="px-2.5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
           >
             <Disc className="w-3 h-3" />
-            <span>{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span>
+            <span>{lang === 'my' ? '+ လေချိန်မည်' : '+ Log Pressure'}</span>
           </button>
           <button
             type="button"
             onClick={() => setIsFuelGuideOpen(true)}
-            className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all cursor-pointer active:scale-95"
+            className="px-2.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1 text-[11px] font-bold"
             title={lang === 'my' ? 'ဆီဖိုး ထည့်နည်း' : 'Fuel Guide'}
           >
             <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+            <span>{lang === 'my' ? 'လမ်းညွှန်' : 'Guide'}</span>
           </button>
 
           <span className="text-slate-200 mx-0.5 shrink-0">|</span>
 
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
             {lang === 'my' ? 'ယာဉ်စာရင်း:' : 'Fleet:'}
           </span>
           {activeVehicles.map((v) => {
@@ -539,7 +613,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 key={v.id}
                 type="button"
                 onClick={() => setSelectedVehicleId(v.id)}
-                className={'px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ' + (isSelected ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200/80')}
+                className={'px-2 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ' + (isSelected ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200/80')}
               >
                 <span>{v.name}</span>
               </button>
@@ -548,7 +622,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           <button
             type="button"
             onClick={handleOpenAddVehicle}
-            className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-all flex items-center gap-0.5 shrink-0 cursor-pointer active:scale-95"
+            className="px-2 py-2 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-all flex items-center gap-0.5 shrink-0 cursor-pointer active:scale-95"
             title={lang === 'my' ? 'ယာဉ်အသစ်' : 'Add Vehicle'}
           >
             <Plus className="w-3 h-3 text-amber-700 stroke-[3]" />
@@ -560,6 +634,13 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
       {/* [v7.5.55 C6] Deactivated vehicles (if any) with Reactivate */}
       {deactivatedSection}
 
+      {/* [v7.5.60 D-S7] Range caption — these figures follow the same
+          range as the cost summary below, never silently all-time. */}
+      <p className="flex items-center gap-1.5 text-[11px] text-slate-500 px-1 -mb-3">
+        <Calendar className="w-3 h-3 text-slate-400" />
+        <span>{metricRangeCaption}</span>
+      </p>
+
       {/* [v7.3.0] Key metrics — ultra-compact single-row cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {/* Fuel Efficiency */}
@@ -568,14 +649,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             <Fuel className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
               {lang === 'my' ? 'ဆီစားနှုန်း' : 'Efficiency'}
             </div>
             <div className="flex items-baseline gap-0.5">
               <span className="text-base font-black font-mono text-slate-900 leading-none">
                 {fuelStats.avgEfficiency > 0 ? fuelStats.avgEfficiency : '--'}
               </span>
-              <span className="text-[9px] font-bold text-amber-600">km/L</span>
+              <span className="text-[11px] font-bold text-amber-600">km/L</span>
             </div>
           </div>
         </div>
@@ -586,14 +667,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             <DollarSign className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
               {lang === 'my' ? 'ဆီဈေး' : 'Fuel Price'}
             </div>
             <div className="flex items-baseline gap-0.5">
               <span className="text-base font-black font-mono text-slate-900 leading-none">
                 {fuelStats.latestPricePerLiter > 0 ? fuelStats.latestPricePerLiter.toLocaleString() : '--'}
               </span>
-              <span className="text-[9px] font-bold text-orange-600">Ks/L</span>
+              <span className="text-[11px] font-bold text-orange-600">Ks/L</span>
             </div>
           </div>
         </div>
@@ -604,12 +685,17 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             <Gauge className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
               {lang === 'my' ? 'ဆီဖိုး' : 'Fuel Cost'}
             </div>
             <div className="flex items-baseline gap-0.5">
-              <span className="text-base font-black font-mono text-emerald-800 leading-none truncate">
-                {fuelStats.totalSpent.toLocaleString()}
+              {/* [v7.5.60 D-S1] Lakh display, exact kyat in tooltip.
+                  [v7.5.60 D-N12] No logs yet → "--", not a misleading 0. */}
+              <span
+                className="text-base font-black font-mono text-emerald-800 leading-none truncate"
+                title={rangedFuelLogs.length > 0 ? `${fuelStats.totalSpent.toLocaleString()} MMK` : undefined}
+              >
+                {rangedFuelLogs.length === 0 ? '--' : formatLakhs(fuelStats.totalSpent, lang)}
               </span>
             </div>
           </div>
@@ -621,14 +707,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             {alertCount > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
               {lang === 'my' ? 'သတိပေးချက်' : 'Alerts'}
             </div>
             <div className="flex items-baseline gap-0.5">
               <span className={'text-base font-black font-mono leading-none ' + (alertCount > 0 ? 'text-rose-600' : 'text-slate-900')}>
                 {alertCount}
               </span>
-              <span className="text-[9px] font-bold text-slate-500">{lang === 'my' ? 'ခု' : 'items'}</span>
+              <span className="text-[11px] font-bold text-slate-500">{lang === 'my' ? 'ခု' : 'items'}</span>
             </div>
           </div>
         </div>
@@ -720,7 +806,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                   setEditingFuelLog(null);
                   setIsFuelModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all cursor-pointer shrink-0"
+                className="px-3.5 py-2.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all cursor-pointer shrink-0"
               >
                 {lang === 'my' ? '+ ဆီထည့်စာရင်း အသစ်' : '+ Add Record'}
               </button>
@@ -762,7 +848,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
-                          <span>{log.date}</span>
+                          {/* [v7.5.60 D-S2] DD/MM/YYYY, not ISO. */}
+                          <span>{formatShortDate(log.date)}</span>
                           <span>•</span>
                           <span className="font-mono text-slate-700 font-medium">
                             {log.odometer?.toLocaleString()} {currentVehicle?.odometerUnit || 'km'}
@@ -795,7 +882,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                               {log.calculatedCostPerDistance} Ks / km
                             </span>
                           )}
-                          <span className="text-[9px] text-emerald-600 font-medium block">
+                          <span className="text-[11px] text-emerald-600 font-medium block">
                             ✓ တိုင်ကီပြည့်
                           </span>
                         </div>
@@ -811,11 +898,15 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
                       {/* Cost */}
                       <div className="text-right">
-                        <span className="font-mono font-bold text-base text-slate-900 block">
-                          {log.totalCost.toLocaleString()} Ks
+                        {/* [v7.5.60 D-S1] Lakh display, exact kyat in tooltip. */}
+                        <span
+                          className="font-mono font-bold text-base text-slate-900 block"
+                          title={`${log.totalCost.toLocaleString()} MMK`}
+                        >
+                          {formatLakhs(Number(log.totalCost) || 0, lang)}
                         </span>
                         {log.syncToExpense && (
-                          <span className="text-[9px] text-emerald-600 font-medium block">
+                          <span className="text-[11px] text-emerald-600 font-medium block">
                             ✓ စာရင်းသွင်းပြီး
                           </span>
                         )}
@@ -828,7 +919,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                             setEditingFuelLog(log);
                             setIsFuelModalOpen(true);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
+                          className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
@@ -844,7 +935,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                               onDeleteFuelLog(log.id);
                             }
                           }}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -876,11 +967,40 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
               </p>
             </div>
 
+            {/* [v7.5.60 D-S11] Recorded / due cards first; "မမှတ်ရသေး" rest
+                collapsed behind a toggle (or shown directly when nothing
+                is recorded yet, so a new vehicle is not a blank card). */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {healthStatuses.map((item) => {
+              {(showAllHealth || prominentHealthStatuses.length === 0
+                ? visibleHealthStatuses
+                : prominentHealthStatuses
+              ).map((item) => {
                 const isOverdue = item.status === 'overdue';
                 const isDueSoon = item.status === 'due_soon';
                 const isNotRecorded = item.status === 'not_recorded';
+                // [v7.5.60 D-S3] Which limit is actually deciding the
+                // status — days or km (whichever ratio is smaller).
+                const kmRatio =
+                  item.expectedLifespanKm > 0
+                    ? item.remainingKm / item.expectedLifespanKm
+                    : Number.POSITIVE_INFINITY;
+                const daysRatio =
+                  item.expectedLifespanDays > 0
+                    ? item.remainingDays / item.expectedLifespanDays
+                    : Number.POSITIVE_INFINITY;
+                const daysLimiting = daysRatio <= kmRatio;
+                const kmPart =
+                  item.remainingKm > 0
+                    ? `${item.remainingKm.toLocaleString()} km`
+                    : `${Math.abs(item.remainingKm).toLocaleString()} km ${lang === 'my' ? 'ကျော်' : 'overdue'}`;
+                const daysPart =
+                  item.remainingDays > 0
+                    ? `${item.remainingDays} ${lang === 'my' ? 'ရက်' : 'days'}`
+                    : `${Math.abs(item.remainingDays)} ${lang === 'my' ? 'ရက် ကျော်' : 'days overdue'}`;
+                // Limiting value first, the other alongside it — the
+                // displayed "ကျန်ရှိ" can never contradict the status pill.
+                const remainingText =
+                  item.serviceType === 'license_renewal' ? daysPart : daysLimiting ? `${daysPart} · ${kmPart}` : `${kmPart} · ${daysPart}`;
 
                 return (
                   <div
@@ -900,7 +1020,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         </span>
                         <span className="text-[10px] text-slate-400">
                           {item.lastServiceDate
-                            ? `${item.lastServiceDate} (${item.lastServiceOdometer?.toLocaleString()} km)`
+                            ? `${formatShortDate(item.lastServiceDate)} (${item.lastServiceOdometer?.toLocaleString()} km)`
                             : lang === 'my'
                             ? 'မှတ်တမ်း မရှိသေးပါ'
                             : 'No service recorded'}
@@ -978,17 +1098,12 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                           }`}
                         >
                           {/* [v7.5.55 C20] Not-recorded shows မမှတ်ရသေး, never
-                              a remaining-lifespan figure that looks healthy. */}
+                              a remaining-lifespan figure that looks healthy.
+                              [v7.5.60 D-S3] Show the limiting value first. */}
                           {isNotRecorded ? (
                             lang === 'my' ? 'မမှတ်ရသေး' : 'Not recorded yet'
-                          ) : item.serviceType === 'license_renewal' ? (
-                            item.remainingDays > 0
-                              ? `${item.remainingDays} ရက်`
-                              : `${Math.abs(item.remainingDays)} ရက် ကျော်`
                           ) : (
-                            item.remainingKm > 0
-                              ? `${item.remainingKm.toLocaleString()} km`
-                              : `${Math.abs(item.remainingKm).toLocaleString()} km ကျော်`
+                            remainingText
                           )}
                         </span>
                       </div>
@@ -997,6 +1112,35 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                 );
               })}
             </div>
+
+            {/* [v7.5.60 D-S11] Collapsed "မမှတ်ရသေး" remainder. */}
+            {unrecordedHealthStatuses.length > 0 && prominentHealthStatuses.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllHealth((v) => !v)}
+                className="w-full flex items-center justify-center gap-1 px-3 py-2.5 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl transition-colors cursor-pointer"
+              >
+                {showAllHealth ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" />
+                    <span>
+                      {lang === 'my'
+                        ? 'မမှတ်ရသေးသော အမျိုးအစားများ ဝှက်မည်'
+                        : 'Hide unrecorded types'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" />
+                    <span>
+                      {lang === 'my'
+                        ? `ကျန်အမျိုးအစားများ (${unrecordedHealthStatuses.length} ခု — မမှတ်ရသေး)`
+                        : `More types (${unrecordedHealthStatuses.length} not recorded yet)`}
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Maintenance Logs List */}
@@ -1020,7 +1164,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                   setEditingMaintenance(null);
                   setIsMaintenanceModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer shrink-0"
+                className="px-3.5 py-2.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer shrink-0"
               >
                 {lang === 'my' ? '+ အပိုပစ္စည်းလဲလှယ်မှု အသစ်' : '+ Add Service Log'}
               </button>
@@ -1056,7 +1200,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
-                          <span>{log.date}</span>
+                          {/* [v7.5.60 D-S2] DD/MM/YYYY, not ISO. */}
+                          <span>{formatShortDate(log.date)}</span>
                           <span>•</span>
                           <span className="font-mono text-slate-700">
                             {log.odometer?.toLocaleString()} km
@@ -1090,10 +1235,14 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                     {/* Cost & Edit */}
                     <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60">
                       <div className="text-right">
-                        <span className="font-mono font-bold text-base text-slate-900 block">
-                          {log.cost.toLocaleString()} Ks
+                        {/* [v7.5.60 D-S1] Lakh display, exact kyat in tooltip. */}
+                        <span
+                          className="font-mono font-bold text-base text-slate-900 block"
+                          title={`${log.cost.toLocaleString()} MMK`}
+                        >
+                          {formatLakhs(Number(log.cost) || 0, lang)}
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[11px] text-slate-400">
                           {lang === 'my' ? 'ကုန်ကျငွေ' : 'Total Cost'}
                         </span>
                       </div>
@@ -1107,7 +1256,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                               setIsMaintenanceModalOpen(true);
                             }
                           }}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
+                          className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
@@ -1123,7 +1272,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                               onDeleteMaintenance(log.id);
                             }
                           }}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1170,7 +1319,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                   setEditingTireLog(null);
                   setIsTireModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer shrink-0"
+                className="px-3.5 py-2.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer shrink-0"
               >
                 {lang === 'my' ? '+ မှတ်တမ်းအသစ်' : '+ Log Pressure'}
               </button>
@@ -1198,7 +1347,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-xs text-slate-800">
-                            {log.date}
+                            {/* [v7.5.60 D-S2] DD/MM/YYYY, not ISO. */}
+                            {formatShortDate(log.date)}
                           </span>
                           {log.tireCondition && (
                             <span
@@ -1210,7 +1360,19 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                                   : 'bg-rose-100 text-rose-800'
                               }`}
                             >
-                              {log.tireCondition}
+                              {/* [v7.5.60 D-S4] Never show the raw code value
+                                  (good / fair / needs_check) — translate it. */}
+                              {log.tireCondition === 'good'
+                                ? lang === 'my'
+                                  ? 'ကောင်းမွန်သည်'
+                                  : 'Good'
+                                : log.tireCondition === 'fair'
+                                ? lang === 'my'
+                                  ? 'သင့်တင့်သည်'
+                                  : 'Fair'
+                                : lang === 'my'
+                                ? 'စစ်ဆေးရန် လိုအပ်သည်'
+                                : 'Needs Inspection'}
                             </span>
                           )}
                           {log.servicePlace && (
@@ -1227,9 +1389,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                             </>
                           ) : (
                             <>
-                              <span>FL: {log.frontLeftPsi || '--'}</span>
-                              <span>FR: {log.frontRightPsi || '--'}</span>
-                              <span>RL: {log.rearLeftPsi || '--'}</span>
+                              {/* [v7.5.60 D-N2] PSI unit on every value, like the bike row. */}
+                              <span>FL: {log.frontLeftPsi || '--'} PSI</span>
+                              <span>FR: {log.frontRightPsi || '--'} PSI</span>
+                              <span>RL: {log.rearLeftPsi || '--'} PSI</span>
                               <span>RR: {log.rearRightPsi || '--'} PSI</span>
                             </>
                           )}
@@ -1248,7 +1411,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                           setEditingTireLog(log);
                           setIsTireModalOpen(true);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
+                        className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
@@ -1264,7 +1427,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                             onDeleteTirePressure(log.id);
                           }
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1285,7 +1448,17 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           setEditingVehicle(null);
         }}
         onSave={handleSaveVehicleAndSelect}
-        onDelete={onDeleteVehicle}
+        // [v7.5.60 D-M1] The Edit modal's Delete button goes through the
+        // SAME full-impact warning as the top bar / deactivated section —
+        // never a direct delete. The modal closes only when the delete
+        // actually happened (user confirmed).
+        onDelete={(id) => {
+          const deleted = handleDeleteVehicleAndClean(id);
+          if (deleted) {
+            setIsVehicleModalOpen(false);
+            setEditingVehicle(null);
+          }
+        }}
         // [v7.5.55 C6] The Edit → modal delete path must obey the same
         // sole-vehicle guard as the top-bar trash button.
         canDeleteVehicle={activeVehicles.length > 1 || editingVehicle?.isActive === false}

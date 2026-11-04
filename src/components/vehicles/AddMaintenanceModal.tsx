@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Wrench, Gauge, Shield, Save, Trash2, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { VehicleMaintenance, Vehicle, Wallet, VehicleServiceType } from '../../types';
 import { SERVICE_TYPE_CONFIG } from '../../utils/vehicleAnalytics';
@@ -74,10 +74,27 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       }
       setExpectedLifespanKm(config.defaultLifespanKm);
       setExpectedLifespanDays(config.defaultLifespanDays);
+      // A new service type brings new defaults — expiry auto-calc resumes.
+      lifespanDaysEditedRef.current = false;
     }
   };
 
+  // [v7.5.60 D-N10] Hand-typed days win: stop the expiry auto-calc and
+  // recompute the expiry date FROM the typed days instead, so the two
+  // fields never contradict each other.
+  const handleLifespanDaysChange = (val: string) => {
+    const parsed = handleNumberInput(val);
+    setExpectedLifespanDays(parsed);
+    lifespanDaysEditedRef.current = true;
+    setExpiryDate(deriveExpiryDate(date, parsed));
+  };
+
+  // [v7.5.60 D-N10] Once the user types lifespan days by hand, the
+  // expiry-date auto-calc must stop overwriting their value.
+  const lifespanDaysEditedRef = useRef(false);
+
   useEffect(() => {
+    if (lifespanDaysEditedRef.current) return;
     if (expiryDate && date) {
       const d1 = new Date(date).getTime();
       const d2 = new Date(expiryDate).getTime();
@@ -121,6 +138,8 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   };
 
   useEffect(() => {
+    // A fresh form (new or edit) starts with auto-calc enabled again.
+    lifespanDaysEditedRef.current = false;
     if (editingMaintenance) {
       setVehicleId(editingMaintenance.vehicleId);
       setDate(editingMaintenance.date);
@@ -359,7 +378,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
               )}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">{lang === 'my' ? 'ရက်ပေါင်း သက်တမ်း (Days)' : 'Duration (Days)'}</label>
-                <input type="text" inputMode="decimal" readOnly={isLicenseRenewal} value={expectedLifespanDays} onChange={(e) => setExpectedLifespanDays(handleNumberInput(e.target.value))} placeholder="180" className={`w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono ${isLicenseRenewal ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`} />
+                <input type="text" inputMode="decimal" readOnly={isLicenseRenewal} value={expectedLifespanDays} onChange={(e) => handleLifespanDaysChange(e.target.value)} placeholder="180" className={`w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono ${isLicenseRenewal ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`} />
               </div>
             </div>
           </div>

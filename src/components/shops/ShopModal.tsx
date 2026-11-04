@@ -76,6 +76,9 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [formGeneralNotes, setFormGeneralNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  // [v7.5.60 E24] Validation errors show inline in the modal, not via
+  // the browser's native alert().
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -243,6 +246,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!formName.trim()) return;
 
     // [v7.5.55 C16] Normalize phones (Myanmar digits → Latin, +95/09
@@ -251,21 +255,32 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       .map((p) => normalizeMyanmarPhone(p.trim()))
       .filter(Boolean);
     if (cleanedPhones.length === 0) {
-      alert(lang === 'my' ? 'ဖုန်းနံပါတ် အနည်းဆုံး တစ်ခု ထည့်သွင်းပေးပါ' : 'Please provide at least one phone number');
+      setFormError(lang === 'my' ? 'ဖုန်းနံပါတ် အနည်းဆုံး တစ်ခု ထည့်သွင်းပေးပါ' : 'Please provide at least one phone number');
       return;
     }
     if (!cleanedPhones.every((p) => isValidMyanmarPhone(p))) {
-      alert(
+      setFormError(
         lang === 'my'
           ? 'ဖုန်းနံပါတ် မမှန်ကန်ပါ — 09 ဖြင့် စပြီး ဂဏန်း ၉–၁၁ လုံး ဖြစ်ရပါမည် (ဥပမာ 09123456789)'
           : 'Invalid phone number — it must start with 09 and have 9–11 digits (e.g. 09123456789)'
       );
       return;
     }
+    // [v7.5.60 E27/N-39] KPay is a payment number — validate it like the
+    // phone number instead of saving any typo silently.
+    const cleanKpay = normalizeMyanmarPhone(formKpayNumber.trim());
+    if (cleanKpay && !isValidMyanmarPhone(cleanKpay)) {
+      setFormError(
+        lang === 'my'
+          ? 'KPay နံပါတ် မမှန်ကန်ပါ — 09 ဖြင့် စပြီး ဂဏန်း ၉–၁၁ လုံး ဖြစ်ရပါမည်'
+          : 'Invalid KPay number — it must start with 09 and have 9–11 digits'
+      );
+      return;
+    }
 
     // [v7.5.55 C27] Region and township must be picked (no more Yangon/လသာ default).
     if (!formStateRegion || !formTownship) {
-      alert(
+      setFormError(
         lang === 'my'
           ? 'ပြည်နယ်/တိုင်း နှင့် မြို့နယ် ရွေးချယ်ပေးပါ'
           : 'Please pick a state/region and a township'
@@ -286,7 +301,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       addresses: cleanedAddresses,
       stateRegion: formStateRegion,
       township: finalTownship,
-      city: formCity.trim() || finalTownship,
+      city: formCity.trim(),
       ward: formWard.trim(),
       kpayNumber: normalizeMyanmarPhone(formKpayNumber.trim()),
       generalNotes: formGeneralNotes.trim(),
@@ -381,7 +396,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   type="button"
                   onClick={() => {
                     if (plan !== 'premium') {
-                      alert(
+                      setFormError(
                         lang === 'my'
                           ? 'ကိုယ်ပိုင်သီးသန့်ဆိုင်စာရင်းမှာ Premium အင်္ဂါရပ် ဖြစ်ပါသည်။ Premium သို့ အဆင့်မြှင့်တင်ပါ'
                           : 'Private list is a Premium VIP feature. Please upgrade to unlock.'
@@ -413,6 +428,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           )}
 
           {/* DUPLICATE WARNING BANNER */}
+          {formError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2 leading-relaxed">
+              <span>⚠️ {formError}</span>
+            </div>
+          )}
           {duplicateWarning && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2 animate-fade-in leading-relaxed">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -443,7 +463,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   checkDuplicates(formPhones[0] || '', e.target.value, formTownship);
                 }}
                 placeholder={lang === 'my' ? 'ဥပမာ - ရွှေမန်း ကုန်စုံဆိုင်' : 'e.g. Shwe Man Grocery'}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
               />
             </div>
 
@@ -491,7 +511,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     value={formCustomCategory}
                     onChange={(e) => setFormCustomCategory(e.target.value)}
                     placeholder={lang === 'my' ? 'ဥပမာ - စာအုပ်နှင့် စာရေးကိရိယာ' : 'e.g. Stationery & Books'}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                   />
                 </div>
               )}
@@ -506,7 +526,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 value={formSubCategory}
                 onChange={(e) => setFormSubCategory(e.target.value)}
                 placeholder={lang === 'my' ? 'ရွေးချယ်ရန် သို့မဟုတ် ရိုက်ထည့်ရန်' : 'Select or type'}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
               />
             </div>
             </div>
@@ -539,7 +559,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       setFormTownship('');
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:bg-white cursor-pointer"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium text-slate-900 outline-none focus:bg-white cursor-pointer"
                 >
                   <option value="">{lang === 'my' ? '-- ပြည်နယ်/တိုင်း ရွေးပါ --' : '-- Pick a state / region --'}</option>
                   {MYANMAR_REGIONS.map((r) => (
@@ -565,7 +585,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       checkDuplicates(formPhones[0] || '', formName, e.target.value);
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:bg-white cursor-pointer disabled:opacity-50"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium text-slate-900 outline-none focus:bg-white cursor-pointer disabled:opacity-50"
                 >
                   <option value="">{lang === 'my' ? '-- မြို့နယ် ရွေးပါ --' : '-- Pick a township --'}</option>
                   {(currentRegionObj?.townships || []).map((t) => (
@@ -593,7 +613,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     checkDuplicates(formPhones[0] || '', formName, e.target.value);
                   }}
                   placeholder={lang === 'my' ? 'ဥပမာ - နောင်ချို' : 'e.g. Naungcho'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:bg-white"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
                 />
               </div>
             )}
@@ -608,7 +628,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formWard}
                   onChange={(e) => setFormWard(e.target.value)}
                   placeholder={lang === 'my' ? 'ဥပမာ - ၁၂ ရပ်ကွက်' : 'e.g. Ward 12'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:bg-white"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
                 />
               </div>
               <div>
@@ -620,7 +640,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formCity}
                   onChange={(e) => setFormCity(e.target.value)}
                   placeholder={lang === 'my' ? 'ဥပမာ - ရန်ကုန်' : 'e.g. Yangon'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:bg-white"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
                 />
               </div>
             </div>
@@ -659,7 +679,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     value={ph}
                     onChange={(e) => handlePhoneChange(idx, e.target.value)}
                     placeholder={lang === 'my' ? `ဖုန်းနံပါတ် ${idx + 1} (ဥပမာ - ၀၉၁၂၃၄၅၆၇၈)` : `Phone number ${idx + 1}`}
-                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all"
+                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                   />
                   {formPhones.length > 1 && (
                     <button
@@ -686,7 +706,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formKpayNumber}
                   onChange={(e) => setFormKpayNumber(e.target.value)}
                   placeholder={lang === 'my' ? 'ဥပမာ - ၀၉၁၂၃၄၅၆၇၈၉' : 'e.g. 09123456789'}
-                  className="w-full pl-14 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all"
+                  className="w-full pl-14 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[9px] font-black pointer-events-none">
                   KPay
@@ -717,7 +737,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     value={addr}
                     onChange={(e) => handleAddressChange(idx, e.target.value)}
                     placeholder={lang === 'my' ? `လိပ်စာ ${idx + 1} (ဥပမာ - ဗိုလ်ချုပ်လမ်း၊ အမှတ် ၄၅)` : `Address line ${idx + 1}`}
-                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all"
+                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                   />
                   {formAddresses.length > 1 && (
                     <button
@@ -743,7 +763,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
               value={formGeneralNotes}
               onChange={(e) => setFormGeneralNotes(e.target.value)}
               placeholder={lang === 'my' ? 'ဥပမာ - အိမ်အရောက်ပို့ပေးသည်။ မနက် ၈ နာရီမှ ည ၈ နာရီအထိ ဖွင့်သည်။' : 'e.g. Delivery available. Open 8am - 8pm.'}
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all resize-none"
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all resize-none"
             />
           </div>
 

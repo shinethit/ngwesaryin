@@ -175,6 +175,26 @@ Code: ${err.errorCode || 'N/A'}`;
 
   const tier = getTierInfo(healthScore);
 
+  // [v7.5.60] Zero records is NOT "100% Perfect" — there is nothing to
+  // check yet (F-S8). Show an honest empty state instead of a fake 100%.
+  const hasAnyData = totalLocalTxs > 0 || queueItems.length > 0;
+  const displayTier = hasAnyData
+    ? tier
+    : {
+        level: 'empty',
+        badge: lang === 'my' ? 'မှတ်တမ်း မရှိသေးပါ' : 'No records yet',
+        title: lang === 'my' ? 'မှတ်တမ်း မရှိသေးပါ — စစ်ဆေးစရာ မရှိပါ' : 'No records yet — nothing to check',
+        desc:
+          lang === 'my'
+            ? 'စာရင်း တစ်စောင်မှ မရှိသေးပါ။ စာရင်း ထည့်ပြီးမှ Sync အခြေအနေကို စစ်ဆေးနိုင်ပါမည်။'
+            : 'You have no records yet. Sync status can be checked once you add a record.',
+        bgColor: 'bg-slate-500',
+        textColor: 'text-slate-600',
+        borderColor: 'border-slate-200',
+        bgLight: 'bg-slate-100',
+        gradient: 'from-slate-500 via-slate-600 to-slate-700',
+      };
+
   // Missing or stuck transactions
   const localMissingFromCloud = transactions.filter((t) => !cloudTxIds.has(t.id));
   const stuckQueueItems = queueItems.filter(
@@ -297,7 +317,7 @@ Code: ${err.errorCode || 'N/A'}`;
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden animate-fadeIn">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Modal Header with Dynamic Gradient */}
-        <div className={`p-5 sm:p-6 bg-gradient-to-r ${tier.gradient} text-white relative shrink-0 shadow-inner`}>
+        <div className={`p-5 sm:p-6 bg-gradient-to-r ${displayTier.gradient} text-white relative shrink-0 shadow-inner`}>
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all cursor-pointer"
@@ -314,7 +334,7 @@ Code: ${err.errorCode || 'N/A'}`;
             <div className="space-y-1 pr-8">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/20">
-                  {tier.badge}
+                  {displayTier.badge}
                 </span>
                 <span className="text-xs font-medium text-white/80 flex items-center gap-1">
                   {isOnline ? (
@@ -335,7 +355,7 @@ Code: ${err.errorCode || 'N/A'}`;
                 {lang === 'my' ? 'Database Sync Health စစ်ဆေးချက်' : 'Database Sync Health Monitor'}
               </h2>
               <p className="text-xs sm:text-sm text-white/90 font-medium leading-relaxed">
-                {tier.title}
+                {displayTier.title}
               </p>
             </div>
           </div>
@@ -359,7 +379,7 @@ Code: ${err.errorCode || 'N/A'}`;
                 </span>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl sm:text-4xl font-black text-slate-900 font-mono">
-                    {healthScore}%
+                    {hasAnyData ? `${healthScore}%` : '—'}
                   </span>
                   <span className="text-xs font-bold text-slate-500">
                     ({syncedTxsCount} / {totalLocalTxs} {lang === 'my' ? 'စာရင်း ရောက်ရှိပြီး' : 'confirmed'})
@@ -368,9 +388,9 @@ Code: ${err.errorCode || 'N/A'}`;
               </div>
 
               <div className="text-right shrink-0">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold ${tier.bgLight} ${tier.textColor} border ${tier.borderColor}`}>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold ${displayTier.bgLight} ${displayTier.textColor} border ${displayTier.borderColor}`}>
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>{tier.badge}</span>
+                  <span>{displayTier.badge}</span>
                 </span>
               </div>
             </div>
@@ -387,12 +407,12 @@ Code: ${err.errorCode || 'N/A'}`;
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500'
                     : 'bg-gradient-to-r from-rose-500 to-red-500'
                 }`}
-                style={{ width: `${healthScore}%` }}
+                style={{ width: `${hasAnyData ? healthScore : 0}%` }}
               />
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              {tier.desc}
+              {displayTier.desc}
             </p>
           </div>
 
@@ -506,12 +526,15 @@ Code: ${err.errorCode || 'N/A'}`;
               <div className="p-2.5 bg-white border border-slate-200 rounded-xl space-y-1">
                 <div className="font-bold text-slate-800 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{lang === 'my' ? 'Zero Data Loss Guarantee' : 'Zero Data Loss Guarantee'}</span>
+                  {/* [v7.5.60] Honest wording (F-N3): "Zero Data Loss Guarantee"
+                      over-promises — clearing browser data CAN remove local
+                      records. Say what is actually true. */}
+                  <span>{lang === 'my' ? 'စက်တွင်းမှာ လုံခြုံစွာ သိမ်းထားသည်' : 'Stored Safely On This Device'}</span>
                 </div>
                 <p>
                   {lang === 'my'
-                    ? 'စက်တွင်းနှင့် Cloud မတူညီသေးသော်လည်း စက်တွင်း ဒေတာများ လုံးဝ ပျောက်ဆုံးသွားခြင်း မရှိစေရန် အပြည့်အဝ အကာအကွယ်ပေးထားပါသည်။'
-                    : 'Your data is permanently cached in local storage and will never be lost or overwritten.'}
+                    ? 'စက်တွင်း ဒေတာများကို လုံခြုံစွာ သိမ်းထားပြီး Cloud ရောက်သည်အထိ ထိန်းသိမ်းထားပါသည်။ Browser data ကို ရှင်းလိုက်ရင်တော့ စက်တွင်း ဒေတာပါ ပျောက်နိုင်ပါသည်။'
+                    : 'Your data is stored safely on this device until it reaches the Cloud. Clearing browser data can still remove local records.'}
                 </p>
               </div>
             </div>

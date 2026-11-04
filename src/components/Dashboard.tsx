@@ -10,6 +10,7 @@ import { convertToMMK, getCurrencyInfo } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { MultiWalletSelector } from './MultiWalletSelector';
 import { SmartCalendarCard } from './SmartCalendarCard';
+import { Toast } from './Toast';
 import { useAuth } from '../context/AuthContext';
 import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 import { calculateFinancialHealth, type FinancialHealthTier } from '../utils/financialHealth';
@@ -77,6 +78,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showCurrencyBreakdown, setShowCurrencyBreakdown] = useState<boolean>(false);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState<boolean>(false);
 
+  // [v7.5.60 S14] Inline toast for validation/sync errors (was native
+  // alert() — a system dialog on phones). Rendered at the bottom.
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const handleSetTimeFilter = (f: TimeFilterOption) => {
     setTimeFilter(f);
     if (f !== 'custom') setCustomRange(null);
@@ -92,11 +97,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const applyCustomRange = () => {
     if (!tempFrom || !tempTo) {
-      alert(lang === 'my' ? 'ရက်စွဲ နှစ်ခုလုံး ဖြည့်ပါ' : 'Please fill both dates');
+      setToastMessage(lang === 'my' ? 'ရက်စွဲ နှစ်ခုလုံး ဖြည့်ပါ' : 'Please fill both dates');
       return;
     }
     if (tempFrom > tempTo) {
-      alert(lang === 'my' ? 'စတင်ရက် သည် ဆုံးရက် ထက် မကြီးရပါ' : 'From cannot be after To');
+      setToastMessage(lang === 'my' ? 'စတင်ရက် သည် ဆုံးရက် ထက် မကြီးရပါ' : 'From cannot be after To');
       return;
     }
     setCustomRange({ from: tempFrom, to: tempTo });
@@ -307,6 +312,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const activeDebts = debts.filter((d) => d.status === 'active');
 
+  // [v7.5.60 S2] Debts follow the same wallet scope as the balance: a debt
+  // tied to a Separate (out-of-scope) wallet must not move the health
+  // badge or appear in the reminders. Debts with no wallet id are not
+  // tied to any wallet, so they stay included.
+  const scopedActiveDebts = useMemo(
+    () => activeDebts.filter((d) => !d.walletId || scopedWallets.some((w) => isWalletMatch(w, d.walletId))),
+    [activeDebts, scopedWallets]
+  );
+
   // [v7.5.57] Hero financial-health badge: all-time, scoped to the same
   // wallets as the balance above (so the badge always explains the number
   // it sits under). Reuses the Analytics health tiers — no new scoring.
@@ -317,14 +331,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const allTimeExpense = scopedTransactions
       .filter((t) => t.type === 'expense' && !isTransferTransaction(t))
       .reduce((s, t) => s + convertTxToMMK(t), 0);
-    const totalPayable = activeDebts
+    const totalPayable = scopedActiveDebts
       .filter((d) => d.type === 'payable')
       .reduce((s, d) => s + convertDebtToMMK(d), 0);
-    const totalReceivable = activeDebts
+    const totalReceivable = scopedActiveDebts
       .filter((d) => d.type === 'receivable')
       .reduce((s, d) => s + convertDebtToMMK(d), 0);
     return calculateFinancialHealth(allTimeIncome, allTimeExpense, totalPayable, totalReceivable, totalWalletBalance);
-  }, [scopedTransactions, activeDebts, convertTxToMMK, convertDebtToMMK, totalWalletBalance]);
+  }, [scopedTransactions, scopedActiveDebts, convertTxToMMK, convertDebtToMMK, totalWalletBalance]);
 
   // [v7.5.57] Balance number color on the dark hero, by health tier.
   const heroHealthText: Record<FinancialHealthTier, string> = {
@@ -338,7 +352,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     no_data: 'text-white',
   };
 
-  const urgentDebts = activeDebts
+  const urgentDebts = scopedActiveDebts
     .filter((d) => d.dueDate)
     .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
     .slice(0, 3);
@@ -354,13 +368,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
     ? `${daysMy[todayDate.getDay()]}၊ ${monthsMy[todayDate.getMonth()]} ${todayDate.getDate()} ရက်`
     : `${daysEn[todayDate.getDay()]}, ${todayDate.getDate()} ${monthsEnShort[todayDate.getMonth()]}`;
 
+  // [v7.5.60 S1] The hero income/expense/net row is for the SELECTED
+  // period while the balance is all-time — label the period on the row
+  // itself so the two numbers are never confused.
+  const periodLabel = timeFilter === 'this_month'
+    ? (lang === 'my'
+      ? `ယခုလ (${monthsMy[todayDate.getMonth()]})`
+      : `This Month (${monthsEnShort[todayDate.getMonth()]})`)
+    : getTimeFilterLabel(timeFilter, customRange, lang);
+
+  // [v7.5.60 E-S68] A wallet balance alone (no income/expense/debt
+  // records at all) scores a false "100% perfect" — show the no-data
+  // state instead of a score the user never earned.
+  const heroHasNoData =
+    heroHealth.metrics.totalIncome === 0 &&
+    heroHealth.metrics.totalExpense === 0 &&
+    heroHealth.metrics.totalPayableDebt === 0 &&
+    heroHealth.metrics.totalReceivableDebt === 0;
+
   // [v7.5.55] Pass the real plan (was hardcoded 'free') and surface a failed
   // sync instead of silently swallowing the false return.
   const handleManualSync = async () => {
     if (user && syncDataToCloud) {
       const ok = await syncDataToCloud(transactions, debts, wallets, categories, [], plan);
       if (!ok) {
-        alert(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ။ ထပ်မံ ကြိုးစားပါ။' : 'Could not sync to cloud. Please try again.');
+        setToastMessage(lang === 'my' ? 'Cloud သို့ သိမ်းဆည်း၍ မရပါ။ ထပ်မံ ကြိုးစားပါ။' : 'Could not sync to cloud. Please try again.');
       }
     }
   };
@@ -400,7 +432,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <button
               type="button"
               onClick={openPeriodDropdown}
-              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-white border border-slate-200 hover:bg-slate-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 min-h-11 text-xs font-bold rounded-xl bg-white border border-slate-200 hover:bg-slate-50 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Calendar className="w-3.5 h-3.5 text-slate-500" />
               <span className="text-slate-800">{getTimeFilterLabel(timeFilter, customRange, lang)}</span>
@@ -422,9 +454,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {lang === 'my' ? 'စိတ်ကြိုက်' : 'Custom'}
                   </div>
                   <input type="date" value={tempFrom} onChange={(e) => setTempFrom(e.target.value)}
-                    className="w-full mb-1.5 px-2 py-1 text-xs border border-slate-200 rounded-lg focus:border-emerald-500 outline-none" />
+                    className="w-full mb-1.5 px-2 py-2 text-base border border-slate-200 rounded-lg focus:border-emerald-500 outline-none" />
                   <input type="date" value={tempTo} onChange={(e) => setTempTo(e.target.value)}
-                    className="w-full mb-2 px-2 py-1 text-xs border border-slate-200 rounded-lg focus:border-emerald-500 outline-none" />
+                    className="w-full mb-2 px-2 py-2 text-base border border-slate-200 rounded-lg focus:border-emerald-500 outline-none" />
                   <button type="button" onClick={applyCustomRange}
                     className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg cursor-pointer">
                     {lang === 'my' ? 'အသုံးပြုမည်' : 'Apply'}
@@ -435,20 +467,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
           {onOpenSearch && (
             <button type="button" onClick={onOpenSearch}
-              className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
+              className="min-w-11 min-h-11 p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer flex items-center justify-center"
               title={lang === 'my' ? 'ရှာဖွေရန်' : 'Search'}>
               <Search className="w-3.5 h-3.5" />
             </button>
           )}
           {user && (
             <button type="button" onClick={handleManualSync} disabled={isSyncing}
-              className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
+              className="min-w-11 min-h-11 p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer flex items-center justify-center"
               title="Sync">
               <RefreshCw className={'w-3.5 h-3.5 ' + (isSyncing ? 'animate-spin' : '')} />
             </button>
           )}
         </div>
       </div>
+
+      {/* [v7.5.60 S11] Empty-state guide (text only — no demo data):
+          a brand-new account sees 0s everywhere with no idea what to do. */}
+      {transactions.length === 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+          <div className="font-bold text-sm text-emerald-900">
+            {lang === 'my' ? '👋 စတင်ရန် လွယ်ကူပါတယ်' : '👋 Easy to get started'}
+          </div>
+          <ol className="text-xs text-emerald-800 font-medium space-y-1 list-decimal list-inside">
+            <li>{lang === 'my' ? 'ပိုက်ဆံအိတ် တစ်ခု ထည့်ပါ' : 'Add a wallet'}</li>
+            <li>{lang === 'my' ? 'ပထမဆုံး ဝင်ငွေ / ထွက်ငွေ မှတ်တမ်း ထည့်ပါ' : 'Add your first income / expense record'}</li>
+          </ol>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button type="button" onClick={() => onSelectTab('wallets')}
+              className="min-h-11 px-3 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-800 text-xs font-bold cursor-pointer">
+              {lang === 'my' ? '💳 ပိုက်ဆံအိတ် ထည့်မည်' : '💳 Add a wallet'}
+            </button>
+            <button type="button" onClick={() => onAddTransaction('expense')}
+              className="min-h-11 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer">
+              {lang === 'my' ? '✏️ ပထမဆုံး ထွက်ငွေ မှတ်မည်' : '✏️ Add first expense'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* HERO */}
       <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white shadow-md">
@@ -471,9 +527,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           className="mt-2 flex flex-col items-start gap-1 text-left cursor-pointer group"
           title={lang === 'my' ? 'ငွေကြေးကျန်းမာမှု အသေးစိတ်ကြည့်ရန် နှိပ်ပါ' : 'Tap to view financial health details'}
         >
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${heroHealth.theme.badgeBg}`}>
-            {heroHealth.emoji} {lang === 'my' ? heroHealth.shortTitle.my : heroHealth.shortTitle.en}
-            {heroHealth.scoreDisplay !== '—' ? ` • ${heroHealth.scoreDisplay}` : ''}
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${heroHasNoData ? 'bg-slate-500 text-white border border-slate-400' : heroHealth.theme.badgeBg}`}>
+            {heroHasNoData
+              ? (lang === 'my' ? '📭 ဒေတာ မလုံလောက်သေးပါ' : '📭 Not enough data yet')
+              : (<>{heroHealth.emoji} {lang === 'my' ? heroHealth.shortTitle.my : heroHealth.shortTitle.en}
+                {heroHealth.scoreDisplay !== '—' ? ` • ${heroHealth.scoreDisplay}` : ''}</>)}
           </span>
           <span className="text-[11px] text-slate-300 font-medium leading-snug">
             {lang === 'my' ? heroHealth.advice.my : heroHealth.advice.en}
@@ -494,7 +552,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
               : `Tap to view ${currencyBreakdownData.length} currency breakdown`}
           </div>
         )}
-        <div className="flex items-center gap-4 mt-3 text-xs flex-wrap">
+        {/* [v7.5.60 S1] Period label for the income/expense/net row. */}
+        <div className="text-[11px] font-semibold text-slate-400 mt-3">
+          {periodLabel} · {lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ' : 'Income / Expense'}
+        </div>
+        <div className="flex items-center gap-4 mt-1.5 text-xs flex-wrap">
           <span className="flex items-center gap-1 text-emerald-400 font-bold">
             <ArrowDownLeft className="w-3.5 h-3.5" /><span title={formatMMK(totalIncome)}>+{formatLakhs(totalIncome, lang)}</span>
           </span>
@@ -510,27 +572,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* QUICK ACTIONS */}
       <div className="grid grid-cols-3 gap-2">
         <button type="button" onClick={() => onAddTransaction('income')}
-          className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
+          className="min-h-11 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
           <ArrowDownLeft className="w-4 h-4" />{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}
         </button>
         <button type="button" onClick={() => onAddTransaction('expense')}
-          className="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
+          className="min-h-11 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
           <ArrowUpRight className="w-4 h-4" />{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}
         </button>
         <button type="button" onClick={onAddDebt}
-          className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
+          className="min-h-11 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
           <HandCoins className="w-4 h-4" />{lang === 'my' ? 'အကြွေး' : 'Debt'}
         </button>
       </div>
 
       {/* [v7.3.1] QUICK ACCESS GRID — 6 tab shortcuts */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2.5">
-        <div className="flex items-center justify-between mb-2 px-1">
+        <div className="flex items-center justify-between mb-1 px-1">
           <h3 className="font-bold text-[12px] text-slate-900 flex items-center gap-1.5">
             <span className="text-[14px]">⚡</span>
             {lang === 'my' ? 'အမြန် ဝင်ရောက်ရန်' : 'Quick Access'}
           </h3>
         </div>
+        {/* [v7.5.60 M4] Sidebar stays 6 items (v7.5.57 decision) — say here
+            that Budget, reports, shops and more live in this grid. */}
+        <p className="text-[11px] text-slate-500 font-medium px-1 mb-2">
+          {lang === 'my'
+            ? 'ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ ဈေးနှုန်း နှိုင်းယှဉ်၊ ဆိုင်လိပ်စာ စတာတွေ ဒီမှာရှိပါတယ်'
+            : 'Budgets, reports, price comparison, shops and more live here'}
+        </p>
 
         <div className="grid grid-cols-3 gap-1.5">
           {/* 1. Analytics (Shops position) */}
@@ -540,7 +609,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <BarChart3 className="w-4 h-4" />
             </div>
             <span className="text-[10px] font-bold text-emerald-900 leading-tight text-center">
-              {lang === 'my' ? 'ဘတ်ဂျက်/ဇယား' : 'Analytics'}
+              {lang === 'my' ? 'အစီရင်ခံစာ / ဘတ်ဂျက်' : 'Reports & Budget'}
             </span>
           </button>
 
@@ -640,8 +709,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {debt.dueDate ? ' · ' + (overdue ? '⚠️ ' : '') + formatShortDate(debt.dueDate) : ''}
                     </div>
                   </div>
-                  <div className={'text-xs font-bold font-mono shrink-0 ' + (overdue ? 'text-rose-700' : 'text-slate-800')}>
-                    {formatMMK(rem)}
+                  <div className={'text-xs font-bold font-mono shrink-0 ' + (overdue ? 'text-rose-700' : 'text-slate-800')} title={formatMMK(rem)}>
+                    {formatLakhs(rem, lang)}
                   </div>
                 </button>
               );
@@ -676,7 +745,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCurrencyBreakdown(false)}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg cursor-pointer"
+                className="w-11 h-11 min-w-11 min-h-11 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg cursor-pointer shrink-0"
               >×</button>
             </div>
 
@@ -712,12 +781,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                       {row.sharedTotalMMK !== 0 && (
                         <div className="text-[10px] text-amber-700 font-bold" title={formatMMK(row.sharedTotalMMK)}>
-                          {lang === 'my' ? `🤝 မျှဝေထား ${formatMMK(row.sharedTotalMMK)}` : `🤝 Shared ${formatMMK(row.sharedTotalMMK)}`}
+                          {lang === 'my' ? `🤝 မျှဝေထား ${formatLakhs(row.sharedTotalMMK, lang)}` : `🤝 Shared ${formatLakhs(row.sharedTotalMMK, lang)}`}
                         </div>
                       )}
                       {row.code !== 'MMK' && (
-                        <div className="text-[10px] text-emerald-700 font-bold">
-                          ≈ {formatMMK(row.totalMMK)}
+                        <div className="text-[10px] text-emerald-700 font-bold" title={formatMMK(row.totalMMK)}>
+                          ≈ {formatLakhs(row.totalMMK, lang)}
                         </div>
                       )}
                     </div>
@@ -734,17 +803,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <span className="font-bold text-slate-700">
                       {lang === 'my' ? '🤝 မျှဝေထား / 👤 ကိုယ်ပိုင်' : '🤝 Shared / 👤 Own'}
                     </span>
-                    <span className="font-mono font-bold text-slate-800">
-                      {formatMMK(sharedWalletBalance)} / {formatMMK(ownWalletBalance)}
+                    <span className="font-mono font-bold text-slate-800" title={`${formatMMK(sharedWalletBalance)} / ${formatMMK(ownWalletBalance)}`}>
+                      {formatLakhs(sharedWalletBalance, lang)} / {formatLakhs(ownWalletBalance, lang)}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700">
-                    {lang === 'my' ? 'စုစုပေါင်း (ကျပ်ဖြင့်)' : 'Total (MMK)'}
+                    {lang === 'my' ? 'စုစုပေါင်း (သိန်းဖြင့်)' : 'Total (lakh)'}
                   </span>
-                  <span className="font-mono font-black text-base text-emerald-700">
-                    {formatMMK(totalWalletBalance)}
+                  <span className="font-mono font-black text-base text-emerald-700" title={formatMMK(totalWalletBalance)}>
+                    {formatLakhs(totalWalletBalance, lang)}
                   </span>
                 </div>
               </div>
@@ -761,6 +830,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         lang={lang}
         onNavigateToAnalytics={() => onSelectTab('analytics')}
       />
+
+      {/* [v7.5.60 S14] Inline toast (replaces native alert()). */}
+      {toastMessage && (
+        <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
+      )}
 
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Menu, Lock, Bell, Share2 } from 'lucide-react';
+import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Menu, Lock, Bell, Share2, WifiOff, X } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
@@ -8,6 +8,9 @@ import { syncQueue } from '../lib/syncQueue';
 
 interface NavbarProps {
   currentPlan: PlanType;
+  // [v7.5.60 C-N1] Compact one-line plan/usage summary, e.g.
+  // "Free · မှတ်တမ်း 82/100 · အကြွေး 3/5" (computed by App).
+  usageChip?: string;
   onOpenSidebar: () => void;
   onOpenSearch: () => void;
   onOpenAccountModal: () => void;
@@ -26,6 +29,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentPlan,
+  usageChip,
   onOpenSidebar,
   onOpenSearch,
   onOpenAccountModal,
@@ -58,8 +62,36 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isAutoSyncing = isSyncing || isQueueProcessing;
 
   const handleLogoTap = () => {
-    setShowLogoPicker(!showLogoPicker);
+    // [v7.5.60 S13] A tap goes home (Dashboard) — the old behaviour
+    // opened the logo picker, which nobody expects from a logo. The
+    // picker now opens on a long-press (600ms) instead.
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+    setShowLogoPicker(false);
+    setActiveTab('dashboard');
   };
+
+  // Long-press (600ms) opens the logo picker; a normal tap navigates home.
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressFiredRef = useRef(false);
+  const handleLogoPointerDown = () => {
+    longPressFiredRef.current = false;
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true;
+      setShowLogoPicker(true);
+    }, 600);
+  };
+  const cancelLogoLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // [v7.5.60 N3] Windows shows Ctrl+K (⌘K is Mac-only).
+  const isWindows = typeof navigator !== 'undefined' && /Win/i.test(navigator.platform || navigator.userAgent || '');
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -107,11 +139,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={handleLogoTap}
+                onPointerDown={handleLogoPointerDown}
+                onPointerUp={cancelLogoLongPress}
+                onPointerLeave={cancelLogoLongPress}
+                onContextMenu={(e) => e.preventDefault()}
                 className="group relative flex items-center cursor-pointer transition-transform active:scale-95 focus:outline-none"
                 title={
                   lang === 'my'
-                    ? 'လာဘ်ရွှင်စေသော Logo ပုံစံပြောင်းရန် နှိပ်ပါ'
-                    : 'Click to choose auspicious fortune emblem'
+                    ? 'ပင်မ စာမျက်နှာ ပြန်ရန် နှိပ်ပါ · Logo ပုံစံပြောင်းရန် ကြာကြာ ဖိပါ'
+                    : 'Tap to go home · Long-press to change the logo style'
                 }
               >
                 <FortuneLogo size="sm" style={logoStyle} animate />
@@ -125,8 +161,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <span>✨</span>
                       <span>{lang === 'my' ? 'လာဘ်ရွှင်စေသော Logo ရွေးပါ' : 'Select Lucky Logo'}</span>
                     </span>
-                    <span className="text-[10px] text-amber-700 font-semibold px-1.5 py-0.5 bg-amber-50 rounded">
-                      Fortune
+                    <span className="flex items-center gap-1">
+                      <span className="text-[10px] text-amber-700 font-semibold px-1.5 py-0.5 bg-amber-50 rounded">
+                        Fortune
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowLogoPicker(false)}
+                        className="min-w-8 min-h-8 w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center cursor-pointer"
+                        title={lang === 'my' ? 'ပိတ်မည်' : 'Close'}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </span>
                   </div>
 
@@ -217,17 +263,46 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             <div className="min-w-0 shrink-0 flex items-center gap-1 sm:gap-2">
-              <span className="font-extrabold text-xs sm:text-lg text-slate-900 tracking-tight whitespace-nowrap">
+              <span
+                className="font-extrabold text-xs sm:text-lg text-slate-900 tracking-tight whitespace-nowrap cursor-pointer"
+                onClick={() => setActiveTab('dashboard')}
+                title={lang === 'my' ? 'ပင်မ စာမျက်နှာ ပြန်ရန်' : 'Go to Dashboard'}
+              >
                 {lang === 'my' ? 'ငွေစာရင်း' : 'NgweSarYin'}
               </span>
-              {currentPlan === 'premium' ? (
-                <span className="hidden sm:inline-flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300/80 whitespace-nowrap shrink-0 shadow-2xs">
+              {/* [v7.5.60 N1] The offline state was tracked but never shown
+                  here (only the Sidebar badge showed it). */}
+              {isOffline && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap shrink-0">
+                  <WifiOff className="w-2.5 h-2.5" />
+                  Offline
+                </span>
+              )}
+              {/* [v7.5.60 F-N46 + N8] Guests get a "Guest" badge (was "Free");
+                  the plan badge is no longer hidden on phones. */}
+              {isGuest ? (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-50 text-amber-800 border border-amber-300 whitespace-nowrap shrink-0">
+                  {lang === 'my' ? 'ဧည့်သည်' : 'Guest'}
+                </span>
+              ) : currentPlan === 'premium' ? (
+                <span className="inline-flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300/80 whitespace-nowrap shrink-0 shadow-2xs">
                   <Crown className="w-2.5 h-2.5 text-amber-600 fill-amber-500 shrink-0" />
                   <span>VIP</span>
                 </span>
               ) : (
-                <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
                   Free
+                </span>
+              )}
+              {/* [v7.5.60 C-N1] Compact plan/usage chip — the big PlanBanner
+                  stays removed; this one line is the one-place summary.
+                  Hidden on phones (Navbar is crowded there). */}
+              {usageChip && (
+                <span
+                  className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0"
+                  title={usageChip}
+                >
+                  {usageChip}
                 </span>
               )}
             </div>
@@ -291,14 +366,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="navbar-search-btn"
               onClick={onOpenSearch}
               className="min-h-11 min-w-11 p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
-              title="Search records, debts, notes (⌘K)"
+              title={lang === 'my' ? `မှတ်တမ်းများ ရှာဖွေရန် (${isWindows ? 'Ctrl+K' : '⌘K'})` : `Search records, debts, notes (${isWindows ? 'Ctrl+K' : '⌘K'})`}
             >
               <Search className="w-4 h-4 text-slate-600 shrink-0" />
               <span className="hidden md:inline">
                 {lang === 'my' ? 'ရှာဖွေရန်' : 'Search'}
               </span>
               <kbd className="hidden lg:inline-block px-1.5 py-0.2 text-[10px] font-mono text-slate-500 bg-white border border-slate-200 rounded">
-                ⌘K
+                {isWindows ? 'Ctrl+K' : '⌘K'}
               </kbd>
             </button>
 

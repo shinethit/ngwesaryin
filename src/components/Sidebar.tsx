@@ -63,6 +63,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const logoPickerRef = useRef<HTMLDivElement>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
+  // [v7.5.60 S13] Logo tap goes home (Dashboard); long-press (600ms)
+  // opens the logo picker. Same behaviour as the Navbar logo.
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressFiredRef = useRef(false);
+  const handleLogoTap = () => {
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+    setShowLogoPicker(false);
+    setActiveTab('dashboard');
+    onClose();
+  };
+  const handleLogoPointerDown = () => {
+    longPressFiredRef.current = false;
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true;
+      setShowLogoPicker(true);
+    }, 600);
+  };
+  const cancelLogoLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -192,12 +219,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="relative" ref={logoPickerRef}>
                 <button
                   type="button"
-                  onClick={() => setShowLogoPicker(!showLogoPicker)}
+                  onClick={handleLogoTap}
+                  onPointerDown={handleLogoPointerDown}
+                  onPointerUp={cancelLogoLongPress}
+                  onPointerLeave={cancelLogoLongPress}
+                  onContextMenu={(e) => e.preventDefault()}
                   className="group relative flex items-center cursor-pointer transition-transform active:scale-95 focus:outline-none"
                   title={
                     lang === 'my'
-                      ? 'လာဘ်ရွှင်စေသော Logo ပုံစံပြောင်းရန် နှိပ်ပါ'
-                      : 'Click to choose auspicious fortune emblem'
+                      ? 'ပင်မ စာမျက်နှာ ပြန်ရန် နှိပ်ပါ · Logo ပုံစံပြောင်းရန် ကြာကြာ ဖိပါ'
+                      : 'Tap to go home · Long-press to change the logo style'
                   }
                 >
                   <FortuneLogo size="md" style={logoStyle} animate />
@@ -214,8 +245,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <span>✨</span>
                         <span>{lang === 'my' ? 'လာဘ်ရွှင်စေသော Logo ရွေးပါ' : 'Select Lucky Logo'}</span>
                       </span>
-                      <span className="text-[10px] text-amber-700 font-semibold px-1.5 py-0.5 bg-amber-50 rounded">
-                        Fortune
+                      <span className="flex items-center gap-1">
+                        <span className="text-[10px] text-amber-700 font-semibold px-1.5 py-0.5 bg-amber-50 rounded">
+                          Fortune
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowLogoPicker(false)}
+                          className="min-w-8 min-h-8 w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center cursor-pointer"
+                          title={lang === 'my' ? 'ပိတ်မည်' : 'Close'}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </span>
                     </div>
 
@@ -466,14 +507,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>
                   {isSyncing
                     ? (lang === 'my' ? 'Cloud သို့ ချိတ်ဆက်နေပါသည်...' : 'Syncing with Cloud...')
-                    : (lang === 'my' ? '🔄 မနျူရယ် Cloud Sync ပြုလုပ်မည်' : '🔄 Force Manual Cloud Sync')}
+                    : (lang === 'my' ? '🔄 ကိုယ်တိုင် Cloud Sync ပြုလုပ်မည်' : '🔄 Force Manual Cloud Sync')}
                 </span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Navigation Items (Strictly Ordered 1 to 8) */}
+        {/* Navigation Items (Strictly Ordered 1 to 6) */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1">
           <div className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             {lang === 'my' ? 'စာရင်း စီမံခန့်ခွဲမှု ကဏ္ဍများ' : 'Navigation Menu'}
@@ -573,11 +614,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onOpenAdminPanel();
                   onClose();
                 }}
-                className="p-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95 bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300"
+                className="flex-1 min-h-11 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 bg-purple-600 hover:bg-purple-700 text-white border border-purple-700"
                 title={lang === 'my' ? 'Admin Control Center (စီမံခန့်ခွဲမှု)' : 'Admin Control Center'}
               >
-                <ShieldCheck className="w-4 h-4 text-purple-700" />
-                <span className="text-[11px] font-bold">Admin</span>
+                <ShieldCheck className="w-5 h-5 text-white" />
+                <span className="text-sm font-bold">Admin</span>
               </button>
             )}
           </div>
@@ -661,22 +702,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             )}
 
-            {/* Version Footer Button */}
-            {onOpenVersionHistory && (
-              <div className="pt-1 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenVersionHistory();
-                    onClose();
-                  }}
-                  className="text-[10px] font-medium text-slate-400 hover:text-emerald-700 transition-colors cursor-pointer underline decoration-dotted"
-                  title="Click to view all past versions and updates"
-                >
-                  Version {CURRENT_APP_VERSION} • {lang === 'my' ? 'ပြင်ဆင်မှုမှတ်တမ်းများ ကြည့်ရန်' : 'View Changelog'}
-                </button>
-              </div>
-            )}
+            {/* Version footer — the Version History card button above is
+                the only opener now (v7.5.60 N3: the duplicate text link
+                below it is removed). */}
+            <div className="pt-1 text-center text-[10px] font-medium text-slate-400">
+              Version {CURRENT_APP_VERSION}
+            </div>
           </div>
         </div>
       </aside>

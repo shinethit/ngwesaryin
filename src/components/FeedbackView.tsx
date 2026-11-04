@@ -27,6 +27,8 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
   const [replyingFeedbackId, setReplyingFeedbackId] = useState<string | null>(null);
   const [adminReplyText, setAdminReplyText] = useState('');
   const [adminReplyStatus, setAdminReplyStatus] = useState<'reviewed' | 'resolved'>('reviewed');
+  // [v7.5.60 N-47] Delete failures must be visible, not silent.
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeFeedbacks((list) => {
@@ -36,9 +38,10 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
   }, []);
 
   // Compute stats
+  // [v7.5.60 M-21] Zero feedback => average is "—", NOT a fake 5.0.
   const stats = useMemo(() => {
     if (feedbacks.length === 0) {
-      return { avg: 5.0, count: 0, starsCount: [0, 0, 0, 0, 0] };
+      return { avg: null as number | null, count: 0, starsCount: [0, 0, 0, 0, 0] };
     }
     const total = feedbacks.reduce((acc, f) => acc + (f.rating || 5), 0);
     const avg = Math.round((total / feedbacks.length) * 10) / 10;
@@ -88,7 +91,18 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
 
   const handleDelete = async (feedbackId: string) => {
     if (confirm(lang === 'my' ? 'ဤ Feedback ကို ဖျက်ရန် သေချာပါသလား။' : 'Delete this feedback?')) {
-      await deleteFeedback(feedbackId);
+      // [v7.5.60 N-47] A failed delete used to vanish silently — surface it.
+      setDeleteError(null);
+      try {
+        await deleteFeedback(feedbackId);
+      } catch (e) {
+        console.error('Error deleting feedback:', e);
+        setDeleteError(
+          lang === 'my'
+            ? 'ဖျက်၍မရပါ — အင်တာနက်ကို စစ်ပြီး ပြန်ကြိုးစားပါ'
+            : 'Could not delete — check your connection and try again'
+        );
+      }
     }
   };
 
@@ -165,7 +179,8 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl sm:text-5xl font-extrabold font-mono text-slate-900">
-              {stats.avg}
+              {/* [v7.5.60 M-21] No reviews yet => "—", never a fake 5.0. */}
+              {stats.avg === null ? '—' : stats.avg}
             </span>
             <span className="text-sm font-bold text-slate-400 font-mono">/ 5.0</span>
           </div>
@@ -175,7 +190,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
               <Star
                 key={s}
                 className={`w-5 h-5 ${
-                  s <= Math.round(stats.avg)
+                  stats.avg !== null && s <= Math.round(stats.avg)
                     ? 'fill-amber-400 text-amber-500'
                     : 'fill-slate-100 text-slate-300'
                 }`}
@@ -184,9 +199,13 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
           </div>
 
           <span className="text-xs font-semibold text-slate-500">
-            {lang === 'my'
-              ? `စုစုပေါင်း သုံးသပ်ချက် (${stats.count}) ခု`
-              : `Based on ${stats.count} user reviews`}
+            {stats.count === 0
+              ? (lang === 'my'
+                  ? 'သုံးသပ်ချက် မရှိသေးပါ — ပထမဆုံး ပေးပို့သူ ဖြစ်လာပါ'
+                  : 'No reviews yet — be the first to share yours')
+              : (lang === 'my'
+                ? `စုစုပေါင်း သုံးသပ်ချက် (${stats.count}) ခု`
+                : `Based on ${stats.count} user reviews`)}
           </span>
         </div>
 
@@ -235,17 +254,22 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
             >
               {lang === 'my' ? '🌐 ပြည်သူ့ အကြံပြုချက်များ' : 'All Reviews'}
             </button>
-            <button
-              type="button"
-              onClick={() => setSelectedScope('mine')}
-              className={`flex-1 sm:flex-none px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                selectedScope === 'mine'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {lang === 'my' ? '👤 ကျွန်ုပ် ပေးပို့ထားသည်များ' : 'My Feedbacks'}
-            </button>
+            {/* [v7.5.60 S-89] Guests have no uid, so the old "mine" filter
+                silently showed EVERYONE's feedback. Hide the tab for guests
+                instead of leaking other users' reviews. */}
+            {user?.uid && (
+              <button
+                type="button"
+                onClick={() => setSelectedScope('mine')}
+                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  selectedScope === 'mine'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {lang === 'my' ? '👤 ကျွန်ုပ် ပေးပို့ထားသည်များ' : 'My Feedbacks'}
+              </button>
+            )}
           </div>
 
           {/* Search Box */}
@@ -298,9 +322,32 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
         </div>
       </div>
 
+      {/* [v7.5.60 N-47] Visible delete-failure notice (was silent). */}
+      {deleteError && (
+        <div className="bg-rose-50 border border-rose-300 text-rose-900 text-xs font-bold px-4 py-3 rounded-2xl flex items-center justify-between gap-2">
+          <span>{deleteError}</span>
+          <button type="button" onClick={() => setDeleteError(null)} className="text-rose-600 font-black shrink-0">×</button>
+        </div>
+      )}
+
       {/* Feedbacks Cards Feed */}
       <div className="space-y-4">
-        {filteredFeedbacks.length === 0 ? (
+        {/* [v7.5.60 S-89] Safety net: a guest can never land on "mine"
+            (tab is hidden), but if scope is somehow 'mine' without a uid,
+            show a sign-in prompt instead of everyone's feedback. */}
+        {selectedScope === 'mine' && !user?.uid ? (
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center space-y-3">
+            <MessageSquareHeart className="w-12 h-12 text-slate-300 mx-auto" />
+            <h4 className="font-bold text-slate-800 text-base">
+              {lang === 'my' ? 'မိမိပေးပို့ထားတာတွေ ကြည့်ဖို့ အကောင့်ဝင်ပါ' : 'Sign in to see your feedback'}
+            </h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {lang === 'my'
+                ? 'Guest အနေဖြင့် မိမိပေးပို့ထားသော အကြံပြုချက်များကိုသာ ကြည့်ရှုနိုင်ရန် အကောင့်ဝင်ရန် လိုအပ်ပါသည်။'
+                : 'Please sign in to view only the feedback you submitted.'}
+            </p>
+          </div>
+        ) : filteredFeedbacks.length === 0 ? (
           <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center space-y-3">
             <MessageSquareHeart className="w-12 h-12 text-slate-300 mx-auto" />
             <h4 className="font-bold text-slate-800 text-base">
@@ -397,11 +444,23 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                         <Crown className="w-4 h-4 text-amber-500 fill-amber-400" />
                         <span>{lang === 'my' ? '👑 Admin တုံ့ပြန်ချက် (Admin Reply):' : '👑 Admin Reply:'}</span>
                       </span>
+                      <span className="flex items-center gap-1.5">
+                        {/* [v7.5.60 S-90] Show whether this reply is resolved. */}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                          item.status === 'resolved'
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-slate-100 text-slate-600 border-slate-300'
+                        }`}>
+                          {item.status === 'resolved'
+                            ? (lang === 'my' ? '✅ ဖြေရှင်းပြီး' : 'Resolved')
+                            : (lang === 'my' ? '👁️ စစ်ဆေးပြီး' : 'Reviewed')}
+                        </span>
                       {item.adminRepliedAt && (
                         <span className="text-[10px] text-indigo-400 font-mono">
                           {new Date(item.adminRepliedAt).toLocaleDateString('en-GB')}
                         </span>
                       )}
+                      </span>
                     </div>
                     <p className="text-xs text-indigo-900 font-semibold leading-relaxed break-words">
                       {item.adminReply}
@@ -418,6 +477,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                         onClick={() => {
                           setReplyingFeedbackId(item.id);
                           setAdminReplyText(item.adminReply || '');
+                          setAdminReplyStatus(item.status === 'resolved' ? 'resolved' : 'reviewed');
                         }}
                         className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold flex items-center gap-1 transition-colors cursor-pointer"
                       >
@@ -458,6 +518,39 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
                       placeholder="Type admin response..."
                       className="w-full p-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-amber-400"
                     />
+
+                    {/* [v7.5.60 S-90] Status toggle — without it every reply
+                        stayed 'reviewed' forever and nothing could ever be
+                        marked resolved. */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-slate-400">
+                        {lang === 'my' ? 'အခြေအနေ:' : 'Status:'}
+                      </span>
+                      <div className="flex items-center p-0.5 bg-slate-800 border border-slate-700 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setAdminReplyStatus('reviewed')}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                            adminReplyStatus === 'reviewed'
+                              ? 'bg-white text-slate-900'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {lang === 'my' ? '👁️ စစ်ဆေးပြီး' : 'Reviewed'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAdminReplyStatus('resolved')}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                            adminReplyStatus === 'resolved'
+                              ? 'bg-emerald-500 text-white'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {lang === 'my' ? '✅ ဖြေရှင်းပြီး' : 'Resolved'}
+                        </button>
+                      </div>
+                    </div>
 
                     <div className="flex items-center justify-end gap-2">
                       <button

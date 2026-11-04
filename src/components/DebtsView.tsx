@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { HandCoins, Plus, ArrowUpRight, ArrowDownLeft, Phone, Clock, AlertTriangle, CreditCard, Trash2, Lock, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { Debt, PlanType, Wallet } from '../types';
-import { formatMMK, formatShortDate, isOverdue } from '../utils/formatters';
+import { formatMMK, formatLakhs, formatShortDate, isOverdue } from '../utils/formatters';
 import { buildWalletMap } from '../utils/walletBalance';
 import { convertToMMK, formatCurrency } from '../utils/currency';
+import { useAuth } from '../context/AuthContext';
 
 interface DebtsViewProps {
   debts: Debt[];
@@ -41,6 +42,38 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
   const [activeTab, setActiveTab] = useState<'all' | 'receivable' | 'payable' | 'settled'>('all');
   const [selectedWalletFilter, setSelectedWalletFilter] = useState<string>('all');
   const [expandedDebtId, setExpandedDebtId] = useState<string | null>(null);
+  // [v7.5.60 S-47] App-styled confirm modal state (replaces native
+  // window.confirm). The message keeps the exact amounts, like before.
+  const [confirmState, setConfirmState] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const { user } = useAuth();
+
+  // [v7.5.60 M-12] Shared debts are read-only for collaborators (same
+  // rule as the handlers' canMutateSharedDebt): only the wallet owner
+  // or the debt's creator may mutate one. Everyone else sees the card
+  // with a read-only badge and no edit/delete/repay/settle buttons.
+  const canMutateDebt = (debt: Debt): boolean => {
+    const w = walletMap.get(debt.walletId);
+    const isShared = !!w && (!!w.isSharedFromOther || (w.sharedWith?.length || 0) > 0);
+    if (!isShared) return true;
+    if (!w || !w.isSharedFromOther || !w.ownerUid || w.ownerUid === user?.uid) return true;
+    if (debt.createdBy && user?.uid && debt.createdBy !== user.uid) return false;
+    return true;
+  };
+  const sharedDebtBadgeName = (debt: Debt): string => {
+    if (debt.createdByName && debt.createdByName.trim()) return debt.createdByName.trim();
+    const w = walletMap.get(debt.walletId);
+    const owner = (w?.ownerName || '').trim();
+    if (owner && owner.toLowerCase() !== 'partner') return owner;
+    const email = (w?.ownerEmail || '').trim();
+    if (email) return email.split('@')[0];
+    return lang === 'my' ? 'ပိုင်ရှင်' : 'the owner';
+  };
 
   const walletMap = buildWalletMap(wallets);
 
@@ -141,33 +174,27 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       const direction = debt.type === 'receivable'
         ? (lang === 'my' ? 'ငွေပြန်ဝင်လာမည် (ဝင်ငွေ)' : 'money will come IN (income)')
         : (lang === 'my' ? 'ငွေထွက်သွားမည် (ထွက်ငွေ)' : 'money will go OUT (expense)');
-      const ok = window.confirm(
-        lang === 'my'
-          ? `“${debt.personName}” ၏ အကြွေးကို ကြေပြီဟု သတ်မှတ်မလား?
-
-ကျန်ငွေ: ${formatCurrency(remaining, cur)}
-ဤလုပ်ဆောင်ချက်သည် ကျန်ငွေ ${formatCurrency(remaining, cur)} အတွက် ငွေဆပ်မှတ်တမ်း တစ်ခု အလိုအလျောက် ဖန်တီးပြီး ပိုက်ဆံအိတ်တွင် ${direction} အဖြစ် တကယ့် ငွေစာရင်း (transaction) တစ်ခု ထည့်သွင်းပါမည်။`
-          : `Mark "${debt.personName}"'s debt as settled?
-
-Remaining: ${formatCurrency(remaining, cur)}
-This will create a repayment record for ${formatCurrency(remaining, cur)} and book a REAL wallet transaction (${direction}).`
-      );
-      if (ok) onToggleStatus(debt.id);
+      setConfirmState({
+        title: lang === 'my' ? 'အကြွေးကြေပြီဟု သတ်မှတ်မလား?' : 'Mark debt as settled?',
+        message: lang === 'my'
+          ? `“${debt.personName}” ၏ အကြွေးကို ကြေပြီဟု သတ်မှတ်မလား?\n\nကျန်ငွေ: ${formatCurrency(remaining, cur)}\nဤလုပ်ဆောင်ချက်သည် ကျန်ငွေ ${formatCurrency(remaining, cur)} အတွက် ငွေဆပ်မှတ်တမ်း တစ်ခု အလိုအလျောက် ဖန်တီးပြီး ပိုက်ဆံအိတ်တွင် ${direction} အဖြစ် တကယ့် ငွေစာရင်း (transaction) တစ်ခု ထည့်သွင်းပါမည်။`
+          : `Mark "${debt.personName}"'s debt as settled?\n\nRemaining: ${formatCurrency(remaining, cur)}\nThis will create a repayment record for ${formatCurrency(remaining, cur)} and book a REAL wallet transaction (${direction}).`,
+        confirmLabel: lang === 'my' ? 'ကြေပြီဟု သတ်မှတ်မည်' : 'Mark Settled',
+        onConfirm: () => onToggleStatus(debt.id),
+      });
       return;
     }
     // Reopen
     const settlementReps = (debt.repayments || []).filter((r) => r.id.startsWith('rep_settle_'));
     if (settlementReps.length > 0) {
-      const ok = window.confirm(
-        lang === 'my'
-          ? `“${debt.personName}” ၏ အကြွေးကို ပြန်ဖွင့်မလား?
-
-အလိုအလျောက် ကျေဇယား ငွေဆပ်မှတ်တမ်း (${settlementReps.length} ခု) နှင့် ၎င်း၏ တွဲဖက် ငွေစာရင်းများကို ဖျက်ပါမည်။`
-          : `Reopen "${debt.personName}"'s debt?
-
-The auto-settlement repayment (${settlementReps.length} record(s)) and its linked wallet transaction(s) will be deleted.`
-      );
-      if (ok) onToggleStatus(debt.id);
+      setConfirmState({
+        title: lang === 'my' ? 'အကြွေးကို ပြန်ဖွင့်မလား?' : 'Reopen this debt?',
+        message: lang === 'my'
+          ? `“${debt.personName}” ၏ အကြွေးကို ပြန်ဖွင့်မလား?\n\nအလိုအလျောက် ကျေဇယား ငွေဆပ်မှတ်တမ်း (${settlementReps.length} ခု) နှင့် ၎င်း၏ တွဲဖက် ငွေစာရင်းများကို ဖျက်ပါမည်။`
+          : `Reopen "${debt.personName}"'s debt?\n\nThe auto-settlement repayment (${settlementReps.length} record(s)) and its linked wallet transaction(s) will be deleted.`,
+        confirmLabel: lang === 'my' ? 'ပြန်ဖွင့်မည်' : 'Reopen',
+        onConfirm: () => onToggleStatus(debt.id),
+      });
       return;
     }
     // Naturally settled: the handler removes the most recent repayment(s)
@@ -189,22 +216,14 @@ The auto-settlement repayment (${settlementReps.length} record(s)) and its linke
     const desc = toRemove
       .map((r) => `${formatCurrency(r.amount, cur)} (${formatShortDate(r.date)})`)
       .join(', ');
-    const ok = window.confirm(
-      lang === 'my'
-        ? `“${debt.personName}” ၏ အကြွေးကို ပြန်ဖွင့်မလား?
-
-ဤအကြွေးသည် ပုံမှန် ငွေဆပ်မှုများဖြင့် ကြေခဲ့ခြင်း ဖြစ်ပါသည်။ ပြန်ဖွင့်ရန် နောက်ဆုံး ငွေဆပ်မှတ်တမ်း(များ) ကို ဖျက်ရပါမည်:
-${desc}
-
-ထို မှတ်တမ်းများနှင့် ၎င်းတို့၏ တွဲဖက် ငွေစာရင်း (wallet transaction) များကို ဖျက်ပါမည်။`
-        : `Reopen "${debt.personName}"'s debt?
-
-This debt was settled by ordinary repayments. To reopen it the most recent repayment(s) must be removed:
-${desc}
-
-Those records and their linked wallet transactions will be deleted.`
-    );
-    if (ok) onToggleStatus(debt.id);
+    setConfirmState({
+      title: lang === 'my' ? 'အကြွေးကို ပြန်ဖွင့်မလား?' : 'Reopen this debt?',
+      message: lang === 'my'
+        ? `“${debt.personName}” ၏ အကြွေးကို ပြန်ဖွင့်မလား?\n\nဤအကြွေးသည် ပုံမှန် ငွေဆပ်မှုများဖြင့် ကြေခဲ့ခြင်း ဖြစ်ပါသည်။ ပြန်ဖွင့်ရန် နောက်ဆုံး ငွေဆပ်မှတ်တမ်း(များ) ကို ဖျက်ရပါမည်:\n${desc}\n\nထို မှတ်တမ်းများနှင့် ၎င်းတို့၏ တွဲဖက် ငွေစာရင်း (wallet transaction) များကို ဖျက်ပါမည်။`
+        : `Reopen "${debt.personName}"'s debt?\n\nThis debt was settled by ordinary repayments. To reopen it the most recent repayment(s) must be removed:\n${desc}\n\nThose records and their linked wallet transactions will be deleted.`,
+      confirmLabel: lang === 'my' ? 'ပြန်ဖွင့်မည်' : 'Reopen',
+      onConfirm: () => onToggleStatus(debt.id),
+    });
   };
 
   return (
@@ -218,6 +237,13 @@ Those records and their linked wallet transactions will be deleted.`
             </h1>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
               {activeDebts.length} {lang === 'my' ? 'ခု လက်ကျန်' : 'active'}
+            </span>
+            {/* [v7.5.60 S-43] Usage is ALWAYS visible, not only at the
+                limit — "အကြွေး ၃/၅ ခု" like the budget quota chip. */}
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200" title={lang === 'my' ? 'အကြွေး ကန့်သတ်ချက် အသုံးပြုမှု' : 'Debt limit usage'}>
+              {plan === 'premium' || maxFreeDebts <= 0
+                ? (lang === 'my' ? `အကြွေး ${activeDebts.length} ခု` : `${activeDebts.length} debts`)
+                : (lang === 'my' ? `အကြွေး ${activeDebts.length}/${maxFreeDebts} ခု` : `Debts ${activeDebts.length}/${maxFreeDebts}`)}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-normal">
@@ -285,7 +311,7 @@ Those records and their linked wallet transactions will be deleted.`
           <button
             type="button"
             onClick={() => setSelectedWalletFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               selectedWalletFilter === 'all'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
@@ -302,7 +328,7 @@ Those records and their linked wallet transactions will be deleted.`
                 key={w.id}
                 type="button"
                 onClick={() => setSelectedWalletFilter(w.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-amber-600 text-white shadow-xs'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
@@ -346,8 +372,10 @@ Those records and their linked wallet transactions will be deleted.`
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-bold text-emerald-700 tracking-tight">
-              {formatMMK(totalReceivable)}
+            {/* [v7.5.60 S-40] DISPLAY in lakhs (input stays full kyat);
+                the exact kyat value is the title tooltip. */}
+            <div className="text-2xl sm:text-3xl font-bold text-emerald-700 tracking-tight" title={formatMMK(totalReceivable)}>
+              {formatLakhs(totalReceivable, lang)}
             </div>
             <div className="text-xs text-slate-500 mt-1 font-medium">
               {activeDebts.filter((d) => d.type === 'receivable').length}{' '}
@@ -374,8 +402,10 @@ Those records and their linked wallet transactions will be deleted.`
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-bold text-rose-700 tracking-tight">
-              {formatMMK(totalPayable)}
+            {/* [v7.5.60 S-40] DISPLAY in lakhs (input stays full kyat);
+                the exact kyat value is the title tooltip. */}
+            <div className="text-2xl sm:text-3xl font-bold text-rose-700 tracking-tight" title={formatMMK(totalPayable)}>
+              {formatLakhs(totalPayable, lang)}
             </div>
             <div className="text-xs text-slate-500 mt-1 font-medium">
               {activeDebts.filter((d) => d.type === 'payable').length}{' '}
@@ -418,7 +448,7 @@ Those records and their linked wallet transactions will be deleted.`
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer active:scale-95 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer active:scale-95 ${
                 isActive
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -459,8 +489,8 @@ Those records and their linked wallet transactions will be deleted.`
                   <span className="text-xs font-bold text-slate-700 min-w-0 truncate">
                     👤 {group.personName} · {group.debts.length} {lang === 'my' ? 'ခု' : 'debts'}
                   </span>
-                  <span className="text-xs font-bold text-slate-500 shrink-0">
-                    {lang === 'my' ? 'စုစုပေါင်း ကျန်ငွေ:' : 'Total remaining:'} {formatMMK(group.totalRemainingMMK)}
+                  <span className="text-xs font-bold text-slate-500 shrink-0" title={formatMMK(group.totalRemainingMMK)}>
+                    {lang === 'my' ? 'စုစုပေါင်း ကျန်ငွေ:' : 'Total remaining:'} {formatLakhs(group.totalRemainingMMK, lang)}
                   </span>
                 </div>
               )}
@@ -471,6 +501,8 @@ Those records and their linked wallet transactions will be deleted.`
             const isReceivable = debt.type === 'receivable';
             const isExpanded = expandedDebtId === debt.id;
             const wallet = walletMap.get(debt.walletId);
+            // [v7.5.60 M-12] Read-only for collaborators on a shared debt.
+            const readOnlyShared = !canMutateDebt(debt);
 
             return (
               <div
@@ -538,17 +570,23 @@ Those records and their linked wallet transactions will be deleted.`
                           )}
                         </div>
 
-                        {/* Line 2: Amount & Note / Phone */}
+                        {/* Line 2: Amount & Start date (phone moved to its
+                            own line below — [v7.5.60 N-15] it was truncated
+                            mid-number on a 390px phone). Amounts DISPLAY
+                            in lakhs; exact kyat is the title tooltip. */}
                         <div className="flex items-center justify-between gap-2 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-500 truncate">
-                            <span className={`font-mono font-bold text-sm sm:text-base shrink-0 ${
-                              debt.status === 'settled'
-                                ? 'text-slate-700'
-                                : isReceivable
-                                ? 'text-emerald-700'
-                                : 'text-rose-700'
-                            }`}>
-                              {formatMMK(convertDebtAmountToMMK(debt, debt.status === 'settled' ? debt.totalAmount : remaining))}
+                            <span
+                              className={`font-mono font-bold text-sm sm:text-base shrink-0 ${
+                                debt.status === 'settled'
+                                  ? 'text-slate-700'
+                                  : isReceivable
+                                  ? 'text-emerald-700'
+                                  : 'text-rose-700'
+                              }`}
+                              title={formatMMK(convertDebtAmountToMMK(debt, debt.status === 'settled' ? debt.totalAmount : remaining))}
+                            >
+                              {formatLakhs(convertDebtAmountToMMK(debt, debt.status === 'settled' ? debt.totalAmount : remaining), lang)}
                             </span>
                             <span className="text-slate-300">•</span>
                             <span
@@ -557,20 +595,31 @@ Those records and their linked wallet transactions will be deleted.`
                             >
                               📅 {lang === 'my' ? 'စတင်:' : 'Since:'} {formatShortDate(debt.startDate)}
                             </span>
-                            {debt.phone && (
-                              <>
-                                <span className="text-slate-300">•</span>
-                                <a href={`tel:${debt.phone}`} className="text-indigo-600 text-[11px] font-mono shrink-0 hover:underline">
-                                  📞 {debt.phone}
-                                </a>
-                              </>
-                            )}
                           </div>
 
-                          <div className="text-[11px] text-slate-400 font-mono shrink-0">
-                            {lang === 'my' ? 'မူလ:' : 'Total:'} {formatMMK(convertDebtAmountToMMK(debt, debt.totalAmount))}
+                          <div className="text-[11px] text-slate-400 font-mono shrink-0" title={formatMMK(convertDebtAmountToMMK(debt, debt.totalAmount))}>
+                            {lang === 'my' ? 'မူလ:' : 'Total:'} {formatLakhs(convertDebtAmountToMMK(debt, debt.totalAmount), lang)}
                           </div>
                         </div>
+
+                        {/* [v7.5.60 N-15] Phone on its own line so the full
+                            number is always visible on a phone. */}
+                        {debt.phone && (
+                          <div className="mt-1">
+                            <a href={`tel:${debt.phone}`} className="text-indigo-600 text-[11px] font-mono hover:underline inline-flex items-center gap-1">
+                              <Phone className="w-3 h-3" /> {debt.phone}
+                            </a>
+                          </div>
+                        )}
+
+                        {/* [v7.5.60 M-12] Shared read-only badge + creator. */}
+                        {readOnlyShared && (
+                          <div className="mt-1.5">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                              🤝 {sharedDebtBadgeName(debt)} {lang === 'my' ? 'မှ မျှဝေထားသည် — ဖတ်ရန်သာ' : 'shared this — read-only'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -585,11 +634,11 @@ Those records and their linked wallet transactions will be deleted.`
                   {/* Progress Bar */}
                   <div className="mt-3 space-y-1">
                     <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>
-                        {lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatMMK(convertDebtAmountToMMK(debt, debt.paidAmount))} ({percentPaid}%)
+                      <span title={formatMMK(convertDebtAmountToMMK(debt, debt.paidAmount))}>
+                        {lang === 'my' ? 'ဆပ်ပြီးငွေ:' : 'Paid:'} {formatLakhs(convertDebtAmountToMMK(debt, debt.paidAmount), lang)} ({percentPaid}%)
                       </span>
-                      <span>
-                        {lang === 'my' ? 'ကျန်ငွေ:' : 'Left:'} {formatMMK(convertDebtAmountToMMK(debt, remaining))}
+                      <span title={formatMMK(convertDebtAmountToMMK(debt, remaining))}>
+                        {lang === 'my' ? 'ကျန်ငွေ:' : 'Left:'} {formatLakhs(convertDebtAmountToMMK(debt, remaining), lang)}
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -622,11 +671,12 @@ Those records and their linked wallet transactions will be deleted.`
                     </button>
 
                     <div className="flex items-center gap-2">
-                      {/* Record Repayment Button */}
-                      {debt.status === 'active' && (
+                      {/* [v7.5.60 M-12] Read-only shared debt: no repay /
+                          edit / settle / delete buttons at all. */}
+                      {debt.status === 'active' && !readOnlyShared && (
                         <button
                           onClick={() => onRecordRepayment(debt)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-2xs"
+                          className="inline-flex items-center gap-1 px-3 py-2.5 rounded-lg text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-2xs"
                         >
                           <CreditCard className="w-3.5 h-3.5" />
                           <span>
@@ -639,10 +689,10 @@ Those records and their linked wallet transactions will be deleted.`
 
                       {/* [v7.5.55 D28] Edit the debt itself (person, amount,
                           type, dates, wallet, note). */}
-                      {onEditDebt && (
+                      {onEditDebt && !readOnlyShared && (
                         <button
                           onClick={() => onEditDebt(debt)}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center"
                           title={lang === 'my' ? 'အကြွေး ပြင်ဆင်မည်' : 'Edit debt'}
                         >
                           <Pencil className="w-4 h-4" />
@@ -650,9 +700,10 @@ Those records and their linked wallet transactions will be deleted.`
                       )}
 
                       {/* Mark Settled Toggle */}
+                      {!readOnlyShared && (
                       <button
                         onClick={() => handleToggleClick(debt)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`px-2.5 py-2.5 rounded-lg text-xs font-semibold border transition-colors ${
                           debt.status === 'settled'
                             ? 'text-slate-600 border-slate-200 hover:bg-slate-100'
                             : 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
@@ -663,19 +714,27 @@ Those records and their linked wallet transactions will be deleted.`
                           ? (lang === 'my' ? 'မဆပ်ရသေးအဖြစ်ပြောင်း' : 'Reopen')
                           : (lang === 'my' ? 'အကြွေးကြေပြီ' : 'Mark Settled')}
                       </button>
+                      )}
 
                       {/* Delete Debt */}
+                      {!readOnlyShared && (
                       <button
                         onClick={() => {
-                          if (window.confirm(lang === 'my' ? 'ဤအကြွေးမှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?' : 'Delete this debt record?')) {
-                            onDeleteDebt(debt.id);
-                          }
+                          setConfirmState({
+                            title: lang === 'my' ? 'အကြွေးမှတ်တမ်း ဖျက်မလား?' : 'Delete this debt record?',
+                            message: lang === 'my'
+                              ? `“${debt.personName}” ၏ အကြွေးမှတ်တမ်းနှင့် ၎င်း၏ တွဲဖက် ငွေစာရင်း (${debt.repayments.length} ခု ငွေဆပ်မှတ်တမ်း အပါအဝင်) ကို ဖျက်ရန် သေချာပါသလား?`
+                              : `Delete "${debt.personName}"'s debt record and its linked wallet transactions (including ${debt.repayments.length} repayment record(s))?`,
+                            confirmLabel: lang === 'my' ? 'ဖျက်မည်' : 'Delete',
+                            onConfirm: () => onDeleteDebt(debt.id),
+                          });
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center"
                         title="Delete record"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -718,8 +777,11 @@ Those records and their linked wallet transactions will be deleted.`
                                     ? (lang === 'my' ? repWallet.name : repWallet.nameEn)
                                     : (lang === 'my' ? 'ဖျက်လိုက်သော ပိုက်ဆံအိတ်' : 'Deleted wallet')}
                                 </span>
-                                <span className={`font-bold ${isReceivable ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                  {isReceivable ? '+' : '-'}{formatCurrency(rep.amount, debtCurrency(debt))}
+                                <span
+                                  className={`font-bold ${isReceivable ? 'text-emerald-700' : 'text-rose-700'}`}
+                                  title={debtCurrency(debt) === 'MMK' ? formatMMK(rep.amount) : undefined}
+                                >
+                                  {isReceivable ? '+' : '-'}{debtCurrency(debt) === 'MMK' ? formatLakhs(rep.amount, lang) : formatCurrency(rep.amount, debtCurrency(debt))}
                                 </span>
                                 <div className="flex items-center gap-1">
                                   {rep.transactionId && (
@@ -730,25 +792,30 @@ Those records and their linked wallet transactions will be deleted.`
                                       🔗 #{rep.transactionId.slice(-6)}
                                     </span>
                                   )}
-                                  {onEditRepayment && (
+                                  {onEditRepayment && !readOnlyShared && (
                                     <button
                                       type="button"
                                       onClick={() => onEditRepayment(debt, rep)}
-                                      className="p-1 text-slate-400 hover:text-emerald-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                                      className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-emerald-600 rounded hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
                                       title={lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း ပြင်ဆင်မည်' : 'Edit repayment'}
                                     >
                                       <Pencil className="w-3.5 h-3.5" />
                                     </button>
                                   )}
-                                  {onDeleteRepayment && (
+                                  {onDeleteRepayment && !readOnlyShared && (
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        if (window.confirm(lang === 'my' ? 'ဤငွေဆပ်မှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား။' : 'Delete this repayment record?')) {
-                                          onDeleteRepayment(debt.id, rep.id);
-                                        }
+                                        setConfirmState({
+                                          title: lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း ဖျက်မလား?' : 'Delete this repayment record?',
+                                          message: lang === 'my'
+                                            ? `“${debt.personName}” ၏ ${formatShortDate(rep.date)} ရက်စွဲ ငွေဆပ်မှတ်တမ်း (${formatCurrency(rep.amount, debtCurrency(debt))}) နှင့် ၎င်း၏ တွဲဖက် ငွေစာရင်းကို ဖျက်ရန် သေချာပါသလား။`
+                                            : `Delete the repayment of ${formatCurrency(rep.amount, debtCurrency(debt))} on ${formatShortDate(rep.date)} for "${debt.personName}" and its linked wallet transaction?`,
+                                          confirmLabel: lang === 'my' ? 'ဖျက်မည်' : 'Delete',
+                                          onConfirm: () => onDeleteRepayment(debt.id, rep.id),
+                                        });
                                       }}
-                                      className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                                      className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
                                       title={lang === 'my' ? 'ငွေဆပ်မှတ်တမ်းဖျက်မည်' : 'Delete repayment'}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
@@ -770,6 +837,36 @@ Those records and their linked wallet transactions will be deleted.`
           ))
         )}
       </div>
+
+      {/* [v7.5.60 S-47] App-styled confirm modal (replaces window.confirm). */}
+      {confirmState && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-slate-200 p-6 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">{confirmState.title}</h3>
+            <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">{confirmState.message}</p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmState(null)}
+                className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-sm cursor-pointer"
+              >
+                {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const action = confirmState.onConfirm;
+                  setConfirmState(null);
+                  action();
+                }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm cursor-pointer"
+              >
+                {confirmState.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

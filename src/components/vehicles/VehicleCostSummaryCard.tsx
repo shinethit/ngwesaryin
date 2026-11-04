@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Fuel, Wrench, Disc, Calendar, TrendingUp, Gauge } from 'lucide-react';
 import { FuelLog, VehicleMaintenance, TirePressureLog } from '../../types';
 import { calculateCostPerKm } from '../../utils/vehicleAnalytics';
+import { formatLakhs, formatShortDate } from '../../utils/formatters';
 
 type RangePreset = '1m' | '3m' | '6m' | '1y' | 'all' | 'custom';
 
@@ -107,8 +108,16 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
   const rangeLabel = () => {
     if (preset === 'all') return lang === 'my' ? 'အချိန်အားလုံး' : 'All time';
     if (!range.start && !range.end) return lang === 'my' ? 'ရက်စွဲ ရွေးပါ' : 'Select dates';
-    return `${range.start || '...'} → ${range.end || '...'}`;
+    // [v7.5.60 D-S2] DD/MM/YYYY, not ISO.
+    return `${range.start ? formatShortDate(range.start) : '...'} → ${range.end ? formatShortDate(range.end) : '...'}`;
   };
+
+  // [v7.5.60 D-S13] These totals include logs whose expense sync is OFF
+  // — say so, or the Dashboard totals will look wrong next to them.
+  const hasUnsyncedLogs =
+    filteredFuel.some((l) => l.syncToExpense === false) ||
+    filteredMaint.some((l) => l.syncToExpense === false) ||
+    filteredTire.some((l) => l.syncToExpense === false);
 
   return (
     <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
@@ -136,7 +145,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
               key={p.id}
               type="button"
               onClick={() => onPresetChange(p.id)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                 preset === p.id
                   ? 'bg-white text-indigo-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -199,14 +208,18 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
         <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-200/70">
           <div className="flex items-center gap-2 text-amber-900">
             <Fuel className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold">
+            <span className="text-[11px] font-bold">
               {lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}
             </span>
           </div>
-          <div className="mt-0.5 font-mono font-black text-amber-900 text-sm truncate">
-            {fuelTotal.toLocaleString()}
+          {/* [v7.5.60 D-S1] Lakh display, exact kyat in tooltip. */}
+          <div
+            className="mt-0.5 font-mono font-black text-amber-900 text-sm truncate"
+            title={`${fuelTotal.toLocaleString()} MMK`}
+          >
+            {formatLakhs(fuelTotal, lang)}
           </div>
-          <div className="text-[10px] text-amber-700">
+          <div className="text-[11px] text-amber-700">
             {filteredFuel.length} {lang === 'my' ? 'ကြိမ်' : 'logs'}
           </div>
         </div>
@@ -215,14 +228,17 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
         <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200/70">
           <div className="flex items-center gap-2 text-blue-900">
             <Wrench className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold">
+            <span className="text-[11px] font-bold">
               {lang === 'my' ? 'ပြုပြင်ထိန်းသိမ်းမှု' : 'Maintenance'}
             </span>
           </div>
-          <div className="mt-0.5 font-mono font-black text-blue-900 text-sm truncate">
-            {maintTotal.toLocaleString()}
+          <div
+            className="mt-0.5 font-mono font-black text-blue-900 text-sm truncate"
+            title={`${maintTotal.toLocaleString()} MMK`}
+          >
+            {formatLakhs(maintTotal, lang)}
           </div>
-          <div className="text-[10px] text-blue-700">
+          <div className="text-[11px] text-blue-700">
             {filteredMaint.length} {lang === 'my' ? 'ကြိမ်' : 'services'}
           </div>
         </div>
@@ -231,41 +247,59 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
         <div className="p-2.5 rounded-xl bg-teal-50/60 border border-teal-200/70">
           <div className="flex items-center gap-2 text-teal-900">
             <Disc className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold">
+            <span className="text-[11px] font-bold">
               {lang === 'my' ? 'တာယာ' : 'Tires'}
             </span>
           </div>
-          <div className="mt-0.5 font-mono font-black text-teal-900 text-sm truncate">
-            {tireTotal.toLocaleString()}
+          <div
+            className="mt-0.5 font-mono font-black text-teal-900 text-sm truncate"
+            title={`${tireTotal.toLocaleString()} MMK`}
+          >
+            {formatLakhs(tireTotal, lang)}
           </div>
-          <div className="text-[10px] text-teal-700">
+          <div className="text-[11px] text-teal-700">
             {filteredTire.length} {lang === 'my' ? 'ကြိမ်' : 'checks'}
           </div>
         </div>
       </div>
+
+      {/* [v7.5.60 D-S13] Unsynced logs are counted here but not in the
+          Dashboard expense totals — say so plainly. */}
+      {hasUnsyncedLogs && (
+        <p className="text-[11px] text-slate-500 flex items-center gap-1 px-0.5">
+          <span>⚠️</span>
+          <span>
+            {lang === 'my'
+              ? 'ငွေစာရင်းသို့ မသွင်းထားသော မှတ်တမ်းများပါ ပါဝင်သည် — Dashboard ထွက်ငွေနှင့် ကွာနိုင်သည်'
+              : 'Includes logs not synced to expenses — totals may differ from the Dashboard'}
+          </span>
+        </p>
+      )}
 
       {/* [v7.3.0] Grand Total + Cost per Km — combined strip */}
       <div className="rounded-2xl overflow-hidden border border-indigo-200/70">
         <div className="grid grid-cols-2 divide-x divide-indigo-200/70">
           {/* Grand Total */}
           <div className="p-2.5 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white">
-            <div className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider">
+            <div className="text-[11px] font-bold text-indigo-200 uppercase tracking-wider">
               {lang === 'my' ? '💰 စုစုပေါင်း' : '💰 Total'}
             </div>
             <div className="mt-0.5 flex items-baseline gap-0.5">
-              <span className="font-mono font-black text-lg text-emerald-300 leading-none truncate">
-                {grandTotal.toLocaleString()}
+              <span
+                className="font-mono font-black text-lg text-emerald-300 leading-none truncate"
+                title={`${grandTotal.toLocaleString()} MMK`}
+              >
+                {formatLakhs(grandTotal, lang)}
               </span>
-              <span className="text-[9px] font-bold text-emerald-400">MMK</span>
             </div>
-            <div className="text-[9px] text-slate-400 mt-0.5">
+            <div className="text-[11px] text-slate-400 mt-0.5">
               {filteredFuel.length}F • {filteredMaint.length}S • {filteredTire.length}T
             </div>
           </div>
 
           {/* Cost per Km */}
           <div className="p-2.5 bg-gradient-to-br from-indigo-50 to-emerald-50">
-            <div className="text-[10px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1">
+            <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1">
               <Gauge className="w-3 h-3" />
               {lang === 'my' ? '⛽ /km' : '⛽ per km'}
             </div>
@@ -275,14 +309,22 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
                   <span className="font-mono font-black text-lg text-indigo-900 leading-none truncate">
                     {costPerKmData.costPerKm.toFixed(2)}
                   </span>
-                  <span className="text-[9px] font-bold text-indigo-700">Ks/km</span>
+                  <span className="text-[11px] font-bold text-indigo-700">Ks/km</span>
                 </div>
-                <div className="text-[9px] text-slate-500 mt-0.5 truncate">
+                <div className="text-[11px] text-slate-500 mt-0.5 truncate">
                   {costPerKmData.totalDistance.toLocaleString()} km
                 </div>
               </>
             ) : (
-              <div className="mt-1 font-bold text-xs text-slate-400 leading-none">N/A</div>
+              /* [v7.5.60 D-N4] Say WHY it cannot be calculated. */
+              <div className="mt-1">
+                <div className="font-bold text-xs text-slate-400 leading-none">N/A</div>
+                <div className="text-[11px] text-slate-500 mt-1 leading-snug">
+                  {lang === 'my'
+                    ? 'ဆီမှတ်တမ်း ၂ ကြိမ်နှင့် အထက် ရှိမှ တွက်နိုင်ပါမည်'
+                    : 'Needs 2+ fuel logs to calculate'}
+                </div>
+              </div>
             )}
           </div>
         </div>

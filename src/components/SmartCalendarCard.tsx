@@ -116,8 +116,27 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
     ? `${year} ခုနှစ်၊ ${monthNameMy[month]}`
     : `${monthNameEn[month]} ${year}`;
 
+  // [v7.5.60 S19] Phones have no hover for the title tooltips: tapping
+  // a lakh amount toggles it to the exact kyat value, and back.
+  const [amountsExact, setAmountsExact] = useState(false);
+  const toggleExactAmounts = () => setAmountsExact((v) => !v);
+  const fmtCell = (amount: number): string =>
+    amountsExact ? formatMMK(Math.abs(amount)) : formatShortLakhs(amount);
+
   const shiftMonth = (offset: number) => {
-    setViewDate(new Date(year, month + offset, 1));
+    const next = new Date(year, month + offset, 1);
+    setViewDate(next);
+    // [v7.5.60 S21] The selected day belongs to the old month — pick the
+    // matching day in the new month (today if it is this month, else the 1st).
+    if (selectedDayStr) {
+      const nextKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+      if (selectedDayStr.slice(0, 7) !== nextKey) {
+        const today = new Date();
+        const isCurrentMonth =
+          next.getFullYear() === today.getFullYear() && next.getMonth() === today.getMonth();
+        setSelectedDayStr(isCurrentMonth ? getLocalDateString(today) : `${nextKey}-01`);
+      }
+    }
   };
 
   // Build calendar grid
@@ -192,6 +211,20 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
     );
   }, [transactions, selectedDayStr, selectedWalletIds, wallets]);
 
+  // [v7.5.60 N5] Transfers are excluded from the totals above, but a day
+  // with ONLY transfers is not an empty day — count them so the empty
+  // state can say so instead of "မှတ်တမ်း မရှိပါ".
+  const selectedDayTransferCount = useMemo(() => {
+    if (!selectedDayStr) return 0;
+    return transactions.filter(
+      (t) =>
+        t &&
+        t.date === selectedDayStr &&
+        isTransferTransaction(t) &&
+        matchesWalletFilter(t.walletId)
+    ).length;
+  }, [transactions, selectedDayStr, selectedWalletIds, wallets]);
+
   const selectedDaySummary = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -219,6 +252,12 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   const weekDays = lang === 'my'
     ? ['တနင်္ဂနွေ', 'တနင်္လာ', 'အင်္ဂါ', 'ဗုဒ္ဓဟူး', 'ကြာသပတေး', 'သောကြာ', 'စနေ']
     : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // [v7.5.60 S18] Full names ("ကြာသပတေး") wrap to 2 lines in a ~49px
+  // phone cell — one-syllable short names on small screens.
+  const weekDaysShort = lang === 'my'
+    ? ['နွေ', 'လာ', 'ဂါ', 'ဟူး', 'ကြာ', 'သော', 'စနေ']
+    : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   // [v7.5.55] Localized selected-day label with hardcoded Myanmar names
   // (some phone browsers lack the Intl 'my-MM' locale) — was raw ISO.
@@ -248,14 +287,14 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
               {lang === 'my' ? 'စမတ်ပြက္ခဒိန် ဝင်/ထွက်/ကျန် (Smart Calendar Summary)' : 'Smart Calendar Daily Summary'}
             </h3>
             <p className="text-[11px] text-slate-500 font-medium">
-              {lang === 'my' ? 'ရက်စွဲအလိုက် ဝင်၊ ထွက်၊ ကျန် — သိန်းဂဏန်းဖြင့် (×100,000)' : 'Daily In, Out, Net — in lakhs (×100,000)'}
+              {lang === 'my' ? 'ရက်စွဲအလိုက် ဝင်၊ ထွက်၊ ကျန် — သိန်းဂဏန်းဖြင့် (×100,000) · ပမာဏကို နှိပ်ရင် ကျပ်အတိအကျ ကြည့်နိုင်ပါသည်' : 'Daily In, Out, Net — in lakhs (×100,000) · tap an amount to see the exact kyat value'}
             </p>
             {/* [v7.5.56] Month shared split (finding 24). */}
             {(monthSharedSummary.income > 0 || monthSharedSummary.expense > 0) && (
               <p className="text-[11px] text-amber-700 font-semibold" title={`🤝 Shared in: ${formatMMK(monthSharedSummary.income)} · out: ${formatMMK(monthSharedSummary.expense)}`}>
                 {lang === 'my'
-                  ? `🤝 ဒီလ မျှဝေထား — ဝင် +${formatShortLakhs(monthSharedSummary.income)} · ထွက် -${formatShortLakhs(monthSharedSummary.expense)} · ကျန် ${monthSharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(monthSharedSummary.net)}`
-                  : `🤝 Shared this month — in +${formatShortLakhs(monthSharedSummary.income)} · out -${formatShortLakhs(monthSharedSummary.expense)} · net ${monthSharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(monthSharedSummary.net)}`}
+                  ? `🤝 ဒီလ မျှဝေထား — ဝင် +${fmtCell(monthSharedSummary.income)} · ထွက် -${fmtCell(monthSharedSummary.expense)} · ကျန် ${monthSharedSummary.net >= 0 ? '+' : ''}${fmtCell(monthSharedSummary.net)}`
+                  : `🤝 Shared this month — in +${fmtCell(monthSharedSummary.income)} · out -${fmtCell(monthSharedSummary.expense)} · net ${monthSharedSummary.net >= 0 ? '+' : ''}${fmtCell(monthSharedSummary.net)}`}
               </p>
             )}
           </div>
@@ -266,7 +305,8 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           <button
             type="button"
             onClick={() => shiftMonth(-1)}
-            className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-all cursor-pointer"
+            className="min-w-11 min-h-11 p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-all cursor-pointer flex items-center justify-center"
+            aria-label={lang === 'my' ? 'ပြီးခဲ့သည့်လ' : 'Previous month'}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -276,7 +316,8 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           <button
             type="button"
             onClick={() => shiftMonth(1)}
-            className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-all cursor-pointer"
+            className="min-w-11 min-h-11 p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-all cursor-pointer flex items-center justify-center"
+            aria-label={lang === 'my' ? 'နောက်လ' : 'Next month'}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -295,7 +336,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             <button
               type="button"
               onClick={() => setWalletFilterOpen((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 !isAllWalletsShown
                   ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -304,7 +345,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
               <Filter className="w-3.5 h-3.5" />
               <span>
                 {isAllWalletsShown
-                  ? (lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး' : 'All Wallets')
+                  ? (lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး (Dashboard အတိုင်း)' : 'All Wallets (as on Dashboard)')
                   : `${selectedWalletIds.length} / ${wallets.length} ${lang === 'my' ? 'ရွေးထား' : 'selected'}`}
               </span>
               <ChevronRight className={`w-3.5 h-3.5 transition-transform ${walletFilterOpen ? 'rotate-90' : ''}`} />
@@ -404,7 +445,10 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
         {/* Weekdays Header */}
         <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200 text-center text-[10px] sm:text-xs font-bold text-slate-600 py-2">
           {weekDays.map((w, idx) => (
-            <div key={idx} className={idx === 0 || idx === 6 ? 'text-rose-600' : ''}>{w}</div>
+            <div key={idx} className={idx === 0 || idx === 6 ? 'text-rose-600' : ''}>
+              <span className="sm:hidden">{weekDaysShort[idx]}</span>
+              <span className="hidden sm:inline">{w}</span>
+            </div>
           ))}
         </div>
 
@@ -420,10 +464,13 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             const isToday = slot.dateStr === todayStr;
 
             return (
-              <div
+              <button
                 key={idx}
+                type="button"
                 onClick={() => setSelectedDayStr(slot.dateStr)}
-                className={`bg-white min-h-[72px] sm:min-h-[88px] p-1.5 sm:p-2 flex flex-col justify-between transition-all cursor-pointer hover:bg-indigo-50/40 relative ${
+                aria-pressed={isSelected}
+                aria-label={`${formatSelectedDay(slot.dateStr)}${metrics ? ` — ${lang === 'my' ? 'ဝင်ငွေ' : 'income'} ${formatMMK(metrics.income)}, ${lang === 'my' ? 'ထွက်ငွေ' : 'expense'} ${formatMMK(metrics.expense)}` : ''}`}
+                className={`bg-white min-h-[72px] sm:min-h-[88px] p-1.5 sm:p-2 flex flex-col justify-between transition-all cursor-pointer hover:bg-indigo-50/40 relative text-left w-full ${
                   isSelected ? 'ring-2 ring-indigo-600 bg-indigo-50/30 z-10' : ''
                 } ${isToday ? 'bg-amber-50/30' : ''}`}
               >
@@ -440,24 +487,26 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                   )}
                 </div>
 
-                {/* Day In / Out / Net Badges */}
+                {/* Day In / Out / Net Badges — tap an amount to toggle
+                    lakh ↔ exact kyat (S19); the tap must not re-select
+                    the day, so it stops propagation. */}
                 {metrics ? (
                   <div className="space-y-0.5 text-[9px] font-mono">
                     {metrics.income > 0 && (
                       <div className="text-emerald-700 font-bold truncate" title={`In: +${formatMMK(metrics.income)}`}>
-                        +{formatShortLakhs(metrics.income)}
+                        <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">+{fmtCell(metrics.income)}</span>
                       </div>
                     )}
                     {metrics.expense > 0 && (
                       <div className="text-rose-600 font-bold truncate" title={`Out: -${formatMMK(metrics.expense)}`}>
-                        -{formatShortLakhs(metrics.expense)}
+                        <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">-{fmtCell(metrics.expense)}</span>
                       </div>
                     )}
                     {/* [v7.5.55] Net row: the header promises ဝင်/ထွက်/ကျန်
                         but cells only showed income/expense. */}
                     {(metrics.income > 0 || metrics.expense > 0) && (
                       <div className="text-indigo-700 font-bold truncate" title={`Net: ${metrics.net >= 0 ? '+' : ''}${formatMMK(metrics.net)}`}>
-                        {metrics.net >= 0 ? '+' : '-'}{formatShortLakhs(metrics.net)}
+                        <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">{metrics.net >= 0 ? '+' : '-'}{fmtCell(metrics.net)}</span>
                       </div>
                     )}
                     {metrics.income === 0 && metrics.expense === 0 && (
@@ -467,7 +516,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                 ) : (
                   <div className="text-[9px] text-slate-300">-</div>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>
@@ -494,19 +543,19 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             </button>
           </div>
 
-          {/* Summary for selected day */}
+          {/* Summary for selected day — tap an amount to toggle lakh ↔ exact kyat (S19) */}
           <div className="grid grid-cols-3 gap-2.5 text-xs font-mono font-bold">
             <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-emerald-700">{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</div>
-              <div className="text-xs sm:text-sm font-black" title={`+${formatMMK(selectedDaySummary.income)}`}>+{formatShortLakhs(selectedDaySummary.income)}</div>
+              <button type="button" onClick={toggleExactAmounts} className="text-xs sm:text-sm font-black cursor-pointer" title={`+${formatMMK(selectedDaySummary.income)}`}>+{fmtCell(selectedDaySummary.income)}</button>
             </div>
             <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-900 border border-rose-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-rose-700">{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</div>
-              <div className="text-xs sm:text-sm font-black" title={`-${formatMMK(selectedDaySummary.expense)}`}>-{formatShortLakhs(selectedDaySummary.expense)}</div>
+              <button type="button" onClick={toggleExactAmounts} className="text-xs sm:text-sm font-black cursor-pointer" title={`-${formatMMK(selectedDaySummary.expense)}`}>-{fmtCell(selectedDaySummary.expense)}</button>
             </div>
             <div className={`p-2.5 rounded-2xl border text-center shadow-2xs ${selectedDaySummary.net >= 0 ? 'bg-indigo-50 text-indigo-950 border-indigo-200' : 'bg-rose-50 text-rose-950 border-rose-200'}`}>
               <div className="text-[10px] font-sans font-semibold opacity-85">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
-              <div className="text-xs sm:text-sm font-black" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net >= 0 ? '+' : ''}{formatShortLakhs(selectedDaySummary.net)}</div>
+              <button type="button" onClick={toggleExactAmounts} className="text-xs sm:text-sm font-black cursor-pointer" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net >= 0 ? '+' : ''}{fmtCell(selectedDaySummary.net)}</button>
             </div>
           </div>
 
@@ -514,15 +563,19 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           {(selectedDaySharedSummary.income > 0 || selectedDaySharedSummary.expense > 0) && (
             <div className="text-[11px] text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5" title={`🤝 Shared in: ${formatMMK(selectedDaySharedSummary.income)} · out: ${formatMMK(selectedDaySharedSummary.expense)}`}>
               {lang === 'my'
-                ? `🤝 မျှဝေထား — ဝင် +${formatShortLakhs(selectedDaySharedSummary.income)} · ထွက် -${formatShortLakhs(selectedDaySharedSummary.expense)} · ကျန် ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(selectedDaySharedSummary.net)}`
-                : `🤝 Shared — in +${formatShortLakhs(selectedDaySharedSummary.income)} · out -${formatShortLakhs(selectedDaySharedSummary.expense)} · net ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${formatShortLakhs(selectedDaySharedSummary.net)}`}
+                ? `🤝 မျှဝေထား — ဝင် +${fmtCell(selectedDaySharedSummary.income)} · ထွက် -${fmtCell(selectedDaySharedSummary.expense)} · ကျန် ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${fmtCell(selectedDaySharedSummary.net)}`
+                : `🤝 Shared — in +${fmtCell(selectedDaySharedSummary.income)} · out -${fmtCell(selectedDaySharedSummary.expense)} · net ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${fmtCell(selectedDaySharedSummary.net)}`}
             </div>
           )}
 
           {/* Transactions Structured Table for Selected Day */}
           {selectedDayTxs.length === 0 ? (
             <div className="py-6 text-center text-slate-400 text-xs">
-              {lang === 'my' ? 'ဤနေ့တွင် မှတ်တမ်း မရှိပါ။' : 'No transactions recorded on this date.'}
+              {selectedDayTransferCount > 0
+                ? (lang === 'my'
+                  ? `လွှဲပြောင်းမှု ${selectedDayTransferCount} ခု ရှိသည် (ဝင်ငွေ/ထွက်ငွေ အဖြစ် မရေတွက်ပါ)`
+                  : `${selectedDayTransferCount} transfer(s) on this day (not counted as income/expense)`)
+                : (lang === 'my' ? 'ဤနေ့တွင် မှတ်တမ်း မရှိပါ။' : 'No transactions recorded on this date.')}
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200/90 overflow-x-auto shadow-2xs">
@@ -570,8 +623,12 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                             </div>
                           </div>
                         </td>
-                        <td className={`py-3 px-3 text-right font-mono font-bold text-xs sm:text-sm shrink-0 whitespace-nowrap ${isInc ? 'text-emerald-700' : 'text-rose-600'}`} title={isInc ? `+${formatMMK(t.amount)}` : `-${formatMMK(t.amount)}`}>
-                          {isInc ? `+${formatShortLakhs(t.amount)}` : `-${formatShortLakhs(t.amount)}`}
+                        <td className="py-3 px-3 text-right shrink-0 whitespace-nowrap">
+                          <button type="button" onClick={toggleExactAmounts}
+                            className={`font-mono font-bold text-xs sm:text-sm cursor-pointer ${isInc ? 'text-emerald-700' : 'text-rose-600'}`}
+                            title={isInc ? `+${formatMMK(t.amount)}` : `-${formatMMK(t.amount)}`}>
+                            {isInc ? `+${fmtCell(t.amount)}` : `-${fmtCell(t.amount)}`}
+                          </button>
                         </td>
                       </tr>
                     );

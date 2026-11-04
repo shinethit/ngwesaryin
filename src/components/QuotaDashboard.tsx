@@ -40,6 +40,8 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
   const [isResumingNetwork, setIsResumingNetwork] = useState(false);
   const [networkResumeMsg, setNetworkResumeMsg] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(getTimeUntilUTCMidnight());
+  // [v7.5.60 S-47] App-styled clear confirm (replaces window.confirm).
+  const [confirmClearStats, setConfirmClearStats] = useState(false);
 
   // Subscribe to live quota increments
   useEffect(() => {
@@ -120,16 +122,9 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
   };
 
   const handleClearDailyStats = () => {
-    if (
-      window.confirm(
-        lang === 'my'
-          ? 'ယနေ့ ဒေသတွင်း Quota မှတ်တမ်းကို သုညသို့ ပြန်လည်စတင် (Reset) မည်လား?'
-          : 'Reset local daily quota tracking counters to 0?'
-      )
-    ) {
-      clearTodayQuotaStats();
-      setStats(getQuotaOverviewStats());
-    }
+    clearTodayQuotaStats();
+    setStats(getQuotaOverviewStats());
+    setConfirmClearStats(false);
   };
 
   // Helpers for Status Styles & Badges
@@ -567,7 +562,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
 
           <button
             type="button"
-            onClick={handleClearDailyStats}
+            onClick={() => setConfirmClearStats(true)}
             className="text-xs text-slate-400 hover:text-slate-700 underline cursor-pointer"
           >
             {lang === 'my' ? 'သုညသို့ Reset လုပ်မည်' : 'Reset Daily Tracking'}
@@ -642,6 +637,38 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* [v7.5.60 S-47] App-styled clear confirm (replaces window.confirm). */}
+      {confirmClearStats && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 p-5 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">
+              {lang === 'my' ? 'ယနေ့ Quota မှတ်တမ်း Reset လုပ်မလား?' : 'Reset today’s quota tracking?'}
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {lang === 'my'
+                ? 'ယနေ့ ဒေသတွင်း Quota မှတ်တမ်းကို သုညသို့ ပြန်လည်စတင်ပါမည်။ Cloud ဒေတာများ မထိခိုက်ပါ။'
+                : 'Local daily quota tracking counters will reset to 0. Cloud data is not affected.'}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmClearStats(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleClearDailyStats}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 cursor-pointer"
+              >
+                {lang === 'my' ? 'Reset လုပ်မည်' : 'Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

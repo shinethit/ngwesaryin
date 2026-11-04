@@ -29,6 +29,13 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
 }) => {
   const financialSystem = financialSystemProp ?? 'opening_closing';
   const net = income - expense;
+  // [v7.5.60 A-S19] Phone has no hover — tapping a lakh amount toggles
+  // it to the exact kyat value and back.
+  const [showExact, setShowExact] = React.useState(false);
+  const displayAmount = (v: number, signed = false) =>
+    showExact ? formatMMK(v) : (signed && v >= 0 ? '+' : '') + formatLakhs(v, lang);
+  const displayTip = (v: number) =>
+    showExact ? formatLakhs(v, lang) : formatMMK(v);
 
   // Per-wallet breakdown → total Opening / Inflow / Outflow / Closing
   // [v7.5.55 D18] All amounts converted to MMK (transaction amounts via
@@ -66,14 +73,19 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
       tone === 'neg'  ? 'text-rose-800 border-rose-300 bg-rose-50/60' :
                         'text-slate-800 border-slate-200 bg-slate-50/40';
     return (
-      <div className={`rounded-lg px-2 py-1.5 border ${toneCls} min-w-0`}>
+      <button
+        type="button"
+        onClick={() => setShowExact((v) => !v)}
+        className={`rounded-lg px-2 py-1.5 border ${toneCls} min-w-0 text-left w-full cursor-pointer`}
+        title={tip}
+      >
         <div className="text-[9px] font-bold uppercase tracking-wide opacity-70 leading-none mb-1 truncate">
           {label}
         </div>
         <div className="text-[11px] font-black font-mono truncate leading-tight" title={tip}>
           {value}
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -83,20 +95,20 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
         <div className="grid grid-cols-3 gap-1.5">
           <Card
             label={lang === 'my' ? 'အစလက်ကျန်' : 'Opening'}
-            value={formatLakhs(totals.opening, lang)}
-            tip={formatMMK(totals.opening)}
+            value={displayAmount(totals.opening)}
+            tip={displayTip(totals.opening)}
             tone="neutral"
           />
           <Card
             label={lang === 'my' ? 'လှုပ်ရှားမှု' : 'Movement'}
-            value={(totals.net >= 0 ? '+' : '') + formatLakhs(totals.net, lang)}
-            tip={formatMMK(totals.net)}
+            value={displayAmount(totals.net, true)}
+            tip={displayTip(totals.net)}
             tone={totals.net >= 0 ? 'pos' : 'neg'}
           />
           <Card
             label={lang === 'my' ? 'အဆုံးလက်ကျန်' : 'Closing'}
-            value={formatLakhs(totals.closing, lang)}
-            tip={formatMMK(totals.closing)}
+            value={displayAmount(totals.closing)}
+            tip={displayTip(totals.closing)}
             tone={totals.closing >= 0 ? 'neutral' : 'down'}
           />
         </div>
@@ -106,20 +118,20 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
         <div className="grid grid-cols-3 gap-1.5">
           <Card
             label={`${lang === 'my' ? 'ဝင်ငွေ' : 'Inflow'} · ${incomeCount}`}
-            value={'+' + formatLakhs(totals.inflow, lang)}
-            tip={formatMMK(totals.inflow)}
+            value={displayAmount(totals.inflow, true)}
+            tip={displayTip(totals.inflow)}
             tone="up"
           />
           <Card
             label={`${lang === 'my' ? 'ထွက်ငွေ' : 'Outflow'} · ${expenseCount}`}
-            value={'-' + formatLakhs(totals.outflow, lang)}
-            tip={formatMMK(totals.outflow)}
+            value={showExact ? formatMMK(-totals.outflow) : '-' + formatLakhs(totals.outflow, lang)}
+            tip={displayTip(totals.outflow)}
             tone="down"
           />
           <Card
             label={lang === 'my' ? 'အသားတင်' : 'Net'}
-            value={(totals.net >= 0 ? '+' : '') + formatLakhs(totals.net, lang)}
-            tip={formatMMK(totals.net)}
+            value={displayAmount(totals.net, true)}
+            tip={displayTip(totals.net)}
             tone={totals.net >= 0 ? 'pos' : 'neg'}
           />
         </div>

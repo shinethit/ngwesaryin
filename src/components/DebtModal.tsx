@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { HandCoins, ArrowDownLeft, ArrowUpRight, Phone, Wallet } from 'lucide-react';
 import { Debt, DebtType, Wallet as WalletType } from '../types';
 import { formatCurrency } from '../utils/currency';
+import { formatLakhs } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { getLocalDateString } from '../utils/dateUtils';
 
@@ -200,7 +201,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1 min-h-0 text-xs sm:text-sm overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1 min-h-0 text-base sm:text-sm overscroll-contain touch-pan-y scroll-smooth [webkit-overflow-scrolling:touch]">
           {/* Debt Type Toggle: ရရန်ရှိ vs ပေးရန်ရှိ */}
           <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
             <button
@@ -249,6 +250,17 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                 ? `ဤပမာဏကို ${currencyCode} ဖြင့် မှတ်တမ်းတင်ပါမည်${selectedWallet ? ` (${lang === 'my' ? selectedWallet.name : selectedWallet.nameEn} ၏ ငွေကြေး)` : ''}`
                 : `This amount is recorded in ${currencyCode}${selectedWallet ? ` (currency of ${selectedWallet.nameEn})` : ''}`}
             </p>
+            {/* [v7.5.60 S-41] Live lakh preview — what the typed kyat
+                amount is in lakhs (display-only; input stays full kyat).
+                Shown for MMK only; foreign currencies have no lakh unit. */}
+            {currencyCode === 'MMK' && (() => {
+              const v = parseMyanmarNumber(totalAmount);
+              return v > 0 ? (
+                <p className="text-[11px] font-bold text-emerald-700 mt-1">
+                  ≈ {formatLakhs(v, lang)}
+                </p>
+              ) : null;
+            })()}
 
             {/* Quick Lakhs Converter Helper */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1.5">

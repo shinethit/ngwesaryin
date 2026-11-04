@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { BarChart3, TrendingUp, TrendingDown, Calendar, ArrowRight, Sparkles } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { isTransferTransaction, buildWalletMap, isWalletMatch } from '../utils/walletBalance';
 import { CategoryIcon } from './CategoryIcon';
@@ -63,7 +63,10 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
   onViewDetails,
 }) => {
   const [viewType, setViewType] = useState<'overall' | 'categories'>('overall');
-  const [comparisonPeriod, setComparisonPeriod] = useState<'full' | 'toDate'>('full');
+  // [v7.5.60 A-S04] Default to 'toDate' (day 1 through today) —
+  // comparing a partial current month against a whole previous month
+  // always looked like a saving.
+  const [comparisonPeriod, setComparisonPeriod] = useState<'full' | 'toDate'>('toDate');
 
   // Determine current month & previous month
   const today = useMemo(() => new Date(), []);
@@ -117,6 +120,9 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
     transactions.forEach((tx) => {
       if (isTransferTransaction(tx)) return;
       if (tx.type !== 'expense') return;
+      // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope).
+      const w = walletMap.get(tx.walletId) || wallets.find((wall) => isWalletMatch(wall, tx.walletId));
+      if (w && w.includeInTotals === false) return;
 
       const txDate = tx.date;
       const txMonth = txDate.slice(0, 7);
@@ -218,8 +224,9 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
         <div className="bg-slate-900/95 backdrop-blur-md text-white px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700/80 text-xs space-y-1 z-50">
           <div className="font-bold text-slate-200">{data.periodName}</div>
           <div className="flex items-center gap-1.5 text-sm font-black text-white">
-            <span>{formatMMK(data.spending)}</span>
+            <span>{formatLakhs(data.spending, lang)}</span>
           </div>
+          <div className="text-[10px] text-slate-400">{formatMMK(data.spending)}</div>
           <div className="text-[10px] text-slate-400">
             {comparisonPeriod === 'toDate'
               ? (lang === 'my' ? `ရက်စွဲ ၁ မှ ${currentDay} အထိ` : `Day 1 to ${currentDay}`)
@@ -248,19 +255,19 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
               <span className="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>
               <span>{lang === 'my' ? 'ပြီးခဲ့သည့်လ:' : 'Prev Month:'}</span>
             </span>
-            <span className="font-semibold text-slate-200">{formatMMK(prevVal)}</span>
+            <span className="font-semibold text-slate-200">{formatLakhs(prevVal, lang)}</span>
           </div>
           <div className="flex items-center justify-between text-slate-300">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>
               <span>{lang === 'my' ? 'ယခုလ:' : 'This Month:'}</span>
             </span>
-            <span className="font-semibold text-indigo-300">{formatMMK(thisVal)}</span>
+            <span className="font-semibold text-indigo-300">{formatLakhs(thisVal, lang)}</span>
           </div>
           <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[11px]">
             <span className="text-slate-400">{lang === 'my' ? 'ကွာခြားချက်:' : 'Difference:'}</span>
             <span className={`font-bold ${catDiff > 0 ? 'text-rose-400' : catDiff < 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
-              {catDiff > 0 ? `+${formatMMK(catDiff)}` : catDiff < 0 ? `-${formatMMK(Math.abs(catDiff))}` : '0 MMK'}
+              {catDiff > 0 ? `+${formatLakhs(catDiff, lang)}` : catDiff < 0 ? `-${formatLakhs(Math.abs(catDiff), lang)}` : '0'}
             </span>
           </div>
         </div>
@@ -360,8 +367,8 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
               {lang === 'my' ? 'ပြီးခဲ့သည့်လ' : 'Previous'}
             </span>
           </div>
-          <div className="text-base sm:text-lg font-black text-slate-800 mt-1 font-mono">
-            {formatMMK(prevMonthTotal)}
+          <div className="text-base sm:text-lg font-black text-slate-800 mt-1 font-mono truncate" title={formatMMK(prevMonthTotal)}>
+            {formatLakhs(prevMonthTotal, lang)}
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
             {comparisonPeriod === 'toDate'
@@ -378,8 +385,8 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
               {lang === 'my' ? 'ယခုလ' : 'Current'}
             </span>
           </div>
-          <div className="text-base sm:text-lg font-black text-slate-900 mt-1 font-mono">
-            {formatMMK(thisMonthTotal)}
+          <div className="text-base sm:text-lg font-black text-slate-900 mt-1 font-mono truncate" title={formatMMK(thisMonthTotal)}>
+            {formatLakhs(thisMonthTotal, lang)}
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
             {comparisonPeriod === 'toDate'
@@ -413,10 +420,10 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
             </span>
           </div>
 
-          <div className={`text-base sm:text-lg font-black mt-1 font-mono ${
+          <div className={`text-base sm:text-lg font-black mt-1 font-mono truncate ${
             isSpendingDecreased ? 'text-emerald-700' : isSpendingIncreased ? 'text-rose-700' : 'text-slate-800'
-          }`}>
-            {isSpendingIncreased ? `+${formatMMK(diffAmount)}` : isSpendingDecreased ? `-${formatMMK(Math.abs(diffAmount))}` : '0 MMK'}
+          }`} title={formatMMK(diffAmount)}>
+            {isSpendingIncreased ? `+${formatLakhs(diffAmount, lang)}` : isSpendingDecreased ? `-${formatLakhs(Math.abs(diffAmount), lang)}` : '0'}
           </div>
 
           <div className="text-[11px] mt-0.5">
@@ -466,11 +473,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                       tick={{ fill: '#94A3B8', fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
-                      tickFormatter={(val) => {
-                        if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
-                        if (val >= 1000) return `${Math.round(val / 1000)}k`;
-                        return `${val}`;
-                      }}
+                      tickFormatter={(val) => formatLakhs(val, lang)}
                     />
                     <Tooltip content={<CustomOverallTooltip />} cursor={{ fill: '#F8FAFC' }} />
                     <Bar
@@ -522,16 +525,16 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                       tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
                       axisLine={{ stroke: '#E2E8F0' }}
                       tickLine={false}
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={70}
                     />
                     <YAxis
                       tick={{ fill: '#94A3B8', fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
-                      tickFormatter={(val) => {
-                        if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
-                        if (val >= 1000) return `${Math.round(val / 1000)}k`;
-                        return `${val}`;
-                      }}
+                      tickFormatter={(val) => formatLakhs(val, lang)}
                     />
                     <Tooltip content={<CustomCategoryTooltip />} cursor={{ fill: '#F8FAFC' }} />
                     <Legend
@@ -583,7 +586,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <span className="text-slate-400 font-mono text-[11px] block">
-                            {formatMMK(cat.prevAmount)} → <span className="text-slate-800 font-bold">{formatMMK(cat.thisAmount)}</span>
+                            <span title={formatMMK(cat.prevAmount)}>{formatLakhs(cat.prevAmount, lang)}</span> → <span className="text-slate-800 font-bold" title={formatMMK(cat.thisAmount)}>{formatLakhs(cat.thisAmount, lang)}</span>
                           </span>
                         </div>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
@@ -615,7 +618,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                 {comparisonPeriod === 'toDate' ? `ယခုလ ${currentDay} ရက်အထိ ` : 'ယခုလ '}
                 အသုံးစရိတ်သည် ပြီးခဲ့သည့်လနှင့် နှိုင်းယှဉ်ပါက{' '}
                 <strong className={isSpendingDecreased ? 'text-emerald-700' : isSpendingIncreased ? 'text-rose-700' : 'text-slate-800'}>
-                  {formatMMK(Math.abs(diffAmount))} ({percentChange}%)
+                  {formatLakhs(Math.abs(diffAmount), lang)} ({percentChange}%)
                 </strong>{' '}
                 {isSpendingDecreased
                   ? 'လျော့နည်းပြီး ချွေတာနိုင်ခဲ့ပါသည် 🎉'
@@ -627,7 +630,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
               <span>
                 Spending this month is{' '}
                 <strong className={isSpendingDecreased ? 'text-emerald-700' : isSpendingIncreased ? 'text-rose-700' : 'text-slate-800'}>
-                  {formatMMK(Math.abs(diffAmount))} ({percentChange}%)
+                  {formatLakhs(Math.abs(diffAmount), lang)} ({percentChange}%)
                 </strong>{' '}
                 {isSpendingDecreased
                   ? 'lower than last month (great job!)'

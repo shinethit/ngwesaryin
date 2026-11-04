@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CreditCard } from 'lucide-react';
 import { Debt, Wallet as WalletType } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -33,17 +33,23 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // [v7.5.60 S-41] Same idempotent lakh guard as DebtModal: true once
+  // the field holds kyat (converted, or an edited repayment's stored
+  // total). A manual edit clears it.
+  const [lakhConverted, setLakhConverted] = useState(false);
 
   React.useEffect(() => {
     if (isOpen && debt) {
       if (editingRepayment) {
         setAmount(editingRepayment.amount.toString());
+        setLakhConverted(true);
         setDate(editingRepayment.date ? getLocalDateString(editingRepayment.date) : getLocalDateString());
         setWalletId(editingRepayment.walletId || wallets[0]?.id || 'cash');
         setNote(editingRepayment.note || '');
       } else {
         const rem = Math.max(0, debt.totalAmount - debt.paidAmount);
         setAmount(rem.toString());
+        setLakhConverted(true);
         setDate(getLocalDateString());
         // [v7.5.55 D12] Default to the debt's own wallet so the repayment
         // uses the same currency as the debt.
@@ -57,6 +63,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
 
   if (!isOpen || !debt) return null;
 
+  const isEditing = !!editingRepayment;
   const isReceivable = debt.type === 'receivable';
   // [v7.5.55 D12] The debt's currency: explicit field, else its wallet's
   // currency. All amounts in this modal are in this currency.
@@ -66,6 +73,31 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
   const walletCurrencyMismatch =
     !!selectedWallet?.currency && selectedWallet.currency !== debtCurrency;
   const parsedAmount = parseMyanmarNumber(amount);
+
+  // [v7.5.60 S-41] Lakh helpers — same contract as DebtModal: the
+  // multiply button works once per manual edit and refuses kyat-scale
+  // values (>= 100,000); "+1 သိန်း" adds 1 lakh while the field holds
+  // lakhs, 100,000 kyat once it holds kyat.
+  const handleAmountChange = (v: string) => {
+    setAmount(v);
+    setLakhConverted(false);
+  };
+  const handleMultiplyLakh = () => {
+    const val = parseMyanmarNumber(amount);
+    if (!val || val <= 0) return;
+    if (lakhConverted) return;
+    if (val >= 100000) {
+      setError(lang === 'my' ? 'ဒီပမာဏက ကျပ်နဲ့ ရိုက်ထားပြီးသား ဖြစ်ပါတယ် — သိန်းနဲ့ ထပ်မြှောက်စရာ မလိုပါဘူး' : 'This amount is already in kyat — no need to multiply by 100,000');
+      return;
+    }
+    setError('');
+    setAmount(String(Math.round(val * 100000)));
+    setLakhConverted(true);
+  };
+  const handleAddOneLakh = () => {
+    const val = parseMyanmarNumber(amount) || 0;
+    setAmount(String(lakhConverted ? val + 100000 : val + 1));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +135,11 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
           <div className="flex items-center gap-2 min-w-0">
             <CreditCard className="w-5 h-5 text-emerald-600 shrink-0" />
             <h2 className="font-bold text-lg text-slate-900 min-w-0">
-              {lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း သွင်းခြင်း' : 'Record Debt Payment'}
+              {/* [v7.5.60 N-18] Editing says so — it used to read like a
+                  new entry ("ငွေဆပ်မှတ်တမ်း သွင်းခြင်း"). */}
+              {isEditing
+                ? (lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း ပြင်ဆင်ခြင်း' : 'Edit Repayment Record')
+                : (lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း သွင်းခြင်း' : 'Record Debt Payment')}
             </h2>
           </div>
           <button
@@ -114,7 +150,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 text-xs sm:text-sm">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 text-base sm:text-sm">
           {/* Target Debt Snapshot */}
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
             <div className="flex items-center justify-between">
@@ -155,9 +191,40 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
               autoFocus
               max={maxAllowedAmount}
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => handleAmountChange(e.target.value)}
               className="w-full text-xl font-bold py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
+            {/* [v7.5.60 S-41] Live lakh preview + lakh buttons (DebtModal
+                parity). Preview is MMK-only; the buttons work in the
+                debt's currency units like DebtModal's. */}
+            {debtCurrency === 'MMK' && !isNaN(parsedAmount) && parsedAmount > 0 && (
+              <p className="text-[11px] font-bold text-emerald-700 mt-1">
+                ≈ {formatLakhs(parsedAmount, lang)}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+              <span className="text-[11px] font-semibold text-slate-500">{lang === 'my' ? 'မြန်ဆန် သက်သာ:' : 'Quick:'}</span>
+              <button
+                type="button"
+                onClick={handleMultiplyLakh}
+                disabled={lakhConverted}
+                className={`px-2.5 py-1 border rounded-lg text-xs font-bold transition-all active:scale-95 shadow-2xs ${
+                  lakhConverted
+                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 cursor-pointer'
+                }`}
+                title={lang === 'my' ? 'ရိုက်ထည့်ထားသော ဂဏန်း (သိန်း) အား ၁ သိန်း (x 100,000) ဖြင့် မြှောက်မည် — တစ်ကြိမ်သာ အလုပ်လုပ်ပါသည်' : 'Multiply the typed number (in lakhs) by 100,000 — works once per edit'}
+              >
+                ✨ သိန်း (x100,000)
+              </button>
+              <button
+                type="button"
+                onClick={handleAddOneLakh}
+                className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold cursor-pointer active:scale-95"
+              >
+                +1 သိန်း
+              </button>
+            </div>
             {!isNaN(parsedAmount) && parsedAmount > maxAllowedAmount && (
               <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
                 {lang === 'my'
@@ -175,7 +242,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
             <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
               <button
                 type="button"
-                onClick={() => setAmount(remaining.toString())}
+                onClick={() => { setAmount(remaining.toString()); setLakhConverted(true); }}
                 className="text-emerald-700 hover:underline font-semibold"
               >
                 {lang === 'my' ? 'အကြွေးအကုန်ဆပ်မည် (Pay in full)' : 'Pay full balance'}
@@ -184,7 +251,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
                   hidden for small debts (remaining <= 50000) with no reason given. */}
               <button
                 type="button"
-                onClick={() => setAmount((Math.round(remaining / 2)).toString())}
+                onClick={() => { setAmount((Math.round(remaining / 2)).toString()); setLakhConverted(true); }}
                 className="text-slate-600 hover:underline"
               >
                 {lang === 'my' ? 'တစ်ဝက်ဆပ်မည် (50%)' : 'Pay 50%'}
@@ -270,7 +337,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
                   <span>{lang === 'my' ? 'သိမ်းဆည်းနေပါသည်...' : 'Saving...'}</span>
                 </>
               ) : (
-                <span>{lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း သိမ်းမည်' : 'Save Repayment'}</span>
+                <span>{isEditing ? (lang === 'my' ? 'ပြင်ဆင်ချက် သိမ်းမည်' : 'Save Changes') : (lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း သိမ်းမည်' : 'Save Repayment')}</span>
               )}
             </button>
           </div>

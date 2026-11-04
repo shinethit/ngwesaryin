@@ -1,114 +1,6 @@
 import React from 'react';
-import { TrendingUp, PiggyBank, HandCoins, ReceiptText, Plus, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, PiggyBank, HandCoins, ReceiptText, Plus } from 'lucide-react';
 
-/**
- * Serene, eye-friendly Financial Overview Banner
- * Designed with soothing neutral tones and calm accents to prevent eye strain.
- */
-export const FinancialOverviewBanner: React.FC<{
-  className?: string;
-  lang?: 'my' | 'en';
-  onAddIncome?: () => void;
-  onAddExpense?: () => void;
-  onAddDebt?: () => void;
-}> = ({
-  className = 'w-full',
-  lang = 'my',
-  onAddIncome,
-  onAddExpense,
-  onAddDebt,
-}) => {
-  // [v7.5.55] Hardcoded Myanmar/English names: some phone browsers lack the
-  // Intl 'my-MM' locale and fall back to English.
-  const daysMy = ['တနင်္ဂနွေ', 'တနင်္လာ', 'အင်္ဂါ', 'ဗုဒ္ဓဟူး', 'ကြာသပတေး', 'သောကြာ', 'စနေ'];
-  const daysEnShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthsMy = ['ဇန်နဝါရီ', 'ဖေဖော်ဝါရီ', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်', 'ဇူလိုင်', 'သြဂုတ်', 'စက်တင်ဘာ', 'အောက်တိုဘာ', 'နိုဝင်ဘာ', 'ဒီဇင်ဘာ'];
-  const monthsEnShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const now = new Date();
-  const currentDate = lang === 'my'
-    ? `${daysMy[now.getDay()]}၊ ${now.getDate()} ${monthsMy[now.getMonth()]} ${now.getFullYear()}`
-    : `${daysEnShort[now.getDay()]}, ${monthsEnShort[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
-
-  return (
-    <div
-      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 p-6 sm:p-7 text-white shadow-sm border border-slate-800/80 ${className}`}
-    >
-      {/* Gentle ambient background glows */}
-      <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
-      <div className="absolute left-1/3 -bottom-16 w-56 h-56 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-        {/* Left Welcome and Overview Message */}
-        <div className="space-y-2 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium text-slate-300 border border-white/10">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>{currentDate}</span>
-          </div>
-
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-            {lang === 'my' ? 'ငွေကြေး စီမံခန့်ခွဲမှု အကျဉ်းချုပ်' : 'Financial Dashboard'}
-          </h2>
-
-          <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
-            {lang === 'my'
-              ? 'နေ့စဉ် ဝင်ငွေ၊ ထွက်ငွေနှင့် အကြွေး (ပေးရန်/ရရန်) စာရင်းများကို ရှင်းလင်းအေးချမ်းစွာ ကြည့်ရှုမှတ်တမ်းတင်ပါ'
-              : 'Keep your income, daily expenses, and debt balances accurately monitored with clarity.'}
-          </p>
-        </div>
-
-        {/* Right Quick Action Buttons (ဝင်ငွေ မှတ်မည် ၊ ထွက်ငွေ မှတ်မည် ၊ အကြွေး မှတ်မည်) */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full xl:w-auto shrink-0 mt-3 lg:mt-0">
-          {/* Add Income Button */}
-          <button
-            type="button"
-            onClick={onAddIncome}
-            className="w-full flex flex-col items-center justify-center gap-1.5 px-2 py-3 sm:py-3.5 rounded-2xl text-[11px] min-[380px]:text-xs sm:text-sm font-bold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 transition-all cursor-pointer active:scale-95 shadow-sm h-full min-h-[76px] sm:min-h-[84px] leading-tight select-none border border-emerald-300/50 text-center"
-            title={lang === 'my' ? 'ဝင်ငွေ မှတ်မည်' : 'Add Income'}
-          >
-            <div className="w-6 h-6 rounded-lg bg-emerald-950/15 flex items-center justify-center shrink-0">
-              <ArrowDownLeft className="w-4 h-4 stroke-[2.5] text-emerald-950" />
-            </div>
-            <span className="leading-tight text-center break-words font-extrabold text-emerald-950">
-              {lang === 'my' ? '+ ဝင်ငွေမှတ်မည်' : '+ Add Income'}
-            </span>
-          </button>
-
-          {/* Add Expense Button */}
-          <button
-            type="button"
-            onClick={onAddExpense}
-            className="w-full flex flex-col items-center justify-center gap-1.5 px-2 py-3 sm:py-3.5 rounded-2xl text-[11px] min-[380px]:text-xs sm:text-sm font-bold text-rose-100 bg-rose-900/90 hover:bg-rose-800 transition-all cursor-pointer active:scale-95 shadow-sm h-full min-h-[76px] sm:min-h-[84px] leading-tight select-none border border-rose-700/80 text-center"
-            title={lang === 'my' ? 'ထွက်ငွေ မှတ်မည်' : 'Add Expense'}
-          >
-            <div className="w-6 h-6 rounded-lg bg-rose-950/40 flex items-center justify-center shrink-0">
-              <ArrowUpRight className="w-4 h-4 stroke-[2.5] text-rose-300" />
-            </div>
-            <span className="leading-tight text-center break-words font-extrabold text-rose-100">
-              {lang === 'my' ? '- ထွက်ငွေမှတ်မည်' : '- Add Expense'}
-            </span>
-          </button>
-
-          {/* Add Debt Button */}
-          <button
-            type="button"
-            onClick={onAddDebt}
-            className="w-full flex flex-col items-center justify-center gap-1.5 px-2 py-3 sm:py-3.5 rounded-2xl text-[11px] min-[380px]:text-xs sm:text-sm font-bold text-amber-950 bg-amber-400 hover:bg-amber-300 transition-all cursor-pointer active:scale-95 shadow-sm h-full min-h-[76px] sm:min-h-[84px] leading-tight select-none border border-amber-300/50 text-center"
-            title={lang === 'my' ? 'အကြွေး မှတ်မည်' : 'Add Debt'}
-          >
-            <div className="w-6 h-6 rounded-lg bg-amber-950/15 flex items-center justify-center shrink-0">
-              <HandCoins className="w-4 h-4 stroke-[2.5] text-amber-950" />
-            </div>
-            <span className="leading-tight text-center break-words font-extrabold text-amber-950">
-              {lang === 'my' ? '🤝 အကြွေးမှတ်မည်' : '🤝 Add Debt'}
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Backward-compatibility alias
 /**
  * Clean, eye-friendly financial insight cards
  * Soft, comfortable background with crisp Lucide icons and clean metrics.
@@ -167,7 +59,7 @@ export const FinancialInsightCard: React.FC<{
         <h4 className="font-bold text-xs sm:text-sm text-slate-800 tracking-tight">
           {title}
         </h4>
-        <div className="text-xs font-semibold text-slate-600">
+        <div className="text-xs font-semibold text-slate-600 truncate" title={subtitle}>
           {subtitle}
         </div>
       </div>

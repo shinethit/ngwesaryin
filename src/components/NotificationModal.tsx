@@ -11,7 +11,7 @@ import {
   RecurringTransaction,
   AdminSystemMessage,
 } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 import { getMaintenanceAlerts } from '../utils/vehicleAnalytics';
@@ -21,6 +21,9 @@ export interface NotificationItem {
   type: 'debt' | 'budget' | 'vehicle' | 'recurring' | 'system';
   title: string;
   message: string;
+  // [v7.5.60 G-M5] Exact kyat value, shown as a tooltip on the
+  // message — DISPLAY is lakh, exact kyat is one tap/hover away.
+  exactAmount?: string;
   date?: string;
   severity: 'danger' | 'warning' | 'info';
   actionTab?: string;
@@ -146,9 +149,13 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             id: `notif_debt_${debt.id}_${debt.dueDate}`,
             type: 'debt',
             title,
-            message: `${lang === 'my' ? 'ကျန်ရှိငွေ' : 'Remaining'}: ${formatMMK(
-              remainingAmount
+            // [v7.5.60 G-M5] DISPLAY in lakh (app-wide rule); exact
+            // kyat kept in exactAmount for the tooltip.
+            message: `${lang === 'my' ? 'ကျန်ရှိငွေ' : 'Remaining'}: ${formatLakhs(
+              remainingAmount,
+              lang
             )} | ${lang === 'my' ? 'ရက်စွဲ' : 'Due'}: ${debt.dueDate}`,
+            exactAmount: formatMMK(remainingAmount),
             date: debt.dueDate,
             severity,
             actionTab: 'debts',
@@ -166,8 +173,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   // spending in categories with NO explicit budget (the old code used raw
   // amounts, counted transfers, treated a 20% budget as a 20 MMK limit,
   // and could never trigger the General budget).
-  // NOTE: App does not pass `wallets` to this modal yet, so conversion
-  // falls back to raw amounts until that wiring lands (see report).
+  // NOTE: App passes `wallets` (computedWallets) to this modal, so
+  // amounts convert to MMK per wallet currency.
   const notifWalletMap = buildWalletMap((wallets as any) || []);
   const notifConvertTx = (t: Transaction) => {
     const w = notifWalletMap.get(t.walletId);
@@ -221,9 +228,11 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             lang === 'my'
               ? `🚨 ${categoryName} ဘတ်ဂျက် ၁၀၀% သုံးစွဲမိသွားပါပြီ`
               : `🚨 ${categoryName} budget 100% EXCEEDED`,
-          message: `${lang === 'my' ? 'သုံးပြီး' : 'Spent'}: ${formatMMK(spent)} / ${formatMMK(
-            limit
+          message: `${lang === 'my' ? 'သုံးပြီး' : 'Spent'}: ${formatLakhs(spent, lang)} / ${formatLakhs(
+            limit,
+            lang
           )} (${Math.round(percentage)}%)`,
+          exactAmount: `${formatMMK(spent)} / ${formatMMK(limit)}`,
           severity: 'danger',
           actionTab: 'analytics',
           actionText: lang === 'my' ? 'ဘတ်ဂျက် စစ်ဆေးမည်' : 'Check Budget',
@@ -237,9 +246,11 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             lang === 'my'
               ? `⚠️ ${categoryName} ဘတ်ဂျက် ၈၀% ကျော်လွန်နေပါပြီ`
               : `⚠️ ${categoryName} budget reached 80%`,
-          message: `${lang === 'my' ? 'သုံးပြီး' : 'Spent'}: ${formatMMK(spent)} / ${formatMMK(
-            limit
+          message: `${lang === 'my' ? 'သုံးပြီး' : 'Spent'}: ${formatLakhs(spent, lang)} / ${formatLakhs(
+            limit,
+            lang
           )} (${Math.round(percentage)}%)`,
+          exactAmount: `${formatMMK(spent)} / ${formatMMK(limit)}`,
           severity: 'warning',
           actionTab: 'analytics',
           actionText: lang === 'my' ? 'ဘတ်ဂျက် စစ်ဆေးမည်' : 'Check Budget',
@@ -301,7 +312,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           lang === 'my'
             ? `🔄 ဒီနေ့ ပုံမှန် ${rec.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} စာရင်း ထည့်ရန်နေ့ပါ`
             : `🔄 Recurring ${rec.type} due today: ${rec.title}`,
-        message: `${rec.title}: ${formatMMK(rec.amount)}`,
+        message: `${rec.title}: ${formatLakhs(rec.amount, lang)}`,
+        exactAmount: formatMMK(rec.amount),
         severity: 'info',
         actionTab: 'transactions',
         actionText: lang === 'my' ? 'စာရင်းထည့်မည်' : 'View Transactions',
@@ -332,6 +344,13 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     if (filterTab === 'system') return n.type === 'system' || n.type === 'recurring';
     return n.type === filterTab;
   });
+
+  // [v7.5.60 G-S4] App passes no recurringTransactions / systemMessages
+  // yet, so the "System" tab would always be empty (dead UI). Hide it
+  // until that wiring lands instead of showing an empty tab.
+  const hasSystemNotifications = generatedNotifications.some(
+    (n) => n.type === 'system' || n.type === 'recurring'
+  );
 
   // Count unread
   const unreadCount = generatedNotifications.filter((n) => !readNotificationIds.includes(n.id)).length;
@@ -520,17 +539,19 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               🚗 {lang === 'my' ? 'ယာဉ်စနစ်' : 'Vehicles'}
             </button>
 
-            <button
-              type="button"
-              onClick={() => setFilterTab('system')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                filterTab === 'system'
-                  ? 'bg-purple-600 text-white shadow-xs'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              📢 {lang === 'my' ? 'စနစ်အသိပေးချက်' : 'System'}
-            </button>
+            {hasSystemNotifications && (
+              <button
+                type="button"
+                onClick={() => setFilterTab('system')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  filterTab === 'system'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                📢 {lang === 'my' ? 'စနစ်အသိပေးချက်' : 'System'}
+              </button>
+            )}
           </div>
 
           {unreadCount > 0 && (
@@ -625,7 +646,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                           <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 mt-0.5 leading-relaxed break-words">
+                      <p
+                        className="text-xs text-slate-600 mt-0.5 leading-relaxed break-words"
+                        title={
+                          notif.exactAmount
+                            ? (lang === 'my' ? 'အတိအကျ: ' : 'Exact: ') + notif.exactAmount
+                            : undefined
+                        }
+                      >
                         {notif.message}
                       </p>
                     </div>
@@ -650,7 +678,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     <button
                       type="button"
                       onClick={() => onMarkAsRead(notif.id)}
-                      className={`p-1.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
+                      className={`p-2.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
                         isRead
                           ? 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200'
                           : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'

@@ -99,11 +99,24 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
         <button
           type="button"
           onClick={onOpenAddModal}
-          className="px-3.5 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer self-start sm:self-auto"
+          className="px-3.5 py-2.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer self-start sm:self-auto"
         >
           {lang === 'my' ? '+ လေထိုး/လေချိန် မှတ်မည်' : '+ Log Tire Check'}
         </button>
       </div>
+
+      {/* [v7.5.60 D-N5] No log yet — invite the first check instead of
+          bare "--" everywhere, and say it has never been checked. */}
+      {!latestLog && (
+        <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <span>
+            {lang === 'my'
+              ? 'တာယာလေပေါင်ချိန် မစစ်ဆေးရသေးပါ — မှတ်တမ်း မရှိသေးပါ။ အထက်က "+ လေထိုး/လေချိန် မှတ်မည်" ကို နှိပ်၍ ပထမဆုံး စစ်ဆေးချက် ထည့်ပါ။'
+              : 'Never checked yet — no tire pressure log exists. Tap "+ Log Tire Check" above to add your first check.'}
+          </span>
+        </div>
+      )}
 
       {/* [v7.5.55 C24] PSI status legend — the labels were computed but
           never shown anywhere. */}

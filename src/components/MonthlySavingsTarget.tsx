@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db, safeSetDoc } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { Target, TrendingUp, AlertTriangle, CheckCircle2, Edit3, Calendar, X, Power, Lock } from 'lucide-react';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { PlanType } from '../types';
 
 interface MonthlySavingsTargetProps {
@@ -19,6 +23,9 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
   plan,
   onOpenUpgrade,
 }) => {
+  // [v7.5.60 S10] Called before the guest early-return below so the hook
+  // order stays stable (the guest branch returns before the other hooks).
+  const { user } = useAuth();
   // Lock feature for Guest Mode
   if (plan === 'guest') {
     return (
@@ -64,9 +71,18 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
     return saved === 'true';
   });
 
+  // [v7.5.60 S10] Cloud sync state for the target + enabled flag
+  // (user-doc fields savingsTargetDefault / savingsTargetEnabled).
+  // 'local' = guest / no account (this device only).
+  const [cloudState, setCloudState] = useState<'local' | 'loading' | 'synced' | 'error'>('local');
+  const cloudReadyRef = useRef(false);
+
   const handleToggleEnabled = (enabled: boolean) => {
     setIsEnabled(enabled);
     safeSetItem('ngwe_savings_target_enabled', enabled ? 'true' : 'false');
+    if (user && cloudReadyRef.current) {
+      safeSetDoc(doc(db, 'users', user.uid), { savingsTargetEnabled: enabled }, { merge: true }).catch(() => {});
+    }
   };
 
   // State for savings target amount (supports 0!)
@@ -108,16 +124,75 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
     setTargetAmount(sanitized);
     safeSetItem(storageKey, sanitized.toString());
     safeSetItem('ngwe_savings_target_default', sanitized.toString());
+    // [v7.5.60 S10] Push the default to the user doc (the per-month key
+    // stays local; the default is what the next device falls back to).
+    if (user && cloudReadyRef.current) {
+      safeSetDoc(doc(db, 'users', user.uid), { savingsTargetDefault: sanitized }, { merge: true }).catch(() => {});
+    }
     setIsEditing(false);
   };
 
+  // [v7.5.60 S8] A % preset only FILLS the input — saving happens when
+  // the user taps "သိမ်းဆည်းမည်" (was: saved + closed the modal at once).
   const handleApplyPercentage = (pct: number) => {
     if (income > 0) {
       const calc = Math.round((income * (pct / 100)) / 10000) * 10000;
       setInputVal(calc.toString());
-      handleSaveTarget(calc);
     }
   };
+
+  // [v7.5.60 S10] Load the cloud values on mount; migrate the local
+  // values up when the cloud fields are empty.
+  useEffect(() => {
+    if (!user) {
+      cloudReadyRef.current = true;
+      setCloudState('local');
+      return;
+    }
+    let cancelled = false;
+    setCloudState('loading');
+    getDoc(doc(db, 'users', user.uid))
+      .then((snap) => {
+        if (cancelled) return;
+        const data = snap.exists() ? (snap.data() as { savingsTargetDefault?: unknown; savingsTargetEnabled?: unknown }) : {};
+        const cloudDefault = data.savingsTargetDefault;
+        const cloudEnabled = data.savingsTargetEnabled;
+        if (typeof cloudDefault === 'number' && Number.isFinite(cloudDefault) && cloudDefault >= 0) {
+          // A month-specific local value wins; otherwise the cloud default
+          // is this month's target on a new device.
+          if (safeGetItem(storageKey) === null) {
+            setTargetAmount(cloudDefault);
+            safeSetItem(storageKey, String(cloudDefault));
+          }
+          safeSetItem('ngwe_savings_target_default', String(cloudDefault));
+        } else {
+          const savedDefault = safeGetItem('ngwe_savings_target_default');
+          if (savedDefault !== null && !Number.isNaN(Number(savedDefault))) {
+            safeSetDoc(doc(db, 'users', user.uid), { savingsTargetDefault: Number(savedDefault) }, { merge: true }).catch(() => {});
+          }
+        }
+        if (typeof cloudEnabled === 'boolean') {
+          setIsEnabled(cloudEnabled);
+          safeSetItem('ngwe_savings_target_enabled', cloudEnabled ? 'true' : 'false');
+        } else {
+          const savedEnabled = safeGetItem('ngwe_savings_target_enabled');
+          if (savedEnabled !== null) {
+            safeSetDoc(doc(db, 'users', user.uid), { savingsTargetEnabled: savedEnabled === 'true' }, { merge: true }).catch(() => {});
+          }
+        }
+        cloudReadyRef.current = true;
+        setCloudState('synced');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        cloudReadyRef.current = true;
+        setCloudState('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Compact Minimal Bar when Disabled
   if (!isEnabled) {
@@ -147,7 +222,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
               setIsEditing(true);
             }
           }}
-          className="shrink-0 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+          className="shrink-0 min-h-11 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
         >
           <Target className="w-3.5 h-3.5" />
           <span>{lang === 'my' ? 'ငွေစုပန်းတိုင် ဖွင့်မည်' : 'Enable Savings Goal'}</span>
@@ -204,7 +279,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
                 setInputVal(targetAmount.toString());
                 setIsEditing(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-extrabold text-purple-950 bg-gradient-to-r from-amber-200 to-amber-300 hover:from-amber-300 hover:to-amber-400 shadow-[3px_4px_10px_rgba(245,158,11,0.3),inset_1px_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 cursor-pointer"
+              className="min-h-11 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-extrabold text-purple-950 bg-gradient-to-r from-amber-200 to-amber-300 hover:from-amber-300 hover:to-amber-400 shadow-[3px_4px_10px_rgba(245,158,11,0.3),inset_1px_1px_2px_rgba(255,255,255,0.8)] transition-all active:scale-95 cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5 text-purple-950" />
               <span>{lang === 'my' ? 'ပန်းတိုင် ပြင်မည်' : 'Set Target'}</span>
@@ -213,7 +288,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
             <button
               type="button"
               onClick={() => handleToggleEnabled(false)}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-full text-xs font-semibold text-purple-200 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer"
+              className="min-h-11 inline-flex items-center gap-1 px-3 py-2 rounded-full text-xs font-semibold text-purple-200 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer"
               title={lang === 'my' ? 'ငွေစုပန်းတိုင် ကတ်ပြားကို ပိတ်ထားမည်' : 'Disable and hide savings target card'}
             >
               <Power className="w-3.5 h-3.5" />
@@ -229,11 +304,11 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
             <span className="text-[11px] font-bold text-purple-200 block mb-1">
               {lang === 'my' ? 'သတ်မှတ်ပန်းတိုင် (Target)' : 'Target Amount'}
             </span>
-            <div className="text-base sm:text-lg font-black text-white tracking-tight">
+            <div className="text-base sm:text-lg font-black text-white tracking-tight" title={targetAmount > 0 ? formatMMK(targetAmount) : undefined}>
               {targetAmount > 0 ? (
-                formatMMK(targetAmount)
+                formatLakhs(targetAmount, lang)
               ) : (
-                <span className="text-purple-300 text-sm font-semibold">
+                <span className="text-purple-200 text-sm font-semibold">
                   {lang === 'my' ? '၀ ကျပ် (သတ်မှတ်မထားပါ)' : '0 MMK (None)'}
                 </span>
               )}
@@ -249,8 +324,9 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
               className={`text-base sm:text-lg font-black tracking-tight ${
                 isDeficit ? 'text-rose-300' : 'text-teal-300'
               }`}
+              title={formatMMK(actualSavings)}
             >
-              {formatMMK(actualSavings)}
+              {formatLakhs(actualSavings, lang)}
             </div>
           </div>
 
@@ -263,12 +339,12 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
                 ? lang === 'my' ? 'ပန်းတိုင်ထက် ပိုလျှံငွေ' : 'Surplus Saved'
                 : lang === 'my' ? 'ပန်းတိုင်ရောက်ရန် လိုငွေ' : 'Needed to Reach Goal'}
             </span>
-            <div className="text-base sm:text-lg font-black text-white tracking-tight">
+            <div className="text-base sm:text-lg font-black text-white tracking-tight" title={targetAmount === 0 ? undefined : formatMMK(isTargetAchieved ? actualSavings - targetAmount : remainingToGoal)}>
               {targetAmount === 0
                 ? '-'
                 : isTargetAchieved
-                ? `+${formatMMK(actualSavings - targetAmount)}`
-                : formatMMK(remainingToGoal)}
+                ? `+${formatLakhs(actualSavings - targetAmount, lang)}`
+                : formatLakhs(remainingToGoal, lang)}
             </div>
           </div>
 
@@ -293,7 +369,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               {targetAmount === 0 ? (
-                <span className="inline-flex items-center gap-1 text-purple-300 font-medium">
+                <span className="inline-flex items-center gap-1 text-purple-200 font-medium">
                   {lang === 'my' ? 'ပန်းတိုင် ပမာဏ သတ်မှတ်ရန် အပေါ်ရှိ "ပန်းတိုင် ပြင်မည်" ကို နှိပ်ပါ' : 'Click "Set Target" above to configure your monthly savings goal'}
                 </span>
               ) : isTargetAchieved ? (
@@ -317,13 +393,15 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
             <div className="font-bold text-sm tracking-tight text-white">
               {targetAmount > 0 ? (
                 <>
-                  {progressPercent}%{' '}
-                  <span className="text-xs font-normal text-slate-400">
-                    ({formatMMK(Math.max(0, actualSavings))} / {formatMMK(targetAmount)})
+                  {/* [v7.5.60 N6] Shown % is capped at 100% — the surplus
+                      itself is shown separately in the tile above. */}
+                  {clampedProgress}%{' '}
+                  <span className="text-xs font-normal text-purple-200" title={`${formatMMK(Math.max(0, actualSavings))} / ${formatMMK(targetAmount)}`}>
+                    ({formatLakhs(Math.max(0, actualSavings), lang)} / {formatLakhs(targetAmount, lang)})
                   </span>
                 </>
               ) : (
-                <span className="text-xs text-purple-300">0%</span>
+                <span className="text-xs text-purple-200">0%</span>
               )}
             </div>
           </div>
@@ -350,13 +428,24 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
           </div>
 
           {/* Progress Milestones labels */}
-          <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono pt-0.5 px-0.5">
+          <div className="flex justify-between items-center text-[10px] text-purple-200 font-mono pt-0.5 px-0.5">
             <span>0%</span>
             <span>25%</span>
             <span>50%</span>
             <span>75%</span>
             <span className={isTargetAchieved ? 'text-emerald-400 font-bold' : ''}>100% 🎯</span>
           </div>
+        </div>
+
+        {/* [v7.5.60 S10] Where this goal lives. */}
+        <div className="text-[10px] font-semibold text-purple-200/80 pt-0.5">
+          {cloudState === 'synced'
+            ? (lang === 'my' ? '☁️ Cloud Sync ပြုလုပ် — စက်တိုင်း တူညီမည်' : '☁️ Cloud synced — same on every device')
+            : cloudState === 'loading'
+            ? (lang === 'my' ? '☁️ Cloud နှင့် ချိတ်ဆက်နေသည်...' : '☁️ Syncing with cloud...')
+            : cloudState === 'error'
+            ? (lang === 'my' ? '⚠️ Cloud နှင့် ချိတ်ဆက်၍ မရပါ — ဒီစက်မှာသာ သက်ရောက်သည်' : '⚠️ Cloud unreachable — applies on this device only')
+            : (lang === 'my' ? '📱 ဒီစက်မှာသာ သက်ရောက်သည်' : '📱 Applies on this device only')}
         </div>
 
         {/* Daily Pacing & Smart Financial Advice */}
@@ -377,12 +466,12 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
                   {lang === 'my' ? (
                     <>
                       ပန်းတိုင်ပြည့်ရန် တစ်ရက်ပျမ်းမျှ{' '}
-                      <strong className="text-emerald-400 font-bold">{formatMMK(dailyNeeded)}</strong> စုဆောင်းသင့်ပါသည်
+                      <strong className="text-emerald-400 font-bold" title={formatMMK(dailyNeeded)}>{formatLakhs(dailyNeeded, lang)}</strong> စုဆောင်းသင့်ပါသည်
                     </>
                   ) : (
                     <>
                       Target daily pace:{' '}
-                      <strong className="text-emerald-400 font-bold">{formatMMK(dailyNeeded)}</strong> / day
+                      <strong className="text-emerald-400 font-bold" title={formatMMK(dailyNeeded)}>{formatLakhs(dailyNeeded, lang)}</strong> / day
                     </>
                   )}
                 </span>
@@ -411,7 +500,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
               </div>
               <button
                 onClick={() => setIsEditing(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                className="min-w-11 min-h-11 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -430,18 +519,24 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
               </label>
               <div className="relative">
                 <input
-                  type="number"
-                  min="0"
-                  step="10000"
+                  type="text"
+                  inputMode="decimal"
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-bold tracking-wide focus:outline-none focus:border-emerald-500 text-lg"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-bold tracking-wide focus:outline-none focus:border-emerald-500 text-base"
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
                   MMK
                 </span>
               </div>
+              {/* [v7.5.60] Live lakh preview (display-only helper — the
+                  input itself stays full kyat numbers). */}
+              {!Number.isNaN(parseMyanmarNumber(inputVal)) && parseMyanmarNumber(inputVal) > 0 && (
+                <p className="text-[11px] font-semibold text-emerald-400">
+                  ≈ {formatLakhs(parseMyanmarNumber(inputVal), lang)}
+                </p>
+              )}
             </div>
 
             {/* Quick Presets */}
@@ -453,7 +548,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
                 <button
                   type="button"
                   onClick={() => setInputVal('0')}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
+                  className={`min-h-11 py-2 px-2 rounded-lg text-xs font-semibold border transition-all ${
                     inputVal === '0'
                       ? 'bg-rose-500/20 border-rose-500 text-rose-300'
                       : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -466,13 +561,14 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
                     key={amt}
                     type="button"
                     onClick={() => setInputVal(amt.toString())}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
-                      Number(inputVal) === amt
+                    className={`min-h-11 py-2 px-2 rounded-lg text-xs font-semibold border transition-all ${
+                      parseMyanmarNumber(inputVal) === amt
                         ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
                         : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
                     }`}
+                    title={formatMMK(amt)}
                   >
-                    {formatMMK(amt)}
+                    {formatLakhs(amt, lang)}
                   </button>
                 ))}
               </div>
@@ -485,7 +581,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
                       key={pct}
                       type="button"
                       onClick={() => handleApplyPercentage(pct)}
-                      className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-300"
+                      className="min-h-11 px-3 py-2 rounded-md text-xs font-medium bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-300"
                     >
                       {pct}%
                     </button>
@@ -499,14 +595,14 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 border border-slate-700 transition-colors cursor-pointer"
+                className="min-h-11 px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 border border-slate-700 transition-colors cursor-pointer"
               >
                 {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
               </button>
               <button
                 type="button"
-                onClick={() => handleSaveTarget(inputVal === '' ? 0 : Number(inputVal))}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
+                onClick={() => handleSaveTarget(parseMyanmarNumber(inputVal))}
+                className="min-h-11 px-4 py-2 rounded-xl text-xs font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
               >
                 {lang === 'my' ? 'သိမ်းဆည်းမည်' : 'Save Target'}
               </button>

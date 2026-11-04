@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider, GoogleAuthProvider } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import {
   doc,
   getDoc,
@@ -50,6 +50,8 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   signupWithEmail: (email: string, pass: string, displayName: string) => Promise<void>;
+  // [v7.5.60 G-M1] Forgot password — sends a reset email (Firebase).
+  resetPassword: (email: string) => Promise<void>;
   continueAsGuest: () => void;
   logout: () => Promise<void>;
   refreshUserProfile: () => Promise<void>;
@@ -923,6 +925,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw error;
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // [v7.5.60 G-M1] Forgot password — sends a Firebase reset email to
+  // the address. Throws the Firebase error so the caller can map it
+  // to a friendly message (authErrorMapper).
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (error: any) {
+      console.error('Password reset failed:', error);
+      throw error;
     }
   };
 
@@ -1900,6 +1914,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loginWithGoogle,
         loginWithEmail,
         signupWithEmail,
+        resetPassword,
         continueAsGuest,
         logout,
         refreshUserProfile,

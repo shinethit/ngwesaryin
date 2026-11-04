@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, X, ArrowUpRight, ArrowDownRight, Check, Wallet as WalletIcon, Calculator } from 'lucide-react';
 import { Wallet, Transaction } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { isWalletMatch } from '../utils/walletBalance';
 
 interface ReconcileBalanceModalProps {
@@ -34,6 +35,10 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
   const [actualBalanceInput, setActualBalanceInput] = useState<string>('');
   const [recordTx, setRecordTx] = useState<boolean>(false);
   const [note, setNote] = useState<string>('');
+  // [v7.5.60 M-11] One-shot lakh guard (same pattern as DebtModal):
+  // the "သိန်း (x100,000)" button multiplies once per edit, never twice.
+  const [lakhConverted, setLakhConverted] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (initialWalletId && wallets.some((w) => w.id === initialWalletId)) {
@@ -59,6 +64,8 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
   useEffect(() => {
     if (currentWallet && isOpen) {
       setActualBalanceInput(currentWallet.balance.toString());
+      setLakhConverted(false);
+      setError('');
       setNote(lang === 'my' ? 'လက်ကျန်ငွေ စာရင်းညှိခြင်း' : 'Balance reconciliation');
     }
   }, [currentWallet?.id, isOpen, lang]);
@@ -66,11 +73,34 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
   if (!isOpen || !currentWallet) return null;
 
   const currentBalance = currentWallet.balance || 0;
-  const actualBalance = parseFloat(actualBalanceInput) || 0;
+  // [v7.5.60 M-11] parseMyanmarNumber accepts Myanmar digits (၅၀၀၀၀) —
+  // the old parseFloat turned them into NaN → 0.
+  const actualBalance = parseMyanmarNumber(actualBalanceInput) || 0;
   const difference = actualBalance - currentBalance;
   const isSurplus = difference > 0;
   const isDeficit = difference < 0;
   const isExact = difference === 0;
+
+  const handleAmountChange = (v: string) => {
+    setActualBalanceInput(v);
+    setLakhConverted(false);
+    setError('');
+  };
+
+  // [v7.5.60 M-11] Idempotent lakh multiply (DebtModal pattern): a second
+  // tap does nothing, and a value already at kyat scale (>= 100,000) is
+  // refused with a message instead of exploding to billions.
+  const handleMultiplyLakh = () => {
+    const val = parseMyanmarNumber(actualBalanceInput);
+    if (!val || val <= 0) return;
+    if (lakhConverted) return;
+    if (val >= 100000) {
+      setError(lang === 'my' ? 'ဒီပမာဏက ကျပ်နဲ့ ရိုက်ထားပြီးသား ဖြစ်ပါတယ် — သိန်းနဲ့ ထပ်မြှောက်စရာ မလိုပါဘူး' : 'This amount is already in kyat — no need to multiply by 100,000');
+      return;
+    }
+    setActualBalanceInput(String(Math.round(val * 100000)));
+    setLakhConverted(true);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +163,8 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                     onClick={() => {
                       setSelectedWalletId(w.id);
                       setActualBalanceInput(w.balance.toString());
+                      setLakhConverted(false);
+                      setError('');
                     }}
                     className={`p-2.5 rounded-xl text-left border transition-all flex flex-col justify-between min-w-0 cursor-pointer active:scale-95 ${
                       isSelected
@@ -179,7 +211,7 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                 </label>
                 <button
                   type="button"
-                  onClick={() => setActualBalanceInput(calculatedBalanceFromTxs.toString())}
+                  onClick={() => { setActualBalanceInput(calculatedBalanceFromTxs.toString()); setLakhConverted(false); setError(''); }}
                   className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors min-w-0"
                   title={lang === 'my' ? 'မှတ်တမ်းများအရ တွက်ချက်ထားသော လက်ကျန်ငွေဖြင့် အစားထိုးထည့်မည်' : 'Autofill calculated sum of transactions'}
                 >
@@ -191,11 +223,11 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
               </div>
               <div className="relative">
                 <input
-                  type="number"
-                  step="any"
+                  type="text"
+                  inputMode="decimal"
                   required
                   value={actualBalanceInput}
-                  onChange={(e) => setActualBalanceInput(e.target.value)}
+                  onChange={(e) => handleAmountChange(e.target.value)}
                   placeholder="0"
                   className="w-full pl-4 pr-16 py-3 text-lg font-bold font-mono text-slate-900 bg-white border-2 border-indigo-300 focus:border-indigo-600 focus:ring-3 focus:ring-indigo-100 rounded-xl outline-none transition-all"
                 />
@@ -208,12 +240,10 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
               <div className="flex items-center gap-1.5 flex-wrap pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    const num = parseFloat(actualBalanceInput) || 0;
-                    setActualBalanceInput(String(Math.round(num * 100000)));
-                  }}
-                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all active:scale-95 cursor-pointer shadow-2xs"
-                  title={lang === 'my' ? 'ရိုက်ထည့်ထားသော ဂဏန်းအား ၁ သိန်း (x 100,000) ဖြင့် မြှောက်မည်' : 'Multiply by 1 Lakh (x100,000)'}
+                  onClick={handleMultiplyLakh}
+                  disabled={lakhConverted}
+                  className={`px-2.5 py-1 text-xs font-bold border rounded-lg transition-all active:scale-95 shadow-2xs ${lakhConverted ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 cursor-pointer'}`}
+                  title={lang === 'my' ? 'ရိုက်ထည့်ထားသော ဂဏန်းအား ၁ သိန်း (x 100,000) ဖြင့် မြှောက်မည် — တစ်ကြိမ်သာ အလုပ်လုပ်ပါသည်' : 'Multiply by 1 Lakh (x100,000) — works once per edit'}
                 >
                   ✨ {lang === 'my' ? 'သိန်း (x100,000)' : 'Lakhs (x100k)'}
                 </button>
@@ -366,11 +396,18 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder={lang === 'my' ? 'ဥပမာ - မေ့ကျန်ခဲ့သော ကော်ဖီဖိုး ညှိခြင်း' : 'e.g. Cash count reconcile'}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-indigo-200 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                    className="w-full px-3 py-2 text-base rounded-xl bg-white border border-indigo-200 focus:border-indigo-500 focus:outline-none shadow-2xs"
                   />
                 </div>
               )}
             </div>
+          )}
+
+          {/* [v7.5.60 M-11] Lakh-button refusal message (already-kyat value). */}
+          {error && (
+            <p className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+              ⚠️ {error}
+            </p>
           )}
 
           {/* Action Buttons */}

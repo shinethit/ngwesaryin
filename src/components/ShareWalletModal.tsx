@@ -50,6 +50,9 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
   const [pendingInvite, setPendingInvite] = useState<string | null>(null);
   // [v7.5.56] Emails unshared during this modal session (for re-add UX).
   const [unsharedEmails, setUnsharedEmails] = useState<string[]>([]);
+  // [v7.5.60 S-46] Email awaiting unshare confirmation — one stray tap
+  // used to revoke access immediately, with no confirm and no undo.
+  const [pendingUnshareEmail, setPendingUnshareEmail] = useState<string | null>(null);
   // [v7.5.56] Email re-invited after being unshared — its previous
   // permissions were removed, so the card auto-expands with a note.
   const [reAddedEmail, setReAddedEmail] = useState<string | null>(null);
@@ -58,6 +61,7 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
   useEffect(() => {
     if (isOpen && wallet) {
       setPendingInvite(null);
+      setPendingUnshareEmail(null);
       setErrorMsg('');
       setSuccessMsg('');
       setReAddedEmail(null);
@@ -185,6 +189,7 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
   // permission checkboxes with a "previous permissions removed" note.
   const handleUnshare = (email: string) => {
     const clean = email.trim().toLowerCase();
+    setPendingUnshareEmail(null);
     setUnsharedEmails((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
     onUnshareWallet(wallet.id, email);
   };
@@ -218,7 +223,7 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/80 transition-colors cursor-pointer shrink-0"
+            className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/80 transition-colors cursor-pointer shrink-0 flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
@@ -440,14 +445,42 @@ export const ShareWalletModal: React.FC<ShareWalletModalProps> = ({
 
                           <button
                             type="button"
-                            onClick={() => handleUnshare(email)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            onClick={() => setPendingUnshareEmail(email)}
+                            className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                             title={lang === 'my' ? 'မျှဝေမှု ဖယ်ရှားမည်' : 'Remove sharing'}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
+
+                      {/* [v7.5.60 S-46] Unshare confirmation — the trash tap
+                          only arms this; access is revoked on confirm. */}
+                      {pendingUnshareEmail === email && (
+                        <div className="p-3 border-t border-rose-200 bg-rose-50 space-y-2">
+                          <p className="text-xs font-semibold text-rose-900 leading-relaxed">
+                            {lang === 'my'
+                              ? `“${email}” ရဲ့ မျှဝေမှုကို ဖြုတ်မလား? သူ့ရဲ့ ခွင့်ပြုချက်တွေ ပျက်သွားပြီး ဤ Wallet ကို မြင်ရ/သုံးရ တော့မည် မဟုတ်ပါ။`
+                              : `Remove sharing for “${email}”? Their permissions will be revoked and they will no longer see or use this wallet.`}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleUnshare(email)}
+                              className="px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 cursor-pointer"
+                            >
+                              {lang === 'my' ? 'မျှဝေမှု ဖြုတ်မည်' : 'Remove sharing'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingUnshareEmail(null)}
+                              className="px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                            >
+                              {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Permissions Configuration Panel */}
                       {isExpanded && (

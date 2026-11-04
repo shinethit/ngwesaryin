@@ -1,7 +1,7 @@
 import React from 'react';
 import { PieChart } from 'lucide-react';
 import { Budget, Category, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
@@ -106,6 +106,14 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
   const overallNoIncomeBase = totalBudget === 0 && totalActual > 0;
   const overallIsOver = totalActual > totalBudget;
 
+  // [v7.5.60 N7] Month name, not "2026-11" — every other card shows a
+  // month name. Hardcoded Myanmar names (some phones lack 'my-MM').
+  const monthsMy = ['ဇန်နဝါရီ', 'ဖေဖော်ဝါရီ', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်', 'ဇူလိုင်', 'သြဂုတ်', 'စက်တင်ဘာ', 'အောက်တိုဘာ', 'နိုဝင်ဘာ', 'ဒီဇင်ဘာ'];
+  const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const currentMonthLabel = lang === 'my'
+    ? `${monthsMy[now.getMonth()]} ${currentYear}`
+    : `${monthsEn[now.getMonth()]} ${currentYear}`;
+
   if (budgets.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
@@ -115,8 +123,17 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
             <span>{lang === 'my' ? 'ယခုလ ဘတ်ဂျက် နှင့် သုံးစွဲမှု' : 'Current Month Budget vs Actual'}</span>
           </div>
         </div>
-        <div className="text-center py-6 text-slate-400 text-xs space-y-1">
+        <div className="text-center py-6 text-slate-400 text-xs space-y-3">
           <p>{lang === 'my' ? 'ယခုလအတွက် သတ်မှတ်ထားသော ဘတ်ဂျက် မရှိသေးပါ။' : 'No budget configured for this month.'}</p>
+          {/* [v7.5.60 S11] Point at the budget editor below (the Budget
+              tab's own section) instead of leaving a dead end. */}
+          <button
+            type="button"
+            onClick={() => document.getElementById('subtab-budgets')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="min-h-11 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer"
+          >
+            {lang === 'my' ? '💰 ဘတ်ဂျက် သတ်မှတ်မည်' : '💰 Set a Budget'}
+          </button>
         </div>
       </div>
     );
@@ -133,7 +150,7 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
           <div>
             <span>{lang === 'my' ? 'ယခုလ ဘတ်ဂျက် vs အမှန်တကယ်သုံးစွဲမှု' : 'Monthly Budget vs Actual'}</span>
             <div className="text-[10px] text-slate-400 font-normal">
-              {currentYearMonth} • {budgets.length} {lang === 'my' ? 'ခု သတ်မှတ်ထားသည်' : 'categories budgeted'}
+              {currentMonthLabel} • {budgets.length} {lang === 'my' ? 'ခု သတ်မှတ်ထားသည်' : 'categories budgeted'}
             </div>
           </div>
         </div>
@@ -157,8 +174,8 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
       <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100">
         <div className="flex items-center justify-between text-xs font-bold text-slate-700">
           <span>{lang === 'my' ? 'စုစုပေါင်း ဘတ်ဂျက် အသုံးပြုမှု' : 'Total Budget Usage'}</span>
-          <span className="font-mono">
-            {formatMMK(totalActual)} / {formatMMK(totalBudget)}
+          <span className="font-mono" title={`${formatMMK(totalActual)} / ${formatMMK(totalBudget)}`}>
+            {formatLakhs(totalActual, lang)} / {formatLakhs(totalBudget, lang)}
           </span>
         </div>
         <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
@@ -202,11 +219,11 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
                   )}
                 </div>
 
-                <div className="text-right font-mono text-[11px] shrink-0 font-medium">
+                <div className="text-right font-mono text-[11px] shrink-0 font-medium" title={`${formatMMK(actual)} / ${formatMMK(budgeted)}`}>
                   <span className={isOver ? 'text-rose-600 font-bold' : 'text-slate-800'}>
-                    {formatMMK(actual)}
+                    {formatLakhs(actual, lang)}
                   </span>
-                  <span className="text-slate-400"> / {formatMMK(budgeted)}</span>
+                  <span className="text-slate-400"> / {formatLakhs(budgeted, lang)}</span>
                   <span className={`ml-1.5 font-bold ${isOver ? 'text-rose-600' : 'text-slate-500'}`}>
                     ({percent}%)
                   </span>

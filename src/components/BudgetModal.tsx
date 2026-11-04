@@ -50,6 +50,11 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 
   const isGeneralUsed = usedCategoryIds.has(UNBUDGETED_CATEGORY_ID);
 
+  // [v7.5.60 N-19] Nothing left to budget: every expense category AND
+  // General already have budgets. Saving again would silently overwrite
+  // the existing General budget — show it and block the save instead.
+  const noCategoryLeft = !editingBudget && isGeneralUsed && availableCategories.length === 0;
+
   const [categoryId, setCategoryId] = useState<string>(
     editingBudget?.categoryId ||
       (availableCategories[0]?.id || UNBUDGETED_CATEGORY_ID)
@@ -131,6 +136,10 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
       setError(lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်မည့် ကဏ္ဍကို ရွေးချယ်ပါ' : 'Please choose a category');
       return;
     }
+    if (noCategoryLeft) {
+      setError(lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်ရန် ကဏ္ဍ မရှိတော့ပါ — ကဏ္ဍအားလုံး + အထွေထွေ ဘတ်ဂျက် ရှိပြီးသားပါ။ ရှိပြီးသား ဘတ်ဂျက်ကို ပြင်ဆင်ပါ' : 'No category left to budget — every category including General already has a budget. Edit an existing budget instead.');
+      return;
+    }
     if (calcType === 'percentage' && (numValue <= 0 || numValue > 100)) {
       setError(lang === 'my' ? 'ရာခိုင်နှုန်းသည် ၁ မှ ၁၀၀ ကြား ဖြစ်ရပါမည်' : 'Percentage must be between 1 and 100');
       return;
@@ -185,7 +194,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1 text-xs sm:text-sm">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4 flex-1 text-base sm:text-sm">
           {/* Category Selector */}
           <div>
             <label className="block text-slate-700 font-semibold mb-1.5">
@@ -229,8 +238,9 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
             ) : (
               <select
                 value={categoryId}
+                disabled={noCategoryLeft}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 text-base sm:text-sm focus:ring-2 focus:ring-indigo-500"
               >
                 {!isGeneralUsed && (
                   <option value={UNBUDGETED_CATEGORY_ID}>
@@ -252,6 +262,16 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               </p>
             )}
           </div>
+
+          {/* [v7.5.60 N-19] No category left — explain instead of silently
+              overwriting the existing General budget on save. */}
+          {noCategoryLeft && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold leading-relaxed">
+              ⚠️ {lang === 'my'
+                ? 'ဘတ်ဂျက်သတ်မှတ်ရန် ကဏ္ဍ မရှိတော့ပါ — ကဏ္ဍအားလုံးနှင့် အထွေထွေ ဘတ်ဂျက် ရှိပြီးသားပါ။ ရှိပြီးသား ဘတ်ဂျက်တစ်ခုကို ပြင်ဆင်ပါ။'
+                : 'No category left to budget — every category including General already has a budget. Please edit an existing budget instead.'}
+            </div>
+          )}
 
           {/* Budget Limit Calculation Mode: Percentage vs Fixed */}
           <div>
@@ -396,7 +416,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
             <select
               value={walletId}
               onChange={(e) => setWalletId(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 text-base sm:text-sm focus:ring-2 focus:ring-indigo-500"
             >
               <option value="all">
                 🌐 {lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး (All Wallets)' : 'All Wallets (Global)'}
@@ -436,7 +456,8 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
             <button
               id="budget-save-btn"
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs active:scale-95 transition-all"
+              disabled={noCategoryLeft}
+              className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isEditing
                 ? (lang === 'my' ? 'ပြင်ဆင်ချက် သိမ်းမည်' : 'Save Changes')

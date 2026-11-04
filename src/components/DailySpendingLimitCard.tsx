@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Flame, CheckCircle2, AlertTriangle, Settings, X } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db, safeSetDoc } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 import { Transaction, Wallet } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { safeGetItem, safeSetItem } from '../utils/storage';
@@ -26,6 +29,7 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
   lang,
 }) => {
   const todayStr = getLocalDateString(new Date());
+  const { user } = useAuth();
 
   const [dailyLimit, setDailyLimit] = useState<number>(() => {
     const saved = safeGetItem('ngwe_daily_spending_limit');
@@ -33,10 +37,57 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
   });
   const [isEditing, setIsEditing] = useState(false);
   const [inputLimit, setInputLimit] = useState(String(dailyLimit));
+  // [v7.5.60 S8] Invalid-input error shown under the input (was silently ignored).
+  const [inputError, setInputError] = useState<string | null>(null);
+  // [v7.5.60 S10] Cloud sync state. 'local' = guest / no account (this
+  // device only); 'synced' = the value lives in the user doc too.
+  const [cloudState, setCloudState] = useState<'local' | 'loading' | 'synced' | 'error'>('local');
+  const cloudReadyRef = useRef(false);
 
   useEffect(() => {
     safeSetItem('ngwe_daily_spending_limit', String(dailyLimit));
-  }, [dailyLimit]);
+    // [v7.5.60 S10] Push to the user doc once the cloud value has been
+    // loaded (the ref stops the pre-load default overwriting the cloud).
+    if (user && cloudReadyRef.current) {
+      safeSetDoc(doc(db, 'users', user.uid), { dailySpendingLimit: dailyLimit }, { merge: true }).catch(() => {});
+    }
+  }, [dailyLimit, user]);
+
+  // [v7.5.60 S10] Load the cloud value on mount; migrate the local value
+  // up when the cloud field is empty.
+  useEffect(() => {
+    if (!user) {
+      cloudReadyRef.current = true;
+      setCloudState('local');
+      return;
+    }
+    let cancelled = false;
+    setCloudState('loading');
+    getDoc(doc(db, 'users', user.uid))
+      .then((snap) => {
+        if (cancelled) return;
+        const cloudVal = snap.exists() ? (snap.data() as { dailySpendingLimit?: unknown }).dailySpendingLimit : undefined;
+        if (typeof cloudVal === 'number' && Number.isFinite(cloudVal) && cloudVal >= 0) {
+          setDailyLimit(cloudVal);
+          safeSetItem('ngwe_daily_spending_limit', String(cloudVal));
+        } else {
+          const saved = safeGetItem('ngwe_daily_spending_limit');
+          if (saved !== null && !Number.isNaN(Number(saved))) {
+            safeSetDoc(doc(db, 'users', user.uid), { dailySpendingLimit: Number(saved) }, { merge: true }).catch(() => {});
+          }
+        }
+        cloudReadyRef.current = true;
+        setCloudState('synced');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        cloudReadyRef.current = true;
+        setCloudState('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // Calculate today's total expenses (exclude transfers), converted to
   // MMK like every other Analytics figure — raw amounts would mix wallet
@@ -58,8 +109,12 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
     // [v7.5.55] Myanmar digits (၀-၉) accepted in the limit input.
     const val = parseMyanmarNumber(inputLimit);
     if (!isNaN(val) && val >= 0) {
+      setInputError(null);
       setDailyLimit(val);
       setIsEditing(false);
+    } else {
+      // [v7.5.60 S8] Say what is wrong instead of silently doing nothing.
+      setInputError(lang === 'my' ? 'မှန်ကန်တဲ့ နံပါတ် ထည့်ပါ' : 'Please enter a valid number');
     }
   };
 
@@ -113,11 +168,11 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
             {lang === 'my' ? 'ယနေ့ သုံးစွဲပြီး / ကန့်သတ်ချက်' : 'Today Spent / Limit'}
           </div>
           <div className="flex items-baseline gap-1.5 font-mono">
-            <span className={`text-base sm:text-lg font-black ${isOverBudget ? 'text-rose-700' : 'text-slate-900'}`}>
-              {formatMMK(todaySpent)}
+            <span className={`text-base sm:text-lg font-black ${isOverBudget ? 'text-rose-700' : 'text-slate-900'}`} title={formatMMK(todaySpent)}>
+              {formatLakhs(todaySpent, lang)}
             </span>
-            <span className="text-xs font-semibold text-slate-500">
-              / {formatMMK(dailyLimit)}
+            <span className="text-xs font-semibold text-slate-500" title={formatMMK(dailyLimit)}>
+              / {formatLakhs(dailyLimit, lang)}
             </span>
           </div>
         </div>
@@ -126,13 +181,25 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
           type="button"
           onClick={() => {
             setInputLimit(String(dailyLimit));
+            setInputError(null);
             setIsEditing(true);
           }}
-          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+          className="min-h-11 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
         >
           <Settings className="w-3.5 h-3.5" />
           <span>{lang === 'my' ? 'သတ်မှတ်ရန်' : 'Set Limit'}</span>
         </button>
+      </div>
+
+      {/* [v7.5.60 S10] Where this limit lives. */}
+      <div className="text-[10px] font-semibold text-slate-400">
+        {cloudState === 'synced'
+          ? (lang === 'my' ? '☁️ Cloud Sync ပြုလုပ် — စက်တိုင်း တူညီမည်' : '☁️ Cloud synced — same on every device')
+          : cloudState === 'loading'
+          ? (lang === 'my' ? '☁️ Cloud နှင့် ချိတ်ဆက်နေသည်...' : '☁️ Syncing with cloud...')
+          : cloudState === 'error'
+          ? (lang === 'my' ? '⚠️ Cloud နှင့် ချိတ်ဆက်၍ မရပါ — ဒီစက်မှာသာ သက်ရောက်သည်' : '⚠️ Cloud unreachable — applies on this device only')
+          : (lang === 'my' ? '📱 ဒီစက်မှာသာ သက်ရောက်သည်' : '📱 Applies on this device only')}
       </div>
 
       {/* Progress Bar */}
@@ -141,10 +208,10 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
           <span className={isOverBudget ? 'text-rose-700' : 'text-emerald-700'}>
             {percentage}% {lang === 'my' ? 'သုံးစွဲပြီး' : 'used'}
           </span>
-          <span className="text-slate-500">
+          <span className="text-slate-500" title={isOverBudget ? formatMMK(todaySpent - dailyLimit) : formatMMK(dailyLimit - todaySpent)}>
             {isOverBudget
-              ? (lang === 'my' ? `ကျော်လွန်ငွေ: ${formatMMK(todaySpent - dailyLimit)}` : `Over by: ${formatMMK(todaySpent - dailyLimit)}`)
-              : (lang === 'my' ? `ကျန်ရှိငွေ: ${formatMMK(dailyLimit - todaySpent)}` : `Remaining: ${formatMMK(dailyLimit - todaySpent)}`)}
+              ? (lang === 'my' ? `ကျော်လွန်ငွေ: ${formatLakhs(todaySpent - dailyLimit, lang)}` : `Over by: ${formatLakhs(todaySpent - dailyLimit, lang)}`)
+              : (lang === 'my' ? `ကျန်ရှိငွေ: ${formatLakhs(dailyLimit - todaySpent, lang)}` : `Remaining: ${formatLakhs(dailyLimit - todaySpent, lang)}`)}
           </span>
         </div>
         <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
@@ -164,7 +231,7 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+              className="absolute right-4 top-4 w-11 h-11 min-w-11 min-h-11 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -191,24 +258,28 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
                 type="text"
                 inputMode="decimal"
                 value={inputLimit}
-                onChange={(e) => setInputLimit(e.target.value)}
+                onChange={(e) => { setInputLimit(e.target.value); setInputError(null); }}
                 placeholder="20000"
-                className="w-full px-3.5 py-2.5 text-sm font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3.5 py-2.5 text-base font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 autoFocus
               />
+              {/* [v7.5.60 S8] Invalid-input error, shown in place of silence. */}
+              {inputError && (
+                <p className="text-xs font-bold text-rose-600 mt-1.5">{inputError}</p>
+              )}
             </div>
 
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="submit"
-                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all cursor-pointer shadow-xs"
+                className="flex-1 min-h-11 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all cursor-pointer shadow-xs"
               >
                 {lang === 'my' ? 'သိမ်းဆည်းမည်' : 'Save Limit'}
               </button>
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer"
+                className="min-h-11 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer"
               >
                 {lang === 'my' ? 'ပိတ်မည်' : 'Cancel'}
               </button>

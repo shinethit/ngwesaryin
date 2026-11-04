@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Share2, Copy, Check, Download, Globe, ShieldAlert, QrCode, FileText } from 'lucide-react';
+import { X, Share2, Copy, Check, Download, Globe, ShieldAlert, QrCode, FileText, AlertTriangle } from 'lucide-react';
 
 interface ShareAppModalProps {
   isOpen: boolean;
@@ -14,9 +14,15 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  // [v7.5.60 G-N4] QR comes from an external API — it can fail
+  // offline. Show an honest fallback instead of a blank/broken box.
+  const [qrFailed, setQrFailed] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  // [v7.5.60 G-S3] ONE official link everywhere (same as LoginScreen):
+  // the live site.
   const officialUrl = 'https://ngwesaryin.pages.dev';
   
   const shareText = `📱 NgweSarYin (ငွေစာရင်း) App
@@ -33,7 +39,11 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
     } catch (e) {
-      alert('Copy failed. Please copy manually.');
+      setShareMsg(
+        lang === 'my'
+          ? 'ကူးယူ၍ မရပါ — လင့်ခ်ကို ကိုယ်တိုင် ရွေးပြီး ကူးယူပေးပါ။'
+          : 'Copy failed — please select the link and copy it manually.'
+      );
     }
   };
 
@@ -43,7 +53,34 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
       setCopiedText(true);
       setTimeout(() => setCopiedText(false), 2000);
     } catch (e) {
-      alert('Copy failed. Please copy manually.');
+      setShareMsg(
+        lang === 'my'
+          ? 'ကူးယူ၍ မရပါ — စာသားကို ကိုယ်တိုင် ရွေးပြီး ကူးယူပေးပါ။'
+          : 'Copy failed — please select the text and copy it manually.'
+      );
+    }
+  };
+
+  // [v7.5.60 G-N4] Native share sheet (Messenger / Viber / SMS …)
+  // when the device offers it.
+  const canNativeShare = typeof navigator !== 'undefined' && 'share' in navigator;
+  const handleNativeShare = async () => {
+    setShareMsg(null);
+    try {
+      await navigator.share({
+        title: 'NgweSarYin (ငွေစာရင်း)',
+        text: shareText,
+        url: officialUrl,
+      });
+    } catch (e: any) {
+      // User closing the sheet is not an error.
+      if (e?.name !== 'AbortError') {
+        setShareMsg(
+          lang === 'my'
+            ? 'မျှဝေ၍ မရပါ — လင့်ခ်ကို ကူးပြီး ပေးပို့ပေးပါ။'
+            : 'Share failed — please copy the link and send it manually.'
+        );
+      }
     }
   };
 
@@ -77,7 +114,24 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
           {/* QR Code & Link Section */}
           <div className="flex flex-col items-center justify-center space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
             <div className="w-32 h-32 bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex items-center justify-center">
-              <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain" crossOrigin="anonymous" />
+              {qrFailed ? (
+                <div className="text-center px-2">
+                  <QrCode className="w-8 h-8 text-slate-300 mx-auto mb-1.5" />
+                  <p className="text-[11px] text-slate-500 font-medium leading-snug">
+                    {lang === 'my'
+                      ? 'QR တင်လို့ မရပါ — လင့်ခ်ကို ကူးပြီး ပေးပို့ပါ'
+                      : 'QR could not load — copy the link and send it instead'}
+                  </p>
+                </div>
+              ) : (
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code"
+                  className="w-full h-full object-contain"
+                  crossOrigin="anonymous"
+                  onError={() => setQrFailed(true)}
+                />
+              )}
             </div>
             <div className="text-center">
               <p className="text-[11px] text-slate-500 mb-2">
@@ -100,6 +154,24 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Native share sheet — [v7.5.60 G-N4] */}
+          {canNativeShare && (
+            <button
+              type="button"
+              onClick={handleNativeShare}
+              className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-sm"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>{lang === 'my' ? 'Share ဖြင့် မျှဝေမည် (Messenger / Viber …)' : 'Share via Messenger / Viber …'}</span>
+            </button>
+          )}
+          {shareMsg && (
+            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium leading-relaxed flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>{shareMsg}</span>
+            </div>
+          )}
 
           {/* Shareable Text Summary */}
           <div className="space-y-2">

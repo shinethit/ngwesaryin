@@ -131,7 +131,7 @@ export const CategoryPickerModal: React.FC<Props> = ({
           </button>
         </div>
 
-        <div className="px-3 pt-3 pb-2 shrink-0">
+        <div className="px-3 pt-3 pb-2 shrink-0 space-y-2">
           <div className="flex gap-1 bg-slate-100 p-1 rounded-full">
             {(['expense', 'income'] as const).map((t) => {
               const isActive = activeTypeTab === t;
@@ -146,6 +146,22 @@ export const CategoryPickerModal: React.FC<Props> = ({
                 </button>
               );
             })}
+          </div>
+          {/* [v7.5.60 S4] Search belongs at the top, right under the
+              tabs — it used to sit in the footer, below the whole list. */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input type="text"
+              placeholder={lang === 'my' ? 'ရှာဖွေရန်...' : 'Search'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 text-base bg-slate-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white" />
+            {searchQuery && (
+              <button type="button" onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center">
+                <X className="w-3 h-3 text-slate-500" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -213,6 +229,26 @@ export const CategoryPickerModal: React.FC<Props> = ({
                   <div className="relative pl-4 pr-3 pb-3 space-y-1">
                     <div className="absolute left-[26px] top-0 bottom-4 w-px bg-slate-200" />
 
+                    {/* [v7.5.60 S4] A category with sub-categories can now
+                        be picked on its own ("General") — before, tapping
+                        it only expanded the list and a sub-category was
+                        forced. */}
+                    <button type="button"
+                      onClick={() => handleSelectMainOnly(cat)}
+                      className={'relative w-full flex items-center gap-3 pl-3 pr-3 py-2.5 rounded-xl text-left transition-colors ' +
+                        (isCatSelected ? 'bg-emerald-100/70' : 'hover:bg-slate-50')}>
+                      <div className="absolute left-[-14px] top-1/2 w-3 h-px bg-slate-200" />
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
+                        style={{ backgroundColor: cat.color || '#94A3B8' }}>
+                        <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
+                      </div>
+                      <span className={'flex-1 text-xs font-semibold truncate ' +
+                        (isCatSelected ? 'text-emerald-800' : 'text-slate-700')}>
+                        {lang === 'my' ? 'အထွေထွေ (ကဏ္ဍခွဲမရှိ)' : 'General (no sub-category)'}
+                      </span>
+                      {isCatSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                    </button>
+
                     {((cat.id === 'cat_transfer'
                       ? FALLBACK_TRANSFER_SUBS.map((s) => ({ ...s, isCustom: false } as any))
                       : (cat.subCategories || [])
@@ -255,7 +291,7 @@ export const CategoryPickerModal: React.FC<Props> = ({
                             onChange={(e) => setNewSubName(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreateSub(cat.id); } }}
                             placeholder={lang === 'my' ? 'ကဏ္ဍခွဲ အမည်...' : 'New sub...'}
-                            className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-white border border-emerald-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                            className="flex-1 min-w-0 px-2.5 py-1.5 text-sm bg-white border border-emerald-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500" />
                           <button type="button" onClick={() => handleCreateSub(cat.id)}
                             className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold shrink-0">
                             {lang === 'my' ? 'ထည်' : 'Add'}
@@ -279,23 +315,6 @@ export const CategoryPickerModal: React.FC<Props> = ({
           })}
 
           <div className="h-2" />
-        </div>
-
-        <div className="px-3 py-3 border-t border-slate-100 shrink-0 bg-white">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input type="text"
-              placeholder={lang === 'my' ? 'ရှာဖွေရန်...' : 'Search'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2.5 text-sm bg-slate-100 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white" />
-            {searchQuery && (
-              <button type="button" onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center">
-                <X className="w-3 h-3 text-slate-500" />
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>

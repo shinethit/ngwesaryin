@@ -166,10 +166,62 @@ export function useDebtHandlers({
   // edit, repayments). Same rule as delete.
   const canMutateSharedDebt = (debt: Debt): boolean => canDeleteSharedDebt(debt);
 
+  // [v7.5.60 S-45] Rolling-30-day transaction limit, enforced UNIFORMLY
+  // for auto-transactions too (debt add = 1 tx, repayment = 1 tx,
+  // auto-settle = 1 tx) — the same rule useTransactionHandlers applies
+  // to manual adds (count txs dated within the last 30 days against the
+  // CURRENT plan's maxTransactions).
+  // EXCEPTION (documented, not silent): a write to a shared wallet owned
+  // by someone else never counts toward MY limit (v7.5.56 A8), so the
+  // check is skipped when the debt's wallet is such a wallet.
+  const countsTowardMyLimit = (t: Transaction): boolean => {
+    if (user?.uid && t.createdBy && t.createdBy !== user.uid) return false;
+    const w = wallets.find((x) => isWalletMatch(x, t.walletId));
+    if (!w) return true;
+    if (w.isSharedFromOther && w.ownerUid && user?.uid && w.ownerUid !== user.uid) return false;
+    return true;
+  };
+  const countRolling30DayTransactions = (txs: Transaction[]) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    const start = getLocalDateString(d);
+    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
+  };
+  // Returns true when the auto-transaction may proceed. Blocks with the
+  // same clear error UX as a manual add (toast + sign-in for Guest,
+  // toast + Premium modal for Free).
+  const checkRollingLimitForAutoTx = (needed: number, wallet?: Wallet | null): boolean => {
+    if (wallet && wallet.isSharedFromOther && wallet.ownerUid && user?.uid && wallet.ownerUid !== user.uid) return true;
+    const used = countRolling30DayTransactions(transactions);
+    if (used + needed > limits.maxTransactions) {
+      if (plan === 'guest') {
+        showToast(
+          lang === 'my'
+            ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
+            : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please Sign in with Google.`
+        );
+        setIsAuthModalOpen(true);
+      } else {
+        showToast(
+          lang === 'my'
+            ? `Free Plan တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ`
+            : `Free Plan allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please upgrade to Premium.`
+        );
+        setIsPremiumModalOpen(true);
+      }
+      return false;
+    }
+    return true;
+  };
+
   const handleAddDebt = (newDebt: Omit<Debt, 'id' | 'paidAmount' | 'repayments' | 'status' | 'createdAt'>) => {
     const id = `debt_${Date.now()}_${randomSuffix()}`;
     // [v7.5.55 D12] The debt amount is denominated in its wallet's currency.
     const debtWallet = wallets.find((w) => w.id === newDebt.walletId);
+    // [v7.5.60 S-45] Adding a debt auto-creates 1 wallet transaction —
+    // block the whole add when the rolling-30-day limit is reached, so
+    // the debt is never created without its linked transaction.
+    if (!checkRollingLimitForAutoTx(1, debtWallet)) return;
     // [v7.5.56 B] Shared-wallet debt: mirror it for the other member.
     const sharedDocId = debtWallet && isSharedWallet(debtWallet) && user?.uid
       ? getSharedWalletDocId(debtWallet, user.uid)
@@ -423,6 +475,9 @@ export function useDebtHandlers({
       const currentPaid = updatedRepayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
       const remaining = targetDebt.totalAmount - currentPaid;
       if (remaining > 0) {
+        // [v7.5.60 S-45] Auto-settle creates 1 wallet transaction — it
+        // counts toward the rolling-30-day limit.
+        if (!checkRollingLimitForAutoTx(1, walletOfDebt(targetDebt))) return;
         const settlementTxId = `tx_rep_${id}_settle_${Date.now()}_${randomSuffix()}`;
         updatedRepayments = [{
           id: `rep_settle_${Date.now()}`,
@@ -794,14 +849,22 @@ export function useDebtHandlers({
       }
       if (amount > remaining) {
         const overAmount = amount - remaining;
-        const confirmMsg = lang === 'my'
-          ? `ထည့်သွင်းမည့် ငွေပမာဏ (${amount.toLocaleString()} Ks) သည် ပေးရန်ကျန်ငွေ (${remaining.toLocaleString()} Ks) ထက် ${overAmount.toLocaleString()} Ks ပိုလွန်နေပါသည်။\n\nကျန်ငွေ ${remaining.toLocaleString()} Ks သာ သိမ်းဆည်းမည်လား?`
-          : `Amount (${amount.toLocaleString()}) exceeds remaining (${remaining.toLocaleString()}).\n\nCap to ${remaining.toLocaleString()} and record?`;
-        if (!window.confirm(confirmMsg)) {
-          return;
-        }
+        // [v7.5.60 S-47] No native confirm — the RepaymentModal already
+        // blocks over-remaining amounts with an inline error, so this
+        // path is a second line of defence only. Cap to the remaining
+        // amount and say so clearly in a toast instead of asking.
+        showToast(
+          lang === 'my'
+            ? `ထည့်သွင်းမည့် ငွေပမာဏ (${amount.toLocaleString()} Ks) သည် ပေးရန်ကျန်ငွေ (${remaining.toLocaleString()} Ks) ထက် ${overAmount.toLocaleString()} Ks ပိုလွန်နေသဖြင့် ကျန်ငွေ ${remaining.toLocaleString()} Ks သာလျှင် သိမ်းဆည်းပါမည်`
+            : `Amount (${amount.toLocaleString()}) exceeds the remaining balance (${remaining.toLocaleString()}) — capped to ${remaining.toLocaleString()}`
+        );
         finalAmount = remaining; // [v6.9-phase2a-v2] cap to remaining
       }
+
+      // [v7.5.60 S-45] A repayment auto-creates 1 wallet transaction —
+      // it counts toward the rolling-30-day limit.
+      const repWalletForLimit = wallets.find((w) => isWalletMatch(w, walletId));
+      if (!checkRollingLimitForAutoTx(1, repWalletForLimit)) return;
 
       const isReceivable = targetDebt.type === 'receivable';
       repTxId = `tx_rep_${debtId}_${Date.now()}_${randomSuffix()}`;  // [FIX v6.3.1] assigned, not declared

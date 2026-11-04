@@ -16,10 +16,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.59';
-export const CURRENT_BUILD_NUMBER = 274;
+export const CURRENT_APP_VERSION = 'v7.5.60';
+export const CURRENT_BUILD_NUMBER = 275;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.60',
+    buildNumber: 275,
+    releaseDate: '2026-11-03',
+    releaseTime: '11:30 PM (MMT)',
+    titleMy: 'အပြည့်အစုံ စစ်ဆေးချက် ၁၉၇ ခု ပြင်ဆင်ခြင်း',
+    titleEn: 'Full Audit: 197 Findings Fixed',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'App တစ်ခုလုံးကို စေ့စေ့စပ်စပ် စစ်ဆေးပြီး တွေ့ရှိချက် ၁၉၇ ခု (မဖြစ်မနေ ၃၁ ခု၊ ပြင်သင့်သည် ၁၀၉ ခု၊ ပိုကောင်းသည် ၅၇ ခု) ကို အကုန် ပြင်လိုက်ပါသည် — Dashboard နဲ့ Analysis နံပါတ် တူသွားခြင်း၊ ကဏ္ဍဖျက်ရင် မှတ်တမ်း မပျောက်တော့ခြင်း၊ Reconcile ကဏ္ဍ အမှန်၊ စကားဝှက် မေ့ရင် ပြန်ယူနိုင်ခြင်း၊ ပမာဏတွေ သိန်းနဲ့ ပြခြင်း (ထည့်ချိန်မှာတော့ ကျပ်အပြည့်အတိုင်း)၊ ခလုတ်တွေ ကြီးလာခြင်း၊ iPhone zoom ပျောက်ခြင်း အပါအဝင်။',
+    descriptionEn: 'A full careful audit of the whole app found 197 findings (31 must-fix, 109 should-fix, 57 nice-to-have) — all fixed in this version, including matching Dashboard and Analysis totals, no more lost records when deleting a category, the correct Reconcile category, password recovery, amounts shown in lakhs (entry stays in full kyat), bigger touch targets, and no more iPhone zoom.',
+    changesMy: [
+      '📊 Dashboard နဲ့ Analysis နံပါတ် တူသွားပါပြီ (Separate အိတ် scope)',
+      '🛡️ ကဏ္ဍဖျက်ရင် မှတ်တမ်းတွေ မပျောက်တော့ပါ — အခြား ကဏ္ဍသို့ အမှန်အတိုင်း ရွှေ့ပေးပါမည်',
+      '🔑 စကားဝှက် မေ့ရင် Email နဲ့ ပြန်ယူနိုင်ပါပြီ',
+      '💰 ပမာဏတွေ သိန်းနဲ့ ပြတော့မည် (ထည့်ချိန်မှာ ကျပ်အပြည့်အတိုင်း ရိုက်ပါ)',
+      '👆 ခလုတ်တွေ ကြီးလာပြီး iPhone zoom မဝင်တော့ပါ',
+      '🧭 ဘတ်ဂျက်/Analysis/Compare Price ကို ရှာရလွယ်သွားပါပြီ',
+    ],
+    changesEn: [
+      '📊 Dashboard and Analysis totals now match (Separate wallet scope)',
+      '🛡️ Deleting a category no longer loses records — they move to the correct Other category',
+      '🔑 Forgot your password? Recover it by email now',
+      '💰 Amounts now shown in lakhs (enter the full kyat number as before)',
+      '👆 Bigger touch targets, no more iPhone zoom',
+      '🧭 Budget, Analysis and Compare Price are easier to find',
+    ],
+  },
   {
     version: 'v7.5.59',
     buildNumber: 274,

@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { BookOpen, Search, Bookmark, BookmarkCheck, Clock, ArrowRight, ChevronRight, X, TrendingUp, PieChart, ShieldAlert, Coins, Scale, Zap, Crown, Award, Flame, Compass, Layers, Sparkles, CheckCircle2, Calculator, RotateCcw } from 'lucide-react';
 import { ARTICLES, EDUCATION_CATEGORIES, Article } from '../data/educationData';
+import { formatLakhs, formatMMK } from '../utils/formatters';
+import { parseMyanmarNumber } from '../utils/myanmarDigits';
 
 interface EducationViewProps {
   lang: 'my' | 'en';
@@ -188,7 +190,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
                 ? 'ခေါင်းစဉ်၊ အကြွေး၊ ဘေဘီလုံ သို့မဟုတ် Power 48 ရှာရန်...'
                 : 'Search articles, debt, babylon, power 48...'
             }
-            className="w-full pl-10 pr-10 py-2.5 bg-white rounded-2xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-xs transition-all"
+            className="w-full pl-10 pr-10 py-2.5 bg-white rounded-2xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-xs transition-all"
           />
           {searchQuery && (
             <button
@@ -225,7 +227,9 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
       {/* Category Tabs Scrollbar */}
       <div className="flex flex-wrap items-center gap-2">
         {EDUCATION_CATEGORIES.map((cat) => {
-          const isActive = selectedCategory === cat.id && !onlyBookmarks;
+          // [v7.5.60 E31/N-40] The active category tab stays
+          // active while the bookmarks filter is on — both filters apply.
+          const isActive = selectedCategory === cat.id;
           return (
             <button
               key={cat.id}
@@ -245,6 +249,15 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
           );
         })}
       </div>
+
+      {/* [v7.5.60 E31] Combined-filter note when bookmarks are on. */}
+      {onlyBookmarks && (
+        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          {lang === 'my'
+            ? `🔖 သိမ်းထားသည်များ + ${selectedCategory === 'all' ? 'ကဏ္ဍ အားလုံး' : (EDUCATION_CATEGORIES.find((c) => c.id === selectedCategory)?.titleMy || '')} — filter နှစ်ခု တွဲကြည့်နေပါသည်`
+            : `🔖 Saved + ${selectedCategory === 'all' ? 'all categories' : (EDUCATION_CATEGORIES.find((c) => c.id === selectedCategory)?.titleEn || '')} — two filters apply together`}
+        </p>
+      )}
 
       {/* Articles Grid */}
       {filteredArticles.length === 0 ? (
@@ -442,14 +455,15 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
                       {lang === 'my' ? 'သင့် လစဉ် ဝင်ငွေ (ကျပ်):' : 'Enter Your Monthly Income (MMK):'}
                     </label>
                     <input
-                      type="number"
-                      step={10000}
-                      min={0}
+                      type="text"
+                      inputMode="decimal"
                       value={calcIncome}
                       onChange={(e) => {
                         // [v7.5.55] Negative income showed negative splits —
                         // clamp to >= 0 with a message.
-                        const v = Number(e.target.value);
+                        // [v7.5.60 E29/S-83] type="text" + parseMyanmarNumber
+                        // so Myanmar digits (၀-၉) can be typed.
+                        const v = parseMyanmarNumber(e.target.value);
                         if (!isNaN(v) && v < 0) {
                           setCalcIncome(0);
                           setCalcError(lang === 'my' ? 'ဝင်ငွေသည် အနှုတ် ဖြစ်လို့ မရပါ — ၀ အဖြစ် သတ်မှတ်လိုက်ပါသည်' : 'Income cannot be negative — set to 0');
@@ -468,23 +482,26 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
                     <div className="bg-white p-3 rounded-xl border border-emerald-200 space-y-1">
                       <div className="font-bold text-emerald-700">၅၀% (Needs)</div>
                       <div className="text-slate-500">{lang === 'my' ? 'မဖြစ်မနေ လိုအပ်ချက်' : 'Essentials'}</div>
-                      <div className="font-black text-emerald-900 text-sm">
-                        {(calcIncome * 0.5).toLocaleString()} ကျပ်
+                      <div className="font-black text-emerald-900 text-sm" title={formatMMK(calcIncome * 0.5)}>
+                        {formatLakhs(calcIncome * 0.5, lang)}
                       </div>
+                      <div className="text-[10px] text-slate-400 font-mono">{formatMMK(calcIncome * 0.5)}</div>
                     </div>
                     <div className="bg-white p-3 rounded-xl border border-blue-200 space-y-1">
                       <div className="font-bold text-blue-700">၃၀% (Wants)</div>
                       <div className="text-slate-500">{lang === 'my' ? 'လိုချင်ချက်စရိတ်' : 'Lifestyle'}</div>
-                      <div className="font-black text-blue-900 text-sm">
-                        {(calcIncome * 0.3).toLocaleString()} ကျပ်
+                      <div className="font-black text-blue-900 text-sm" title={formatMMK(calcIncome * 0.3)}>
+                        {formatLakhs(calcIncome * 0.3, lang)}
                       </div>
+                      <div className="text-[10px] text-slate-400 font-mono">{formatMMK(calcIncome * 0.3)}</div>
                     </div>
                     <div className="bg-white p-3 rounded-xl border border-purple-200 space-y-1">
                       <div className="font-bold text-purple-700">၂၀% (Savings)</div>
                       <div className="text-slate-500">{lang === 'my' ? 'မဖြစ်မနေ စုဆောင်း' : 'Savings'}</div>
-                      <div className="font-black text-purple-900 text-sm">
-                        {(calcIncome * 0.2).toLocaleString()} ကျပ်
+                      <div className="font-black text-purple-900 text-sm" title={formatMMK(calcIncome * 0.2)}>
+                        {formatLakhs(calcIncome * 0.2, lang)}
                       </div>
+                      <div className="text-[10px] text-slate-400 font-mono">{formatMMK(calcIncome * 0.2)}</div>
                     </div>
                   </div>
                 </div>
@@ -541,7 +558,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
               <button
                 disabled={activeIndex <= 0}
                 onClick={handlePrevArticle}
-                className="px-4 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-all inline-flex items-center gap-1"
+                className="px-4 py-3 min-h-[44px] bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-all inline-flex items-center gap-1"
               >
                 <ChevronRight className="w-4 h-4 rotate-180" />
                 <span>{lang === 'my' ? 'ရှေ့တစ်ပုဒ်' : 'Previous'}</span>
@@ -554,7 +571,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
               <button
                 disabled={activeIndex < 0 || activeIndex >= filteredArticles.length - 1}
                 onClick={handleNextArticle}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-700 transition-all inline-flex items-center gap-1 shadow-xs"
+                className="px-4 py-3 min-h-[44px] bg-indigo-600 text-white rounded-xl text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-700 transition-all inline-flex items-center gap-1 shadow-xs"
               >
                 <span>{lang === 'my' ? 'နောက်တစ်ပုဒ်' : 'Next'}</span>
                 <ChevronRight className="w-4 h-4" />

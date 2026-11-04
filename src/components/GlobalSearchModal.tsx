@@ -119,6 +119,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           const subName = (subCat?.name || '').toLowerCase();
           const subNameEn = (subCat?.nameEn || '').toLowerCase();
           const note = (t.note || '').toLowerCase();
+          // [v7.5.60 S5] Shopping-list item names, like the Transactions
+          // list search already does — "ဆန်" in a shopping list must be
+          // findable from Global Search too.
+          const itemNames = (t.items || []).map((it) => (it.name || '').toLowerCase()).join(' ');
           const wallet = walletMap.get(t.walletId);
           const walletName = (wallet?.name || '').toLowerCase();
           const walletNameEn = (wallet?.nameEn || '').toLowerCase();
@@ -131,6 +135,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             subName.includes(q) ||
             subNameEn.includes(q) ||
             note.includes(q) ||
+            itemNames.includes(q) ||
             walletName.includes(q) ||
             walletNameEn.includes(q) ||
             amtStr.includes(cleanNumbersOnly) ||
@@ -408,7 +413,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" />
-                  {lang === 'my' ? 'ဝင်ငွေ/ထွက်ငွေ စာရင်းများ' : 'Transactions'} ({results.totals.transactions})
+                  {/* [v7.5.60 N4] With no query yet these 5 are the most
+                      recent records, not search results — label them so. */}
+                  {!query.trim()
+                    ? (lang === 'my' ? 'မကြာသေးမီ မှတ်တမ်းများ' : 'Recent Transactions')
+                    : (lang === 'my' ? 'ဝင်ငွေ/ထွက်ငွေ စာရင်းများ' : 'Transactions')} ({results.totals.transactions})
                 </span>
                 <button
                   onClick={() => goToTab('transactions')}

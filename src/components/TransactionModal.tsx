@@ -16,7 +16,7 @@ import {
   TirePressureLog,
 } from '../types';
 import { ShopContact } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
@@ -26,7 +26,8 @@ import { CategoryPickerModal } from './CategoryPickerModal';
 import { FuelExpenseGuideModal } from './vehicles/FuelExpenseGuideModal';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
-import { getAllItemSuggestions, findMatchingItemInfo } from '../utils/itemIntelligence';
+import { getAllItemSuggestions, findMatchingItemInfo, normalizeItemName } from '../utils/itemIntelligence';
+import type { UnifiedItemInfo } from '../utils/itemIntelligence';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
@@ -183,7 +184,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [showQuickAddSub, setShowQuickAddSub] = useState(true);
   const [newSubName, setNewSubName] = useState('');
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
-  const [categorySelectMode, setCategorySelectMode] = useState<'picker' | 'dropdown' | 'grid'>('picker');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [walletExpanded, setWalletExpanded] = useState(false);
@@ -223,6 +223,23 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [vehicleOdometer, setVehicleOdometer] = useState<string>('');
   // [v7.5.55] Validation message shown inside the form (never a silent return).
   const [formError, setFormError] = useState('');
+  // [v7.5.60 S15] Pending income↔expense switch that needs the user's
+  // confirmation when editing. revertCategoryId is set only for the
+  // automatic switch (category pick) — cancelling restores that
+  // category; clearCategoryOnConfirm is set for a manual switch whose
+  // old category belongs to the other type (it is cleared on confirm).
+  const [pendingTypeChange, setPendingTypeChange] = useState<{
+    newType: TransactionType;
+    revertCategoryId?: string;
+    revertSubCategoryId?: string;
+    clearCategoryOnConfirm?: boolean;
+  } | null>(null);
+  // [v7.5.60 S10] Backfill confirm (replaces window.confirm): the submit
+  // awaits this promise; the dialog below resolves it.
+  const [backfillPrompt, setBackfillPrompt] = useState<{
+    message: string;
+    resolve: (ok: boolean) => void;
+  } | null>(null);
   // [v7.5.55] Public-shop publish opt-in (B8): default UNCHECKED.
   const [publishShopOptIn, setPublishShopOptIn] = useState(false);
 
@@ -509,6 +526,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
       setFormError('');
       setIsSubmitting(false);
+      setPendingTypeChange(null);
+      setBackfillPrompt(null);
     }
   }, [isOpen, editTransaction, initialType, initialWalletId, wallets, user, fuelLogs, vehicleMaintenance, tirePressureLogs]);
 
@@ -1049,19 +1068,129 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
+  // [v7.5.60 S15] Remember the last category whose type matches the
+  // current type, so cancelling a type-switch confirm can restore it.
+  const lastMatchingCatRef = useRef<{ categoryId: string; subCategoryId: string }>({ categoryId, subCategoryId });
+  useEffect(() => {
+    if (selectedCatObj && selectedCatObj.type === type) {
+      lastMatchingCatRef.current = { categoryId, subCategoryId };
+    }
+  }, [categoryId, subCategoryId, type, selectedCatObj]);
+
   useEffect(() => {
     if (!isOpen) return;
     if (!selectedCatObj) return;
     if (isTransferCategory) return;
+    if (pendingTypeChange) return;
     const catType = selectedCatObj.type;
-    if (catType && type !== catType) setType(catType);
-  }, [isOpen, selectedCatObj?.id, isTransferCategory]);
+    if (catType && type !== catType) {
+      // [v7.5.60 S15] A category pick must never silently flip
+      // income↔expense on an edit — ask first (the segmented control
+      // below makes the flip visible; this confirm guards the edit).
+      // A new entry just switches (the control shows it happening).
+      if (isEditing) {
+        setPendingTypeChange({
+          newType: catType,
+          revertCategoryId: lastMatchingCatRef.current.categoryId,
+          revertSubCategoryId: lastMatchingCatRef.current.subCategoryId,
+        });
+      } else {
+        setType(catType);
+      }
+    }
+  }, [isOpen, selectedCatObj?.id, isTransferCategory, type, isEditing, pendingTypeChange]);
 
   if (!isOpen) return null;
 
   const handleAddAmount = (add: number) => {
     const current = parseMyanmarNumber(amount) || 0;
     setAmount((current + add).toString());
+  };
+
+  // [v7.5.60 M4/S15] Manual income/expense switch from the segmented
+  // control. A category of the other type cannot stay on the record:
+  // on a new entry it is cleared at once; on an edit the user is asked
+  // first (confirm clears it, cancel keeps everything as it was).
+  // Vehicle models force expense, so the control is disabled there.
+  const handleTypeChange = (newType: TransactionType) => {
+    if (newType === type || entryModel !== 'general') return;
+    const curCat = categories.find((c) => c.id === categoryId);
+    if (curCat && curCat.type !== newType) {
+      if (isEditing) {
+        setPendingTypeChange({ newType, clearCategoryOnConfirm: true });
+        return;
+      }
+      setCategoryId('');
+      setSubCategoryId('');
+    }
+    setType(newType);
+  };
+
+  const confirmTypeChange = () => {
+    if (!pendingTypeChange) return;
+    setType(pendingTypeChange.newType);
+    if (pendingTypeChange.clearCategoryOnConfirm) {
+      setCategoryId('');
+      setSubCategoryId('');
+    }
+    setPendingTypeChange(null);
+  };
+
+  const cancelTypeChange = () => {
+    if (pendingTypeChange?.revertCategoryId !== undefined) {
+      setCategoryId(pendingTypeChange.revertCategoryId);
+      setSubCategoryId(pendingTypeChange.revertSubCategoryId || '');
+    }
+    setPendingTypeChange(null);
+  };
+
+  // [v7.5.60 S10] Backfill confirm as a promise the submit awaits —
+  // replaces window.confirm (the dialog below resolves it).
+  const askBackfill = (odoNum: number, currentOdo: number): Promise<boolean> =>
+    new Promise((resolve) => {
+      setBackfillPrompt({
+        message: lang === 'my'
+          ? `မိုင်တာ (${odoNum.toLocaleString()}) သည် လက်ရှိ မိုင်တာ (${currentOdo.toLocaleString()}) ထက် နည်းနေပါသည်။ အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?`
+          : `Odometer (${odoNum.toLocaleString()}) is lower than the current odometer (${currentOdo.toLocaleString()}). Is this a missed older entry?`,
+        resolve,
+      });
+    });
+
+  // [v7.5.60 E-S73] Near-duplicate item name? Typing "ဆန်" when
+  // "ဆန်(ပေါင်း)" already exists should suggest the existing name, so
+  // inconsistent spellings stop breaking price comparison. Returns null
+  // when the typed name already matches an existing item exactly.
+  const findSimilarItemName = (typed: string): UnifiedItemInfo | null => {
+    const norm = normalizeItemName(typed);
+    if (!norm.key || norm.key.length < 2) return null;
+    if (unifiedItemSuggestions.some((s) => s.normalizedName === norm.key)) return null;
+    const lev = (a: string, b: string): number => {
+      const m = a.length;
+      const n = b.length;
+      if (Math.abs(m - n) > 2) return 99;
+      const dp: number[][] = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+          );
+        }
+      }
+      return dp[m][n];
+    };
+    return (
+      unifiedItemSuggestions.find(
+        (s) =>
+          s.normalizedName.startsWith(norm.key) ||
+          norm.key.startsWith(s.normalizedName) ||
+          s.normalizedName.includes(norm.key) ||
+          norm.key.includes(s.normalizedName) ||
+          lev(s.normalizedName, norm.key) <= 2
+      ) || null
+    );
   };
 
   const handleCreateQuickSub = () => {
@@ -1074,7 +1203,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || !isActionAllowed) return;
     const numAmount = parseMyanmarNumber(amount);
@@ -1135,18 +1264,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
           // odometer. Ask instead of blocking — the vehicle odometer itself stays
           // at the highest reading (recalculation uses max), so this cannot lower it.
-          const okBackfill = window.confirm(
-            lang === 'my'
-              ? `မိုင်တာ (${odoNum.toLocaleString()}) သည် လက်ရှိ မိုင်တာ (${(currVeh.currentOdometer || 0).toLocaleString()}) ထက် နည်းနေပါသည်။ အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?`
-              : `Odometer (${odoNum.toLocaleString()}) is lower than the current odometer (${(currVeh.currentOdometer || 0).toLocaleString()}). Is this a missed older entry?`
-          );
+          // [v7.5.60 S10] Inline dialog (awaited) instead of window.confirm.
+          const okBackfill = await askBackfill(odoNum, currVeh.currentOdometer || 0);
           if (!okBackfill) {
             setIsSubmitting(false);
             return;
           }
         }
         if (!editingOwnOdometer && !editingUnlinkedLog && lastFuelLogForComparison && odoNum === lastFuelLogForComparison.odometer) {
-          alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြယ်ရန်)' : 'Odometer is the same as the last entry.');
+          setFormError(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကွယ်ရန်)' : 'Odometer is the same as the last entry.');
           setIsSubmitting(false);
           return;
         }
@@ -1176,18 +1302,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           // [v7.5.51] Backfill: an older missed entry may legitimately have a lower
           // odometer. Ask instead of blocking — the vehicle odometer itself stays
           // at the highest reading (recalculation uses max), so this cannot lower it.
-          const okBackfill = window.confirm(
-            lang === 'my'
-              ? `မိုင်တာ (${odoNum.toLocaleString()}) သည် လက်ရှိ မိုင်တာ (${(currVeh.currentOdometer || 0).toLocaleString()}) ထက် နည်းနေပါသည်။ အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?`
-              : `Odometer (${odoNum.toLocaleString()}) is lower than the current odometer (${(currVeh.currentOdometer || 0).toLocaleString()}). Is this a missed older entry?`
-          );
+          // [v7.5.60 S10] Inline dialog (awaited) instead of window.confirm.
+          const okBackfill = await askBackfill(odoNum, currVeh.currentOdometer || 0);
           if (!okBackfill) {
             setIsSubmitting(false);
             return;
           }
         }
         if (!editingOwnOdometer && !editingUnlinkedLog && lastMaintLogForComparison && odoNum === lastMaintLogForComparison.odometer) {
-          alert(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကြီးရန်)' : 'Odometer is the same as the last entry.');
+          setFormError(lang === 'my' ? 'Odometer သည် ယခင်မှတ်တမ်းနှင့် တူနေပါသည်။ (Double Entry ကာကွယ်ရန်)' : 'Odometer is the same as the last entry.');
           setIsSubmitting(false);
           return;
         }
@@ -1427,7 +1550,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-3 sm:p-4" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white w-full sm:max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
         <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0">
             <button type="button" onClick={onClose} className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-2 py-1 -ml-2 shrink-0">
@@ -1447,6 +1570,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <span className="flex items-center gap-2 min-w-0">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   <span className="truncate">
+                    {lang === 'my' ? 'ထည့်သွင်းပုံစံ: ' : 'Entry mode: '}
                     {entryModel === 'tire_pressure' ? (lang === 'my' ? '🛞 လေချိန်' : '🛞 Tire Pressure') : entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : entryMode === 'unit_qty' ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty') : entryMode === 'shopping_list' ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List') : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
                   </span>
                 </span>
@@ -1496,6 +1620,21 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div className="mx-3 mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">{formError}</div>
             )}
 
+            {/* [v7.5.60 S15] Income↔expense switch confirm (edit only). */}
+            {pendingTypeChange && (
+              <div className="mx-3 mt-3 p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-2">
+                <p className="text-amber-900 text-xs font-bold leading-relaxed">
+                  {lang === 'my'
+                    ? `မှတ်တမ်း အမျိုးအစား "${pendingTypeChange.newType === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'}" သို့ ပြောင်းမည်။${pendingTypeChange.clearCategoryOnConfirm ? ' လက်ရှိ ကဏ္ဍက အမျိုးအစားအသစ်နှင့် မကိုက်လို့ ဖျက်ပြီး ပြန်ရွေးရပါမည်။' : ''} သေချာပါသလား?`
+                    : `Change the record type to "${pendingTypeChange.newType === 'income' ? 'Income' : 'Expense'}"?${pendingTypeChange.clearCategoryOnConfirm ? ' The current category does not match the new type and will be cleared.' : ''}`}
+                </p>
+                <div className="flex items-center justify-end gap-2">
+                  <button type="button" onClick={cancelTypeChange} className="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 font-bold text-xs cursor-pointer">{lang === 'my' ? 'မပြောင်းပါ' : 'Keep as is'}</button>
+                  <button type="button" onClick={confirmTypeChange} className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer">{lang === 'my' ? 'ပြောင်းမည်' : 'Change'}</button>
+                </div>
+              </div>
+            )}
+
             {entryModel !== "general" && (
               <div className="px-3 pt-3">
                 <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
@@ -1510,8 +1649,31 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             )}
 
-            <div className="px-4 pt-3 pb-1 text-center">
-              {type === "income" ? <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600"><ArrowDownLeft className="w-3 h-3" />{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</span> : <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600"><ArrowUpRight className="w-3 h-3" />{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</span>}
+            {/* [v7.5.60 M4] Income/expense segmented control — the old
+                code showed the type as a text label only, with no way to
+                switch it here. Disabled for vehicle models (expense is
+                forced there). On an edit, switching asks first (S15). */}
+            <div className="px-4 pt-3 pb-1">
+              <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl" role="group" aria-label={lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ' : 'Income / Expense'}>
+                <button
+                  type="button"
+                  onClick={() => handleTypeChange('expense')}
+                  disabled={entryModel !== 'general'}
+                  className={`py-2 px-3 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${type === 'expense' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                  <span>{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTypeChange('income')}
+                  disabled={entryModel !== 'general'}
+                  className={`py-2 px-3 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${type === 'income' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  <ArrowDownLeft className="w-4 h-4" />
+                  <span>{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</span>
+                </button>
+              </div>
             </div>
 
             <div className="px-4 py-4 border-b border-slate-100">
@@ -1543,7 +1705,34 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <button type="button" onClick={() => handleAddAmount(100000)} className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 rounded text-[11px] font-bold text-indigo-700">+100K</button>
                 </div>
               )}
+              {/* [v7.5.60 N1] Live lakh preview while typing the amount
+                  (display-only — the input stays full kyat). */}
+              {(parseMyanmarNumber(amount) || 0) > 0 && (
+                <div className="text-xs text-center text-slate-500 font-semibold mt-1.5" title={formatMMK(parseMyanmarNumber(amount) || 0)}>
+                  ≈ {formatLakhs(parseMyanmarNumber(amount) || 0, lang)}
+                </div>
+              )}
             </div>
+
+            {/* [v7.5.60 S16] Entry-mode choices shown directly instead of
+                hiding behind the ✨ menu — a new user can find the
+                shopping list / unit×qty modes without guessing. */}
+            {entryModel === "general" && (
+              <div className="px-4 py-2 border-b border-slate-100">
+                <div className="text-[11px] font-bold text-slate-500 mb-1.5">{lang === 'my' ? 'ထည့်သွင်းပုံစံ:' : 'Entry mode:'}</div>
+                <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
+                  <button type="button" onClick={() => { setShowQuickAddSub(true); setEntryMode("direct"); setEntryModel("general"); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "direct" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900")}>
+                    <FileText className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</span>
+                  </button>
+                  <button type="button" onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); setShowQuickAddSub(false); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "unit_qty" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
+                    <Boxes className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ဈေး × အရေအတွက်' : 'Unit × Qty'}</span>
+                  </button>
+                  <button type="button" onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); setShowQuickAddSub(false); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "shopping_list" ? "bg-amber-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
+                    <ShoppingCart className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button type="button" onClick={() => setIsCategoryPickerOpen(true)} className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: selectedCatObj?.color || "#94A3B8" }}>
@@ -1667,7 +1856,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       <option value="Other">{lang === 'my' ? '➕ အခြား / အသစ်ရေးရန်' : '➕ Other'}</option>
                     </select>
                     {fuelGasStation === 'Other' && (
-                      <input type="text" value={customGasStation} onChange={(e) => setCustomGasStation(e.target.value)} placeholder={lang === 'my' ? 'ဆီဆိုင် အမည် ရိုက်ထည့်ပါ' : 'Type station name'} className="w-full mt-1.5 text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400" autoFocus />
+                      <input type="text" value={customGasStation} onChange={(e) => setCustomGasStation(e.target.value)} placeholder={lang === 'my' ? 'ဆီဆိုင် အမည် ရိုက်ထည့်ပါ' : 'Type station name'} className="w-full mt-1.5 text-base font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400" autoFocus />
                     )}
                   </div>
                 </div>
@@ -1822,11 +2011,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "ဈေးနှုန်း" : "Unit Price"}</span>
-                  <input type="number" value={unitPrice} onChange={(e) => handleUnitQtyChange("price", e.target.value)} placeholder="0" className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
+                  <input type="text" inputMode="decimal" value={unitPrice} onChange={(e) => handleUnitQtyChange("price", e.target.value)} placeholder="0" className="flex-1 min-w-0 text-base font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "အရေအတွက်" : "Quantity"}</span>
-                  <input type="number" step="any" value={quantity} onChange={(e) => handleUnitQtyChange("qty", e.target.value)} placeholder="1" className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
+                  <input type="text" inputMode="decimal" value={quantity} onChange={(e) => handleUnitQtyChange("qty", e.target.value)} placeholder="1" className="flex-1 min-w-0 text-base font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
               </>
             )}
@@ -1843,16 +2032,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <div ref={shoppingListContainerRef} className="space-y-2 max-h-72 overflow-y-auto overflow-x-hidden pr-1">
                   {shoppingItems.map((item, idx) => {
                     const pastPurchase = getPastPriceForItem(item.name);
+                    // [v7.5.60 E-S73] Near-duplicate name suggestion —
+                    // shown only when the typed name is close to (but not
+                    // exactly) an existing item name.
+                    const similarName = item.name.trim() ? findSimilarItemName(item.name) : null;
                     return (
                       <div key={item.id || idx} className="bg-slate-50 rounded-xl p-2.5 space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <input type="text" list="db-item-suggestions" value={item.name} onChange={(e) => updateShoppingItem(item.id || "", "name", e.target.value)} placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'} className="flex-1 min-w-0 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none" />
+                          <input type="text" list="db-item-suggestions" value={item.name} onChange={(e) => updateShoppingItem(item.id || "", "name", e.target.value)} placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'} className="flex-1 min-w-0 text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none" />
                           <button type="button" onClick={() => removeShoppingItemRow(item.id || "")} className="p-1 text-slate-400 hover:text-rose-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
+                        {similarName && (
+                          <button type="button" onClick={() => updateShoppingItem(item.id || "", "name", similarName.name)} className="w-full text-left text-[11px] font-semibold text-amber-800 bg-amber-100/80 hover:bg-amber-100 border border-amber-200 rounded-lg px-2 py-1">
+                            {lang === 'my'
+                              ? `⚠️ ဆင်တူသော အမည် ရှိပါသည်: “${similarName.name}”${similarName.latestPrice > 0 ? ` (${formatMMK(similarName.latestPrice)})` : ''} — နှိပ်၍ သုံးမည်`
+                              : `⚠️ Similar name exists: “${similarName.name}”${similarName.latestPrice > 0 ? ` (${formatMMK(similarName.latestPrice)})` : ''} — tap to use it`}
+                          </button>
+                        )}
                         <div className="grid grid-cols-3 gap-1.5">
-                          <input type="number" value={item.price || ""} onChange={(e) => updateShoppingItem(item.id || "", "price", e.target.value)} placeholder="ဈေး" className="min-w-0 w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
-                          <input type="number" step="any" value={item.quantity || ""} onChange={(e) => updateShoppingItem(item.id || "", "quantity", e.target.value)} placeholder="Qty" className="min-w-0 w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
-                          <input type="number" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="min-w-0 w-full text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
+                          <input type="text" inputMode="decimal" value={item.price || ""} onChange={(e) => updateShoppingItem(item.id || "", "price", e.target.value)} placeholder="ဈေး" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
+                          <input type="text" inputMode="decimal" value={item.quantity || ""} onChange={(e) => updateShoppingItem(item.id || "", "quantity", e.target.value)} placeholder="Qty" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
+                          <input type="text" inputMode="decimal" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="min-w-0 w-full text-base font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
                         </div>
                         {pastPurchase && item.price > 0 && (<div className="text-[10px] text-slate-500">{lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})</div>)}
                       </div>
@@ -1967,6 +2167,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <div className="h-4" />
           </div>
         </form>
+
+        {/* [v7.5.60 S10] Backfill confirm — inline dialog that resolves
+            the promise handleSubmit is awaiting (no window.confirm). */}
+        {backfillPrompt && (
+          <div className="absolute inset-0 z-10 bg-slate-900/50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-200 p-5 space-y-4">
+              <h3 className="font-bold text-base text-slate-900">
+                {lang === 'my' ? 'အဟောင်းမှတ်တမ်း ပြန်ဖြည့်တာလား?' : 'Backfill an older record?'}
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">{backfillPrompt.message}</p>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button type="button" onClick={() => { backfillPrompt.resolve(false); setBackfillPrompt(null); }} className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-xs cursor-pointer">
+                  {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+                </button>
+                <button type="button" onClick={() => { backfillPrompt.resolve(true); setBackfillPrompt(null); }} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer">
+                  {lang === 'my' ? 'ဟုတ်ကဲ့၊ ပြန်ဖြည့်တာပါ' : 'Yes, backfill'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {isShoppingPriceHistoryOpen && (

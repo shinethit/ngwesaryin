@@ -30,7 +30,6 @@ import {
 import { DEFAULT_WALLET_PERMISSIONS, getCollaboratorPermissions } from './utils/permissions';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-import { PlanBanner } from './components/PlanBanner';
 import { Dashboard } from './components/Dashboard';
 import { TransactionsView } from './components/TransactionsView';
 import { DebtsView } from './components/DebtsView';
@@ -54,7 +53,7 @@ import { db, cleanForFirestore, handleFirestoreError, OperationType, isQuotaExha
 import { syncQueue } from './lib/syncQueue';
 import { recordSyncOperationStart, finishSyncOperation } from './lib/syncOperationLogger';
 import { PinLockScreen } from './components/PinLockScreen';
-import { Toast } from './components/Toast';
+import { Toast, type ToastType } from './components/Toast';
 import { AdminBroadcastBanner } from './components/AdminBroadcastBanner';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { QuotaExceededNotificationBanner } from './components/QuotaExceededNotificationBanner';
@@ -68,7 +67,10 @@ import { SyncStatusDrawer } from './components/SyncStatusDrawer';
 import { EducationView } from './components/EducationView';
 import { CURRENT_APP_VERSION, CURRENT_BUILD_NUMBER } from './data/versionHistory';
 import { trackVisitorSession } from './lib/analyticsService';
-import { syncWalletsWithTransactions, isWalletMatch, repairOrphanedTransactions, isTransferTransaction } from './utils/walletBalance';
+import { syncWalletsWithTransactions, isWalletMatch, repairOrphanedTransactions, isTransferTransaction, buildWalletMap } from './utils/walletBalance';
+import { convertToMMK } from './utils/currency';
+import { getMaintenanceAlerts } from './utils/vehicleAnalytics';
+import { getLocalDateString } from './utils/dateUtils';
 import { mergeAndCleanCategories } from './utils/categoryCleanUp';
 import {
   syncSharedWalletToCloud,
@@ -150,6 +152,9 @@ const validateImportPayload = (parsed: any): { valid: boolean; error?: string } 
     }
   }
   // [v7.4.0] Now accepts 4 languages.
+  // [v7.5.60 G-M7] zh/th are no longer offered — a backup carrying
+  // them still validates, but restores as English (what the app
+  // actually showed for zh/th).
   if (
     parsed.lang !== undefined &&
     parsed.lang !== 'my' &&
@@ -233,8 +238,9 @@ export default function App() {
   }, [user, userProfile]);
 
 
-  // [v7.4.0] lang state now stores Lang ('my'|'en'|'zh'|'th').
-  // Child components still only support 'my'|'en' — Phase 1 narrows.
+  // [v7.4.0] lang state stores Lang ('my'|'en').
+  // [v7.5.60 G-M7] zh/th are no longer offered — a stored legacy
+  // 'zh'/'th' value falls through to English below.
   const [langRaw, setLangRaw] = usePersistedState<Lang>('ngwe_lang', 'my');
   const lang: 'my' | 'en' = langRaw === 'my' ? 'my' : 'en';
 
@@ -394,6 +400,9 @@ export default function App() {
     }
   });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // [v7.5.60 G-N3] Toast type travels with the message so errors
+  // don't render with a green success check.
+  const [toastType, setToastType] = useState<ToastType>('success');
 
   // [v7.2.5] Log version on EVERY app boot so it's visible in console.
   useEffect(() => {
@@ -507,6 +516,14 @@ export default function App() {
       if (l.nextCheckDate) ids.push(`notif_tire_${l.id}_${l.nextCheckDate}`);
     });
 
+    // [v7.5.60 G-S5] Maintenance / license alerts too — the modal
+    // counts them as unread, so "mark all read" must clear them or
+    // the badge never reaches zero.
+    vehicles.forEach((vehicle) => {
+      const vLogs = vehicleMaintenance.filter((m) => m.vehicleId === vehicle.id);
+      getMaintenanceAlerts(vehicle, vLogs, lang).forEach((a) => ids.push(a.id));
+    });
+
     setReadNotificationIds(ids);
     safeSetItem('ngwe_read_notifications', JSON.stringify(ids));
   };
@@ -533,23 +550,41 @@ export default function App() {
     });
 
     // Budget warnings
+    // [v7.5.60 C-S49/G-S5] Same math as BudgetAnalyticsView and the
+    // NotificationModal: convert foreign currency to MMK, exclude
+    // transfers, and the General budget sums the unbudgeted pool
+    // (the old code used raw amounts, counted transfers, and could
+    // never trigger the General budget — so the badge and the modal
+    // disagreed).
+    const badgeWalletMap = buildWalletMap(wallets as any);
+    const badgeConvertTx = (t: (typeof transactions)[number]) => {
+      const w = badgeWalletMap.get(t.walletId);
+      return convertToMMK(t.amount, (w as any)?.currency, (w as any)?.exchangeRate);
+    };
     const currentMonthTx = transactions.filter(
-      (t) => t.type === 'expense' && t.date && t.date.startsWith(currentMonthStr)
+      (t) => t.type === 'expense' && !isTransferTransaction(t) && t.date && t.date.startsWith(currentMonthStr)
+    );
+    const explicitBudgetedCatIds = new Set(
+      budgets.map((b) => b.categoryId).filter((id) => id !== 'cat_general_unbudgeted')
     );
     const spendingByCategory: Record<string, number> = {};
     currentMonthTx.forEach((t) => {
-      spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + t.amount;
+      spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + badgeConvertTx(t);
     });
+    const generalPoolSpent = currentMonthTx
+      .filter((t) => !explicitBudgetedCatIds.has(t.category))
+      .reduce((sum, t) => sum + badgeConvertTx(t), 0);
 
     const monthlyIncome = transactions
       .filter((t) => t.type === 'income' && t.date && t.date.startsWith(currentMonthStr) && !isTransferTransaction(t))
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + badgeConvertTx(t), 0);
 
     budgets.forEach((budget) => {
-      const spent = spendingByCategory[budget.categoryId] || 0;
+      const isGeneralBudget = budget.categoryId === 'cat_general_unbudgeted';
+      const spent = isGeneralBudget ? generalPoolSpent : (spendingByCategory[budget.categoryId] || 0);
       // [v6.7e] Percentage budget: value is % of monthly income
       const limit = budget.calcType === 'percentage'
-        ? (monthlyIncome * budget.value) / 100
+        ? Math.round((monthlyIncome * budget.value) / 100)
         : budget.value;
       if (limit > 0) {
         const percentage = (spent / limit) * 100;
@@ -571,8 +606,17 @@ export default function App() {
       }
     });
 
+    // [v7.5.60 G-S5] Maintenance / license alerts — the modal counts
+    // them, so the badge must too (same helper, same ids).
+    vehicles.forEach((vehicle) => {
+      const vLogs = vehicleMaintenance.filter((m) => m.vehicleId === vehicle.id);
+      getMaintenanceAlerts(vehicle, vLogs, lang).forEach((a) => {
+        if (!readNotificationIds.includes(a.id)) count++;
+      });
+    });
+
     return count;
-  }, [debts, budgets, transactions, tirePressureLogs, readNotificationIds]);
+  }, [debts, budgets, transactions, tirePressureLogs, readNotificationIds, wallets, vehicles, vehicleMaintenance]);
 
     const [pinSettings, setPinSettings] = useState<PinLockSettings>(() => {
     try {
@@ -640,9 +684,40 @@ export default function App() {
     }
   }, []);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, type: ToastType = 'success') => {
+    setToastType(type);
     setToastMessage(msg);
   };
+
+  // [v7.5.60 G-M6] One Toast element rendered above EVERY return
+  // (language picker / loading / login / lock included) so PIN-set
+  // and login toasts are actually visible instead of unmounting
+  // with the main shell.
+  const toastElement = toastMessage ? (
+    <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage(null)} />
+  ) : null;
+
+  // [v7.5.60 G-S7/S-105] First-launch PWA install modal waits ~30s
+  // so the user sees the Dashboard first instead of a modal 1.5s
+  // after entry. The prompt component itself still owns "first
+  // launch ever" + snooze/dismiss rules; this only delays its first
+  // mount. Launches where it was already dismissed once mount
+  // immediately, so the bottom banner timing is unchanged.
+  const [pwaPromptReady, setPwaPromptReady] = useState<boolean>(() => {
+    try {
+      return !!(
+        safeGetItem('pwa_install_dismissed_time') ||
+        safeGetItem('ngwe_pwa_install_dismissed_time')
+      );
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    if (pwaPromptReady) return;
+    const t = setTimeout(() => setPwaPromptReady(true), 30000);
+    return () => clearTimeout(t);
+  }, [pwaPromptReady]);
 
   const {
     handleManualSyncUp,
@@ -1017,7 +1092,7 @@ export default function App() {
         ? (lang === 'my' ? 'မျှဝေထားသော ပိုက်ဆံအိတ်ကို လက်ခံပြီးပါပြီ ✓' : 'Shared wallet accepted ✓')
         : (lang === 'my' ? '⚠️ လက်ခံ၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not accept the invite — check your connection and retry'));
     } catch {
-      showToast(lang === 'my' ? '⚠️ လက်ခံ၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not accept the invite — check your connection and retry');
+      showToast(lang === 'my' ? '⚠️ လက်ခံ၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not accept the invite — check your connection and retry', 'warning');
     } finally {
       setInviteBusyDocId(null);
     }
@@ -1030,7 +1105,7 @@ export default function App() {
         ? (lang === 'my' ? 'မျှဝေမှုကို ငြင်းပယ်ပြီးပါပြီ' : 'Share invite declined')
         : (lang === 'my' ? '⚠️ ငြင်းပယ်၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not decline the invite — check your connection and retry'));
     } catch {
-      showToast(lang === 'my' ? '⚠️ ငြင်းပယ်၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not decline the invite — check your connection and retry');
+      showToast(lang === 'my' ? '⚠️ ငြင်းပယ်၍ မရပါ — အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ' : '⚠️ Could not decline the invite — check your connection and retry', 'warning');
     } finally {
       setInviteBusyDocId(null);
     }
@@ -1225,6 +1300,42 @@ export default function App() {
   const limits = DEFAULT_PLAN_LIMITS[plan];
   const guestLimits = DEFAULT_PLAN_LIMITS.guest;
   const freeLimits = DEFAULT_PLAN_LIMITS.free;
+
+  // [v7.5.60 C-N1] Compact one-line plan/usage chip for the Navbar —
+  // "Free · မှတ်တမ်း 82/100 · အကြွေး 3/5". The big PlanBanner stays
+  // removed (user's choice); this chip is the one-place summary. The
+  // rolling-30-day count uses the SAME rule as the limit enforcement
+  // (useWalletHandlers countsTowardMyLimit): txs dated within the last
+  // 30 days, excluding transactions created by someone else / on a
+  // foreign shared wallet.
+  const usageChip = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    const start = getLocalDateString(d);
+    const usedTx = transactions.filter((t) => {
+      if (!t.date || t.date < start) return false;
+      if (user?.uid && t.createdBy && t.createdBy !== user.uid) return false;
+      const w =
+        wallets.find((x) => isWalletMatch(x, t.walletId)) ||
+        computedWallets.find((x) => isWalletMatch(x, t.walletId));
+      if (!w) return true;
+      if (w.isSharedFromOther && w.ownerUid && user?.uid && w.ownerUid !== user.uid) return false;
+      return true;
+    }).length;
+    const activeDebtCount = debts.filter((x) => x.status === 'active').length;
+    const planLabel = plan === 'guest' ? (lang === 'my' ? 'ဧည့်သည်' : 'Guest') : plan === 'premium' ? 'Premium' : 'Free';
+    const txPart =
+      plan === 'premium'
+        ? (lang === 'my' ? `မှတ်တမ်း ${usedTx}` : `Records ${usedTx}`)
+        : (lang === 'my' ? `မှတ်တမ်း ${usedTx}/${limits.maxTransactions}` : `Records ${usedTx}/${limits.maxTransactions}`);
+    const debtPart =
+      limits.maxDebts <= 0
+        ? ''
+        : plan === 'premium'
+          ? (lang === 'my' ? `အကြွေး ${activeDebtCount}` : `Debts ${activeDebtCount}`)
+          : (lang === 'my' ? `အကြွေး ${activeDebtCount}/${limits.maxDebts}` : `Debts ${activeDebtCount}/${limits.maxDebts}`);
+    return [planLabel, txPart, debtPart].filter(Boolean).join(' · ');
+  }, [transactions, debts, wallets, computedWallets, user?.uid, plan, limits, lang]);
 
   // [v7.0.5] Force-pull vehicles when local empty. Retries on failure (no ref lock).
   useEffect(() => {
@@ -1435,7 +1546,7 @@ export default function App() {
     // [v7.5.55 Decision 2] Export is Premium-only. The pre-delete
     // auto-backup in handleClearAllData is NOT gated (safety net).
     if (plan !== 'premium') {
-      showToast(lang === 'my' ? 'Export သည် Premium အဆင့်အတွက်သာ ဖြစ်ပါသည်' : 'Export is available on Premium only');
+      showToast(lang === 'my' ? 'Export သည် Premium အဆင့်အတွက်သာ ဖြစ်ပါသည်' : 'Export is available on Premium only', 'warning');
       return;
     }
     // [v7.5.55 E4] Include monthly savings targets + deletion markers
@@ -1509,7 +1620,7 @@ export default function App() {
         const counts = ['transactions', 'debts', 'wallets', 'categories', 'budgets', 'shops', 'vehicles']
           .filter((f) => Array.isArray((parsed as any)[f]))
           .map((f) => `${f}: ${(parsed as any)[f].length}`).join(', ');
-        if (!window.confirm(lang === 'my' ? `Backup ဖိုင်မှ ဒေတာများကို ထည့်သွင်းမည် (ဖိုင်တွင် မပါသော စာရင်းများ ပြောင်းလဲမည် မဟုတ်ပါ) — ${counts} — သေချာပါသလား?` : `Import data from this backup? Collections not in the file are left unchanged — ${counts} — Continue?`)) {
+        if (!window.confirm(lang === 'my' ? `Backup ဖိုင်မှ ဒေတာများကို ထည့်သွင်းမည် — ⚠️ ဖိုင်တွင် ပါသော စာရင်းများ၏ လက်ရှိ ဒေတာ အစားထိုးခံရပါမည် (ဖိုင်တွင် မပါသော စာရင်းများ ပြောင်းလဲမည် မဟုတ်ပါ) — ${counts} — သေချာပါသလား?` : `Import data from this backup? ⚠️ Existing data in the included collections will be replaced (collections not in the file are left unchanged) — ${counts} — Continue?`)) {
           return;
         }
         // [v7.5.55 Decision 1] Guest may not restore debts/budgets/
@@ -1542,7 +1653,7 @@ export default function App() {
             });
           } catch { /* ignore */ }
         }
-        if (parsed.lang) setLangRaw(parsed.lang as Lang);
+        if (parsed.lang) setLangRaw(parsed.lang === 'my' ? 'my' : 'en');
         // [v7.5.55 E4] Imported transactions used to vanish for
         // signed-in users: the cloud listener is cloud-authoritative
         // and drops local txs that are neither confirmed nor pending.
@@ -1583,14 +1694,14 @@ export default function App() {
             cloudTxIds
           ).then((ok) => {
             if (!ok) {
-              showToast(lang === 'my' ? '⚠️ ဒေတာ ထည့်သွင်းပြီး Cloud သို့ ပို့ဆောင်၍ မရသေးပါ — Sync ထပ်ကြိုးစားပါ' : '⚠️ Imported locally, but cloud upload did not finish — please sync again');
+              showToast(lang === 'my' ? '⚠️ ဒေတာ ထည့်သွင်းပြီး Cloud သို့ ပို့ဆောင်၍ မရသေးပါ — Sync ထပ်ကြိုးစားပါ' : '⚠️ Imported locally, but cloud upload did not finish — please sync again', 'warning');
             }
           }).catch(() => {
-            showToast(lang === 'my' ? '⚠️ Cloud သို့ ပို့ဆောင်၍ မရပါ — Sync ထပ်ကြိုးစားပါ' : '⚠️ Could not upload to cloud — please sync again');
+            showToast(lang === 'my' ? '⚠️ Cloud သို့ ပို့ဆောင်၍ မရပါ — Sync ထပ်ကြိုးစားပါ' : '⚠️ Could not upload to cloud — please sync again', 'warning');
           });
         }
         if (!allowDebts && parsed.debts) {
-          showToast(lang === 'my' ? 'Guest Mode တွင် အကြွေးစာရင်း ပြန်ထည့်၍ မရပါ' : 'Debts were not imported in Guest Mode');
+          showToast(lang === 'my' ? 'Guest Mode တွင် အကြွေးစာရင်း ပြန်ထည့်၍ မရပါ' : 'Debts were not imported in Guest Mode', 'warning');
         } else {
           showToast(t('toast.backupRestored', lang));
         }
@@ -1815,41 +1926,60 @@ export default function App() {
     showToast(t('toast.pinSet', lang));
   };
 
+  // [v7.5.60 A-N04] Tapping the already-selected bottom tab scrolls
+  // back to the top instead of doing nothing.
+  const handleBottomTabSelect = (tab: string) => {
+    if (activeTab === tab) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setActiveTab(tab);
+  };
+
   // [v7.4.1] First-launch language picker — full-screen takeover.
   // Only shown once per device (device-global flag ngwe_lang_picker_seen).
   if (firstLaunchPicker) {
     return (
-      <LanguagePickerModal
-        isOpen
-        current={langRaw}
-        onSelect={handleSelectLang}
-        isFirstLaunch
-      />
+      <>
+        <LanguagePickerModal
+          isOpen
+          current={langRaw}
+          onSelect={handleSelectLang}
+          isFirstLaunch
+        />
+        {toastElement}
+      </>
     );
   }
 
   // Loading screen
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <FortuneLogo size="lg" style={logoStyle} animate />
-          <p className="text-xs text-slate-500 font-medium">
-            {t('loading.appStarting', lang)}
-          </p>
+      <>
+        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+          <div className="flex flex-col items-center gap-3">
+            <FortuneLogo size="lg" style={logoStyle} animate />
+            <p className="text-xs text-slate-500 font-medium">
+              {t('loading.appStarting', lang)}
+            </p>
+          </div>
         </div>
-      </div>
+        {toastElement}
+      </>
     );
   }
 
   // Landing / Login Screen for unauthenticated or non-guest visitors
   if (!user && !isGuestSession) {
     return (
-      <LoginScreen
-        lang={lang}
-        onToggleLang={handleToggleLang}
-        logoStyle={logoStyle}
-      />
+      <>
+        <LoginScreen
+          lang={lang}
+          onToggleLang={handleToggleLang}
+          logoStyle={logoStyle}
+        />
+        {toastElement}
+      </>
     );
   }
 
@@ -1868,13 +1998,22 @@ export default function App() {
             // app stays LOCKED until that sign-in succeeds — unlocking
             // first (the old code did setIsLocked(false) here) let
             // anyone past the PIN with no re-auth at all.
-            const msg = lang === 'my'
-              ? 'PIN ပြန်လည်သတ်မှတ်ရန် Google/Email အကောင့် ပြန်ဝင်ရန် လိုအပ်ပါသည်။ App ကို လော့ခ်ဖွင့်ရန် အကောင့် ပြန်ဝင်ရပါမည်။\n\nဆက်လုပ်မလား?'
-              : 'PIN recovery requires signing in again. The app stays locked until a fresh sign-in succeeds.\n\nContinue?';
+            // [v7.5.60 G-M2] Guests have no account, so say so plainly:
+            // the PIN cannot be reset by email. Signing in moves to a
+            // new account; the guest data stays on the device and
+            // comes back by signing out and continuing as guest.
+            const msg = isGuestSession
+              ? (lang === 'my'
+                ? 'ဧည့်သည်အဖြစ် သုံးနေပါသည် — အကောင့် မရှိသဖြင့် PIN ကို Email ဖြင့် ပြန်ယူ၍ မရပါ။\n\nGoogle/Email အကောင့်ဖြင့် ဝင်လိုက်လျှင် အကောင့်အသစ်သို့ ပြောင်းသွားပြီး ယခု Guest ဒေတာကို ဒီအကောင့်မှာ မမြင်ရပါ (ဒေတာက စက်ထဲမှာ ကျန်နေသေးပြီး အကောင့်ထွက်ပြီး Guest အဖြစ် ပြန်ဝင်လျှင် ပြန်မြင်ရပါမည်)။ PIN အဟောင်းကို ဖျက်ပြီး အက်ပ်ကို ဖွင့်ပေးပါမည်။\n\nဆက်လုပ်မလား?'
+                : 'You are using Guest Mode — there is no account, so the PIN cannot be reset by email.\n\nSigning in with Google/Email moves you to a new account and this guest data will not show there (it stays on the device — sign out and continue as guest to see it again). The forgotten PIN will be cleared and the app unlocked.\n\nContinue?')
+              : (lang === 'my'
+                ? 'PIN ပြန်လည်သတ်မှတ်ရန် Google/Email အကောင့် ပြန်ဝင်ရန် လိုအပ်ပါသည်။ App ကို လော့ခ်ဖွင့်ရန် အကောင့် ပြန်ဝင်ရပါမည်။ ဝင်ပြီးလျှင် PIN အဟောင်းကို ဖျက်ပေးပါမည် — အကောင့်ထဲမှာ PIN အသစ် ပြန်သတ်မှတ်နိုင်ပါသည်။\n\nဆက်လုပ်မလား?'
+                : 'PIN recovery requires signing in again. The app stays locked until a fresh sign-in succeeds. After signing in, the forgotten PIN is cleared — you can set a new PIN in Account.\n\nContinue?');
             if (!window.confirm(msg)) return;
             setIsForgotPinRecovery(true);
           }}
         />
+        {toastElement}
         {isForgotPinRecovery && (
           <div className="fixed inset-0 z-[110] overflow-y-auto overflow-x-hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
             <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg">
@@ -1889,6 +2028,13 @@ export default function App() {
                   // Only reachable after a successful sign-in
                   // (LoginScreen calls onClose only on success, and
                   // its X button is hidden when allowClose is false).
+                  // [v7.5.60 G-M2] Fresh sign-in proves identity, so
+                  // the forgotten PIN is cleared — otherwise the app
+                  // would re-lock on the next launch with a PIN
+                  // nobody knows. The user can set a new PIN later.
+                  const clearedSettings: PinLockSettings = { isEnabled: false, pin: '', pinSalt: '', requireOnStart: false };
+                  setPinSettings(clearedSettings);
+                  safeSetItem('ngwe_pin', JSON.stringify(clearedSettings));
                   setIsForgotPinRecovery(false);
                   setIsLocked(false);
                   setShowLoginModal(false);
@@ -1905,11 +2051,12 @@ export default function App() {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-emerald-500 selection:text-white pb-24 relative">
       <QuotaExceededNotificationBanner lang={lang} onOpenSyncStatus={() => setIsSyncStatusDrawerOpen(true)} />
       <ConflictBanner lang={lang} />
-      <PWAInstallPrompt lang={lang} />
+      {pwaPromptReady && <PWAInstallPrompt lang={lang} />}
 
       <Navbar
         onOpenShareApp={() => setIsShareAppModalOpen(true)}
         currentPlan={plan}
+        usageChip={usageChip}
         onOpenSidebar={() => setIsSidebarOpen(true)}
         onOpenSearch={() => setIsSearchModalOpen(true)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
@@ -2200,13 +2347,22 @@ export default function App() {
                   🔒
                 </div>
                 <div>
+                  {/* [v7.5.60 S-69] The lock screen covers the WHOLE
+                      analytics tab — Analysis + Compare Price + Budget —
+                      so the title must say so and list what is locked,
+                      not just "ဘတ်ဂျက်". */}
                   <h2 className="text-lg font-bold text-slate-900">
-                    {lang === 'my' ? 'ဘတ်ဂျက် စီမံခြင်း (Guest Mode တွင် မရရှိနိုင်ပါ)' : 'Budget Management Locked in Guest Mode'}
+                    {lang === 'my' ? 'Analysis၊ ဈေးနှုန်း နှိုင်းယှဉ် နှင့် ဘတ်ဂျက် (Guest Mode တွင် မရရှိနိုင်ပါ)' : 'Analysis, Compare Price & Budgets Locked in Guest Mode'}
                   </h2>
+                  <ul className="text-xs text-slate-500 max-w-sm mx-auto mt-2 space-y-1 text-left list-none">
+                    <li>🔒 {lang === 'my' ? 'Analysis — ဝင်ငွေ/ထွက်ငွေ အစီရင်ခံစာနှင့် ဇယားများ' : 'Analysis — income/expense reports and charts'}</li>
+                    <li>🔒 {lang === 'my' ? 'ဈေးနှုန်း နှိုင်းယှဉ် — ပစ္စည်းဈေးနှုန်း နှိုင်းယှဉ်ခြင်း' : 'Compare Price — comparing item prices'}</li>
+                    <li>🔒 {lang === 'my' ? 'ဘတ်ဂျက် — လစဉ် ဘတ်ဂျက် စီမံခန့်ခွဲခြင်း' : 'Budgets — managing monthly budgets'}</li>
+                  </ul>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">
                     {lang === 'my'
-                      ? 'ဝင်ငွေ/ထွက်ငွေ % နှင့် ပုံသေ ဘတ်ဂျက် စီမံခန့်ခွဲနိုင်ရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ (သို့မဟုတ်) Premium သို့ အဆင့်မြှင့်ပါ'
-                      : 'To set and manage monthly budgets, please Sign in with Google or Upgrade to Premium.'}
+                      ? 'အထက်ပါ feature တွေ သုံးနိုင်ရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ (သို့မဟုတ်) Premium သို့ အဆင့်မြှင့်ပါ'
+                      : 'To use the features above, please Sign in with Google for free (or) Upgrade to Premium.'}
                   </p>
                 </div>
                 <button
@@ -2516,6 +2672,7 @@ export default function App() {
             lang={lang}
             plan={plan}
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
+            onOpenSignIn={() => setIsAuthModalOpen(true)}
                 onAddShop={handleAddShop}
             onUpdateShop={handleUpdateShop}
             onDeleteShop={handleDeleteShop}
@@ -2572,11 +2729,11 @@ export default function App() {
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-md">
         <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl px-3 sm:px-4 py-2 shadow-lg shadow-slate-900/5 flex items-center justify-between">
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => handleBottomTabSelect('dashboard')}
             className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
               activeTab === 'dashboard'
                 ? 'text-emerald-700 font-semibold'
-                : 'text-slate-400 hover:text-slate-700'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
             title="Dashboard"
           >
@@ -2585,11 +2742,11 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('transactions')}
+            onClick={() => handleBottomTabSelect('transactions')}
             className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
               activeTab === 'transactions'
                 ? 'text-emerald-700 font-semibold'
-                : 'text-slate-400 hover:text-slate-700'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
             title="Transactions"
           >
@@ -2604,11 +2761,11 @@ export default function App() {
           </div>
 
           <button
-            onClick={() => setActiveTab('debts')}
+            onClick={() => handleBottomTabSelect('debts')}
             className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
               activeTab === 'debts'
                 ? 'text-emerald-700 font-semibold'
-                : 'text-slate-400 hover:text-slate-700'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
             title="Debts"
           >
@@ -2734,6 +2891,10 @@ export default function App() {
             onClose={() => setIsUserGuideModalOpen(false)}
             lang={lang}
             logoStyle={logoStyle}
+            onNavigateTab={(tab) => {
+              setIsUserGuideModalOpen(false);
+              setActiveTab(tab);
+            }}
           />
         )}
 
@@ -2785,12 +2946,7 @@ export default function App() {
         )}
       </React.Suspense>
 
-      {toastMessage && (
-        <Toast
-          message={toastMessage}
-          onClose={() => setToastMessage(null)}
-        />
-      )}
+      {toastElement}
 
       <GlobalSearchModal
         isOpen={isSearchModalOpen}
@@ -2872,6 +3028,11 @@ export default function App() {
         isOpen={isPinSetupModalOpen}
         onClose={() => setIsPinSetupModalOpen(false)}
         lang={lang}
+        isGuest={isGuestSession || !user}
+        onLinkAccount={() => {
+          setIsPinSetupModalOpen(false);
+          setIsAuthModalOpen(true);
+        }}
         onSavePin={handleSavePinAndLock}
       />
 

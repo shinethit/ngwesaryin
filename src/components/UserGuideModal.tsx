@@ -7,6 +7,9 @@ interface UserGuideModalProps {
   onClose: () => void;
   lang: 'my' | 'en';
   logoStyle?: LogoStyle;
+  // [v7.5.60 G-N5] Optional — when provided, each topic that maps to
+  // a real tab shows an "အခု သွားလုပ်မည် →" button to jump there.
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({
@@ -14,9 +17,21 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
   onClose,
   lang,
   logoStyle = 'pixiu',
+  onNavigateTab,
 }) => {
   const [activeTab, setActiveTab] = useState<string>('getting_started');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // [v7.5.60 G-N5] Which guide category jumps to which app tab.
+  // Categories without a real destination (getting started, cloud /
+  // PIN, data management, troubleshooting) get no button.
+  const CATEGORY_TAB: Record<string, string> = {
+    cashflow: 'transactions',
+    debts: 'debts',
+    wallets: 'wallets',
+    shared_wallets: 'wallets',
+    budgets: 'analytics',
+  };
 
   if (!isOpen) return null;
 
@@ -416,11 +431,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       icon: ShieldAlert,
       steps: lang === 'my' ? [
         'ngwesaryin.ai.studio ဟူသော Domain မှာ အမှန်တကယ် မရှိသော အမည်ဖြစ်သဖြင့် Browser တွင် ရိုက်ထည့်ပါက DNS_PROBE_FINISHED_NXDOMAIN ဟု ပြသပါမည်။',
-        'မှန်ကန်သော အက်ပ်လင့်ခ် URL အပြည့်အစုံကိုသာ အသုံးပြုရပါမည် (Google Cloud Run သို့မဟုတ် ai.studio Web App URL)။',
+        'မှန်ကန်သော အက်ပ်လင့်ခ်မှာ https://ngwesaryin.pages.dev သာ ဖြစ်ပါသည် — ဤ URL အပြည့်အစုံကိုသာ အသုံးပြုပါ။',
         'အက်ပ်ကို သူငယ်ချင်း၊ မိသားစုထံ မျှဝေလိုပါက အပေါ်ရှိ "မျှဝေရန် (Share)" ခလုတ် သို့မဟုတ် Sidebar ရှိ "အက်ပ်လင့်ခ်နှင့် မျှဝေရန် လမ်းညွှန်" မှတစ်ဆင့် တိုက်ရိုက် Copy ကူး၍ ပေးပို့နိုင်ပါသည်။',
       ] : [
         '"ngwesaryin.ai.studio" is an invalid domain and will return DNS NXDOMAIN error.',
-        'Always use the official Cloud Run URL or AI Studio app preview link.',
+        'The only official app link is https://ngwesaryin.pages.dev — always use that full URL.',
         'Use the "Share App" button in the Navbar or Sidebar to copy the genuine web link directly.',
       ],
     },
@@ -564,6 +579,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
           ) : (
             filteredTopics.map((topic, idx) => {
               const IconComp = topic.icon || HelpCircle;
+              const goToTab = CATEGORY_TAB[topic.categoryId];
               return (
                 <div
                   key={idx}
@@ -586,6 +602,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                       </li>
                     ))}
                   </ul>
+
+                  {/* [v7.5.60 G-N5] Jump straight to the screen. */}
+                  {goToTab && onNavigateTab && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab(goToTab)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
+                    >
+                      <span>{lang === 'my' ? 'အခု သွားလုပ်မည်' : 'Go there now'}</span>
+                      <span aria-hidden>→</span>
+                    </button>
+                  )}
                 </div>
               );
             })

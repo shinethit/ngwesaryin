@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowUpDown, TrendingUp, TrendingDown, Minus, Search, Wallet as WalletIcon, Download, Filter, BarChart3, Sparkles, Check, Copy, Info, Lock, Shuffle, Tag } from 'lucide-react';
 import { Category, PlanType, Transaction, Wallet } from '../types';
-import { formatMMK, formatDateDisplay } from '../utils/formatters';
+import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { convertToMMK } from '../utils/currency';
 
 interface SpendingComparisonViewProps {
   transactions: Transaction[];
@@ -273,17 +274,24 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
   // Financial aggregates for Period A and Period B
   const stats = useMemo(() => {
+    // [v7.5.60 E15/S-75] Convert every amount to MMK via its wallet —
+    // raw sums mixed foreign-currency amounts with MMK.
+    const convertTx = (t: Transaction) => {
+      const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
+      return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+    };
     let incomeA = 0;
     let expenseA = 0;
     const catExpensesA: Record<string, number> = {};
 
     txA.forEach((t) => {
       if (isTransferTransaction(t)) return;
+      const amt = convertTx(t);
       if (t.type === 'income') {
-        incomeA += t.amount;
+        incomeA += amt;
       } else if (t.type === 'expense') {
-        expenseA += t.amount;
-        catExpensesA[t.category] = (catExpensesA[t.category] || 0) + t.amount;
+        expenseA += amt;
+        catExpensesA[t.category] = (catExpensesA[t.category] || 0) + amt;
       }
     });
 
@@ -293,11 +301,12 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
     txB.forEach((t) => {
       if (isTransferTransaction(t)) return;
+      const amt = convertTx(t);
       if (t.type === 'income') {
-        incomeB += t.amount;
+        incomeB += amt;
       } else if (t.type === 'expense') {
-        expenseB += t.amount;
-        catExpensesB[t.category] = (catExpensesB[t.category] || 0) + t.amount;
+        expenseB += amt;
+        catExpensesB[t.category] = (catExpensesB[t.category] || 0) + amt;
       }
     });
 
@@ -374,7 +383,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       if (!subExpensesA[key]) {
         subExpensesA[key] = { catId: t.category, subId, name: subName, amount: 0 };
       }
-      subExpensesA[key].amount += t.amount;
+      subExpensesA[key].amount += convertTx(t);
     });
 
     txB.forEach((t) => {
@@ -392,7 +401,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       if (!subExpensesB[key]) {
         subExpensesB[key] = { catId: t.category, subId, name: subName, amount: 0 };
       }
-      subExpensesB[key].amount += t.amount;
+      subExpensesB[key].amount += convertTx(t);
     });
 
     const allSubKeys = Array.from(new Set([...Object.keys(subExpensesA), ...Object.keys(subExpensesB)]));
@@ -462,7 +471,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       highestIncreaseCat,
       highestSavingsCat,
     };
-  }, [txA, txB, categoryMap, lang]);
+  }, [txA, txB, categoryMap, lang, walletMap, wallets]);
 
   // All unique comparisons computed from transactions
   // When plan !== 'premium', only the 2 random categories are exposed
@@ -492,9 +501,11 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   }, [plan, stats.categoryComparisons, randomFreeCatIds, categoryMap]);
 
   const totalCategoriesCount = useMemo(() => {
-    // [v7.5.55] Expense categories only — income categories were counted too.
-    return Math.max(stats.categoryComparisons.length, categories.filter((c) => c.type === 'expense').length);
-  }, [stats.categoryComparisons.length, categories]);
+    // [v7.5.60 E17/N-34] Count ONLY categories with data in these two
+    // periods — counting every configured expense category overstated
+    // the hidden count (e.g. "8 hidden" when only 1 had data).
+    return stats.categoryComparisons.length;
+  }, [stats.categoryComparisons.length]);
 
   const hiddenCategoriesCount = useMemo(() => {
     if (plan === 'premium') return 0;
@@ -644,18 +655,18 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       `📊 ${lang === 'my' ? 'ကာလအလိုက် သုံးစွဲမှု နှိုင်းယှဉ်ချက် အကျဉ်းချုပ်' : 'Spending Comparison Summary'}`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       `🔹 ${lang === 'my' ? 'ကာလ (က)' : 'Period A'}: ${labelA}`,
-      `   - ${lang === 'my' ? 'စုစုပေါင်း ထွက်ငွေ' : 'Total Expense'}: ${formatMMK(stats.expenseA)}`,
-      `   - ${lang === 'my' ? 'စုစုပေါင်း ဝင်ငွေ' : 'Total Income'}: ${formatMMK(stats.incomeA)}`,
-      `   - ${lang === 'my' ? 'လက်ကျန်ငွေ' : 'Net Savings'}: ${formatMMK(stats.netA)}`,
+      `   - ${lang === 'my' ? 'စုစုပေါင်း ထွက်ငွေ' : 'Total Expense'}: ${formatLakhs(stats.expenseA, lang)}`,
+      `   - ${lang === 'my' ? 'စုစုပေါင်း ဝင်ငွေ' : 'Total Income'}: ${formatLakhs(stats.incomeA, lang)}`,
+      `   - ${lang === 'my' ? 'လက်ကျန်ငွေ' : 'Net Savings'}: ${formatLakhs(stats.netA, lang)}`,
       ``,
       `🔸 ${lang === 'my' ? 'ကာလ (ခ)' : 'Period B'}: ${labelB}`,
-      `   - ${lang === 'my' ? 'စုစုပေါင်း ထွက်ငွေ' : 'Total Expense'}: ${formatMMK(stats.expenseB)}`,
-      `   - ${lang === 'my' ? 'စုစုပေါင်း ဝင်ငွေ' : 'Total Income'}: ${formatMMK(stats.incomeB)}`,
-      `   - ${lang === 'my' ? 'လက်ကျန်ငွေ' : 'Net Savings'}: ${formatMMK(stats.netB)}`,
+      `   - ${lang === 'my' ? 'စုစုပေါင်း ထွက်ငွေ' : 'Total Expense'}: ${formatLakhs(stats.expenseB, lang)}`,
+      `   - ${lang === 'my' ? 'စုစုပေါင်း ဝင်ငွေ' : 'Total Income'}: ${formatLakhs(stats.incomeB, lang)}`,
+      `   - ${lang === 'my' ? 'လက်ကျန်ငွေ' : 'Net Savings'}: ${formatLakhs(stats.netB, lang)}`,
       ``,
       `📈 ${lang === 'my' ? 'အသုံးစရိတ် ကွာခြားချက်' : 'Expense Difference'}: ${
         stats.diffExpense >= 0 ? '+' : ''
-      }${formatMMK(stats.diffExpense)} (${stats.percentDiffExpense >= 0 ? '+' : ''}${
+      }${formatLakhs(stats.diffExpense, lang)} (${stats.percentDiffExpense >= 0 ? '+' : ''}${
         stats.percentDiffExpense
       }%)`,
       activeHighlights.highestIncreaseCat
@@ -663,14 +674,14 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             lang === 'my'
               ? activeHighlights.highestIncreaseCat.category?.name
               : activeHighlights.highestIncreaseCat.category?.nameEn
-          } (+${formatMMK(activeHighlights.highestIncreaseCat.diff)})`
+          } (+${formatLakhs(activeHighlights.highestIncreaseCat.diff, lang)})`
         : '',
       activeHighlights.highestSavingsCat
         ? `✅ ${lang === 'my' ? 'အများဆုံး လျော့ချနိုင်သော ကဏ္ဍ' : 'Highest Savings'}: ${
             lang === 'my'
               ? activeHighlights.highestSavingsCat.category?.name
               : activeHighlights.highestSavingsCat.category?.nameEn
-          } (${formatMMK(activeHighlights.highestSavingsCat.diff)})`
+          } (${formatLakhs(activeHighlights.highestSavingsCat.diff, lang)})`
         : '',
     ]
       .filter(Boolean)
@@ -1038,6 +1049,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             <button
               onClick={handleCopySummary}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+              title={plan !== 'premium' ? (lang === 'my' ? 'Premium သုံးစွဲသူများအတွက်သာ' : 'Premium only') : undefined}
             >
               {isCopied ? (
                 <>
@@ -1046,8 +1058,12 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 </>
               ) : (
                 <>
+                  {plan !== 'premium' && <Lock className="w-3.5 h-3.5 text-amber-600" />}
                   <Copy className="w-3.5 h-3.5" />
                   <span>{lang === 'my' ? 'အကျဉ်းချုပ် ကူးယူမည်' : 'Copy Summary'}</span>
+                  {plan !== 'premium' && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Premium</span>
+                  )}
                 </>
               )}
             </button>
@@ -1100,11 +1116,11 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             <div className="mt-3">
               <div className="text-xs text-emerald-700 font-semibold flex items-center justify-between">
                 <span>{lang === 'my' ? 'ကာလ (က):' : 'Period A:'}</span>
-                <span className="text-base font-black text-slate-900">{formatMMK(stats.expenseA)}</span>
+                <span className="text-base font-black text-slate-900" title={formatMMK(stats.expenseA)}>{formatLakhs(stats.expenseA, lang)}</span>
               </div>
               <div className="text-xs text-indigo-700 font-semibold flex items-center justify-between mt-1">
                 <span>{lang === 'my' ? 'ကာလ (ခ):' : 'Period B:'}</span>
-                <span className="text-xs font-bold text-slate-600">{formatMMK(stats.expenseB)}</span>
+                <span className="text-xs font-bold text-slate-600" title={formatMMK(stats.expenseB)}>{formatLakhs(stats.expenseB, lang)}</span>
               </div>
             </div>
           </div>
@@ -1117,7 +1133,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               }`}
             >
               {stats.diffExpense > 0 ? '+' : ''}
-              {formatMMK(stats.diffExpense)}
+              {formatLakhs(stats.diffExpense, lang)}
             </span>
           </div>
         </div>
@@ -1153,11 +1169,11 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             <div className="mt-3">
               <div className="text-xs text-emerald-700 font-semibold flex items-center justify-between">
                 <span>{lang === 'my' ? 'ကာလ (က):' : 'Period A:'}</span>
-                <span className="text-base font-black text-slate-900">{formatMMK(stats.incomeA)}</span>
+                <span className="text-base font-black text-slate-900" title={formatMMK(stats.incomeA)}>{formatLakhs(stats.incomeA, lang)}</span>
               </div>
               <div className="text-xs text-indigo-700 font-semibold flex items-center justify-between mt-1">
                 <span>{lang === 'my' ? 'ကာလ (ခ):' : 'Period B:'}</span>
-                <span className="text-xs font-bold text-slate-600">{formatMMK(stats.incomeB)}</span>
+                <span className="text-xs font-bold text-slate-600" title={formatMMK(stats.incomeB)}>{formatLakhs(stats.incomeB, lang)}</span>
               </div>
             </div>
           </div>
@@ -1170,7 +1186,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               }`}
             >
               {stats.diffIncome > 0 ? '+' : ''}
-              {formatMMK(stats.diffIncome)}
+              {formatLakhs(stats.diffIncome, lang)}
             </span>
           </div>
         </div>
@@ -1197,12 +1213,12 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                     stats.netA >= 0 ? 'text-emerald-600' : 'text-rose-600'
                   }`}
                 >
-                  {formatMMK(stats.netA)}
+                  {formatLakhs(stats.netA, lang)}
                 </span>
               </div>
               <div className="text-xs text-indigo-700 font-semibold flex items-center justify-between mt-1">
                 <span>{lang === 'my' ? 'ကာလ (ခ):' : 'Period B:'}</span>
-                <span className="text-xs font-bold text-slate-600">{formatMMK(stats.netB)}</span>
+                <span className="text-xs font-bold text-slate-600">{formatLakhs(stats.netB, lang)}</span>
               </div>
             </div>
           </div>
@@ -1215,7 +1231,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               }`}
             >
               {stats.netA - stats.netB > 0 ? '+' : ''}
-              {formatMMK(stats.netA - stats.netB)}
+              {formatLakhs(stats.netA - stats.netB, lang)}
             </span>
           </div>
         </div>
@@ -1242,7 +1258,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                     ⬆️ {lang === 'my' ? activeHighlights.highestIncreaseCat.category?.name : activeHighlights.highestIncreaseCat.category?.nameEn}
                   </span>
                   <span className="font-bold text-rose-800 whitespace-nowrap">
-                    +{formatMMK(activeHighlights.highestIncreaseCat.diff)}
+                    +{formatLakhs(activeHighlights.highestIncreaseCat.diff, lang)}
                   </span>
                 </div>
               ) : (
@@ -1255,7 +1271,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                     ⬇️ {lang === 'my' ? activeHighlights.highestSavingsCat.category?.name : activeHighlights.highestSavingsCat.category?.nameEn}
                   </span>
                   <span className="font-bold text-emerald-800 whitespace-nowrap">
-                    {formatMMK(activeHighlights.highestSavingsCat.diff)}
+                    {formatLakhs(activeHighlights.highestSavingsCat.diff, lang)}
                   </span>
                 </div>
               ) : (
@@ -1267,11 +1283,11 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
           <div className="mt-3 pt-2.5 border-t border-indigo-200/50 text-[11px] text-indigo-900">
             {stats.diffExpense < 0
               ? lang === 'my'
-                ? `ကာလ (က) တွင် သုံးစွဲငွေ ${formatMMK(Math.abs(stats.diffExpense))} ပိုမိုသက်သာခဲ့ပါသည်`
-                : `Saved ${formatMMK(Math.abs(stats.diffExpense))} in Period A`
+                ? `ကာလ (က) တွင် သုံးစွဲငွေ ${formatLakhs(Math.abs(stats.diffExpense), lang)} ပိုမိုသက်သာခဲ့ပါသည်`
+                : `Saved ${formatLakhs(Math.abs(stats.diffExpense), lang)} in Period A`
               : lang === 'my'
-              ? `ကာလ (က) တွင် သုံးစွဲငွေ ${formatMMK(stats.diffExpense)} ပိုမိုသုံးခဲ့ပါသည်`
-              : `Spent ${formatMMK(stats.diffExpense)} more in Period A`}
+              ? `ကာလ (က) တွင် သုံးစွဲငွေ ${formatLakhs(stats.diffExpense, lang)} ပိုမိုသုံးခဲ့ပါသည်`
+              : `Spent ${formatLakhs(stats.diffExpense, lang)} more in Period A`}
           </div>
         </div>
       </div>
@@ -1362,7 +1378,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                             : 'bg-slate-200 text-slate-700'
                         }`}
                       >
-                        {c.isNew ? `+${formatMMK(c.diff)} (${lang === 'my' ? 'အသစ်' : 'New'})` : c.diff > 0 ? `+${formatMMK(c.diff)} (+${c.pctChange}%)` : c.diff < 0 ? `${formatMMK(c.diff)} (${c.pctChange}%)` : '0 MMK (0%)'}
+                        {c.isNew ? `+${formatLakhs(c.diff, lang)} (${lang === 'my' ? 'အသစ်' : 'New'})` : c.diff > 0 ? `+${formatLakhs(c.diff, lang)} (+${c.pctChange}%)` : c.diff < 0 ? `${formatLakhs(c.diff, lang)} (${c.pctChange}%)` : '0 (0%)'}
                       </span>
                     </div>
                   </div>
@@ -1381,7 +1397,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                         />
                       </div>
                       <span className="w-24 text-right font-bold text-slate-900 shrink-0">
-                        {formatMMK(c.amountA)}
+                        {formatLakhs(c.amountA, lang)}
                       </span>
                     </div>
 
@@ -1397,7 +1413,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                         />
                       </div>
                       <span className="w-24 text-right font-semibold text-slate-600 shrink-0">
-                        {formatMMK(c.amountB)}
+                        {formatLakhs(c.amountB, lang)}
                       </span>
                     </div>
                   </div>
@@ -1609,7 +1625,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
                           {/* Period A */}
                           <td className="py-3.5 px-3 text-right font-bold text-slate-900">
-                            {formatMMK(item.amountA)}
+                            {formatLakhs(item.amountA, lang)}
                             <span className="block text-[10px] text-slate-400 font-normal">
                               {item.pctOfTotalA}% {lang === 'my' ? 'အသုံး' : 'of total'}
                             </span>
@@ -1617,7 +1633,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
                           {/* Period B */}
                           <td className="py-3.5 px-3 text-right font-medium text-slate-600">
-                            {formatMMK(item.amountB)}
+                            {formatLakhs(item.amountB, lang)}
                             <span className="block text-[10px] text-slate-400 font-normal">
                               {item.pctOfTotalB}% {lang === 'my' ? 'အသုံး' : 'of total'}
                             </span>
@@ -1635,7 +1651,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                               }`}
                             >
                               {item.diff > 0 ? '+' : ''}
-                              {formatMMK(item.diff)}
+                              {formatLakhs(item.diff, lang)}
                             </span>
                           </td>
 
@@ -1720,8 +1736,8 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                         </div>
 
                                         <div className="flex items-center justify-between text-[11px] text-slate-500">
-                                          <span>{lang === 'my' ? 'ကာလ (က)' : 'A'}: <strong className="text-emerald-700 font-bold">{formatMMK(sub.amountA)}</strong></span>
-                                          <span>{lang === 'my' ? 'ကာလ (ခ)' : 'B'}: <strong className="text-indigo-700 font-bold">{formatMMK(sub.amountB)}</strong></span>
+                                          <span>{lang === 'my' ? 'ကာလ (က)' : 'A'}: <strong className="text-emerald-700 font-bold">{formatLakhs(sub.amountA, lang)}</strong></span>
+                                          <span>{lang === 'my' ? 'ကာလ (ခ)' : 'B'}: <strong className="text-indigo-700 font-bold">{formatLakhs(sub.amountB, lang)}</strong></span>
                                         </div>
                                       </div>
                                     ))}
@@ -1749,7 +1765,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                             <span className="block truncate font-medium text-slate-800">{t.note || item.category?.name}</span>
                                             <span className="block text-[10px] text-slate-400">{formatDateDisplay(t.date)}</span>
                                           </div>
-                                          <span className="font-bold text-slate-900 shrink-0">{formatMMK(t.amount)}</span>
+                                          <span className="font-bold text-slate-900 shrink-0">{formatLakhs(t.amount, lang)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1774,7 +1790,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                             <span className="block truncate font-medium text-slate-800">{t.note || item.category?.name}</span>
                                             <span className="block text-[10px] text-slate-400">{formatDateDisplay(t.date)}</span>
                                           </div>
-                                          <span className="font-bold text-slate-900 shrink-0">{formatMMK(t.amount)}</span>
+                                          <span className="font-bold text-slate-900 shrink-0">{formatLakhs(t.amount, lang)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1834,7 +1850,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
                       {/* Period A */}
                       <td className="py-3.5 px-3 text-right font-bold text-slate-900">
-                        {formatMMK(item.amountA)}
+                        {formatLakhs(item.amountA, lang)}
                         <span className="block text-[10px] text-slate-400 font-normal">
                           {item.pctOfTotalA}% {lang === 'my' ? 'အသုံး' : 'of total'}
                         </span>
@@ -1842,7 +1858,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
                       {/* Period B */}
                       <td className="py-3.5 px-3 text-right font-medium text-slate-600">
-                        {formatMMK(item.amountB)}
+                        {formatLakhs(item.amountB, lang)}
                         <span className="block text-[10px] text-slate-400 font-normal">
                           {item.pctOfTotalB}% {lang === 'my' ? 'အသုံး' : 'of total'}
                         </span>
@@ -1860,7 +1876,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                           }`}
                         >
                           {item.diff > 0 ? '+' : ''}
-                          {formatMMK(item.diff)}
+                          {formatLakhs(item.diff, lang)}
                         </span>
                       </td>
 

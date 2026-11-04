@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 
@@ -39,6 +39,12 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
   };
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope). Unknown
+  // wallets are kept — their scope cannot be judged.
+  const isScopedTx = (t: Transaction) => {
+    const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
+    return !w || w.includeInTotals !== false;
+  };
 
   // 1. Determine last 6 months in chronological order
   const lastSixMonths = useMemo(() => {
@@ -60,6 +66,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
     const categoryTotals: Record<string, number> = {};
     transactions.forEach((t) => {
       if (t.type !== 'expense' || isTransferTransaction(t)) return;
+      if (!isScopedTx(t)) return;
       const monthKey = t.date?.slice(0, 7);
       const isInLast6 = lastSixMonths.some((m) => m.key === monthKey);
       if (!isInLast6) return;
@@ -85,7 +92,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
         const catName = lang === 'my' ? (cat?.name || catId) : (cat?.nameEn || catId);
 
         const sum = transactions
-          .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && t.date?.startsWith(m.key) && (t.category === catId))
+          .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && isScopedTx(t) && t.date?.startsWith(m.key) && (t.category === catId))
           .reduce((acc, t) => acc + convertTxToMMK(t), 0);
 
         row[catName] = sum;
@@ -94,7 +101,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       // [v7.5.55 D18] "Total Expense" is the TRUE monthly total across ALL
       // expense categories — previously it summed only the top-N lines.
       const totalMonthExpense = transactions
-        .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && t.date?.startsWith(m.key))
+        .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && isScopedTx(t) && t.date?.startsWith(m.key))
         .reduce((acc, t) => acc + convertTxToMMK(t), 0);
 
       row[lang === 'my' ? 'စုစုပေါင်းထွက်ငွေ' : 'Total Expense'] = totalMonthExpense;
@@ -103,6 +110,12 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
   }, [lastSixMonths, topCategories, transactions, catMap, lang, walletMap, wallets]);
 
   const categoryColors = ['#10B981', '#6366F1', '#EC4899', '#F59E0B', '#3B82F6', '#8B5CF6'];
+
+  // [v7.5.60 E4/S-66] Empty state instead of a blank chart.
+  const totalSixMonthExpense = useMemo(
+    () => chartData.reduce((s, r) => s + (r[lang === 'my' ? 'စုစုပေါင်းထွက်ငွေ' : 'Total Expense'] as number || 0), 0),
+    [chartData, lang]
+  );
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-4">
@@ -141,6 +154,14 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       </div>
 
       {/* Recharts Line Chart */}
+      {totalSixMonthExpense === 0 ? (
+        <div className="py-10 text-center text-slate-500 text-xs space-y-2 rounded-xl bg-slate-50 border border-dashed border-slate-200">
+          <p className="font-bold text-slate-700">
+            {lang === 'my' ? 'လွန်ခဲ့သော ၆ လအတွင်း ထွက်ငွေ မှတ်တမ်း မရှိသေးပါ' : 'No expense records in the last 6 months yet'}
+          </p>
+          <p>{lang === 'my' ? 'မှတ်တမ်းတစ်ခု ထည့်လိုက်ပါက ဒီမှာ trend ပေါ်လာပါမည်' : 'Add a record and the trend will appear here'}</p>
+        </div>
+      ) : (
       <div className="w-full h-64 sm:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
@@ -151,10 +172,10 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
               fontSize={11}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v) => (v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)}
+              tickFormatter={(v) => formatLakhs(v, lang)}
             />
             <Tooltip
-              formatter={(value: any, name: any) => [formatMMK(Number(value) || 0), name]}
+              formatter={(value: any, name: any) => [`${formatLakhs(Number(value) || 0, lang)} (${formatMMK(Number(value) || 0)})`, name]}
               contentStyle={{
                 backgroundColor: '#1E293B',
                 borderRadius: '16px',
@@ -196,6 +217,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
           </LineChart>
         </ResponsiveContainer>
       </div>
+      )}
     </div>
   );
 };

@@ -4,7 +4,7 @@ import {
   FinancialHealthResult,
   FINANCIAL_HEALTH_TIERS,
 } from '../utils/financialHealth';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 
 interface FinancialHealthModalProps {
   isOpen: boolean;
@@ -50,10 +50,10 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
               : 'bg-gradient-to-r from-rose-900 to-red-950 text-white border-rose-800'
           }`}
         >
-          {/* Close button */}
+          {/* Close button — [v7.5.60 S6] 44px touch target. */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all cursor-pointer"
+            className="absolute top-4 right-4 min-w-11 min-h-11 w-11 h-11 rounded-full bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all cursor-pointer flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
@@ -90,7 +90,8 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
 
         {/* Scrollable Body */}
         <div className="p-5 sm:p-6 overflow-y-auto overflow-x-hidden space-y-6 text-slate-800">
-          {/* Real-time Financial Metrics Grid */}
+          {/* Real-time Financial Metrics Grid — [v7.5.60 S5] lakh display
+              with exact kyat in the title tooltip. */}
           <div className="space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
@@ -102,8 +103,8 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 <span className="text-[11px] text-slate-500 font-semibold block mb-0.5">
                   {lang === 'my' ? 'စုစုပေါင်း ဝင်ငွေ' : 'Total Income'}
                 </span>
-                <span className="text-sm font-bold text-emerald-600 break-words">
-                  {formatMMK(metrics.totalIncome)}
+                <span className="text-sm font-bold text-emerald-600 break-words" title={formatMMK(metrics.totalIncome)}>
+                  {formatLakhs(metrics.totalIncome, lang)}
                 </span>
               </div>
 
@@ -111,8 +112,8 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 <span className="text-[11px] text-slate-500 font-semibold block mb-0.5">
                   {lang === 'my' ? 'စုစုပေါင်း အသုံး' : 'Total Expense'}
                 </span>
-                <span className="text-sm font-bold text-rose-600 break-words">
-                  {formatMMK(metrics.totalExpense)}
+                <span className="text-sm font-bold text-rose-600 break-words" title={formatMMK(metrics.totalExpense)}>
+                  {formatLakhs(metrics.totalExpense, lang)}
                 </span>
               </div>
 
@@ -126,8 +127,8 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 </span>
                 <span className={`text-sm font-black break-words ${
                   metrics.netSavings < 0 ? 'text-rose-700' : 'text-emerald-700'
-                }`}>
-                  {metrics.netSavings < 0 ? '-' : '+'}{formatMMK(Math.abs(metrics.netSavings))}
+                }`} title={`${metrics.netSavings < 0 ? '-' : '+'}${formatMMK(Math.abs(metrics.netSavings))}`}>
+                  {metrics.netSavings < 0 ? '-' : '+'}{formatLakhs(Math.abs(metrics.netSavings), lang)}
                 </span>
               </div>
 
@@ -137,8 +138,8 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
                 </span>
                 <span className={`text-sm font-bold break-words ${
                   metrics.totalPayableDebt > 0 ? 'text-amber-700' : 'text-slate-700'
-                }`}>
-                  {formatMMK(metrics.totalPayableDebt)}
+                }`} title={formatMMK(metrics.totalPayableDebt)}>
+                  {formatLakhs(metrics.totalPayableDebt, lang)}
                 </span>
               </div>
             </div>

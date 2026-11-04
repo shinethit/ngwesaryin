@@ -488,9 +488,12 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
                 <span>🛑 Google Cloud Firestore Daily Write Quota အကန့်အသတ် ပြည့်နေပါသည် (HTTP 429 Quota Exceeded)</span>
               </div>
               <p className="text-[11.5px] leading-relaxed font-medium">
+                {/* [v7.5.60 M-18] The old text hardcoded "58 / 59th record"
+                    from one past incident — every other user saw a lie.
+                    Show the real live counts instead. */}
                 {lang === 'my'
-                  ? 'Google Firebase free tier ၏ နေ့စဉ် အခမဲ့ ရေးသားခွင့် (Daily write limit - 20,000 writes/day) ပြည့်သွားသဖြင့် Cloud server က မှတ်တမ်းအသစ်များအား ခေတ္တ ငြင်းပယ်ထားပါသည်။ စာရင်း ၅၈ ခုသည် Cloud DB တွင် အန္တရာယ်ကင်းစွာ ရောက်ရှိပြီးဖြစ်ပြီး၊ ၅၉ ခုမြောက် စာရင်းနှင့် အခြားပြင်ဆင်ချက်များသည် စက်ထဲတွင် လုံခြုံစွာ ရှိနေပါသည်။'
-                  : 'Google Firebase free tier limit (20,000 writes/day) has been exceeded for today. Cloud Firestore is temporarily rejecting new writes. All prior 58 records are completely safe in Cloud DB, and the 59th record is secured locally on this device.'}
+                  ? `Google Firebase free tier ၏ နေ့စဉ် အခမဲ့ ရေးသားခွင့် (Daily write limit - 20,000 writes/day) ပြည့်သွားသဖြင့် Cloud server က မှတ်တမ်းအသစ်များအား ခေတ္တ ငြင်းပယ်ထားပါသည်။ စာရင်း ${syncedTxsCount} ခုသည် Cloud DB တွင် အန္တရာယ်ကင်းစွာ ရောက်ရှိပြီးဖြစ်ပြီး၊ ${pendingTxsCount} ခုသည် စက်ထဲတွင် လုံခြုံစွာ ရှိနေပါသည်။`
+                  : `Google Firebase free tier limit (20,000 writes/day) has been exceeded for today. Cloud Firestore is temporarily rejecting new writes. ${syncedTxsCount} record(s) are completely safe in Cloud DB, and ${pendingTxsCount} record(s) are secured locally on this device.`}
               </p>
               <div className="text-[11px] text-rose-700 bg-rose-100/50 p-2 rounded-xl font-medium border border-rose-200">
                 {lang === 'my'
@@ -593,7 +596,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
 
             {/* Card 2: Confirmed in Cloud Database */}
             <div className={`rounded-2xl p-3 border text-center space-y-0.5 ${
-              pendingTxsCount === 0 && queueItems.length === 0
+              totalLocalTxs > 0 && pendingTxsCount === 0 && queueItems.length === 0
                 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
                 : 'bg-indigo-50/80 border-indigo-200 text-indigo-950'
             }`}>
@@ -605,7 +608,11 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
                 {syncedTxsCount}
               </div>
               <div className="text-[10px] text-emerald-600 font-bold">
-                {pendingTxsCount === 0 && queueItems.length === 0
+                {/* [v7.5.60 S-92] 0 records is NOT "100% In-Sync" — there is
+                    nothing to sync yet. Show that honestly. */}
+                {totalLocalTxs === 0
+                  ? (lang === 'my' ? 'မှတ်တမ်း မရှိသေးပါ' : 'No records yet')
+                  : pendingTxsCount === 0 && queueItems.length === 0
                   ? (lang === 'my' ? '၁၀၀% တပြေးညီ ✓' : '100% In-Sync ✓')
                   : pendingTxsCount === 0
                   ? (lang === 'my' ? `${syncedTxsCount}/${totalLocalTxs} (Queue တွင် ကျန်)` : `${syncedTxsCount}/${totalLocalTxs} (Queue Pending)`)

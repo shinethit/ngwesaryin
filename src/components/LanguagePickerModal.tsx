@@ -12,8 +12,6 @@ interface LanguagePickerModalProps {
 const FLAGS: Record<Lang, string> = {
   my: '🇲🇲',
   en: '🇬🇧',
-  zh: '🇨🇳',
-  th: '🇹🇭',
 };
 
 export const LanguagePickerModal: React.FC<LanguagePickerModalProps> = ({
@@ -37,8 +35,6 @@ export const LanguagePickerModal: React.FC<LanguagePickerModalProps> = ({
           </h2>
           <p className="text-xs text-slate-500 leading-relaxed">
             Choose your preferred language
-            <br />
-            请选择您的语言 · เลือกภาษาของคุณ
           </p>
         </div>
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, RefreshCw, Trash2, X, ShieldAlert, CheckCircle2, Layers } from 'lucide-react';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
-import { formatMMK, getCategoryDisplayName } from '../utils/formatters';
+import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 import { Transaction, Category } from '../types';
 
 interface SyncStatusDrawerProps {
@@ -23,6 +24,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
   categories = [],
   onDeleteTransaction,
 }) => {
+  const { user } = useAuth();
   const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -50,6 +52,18 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
     return isPendingInQueue || notInCloud;
   });
 
+  // [v7.5.60 M-22] Pending records that never entered the queue were
+  // computed but never rendered — this is where they are listed.
+  const pendingNotInQueue = pendingOrFailedTransactions.filter(
+    (t) => !queueItems.some((q) => q.entityType === 'transactions' && q.entityId === t.id)
+  );
+
+  // [v7.5.60 S-93] A retry is only a success if the item actually left
+  // the queue afterwards — processQueue() returning without throwing
+  // does NOT prove the record reached Cloud.
+  const isStillQueued = (entityType: string, entityId: string) =>
+    syncQueue.getQueue().some((q) => q.entityType === entityType && q.entityId === entityId);
+
   const handleRetryItem = async (item: SyncQueueItem) => {
     setIsProcessing(true);
     setActionNotice(null);
@@ -57,11 +71,56 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
       syncQueue.enqueue(item.entityType, item.entityId, item.operation, item.targetUid, item.data);
       await syncQueue.processQueue();
       loadQueue();
+      if (isStillQueued(item.entityType, item.entityId)) {
+        setActionNotice(
+          lang === 'my'
+            ? `⚠️ မအောင်မြင်သေးပါ — မှတ်တမ်း ${item.entityId} သည် Queue ထဲတွင် ကျန်နေသေးသည်။ နောက်တစ်ကြိမ် ကြိုးစားပါ`
+            : `⚠️ Not synced yet — item ${item.entityId} is still in the queue. Please try again.`
+        );
+      } else {
+        setActionNotice(
+          lang === 'my'
+            ? `✅ အမှတ် ${item.entityId} ကို DB သို့ ထပ်မံ ပို့ဆောင်ပြီးပါပြီ!`
+            : `✅ Successfully retried syncing item ${item.entityId}!`
+        );
+      }
+    } catch (err: any) {
       setActionNotice(
         lang === 'my'
-          ? `✅ အမှတ် ${item.entityId} ကို DB သို့ ထပ်မံ ပို့ဆောင်ပြီးပါပြီ!`
-          : `✅ Successfully retried syncing item ${item.entityId}!`
+          ? `❌ ထပ်မံပို့ဆောင်မှု မအောင်မြင်ပါ: ${err?.message || 'Error'}`
+          : `❌ Retry failed: ${err?.message || 'Error'}`
       );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // [v7.5.60 M-22] Retry for a pending record that is not in the queue:
+  // enqueue it first, then process and verify it actually left the queue.
+  const handleRetryTransaction = async (tx: Transaction) => {
+    if (!user?.uid) {
+      setActionNotice(
+        lang === 'my' ? '❌ ထပ်ကြိုးစားရန် အကောင့်ဝင်ရန် လိုအပ်ပါသည်' : '❌ Sign in to retry sync'
+      );
+      return;
+    }
+    setIsProcessing(true);
+    setActionNotice(null);
+    try {
+      syncQueue.enqueue('transactions', tx.id, 'upsert', user.uid, tx as any);
+      await syncQueue.processQueue();
+      loadQueue();
+      if (isStillQueued('transactions', tx.id)) {
+        setActionNotice(
+          lang === 'my'
+            ? `⚠️ မအောင်မြင်သေးပါ — မှတ်တမ်း ${tx.id} သည် Queue ထဲတွင် ကျန်နေသေးသည်။ နောက်တစ်ကြိမ် ကြိုးစားပါ`
+            : `⚠️ Not synced yet — record ${tx.id} is still in the queue. Please try again.`
+        );
+      } else {
+        setActionNotice(
+          lang === 'my' ? '✅ မှတ်တမ်းကို Cloud သို့ ထပ်မံ ပို့ဆောင်ပြီးပါပြီ!' : '✅ Record synced to Cloud!'
+        );
+      }
     } catch (err: any) {
       setActionNotice(
         lang === 'my'
@@ -74,11 +133,14 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
   };
 
   const handleDeleteLocalCopy = (entityType: string, entityId: string) => {
+    // [v7.5.60 M-23] The old "စက်တွင်း ဖျက်မည်" label + confirm sounded
+    // like deleting a spare local copy. In truth this deletes the ONE
+    // and only copy when the record has not reached Cloud yet — say so.
     if (
       window.confirm(
         lang === 'my'
-          ? 'ဤဒေတာကို စက်တွင်း (Local) မှ ဖျက်ပစ်ရန် သေချာပါသလား?'
-          : 'Are you sure you want to delete this local copy?'
+          ? '⚠️ သတိပေးချက်: ဤမှတ်တမ်းသည် Cloud ကို မရောက်သေးပါ — ဖျက်လိုက်ရင် ပြန်ရမည် မဟုတ်ပါ။ မှတ်တမ်း အပြီးဖျက်ရန် သေချာပါသလား?'
+          : '⚠️ Warning: this record has NOT reached Cloud yet — deleting it removes the only copy forever. Delete the record permanently?'
       )
     ) {
       syncQueue.remove(entityType as any, entityId);
@@ -87,7 +149,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
       }
       loadQueue();
       setActionNotice(
-        lang === 'my' ? '🗑️ စက်တွင်း မှတ်တမ်းကို ဖျက်ပြီးပါပြီ' : '🗑️ Local copy deleted successfully'
+        lang === 'my' ? '🗑️ မှတ်တမ်းကို အပြီးဖျက်ပြီးပါပြီ' : '🗑️ Record permanently deleted'
       );
     }
   };
@@ -96,11 +158,22 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
     setIsProcessing(true);
     setActionNotice(null);
     try {
+      const beforeCount = syncQueue.getQueue().length;
       await syncQueue.processQueue();
       loadQueue();
-      setActionNotice(
-        lang === 'my' ? '✅ အားလုံးကို DB သို့ ပြန်လည် ပို့ဆောင်ပြီးပါပြီ!' : '✅ Processed all pending sync items!'
-      );
+      const remaining = syncQueue.getQueue().length;
+      // [v7.5.60 S-93] Report the real outcome, not a blanket success.
+      if (remaining > 0) {
+        setActionNotice(
+          lang === 'my'
+            ? `⚠️ ${beforeCount} ခုထဲမှ ${remaining} ခု မအောင်မြင်သေးပါ — Queue ထဲတွင် ကျန်နေသည်။ နောက်တစ်ကြိမ် ကြိုးစားပါ`
+            : `⚠️ ${remaining} of ${beforeCount} items are still in the queue — not all synced. Please try again.`
+        );
+      } else {
+        setActionNotice(
+          lang === 'my' ? '✅ အားလုံးကို DB သို့ ပြန်လည် ပို့ဆောင်ပြီးပါပြီ!' : '✅ Processed all pending sync items!'
+        );
+      }
     } catch (err: any) {
       setActionNotice(
         lang === 'my' ? `❌ အားလုံးပို့ဆောင်မှုတွင် အမှားရှိသည်: ${err?.message}` : `❌ Error processing queue: ${err?.message}`
@@ -185,7 +258,9 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                 {queueItems.map((item) => {
                   const isFailed = item.status === 'failed';
                   const txData = item.data;
-                  const amt = txData?.amount ? formatMMK(txData.amount) : '';
+                  // [v7.5.60] Display in lakhs; exact kyat in the tooltip.
+                  const amt = txData?.amount ? formatLakhs(txData.amount, lang) : '';
+                  const amtExact = txData?.amount ? formatMMK(txData.amount) : '';
 
                   return (
                     <div
@@ -211,7 +286,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                         <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200 text-xs space-y-1">
                           <div className="flex items-center justify-between font-bold text-slate-900">
                             <span className="min-w-0 truncate">{getCategoryDisplayName(txData.category, categories, lang)}</span>
-                            {amt && <span className="font-mono text-emerald-700 shrink-0">{amt}</span>}
+                            {amt && <span className="font-mono text-emerald-700 shrink-0" title={amtExact}>{amt}</span>}
                           </div>
                           {txData.note && <p className="text-slate-600 italic text-[11px]">"{txData.note}"</p>}
                         </div>
@@ -246,16 +321,65 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                           onClick={() => handleDeleteLocalCopy(item.entityType, item.entityId)}
                           disabled={isProcessing}
                           className="py-2 px-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                          title={lang === 'my' ? 'စက်တွင်းကော်ပီကို ဖျက်မည်' : 'Delete Local Copy'}
+                          title={lang === 'my' ? 'ဤမှတ်တမ်းသည် Cloud ကို မရောက်သေးပါ — ဖျက်လိုက်ရင် ပြန်ရမည် မဟုတ်ပါ' : 'This record has not reached Cloud yet — deleting removes it forever'}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          <span>{lang === 'my' ? 'စက်တွင်း ဖျက်မည်' : 'Delete Local'}</span>
+                          <span>{lang === 'my' ? 'မှတ်တမ်း အပြီးဖျက်မည်' : 'Delete Record Permanently'}</span>
                         </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {/* [v7.5.60 M-22] Pending records NOT in the queue — previously
+                  computed but never shown anywhere, so the user knew a
+                  count existed but could never see or retry the records. */}
+              {pendingNotInQueue.length > 0 && (
+                <div className="space-y-3 pt-1">
+                  <span className="text-xs font-bold text-slate-700">
+                    {lang === 'my'
+                      ? `Queue ထဲ မဝင်သေးတဲ့ ပို့ရန်ကျန် စာရင်းများ (${pendingNotInQueue.length} ခု)`
+                      : `Pending records not in queue (${pendingNotInQueue.length})`}
+                  </span>
+                  {pendingNotInQueue.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="p-4 rounded-2xl border space-y-2.5 bg-slate-50/70 border-slate-200"
+                    >
+                      <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200 text-xs space-y-1">
+                        <div className="flex items-center justify-between font-bold text-slate-900 gap-2">
+                          <span className="min-w-0 truncate">{getCategoryDisplayName(tx.category, categories, lang)}</span>
+                          <span
+                            className={`font-mono shrink-0 ${tx.type === 'income' ? 'text-emerald-700' : 'text-slate-800'}`}
+                            title={formatMMK(tx.amount || 0)}
+                          >
+                            {tx.type === 'income' ? '+' : '-'}{formatLakhs(tx.amount || 0, lang)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-500">
+                          <span className="font-mono text-[11px]">{tx.date}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            {lang === 'my' ? '⏳ Cloud မရောက်သေးပါ' : 'Not synced yet'}
+                          </span>
+                        </div>
+                        {tx.note && <p className="text-slate-600 italic text-[11px]">"{tx.note}"</p>}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleRetryTransaction(tx)}
+                          disabled={isProcessing}
+                          className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>{lang === 'my' ? '🔄 Retry (ထပ်ကြိုးစားမည်)' : 'Retry'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

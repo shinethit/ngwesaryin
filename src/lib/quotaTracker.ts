@@ -76,17 +76,17 @@ export const FIRESTORE_LIMITS = {
 const STORAGE_KEY_PREFIX = 'ngwe_fs_quota_';
 const EVENT_NAME = 'ngwe_fs_quota_update';
 
+// [v7.5.60 S-51] The date bucket AND the "resets at" countdown MUST use
+// ONE timezone — UTC for both. Was America/Los_Angeles here while
+// getTimeUntilUTCMidnight counted to UTC midnight, so the countdown hit
+// 0 at 06:30 Myanmar time but the bucket did not roll over until the PT
+// midnight (~13:30 Myanmar time). getTimeUntilUTCMidnight is UTC too.
 function getTodayKey(): string {
   const now = new Date();
-  try {
-    const ptDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-    const y = ptDate.getFullYear();
-    const m = String(ptDate.getMonth() + 1).padStart(2, '0');
-    const d = String(ptDate.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  } catch {
-    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
-  }
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(now.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export function loadTodayQuotaData(): DailyQuotaData {

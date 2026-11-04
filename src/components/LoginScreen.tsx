@@ -28,12 +28,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     loginWithGoogle,
     loginWithEmail,
     signupWithEmail,
+    resetPassword,
     continueAsGuest,
     isSyncing,
   } = useAuth();
 
   const [authMode, setAuthMode] = useState<'google' | 'email'>('email');
-  const [isSignUp, setIsSignUp] = useState(true);
+  // [v7.5.60 G-S1] Default to Sign In — most visitors are returning
+  // users; defaulting to Sign Up invited accidental new accounts
+  // (whose old data then "vanished").
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -44,13 +48,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [showVpnTip, setShowVpnTip] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // [v7.5.60 G-M1] Forgot-password flow state.
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+  const [resetSending, setResetSending] = useState(false);
 
   const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
+  // [v7.5.60 G-S3] ONE official link everywhere (same as Share modal):
+  // the live site. The old Cloud Run fallback URL is gone.
   const appUrl =
     typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost')
       ? window.location.origin
-      : 'https://ais-pre-addetoba2glfudzzqh24cb-568885421431.us-east1.run.app';
+      : 'https://ngwesaryin.pages.dev';
 
   // Friendly error formatter
   const formatAuthError = (err: any): string => {
@@ -100,6 +109,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     window.open(window.location.href, '_blank', 'noopener,noreferrer');
   };
 
+  // [v7.5.60 G-M1] Forgot password — sends a reset email to the
+  // address typed above. The email itself tells the user to check
+  // Spam if it doesn't arrive.
+  const handleForgotPassword = async () => {
+    setErrorMsg(null);
+    setResetMsg(null);
+    if (!email.trim()) {
+      setErrorMsg(
+        lang === 'my'
+          ? 'အရင် အထက်က Email အကွက်မှာ သင့်အီးမေးလ်ကို ရိုက်ထည့်ပါ၊ ပြီးမှ "စကားဝှက် မေ့သွားပြီ" ကို နှိပ်ပါ။'
+          : 'Enter your email in the field above first, then tap "Forgot password?".'
+      );
+      return;
+    }
+    setResetSending(true);
+    try {
+      await resetPassword(email.trim());
+      setResetMsg(
+        lang === 'my'
+          ? `စကားဝှက် ပြန်လည်သတ်မှတ်ရန် Email ကို ${email.trim()} သို့ ပို့လိုက်ပါပြီ။ Email မရောက်လျှင် Spam / Junk Folder ကို စစ်ပါ၊ Email လိပ်စာ မှန်မမှန် ပြန်စစ်ပါ။`
+          : `A password-reset email was sent to ${email.trim()}. If it doesn't arrive, check your Spam / Junk folder and verify the email address.`
+      );
+    } catch (err: any) {
+      setErrorMsg(formatAuthError(err));
+    } finally {
+      setResetSending(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between selection:bg-emerald-500 selection:text-white relative px-4 py-6 sm:py-10">
       {/* Top Bar with Language switcher & optional close */}
@@ -116,7 +154,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <button
               type="button"
               onClick={onToggleLang}
-              className="px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-700 hover:bg-slate-100 bg-white border border-slate-200 transition-colors cursor-pointer active:scale-95 shadow-2xs"
+              className="px-3 py-2 text-xs font-semibold rounded-lg text-slate-700 hover:bg-slate-100 bg-white border border-slate-200 transition-colors cursor-pointer active:scale-95 shadow-2xs min-h-[36px]"
             >
               {lang === 'my' ? 'ENG' : 'မြန်မာ'}
             </button>
@@ -152,7 +190,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </div>
 
           {/* Official Web App URL info box */}
-          <div className="mb-5 p-3 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-1.5 text-slate-700">
+          <div className="mb-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-1.5 text-slate-700">
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
               <span className="flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-emerald-600" />
@@ -182,16 +220,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 )}
               </button>
             </div>
-            <div className="text-[10px] font-mono text-slate-500 truncate bg-white px-2 py-1 rounded-lg border border-slate-200 select-all">
+            <div className="text-[11px] font-mono text-slate-500 truncate bg-white px-2 py-1 rounded-lg border border-slate-200 select-all">
               {appUrl}
             </div>
-            <p className="text-[10px] text-amber-800 flex items-start gap-1 font-medium leading-tight">
+            <p className="text-[11px] text-amber-800 flex items-start gap-1 font-medium leading-tight">
               <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
               <span>
                 {lang === 'my'
                   ? 'သတိပြုရန်: ngwesaryin.ai.studio ဟု ရိုက်ထည့်ပါက Website ရှာမတွေ့နိုင်ပါ။ အထက်ပါ လင့်ခ်အပြည့်အစုံကိုသာ အသုံးပြုပါ'
                   : 'Note: Do not type ngwesaryin.ai.studio. Please use the official link above.'}
               </span>
+            </p>
+          </div>
+
+          {/* Guest Mode Option — [v7.5.60 G-S2] moved ABOVE the email
+              form so it is visible on a phone without scrolling. */}
+          <div className="text-center mb-4">
+            <button
+              type="button"
+              id="btn-guest-login"
+              onClick={continueAsGuest}
+              className="w-full py-3 px-4 rounded-2xl border border-slate-200 bg-slate-50/80 hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
+            >
+              <span>
+                {lang === 'my'
+                  ? 'အကောင့်မဖွင့်ဘဲ ဧည့်သည်အဖြစ် စမ်းသုံးမည်'
+                  : 'Continue as Guest (Offline Mode)'}
+              </span>
+              <ArrowRight className="w-4 h-4 text-slate-500" />
+            </button>
+            <p className="text-[11px] text-slate-400 mt-2 font-normal">
+              {lang === 'my'
+                ? 'ဒေတာများကို သင့်စက်ထဲ၌သာ သိမ်းဆည်းထားမည်ဖြစ်ပြီး အချိန်မရွေး Google အကောင့် ချိတ်ဆက်နိုင်ပါသည်'
+                : 'Data is saved on this device. You can connect your Google account anytime.'}
             </p>
           </div>
 
@@ -312,6 +373,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 </div>
               </div>
 
+              {/* [v7.5.60 G-M1] Forgot password — sign-in mode only. */}
+              {!isSignUp && (
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={resetSending}
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline underline-offset-2 transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    {resetSending
+                      ? (lang === 'my' ? 'ပို့နေသည်...' : 'Sending...')
+                      : (lang === 'my' ? 'စကားဝှက် မေ့သွားပြီ?' : 'Forgot password?')}
+                  </button>
+                </div>
+              )}
+              {resetMsg && (
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium leading-relaxed">
+                  {resetMsg}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -374,8 +456,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               )}
               <span>
                 {lang === 'my'
-                  ? 'Now VPN နှင့် အဆင်ပြေဆုံး ဖြစ်သည် - Google Pop-up ဖြင့် ဝင်မည်'
-                  : 'Now VPN Recommended - Sign in with Google Account'}
+                  ? 'Google ဖြင့် ဝင်မည် (VPN လိုအပ်နိုင်ပါသည် — မရလျှင် Email ဖြင့် ဝင်ပါ)'
+                  : 'Continue with Google (VPN may be needed — use Email if it fails)'}
               </span>
             </button>
           </div>
@@ -390,28 +472,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 {lang === 'my' ? 'သို့မဟုတ်' : 'or'}
               </span>
             </div>
-          </div>
-
-          {/* Guest Mode Option */}
-          <div className="text-center">
-            <button
-              type="button"
-              id="btn-guest-login"
-              onClick={continueAsGuest}
-              className="w-full py-3 px-4 rounded-2xl border border-slate-200 bg-slate-50/80 hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
-            >
-              <span>
-                {lang === 'my'
-                  ? 'အကောင့်မဖွင့်ဘဲ ဧည့်သည်အဖြစ် စမ်းသုံးမည်'
-                  : 'Continue as Guest (Offline Mode)'}
-              </span>
-              <ArrowRight className="w-4 h-4 text-slate-500" />
-            </button>
-            <p className="text-[11px] text-slate-400 mt-2 font-normal">
-              {lang === 'my'
-                ? 'ဒေတာများကို သင့်စက်ထဲ၌သာ သိမ်းဆည်းထားမည်ဖြစ်ပြီး အချိန်မရွေး Google အကောင့် ချိတ်ဆက်နိုင်ပါသည်'
-                : 'Data is saved on this device. You can connect your Google account anytime.'}
-            </p>
           </div>
         </div>
       </div>

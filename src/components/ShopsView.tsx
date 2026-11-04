@@ -20,6 +20,9 @@ interface ShopsViewProps {
   lang: 'my' | 'en';
   plan?: string;
   onOpenUpgradeModal?: () => void;
+  // [v7.5.60 S-81] Opens the sign-in modal so a guest tapping "Add Shop"
+  // gets a sign-in button, not just a notice.
+  onOpenSignIn?: () => void;
   onAddShop: (shop: Omit<ShopContact, 'id' | 'userId' | 'createdAt'>) => Promise<boolean>;
   onUpdateShop: (shop: ShopContact) => Promise<boolean>;
   onDeleteShop: (id: string) => Promise<boolean>;
@@ -30,6 +33,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   lang,
   plan = 'free',
   onOpenUpgradeModal,
+  onOpenSignIn,
   onAddShop: onAddPrivateShop,
   onUpdateShop: onUpdatePrivateShop,
   onDeleteShop: onDeletePrivateShop,
@@ -78,6 +82,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
   // Policy Section Toggle
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+
+  // [v7.5.60 E24/N-36] In-app notice / confirm dialogs — the browser's
+  // native showNotice()/confirm() popups do not match the app design and show
+  // English OK/Cancel buttons on phones.
+  const [noticeMsg, setNoticeMsg] = useState<string | null>(null);
+  const showNotice = (msg: string) => setNoticeMsg(msg);
+  // [v7.5.60 S-81] Guest "Add Shop" prompt with a real sign-in button —
+  // a toast alone never let the guest sign in from here.
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ message: string; resolve: (v: boolean) => void } | null>(null);
+  const askConfirm = (message: string) =>
+    new Promise<boolean>((resolve) => setConfirmState({ message, resolve }));
 
   // Real-time Firestore Subscription for Community Directory
   useEffect(() => {
@@ -135,7 +151,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       }
     } catch (err) {
       console.error('Failed to vote shop', err);
-      alert(
+      showNotice(
         lang === 'my'
           ? 'မဲပေး၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ မဲပေးနိုင်ပါသည်'
           : 'Could not vote — only the shop adder and admins can vote'
@@ -147,12 +163,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const handleOpenAdd = () => {
     // [v7.5.55 C15] Stop guests at form open — show the sign-in prompt
     // immediately instead of letting them fill the whole form first.
+    // [v7.5.60 S-81] The prompt has a sign-in button (via onOpenSignIn)
+    // so the guest can actually sign in from here.
     if (!auth.currentUser) {
-      alert(
-        lang === 'my'
-          ? 'ဆိုင်အချက်အလက် ထည့်သွင်းရန် ဦးစွာ အကောင့်ဝင်ရန် လိုအပ်ပါသည်'
-          : 'Please sign in first to add a shop'
-      );
+      setShowGuestPrompt(true);
       return;
     }
     if (directoryType === 'private' && plan !== 'premium') {
@@ -168,7 +182,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const handleOpenEdit = (shop: ShopContact | PublicShop) => {
     // [v7.5.55 C15] Stop guests at form open.
     if (!auth.currentUser) {
-      alert(
+      showNotice(
         lang === 'my'
           ? 'ဆိုင်အချက်အလက် ပြင်ဆင်ရန် ဦးစွာ အကောင့်ဝင်ရန် လိုအပ်ပါသည်'
           : 'Please sign in first to edit a shop'
@@ -182,7 +196,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       const isOwner = auth.currentUser.uid === (shop as PublicShop).addedByUid;
       const isAdmin = auth.currentUser.email === 'khunthanshwe@gmail.com';
       if (!isOwner && !isAdmin) {
-        alert(
+        showNotice(
           lang === 'my'
             ? 'ဤဆိုင်ကို ထည့်သူနှင့် admin သာ ပြင်ဆင်နိုင်ပါသည်'
             : 'Only the shop adder and admins can edit this shop'
@@ -206,13 +220,13 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         lang === 'my'
           ? `"${name}" ကို ပြည်သူ့လမ်းညွှန်ထဲမှ ဖျက်ရန် သေချာပါသလား။`
           : `Are you sure you want to delete "${name}" from the Community Directory?`;
-      if (!window.confirm(confirmMsg)) return;
+      if (!(await askConfirm(confirmMsg))) return;
 
       // [v7.5.55] Check the safe* return — a permission-denied delete
       // must not look like success.
       const ok = await safeDeleteDoc(doc(db, 'public_shops', id));
       if (!ok) {
-        alert(
+        showNotice(
           lang === 'my'
             ? 'ဆိုင်ကို ဖျက်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ဖျက်နိုင်ပါသည်'
             : 'Could not delete this shop — only the shop adder and admins can delete it'
@@ -223,7 +237,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         lang === 'my'
           ? `"${name}" ဆိုင်လိပ်စာကို ကိုယ်ပိုင်လမ်းညွှန်ထဲမှ ဖျက်ရန် သေချာပါသလား။`
           : `Are you sure you want to delete "${name}" from your private list?`;
-      if (window.confirm(confirmMsg)) {
+      if (await askConfirm(confirmMsg)) {
         // [v7.5.55 C5] Await the delete — the handler toasts on failure and
         // the shop stays in the list when the cloud write fails.
         await onDeletePrivateShop(id);
@@ -241,7 +255,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     const isPublic = 'addedBy' in shop;
 
     if (isPublic && !currentUser) {
-      alert(
+      showNotice(
         lang === 'my'
           ? 'အကောင့်ဝင်ပြီးမှသာ ပြည်သူ့ဈေးနှုန်းများ တည်းဖြတ်နိုင်ပါမည်'
           : 'Please log in to contribute live prices'
@@ -281,7 +295,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         items: updatedItems,
       });
       if (!ok) {
-        alert(
+        showNotice(
           lang === 'my'
             ? 'ဈေးနှုန်း ထည့်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည်'
             : 'Could not add the price — only the shop adder and admins can edit prices'
@@ -307,7 +321,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       lang === 'my'
         ? 'ဤပစ္စည်းကို ဈေးနှုန်းစာရင်းမှ ဖျက်ပစ်ရန် သေချာပါသလား။'
         : 'Are you sure you want to delete this price entry?';
-    if (!window.confirm(confirmMsg)) return false;
+    if (!(await askConfirm(confirmMsg))) return false;
 
     const isPublic = 'addedBy' in shop;
     const currentItems = shop.items || [];
@@ -315,7 +329,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
     if (isPublic) {
       if (!auth.currentUser) {
-        alert(
+        showNotice(
           lang === 'my'
             ? 'အကောင့်ဝင်ပြီးမှသာ ပြည်သူ့ဈေးနှုန်းများ ဖျက်နိုင်ပါမည်'
             : 'Please log in to manage prices'
@@ -327,7 +341,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         items: updatedItems,
       });
       if (!ok) {
-        alert(
+        showNotice(
           lang === 'my'
             ? 'ပစ္စည်းကို ဖျက်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည်'
             : 'Could not delete the item — only the shop adder and admins can edit prices'
@@ -364,7 +378,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
     if (data.targetDirectory === 'public') {
       if (!currentUser) {
-        alert(
+        showNotice(
           lang === 'my'
             ? 'ပြည်သူ့ဆိုင်လမ်းညွှန်တွင် အချက်အလက်များ မျှဝေရန်အတွက် ဦးစွာ အကောင့်ဝင်ရန် လိုအပ်ပါသည်'
             : 'Please log in to contribute to the Community Directory'
@@ -398,7 +412,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           items: (editingShop as ShopContact).items || [],
         });
         if (!okCreate) {
-          alert(
+          showNotice(
             lang === 'my'
               ? 'ပြည်သူ့လမ်းညွှန်သို့ ရွှေ့၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
               : 'Could not move the shop to the public directory — please check your connection and permissions'
@@ -434,7 +448,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           generalNotes: data.generalNotes,
         });
         if (!ok) {
-          alert(
+          showNotice(
             lang === 'my'
               ? 'ဆိုင်ကို သိမ်း၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည် (သို့မဟုတ် အင်တာနက် စစ်ပေးပါ)'
               : 'Could not save the shop — only the shop adder and admins can edit it (or check your connection)'
@@ -466,7 +480,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           items: [],
         });
         if (!ok) {
-          alert(
+          showNotice(
             lang === 'my'
               ? 'ဆိုင်ကို သိမ်း၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
               : 'Could not save the shop — please check your connection and permissions'
@@ -478,7 +492,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     } else {
       // Save Private Shop
       if (plan !== 'premium') {
-        alert(
+        showNotice(
           lang === 'my'
             ? 'ကိုယ်ပိုင်ဆိုင်စာရင်း သုံးစွဲရန် Premium အသုံးပြုသူ ဖြစ်ရန် လိုအပ်ပါသည်'
             : 'Premium plan required for private lists'
@@ -492,7 +506,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       if (editingShop && isEditingPublic) {
         const okDel = await safeDeleteDoc(doc(db, 'public_shops', editingShop.id));
         if (!okDel) {
-          alert(
+          showNotice(
             lang === 'my'
               ? 'ကိုယ်ပိုင်စာရင်းသို့ ရွှေ့၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ရွှေ့နိုင်ပါသည်'
               : 'Could not move the shop to your private list — only the shop adder and admins can move it'
@@ -762,9 +776,13 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             type="button"
             onClick={handleOpenAdd}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer shrink-0"
+            title={!auth.currentUser ? (lang === 'my' ? 'အကောင့်ဝင်ပြီးမှ ဆိုင်ထည့်နိုင်ပါသည်' : 'Sign in to add a shop') : undefined}
           >
-            <Plus className="w-3.5 h-3.5" />
+            {!auth.currentUser ? <Lock className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
             <span>{lang === 'my' ? 'ဆိုင်အသစ်' : 'Add Shop'}</span>
+            {!auth.currentUser && (
+              <span className="text-[10px] font-bold opacity-80">{lang === 'my' ? '(Sign in မှ ထည့်နိုင်မည်)' : '(Sign in to add)'}</span>
+            )}
           </button>
         </div>
 
@@ -801,7 +819,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`p-2.5 rounded-md transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
               title={lang === 'my' ? 'ကတ်ပြကွက်' : 'Grid'}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -809,7 +827,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('compact')}
-              className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'compact' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`p-2.5 rounded-md transition-all cursor-pointer ${viewMode === 'compact' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
               title={lang === 'my' ? 'စာရင်း' : 'List'}
             >
               <List className="w-3.5 h-3.5" />
@@ -863,7 +881,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                       ? 'ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် ရှာရန်...'
                       : 'Search shops, phone, KPay, township...'
                   }
-                  className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
+                  className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
                 />
                 {searchQuery && (
                   <button
@@ -881,7 +899,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 <select
                   value={sortMode}
                   onChange={(e) => setSortMode(e.target.value as any)}
-                  className="appearance-none pl-2.5 pr-7 py-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-[11px] font-bold text-slate-700 outline-none cursor-pointer"
+                  className="appearance-none pl-2.5 pr-7 py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
                   title={lang === 'my' ? 'စီစဥ်ရန်' : 'Sort'}
                 >
                   <option value="group-category">{lang === 'my' ? '📁 အုပ်စုခွဲ (အမျိုးအစား)' : '📁 Group by Category'}</option>
@@ -912,12 +930,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowUnknown(!showUnknown)}
-                className={`w-8 h-8 flex items-center justify-center rounded-xl border transition-all cursor-pointer shrink-0 ${showUnknown ? 'bg-slate-800 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                className={`h-9 px-2.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${showUnknown ? 'bg-slate-800 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                 title={lang === 'my' ? 'အမည်မသိ ဆိုင်များ ပြ/မပြ' : 'Toggle Unknown Shops'}
               >
-                <span className="text-xs">
-                  {showUnknown ? '👁️' : '🫣'}
-                </span>
+                <span>{showUnknown ? '👁️' : '🫣'}</span>
+                <span>{lang === 'my' ? 'အမည်မသိ' : 'Unknown'}</span>
               </button>
 
               {/* Reset (icon only) */}
@@ -1368,6 +1385,76 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         onSave={handleSaveModal}
         existingShops={directoryType === 'public' ? publicShops : privateShops}
       />
+
+      {/* [v7.5.60 E24/N-36] In-app notice dialog (replaces alert()) */}
+      {noticeMsg && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" onClick={() => setNoticeMsg(null)}>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-slate-800 leading-relaxed">{noticeMsg}</p>
+            <div className="flex justify-end">
+              <button type="button" onClick={() => setNoticeMsg(null)} className="px-4 py-2.5 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer">
+                {lang === 'my' ? 'နားလည်ပါပြီ' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [v7.5.60 S-81] Guest "Add Shop" prompt — message + sign-in button. */}
+      {showGuestPrompt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" onClick={() => setShowGuestPrompt(false)}>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 text-xl shrink-0">🔒</span>
+              <p className="text-sm text-slate-800 leading-relaxed font-bold">
+                {lang === 'my' ? 'အကောင့် ဝင်ပြီးမှ ဆိုင်ထည့်နိုင်ပါတယ်' : 'Sign in to add a shop'}
+              </p>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {lang === 'my'
+                ? 'ဆိုင်အချက်အလက် ထည့်သွင်းရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ။'
+                : 'Please sign in with Google for free to add a shop.'}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowGuestPrompt(false)} className="px-4 py-2.5 min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">
+                {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowGuestPrompt(false); if (onOpenSignIn) onOpenSignIn(); }}
+                className="px-4 py-2.5 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+              >
+                {lang === 'my' ? 'အကောင့် ဝင်မည်' : 'Sign In'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [v7.5.60 E24/N-36] In-app confirm dialog (replaces window.confirm()) */}
+      {confirmState && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm p-5 space-y-4">
+            <p className="text-sm text-slate-800 leading-relaxed">{confirmState.message}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { confirmState.resolve(false); setConfirmState(null); }}
+                className="px-4 py-2.5 min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                {lang === 'my' ? 'မလုပ်ပါ' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { confirmState.resolve(true); setConfirmState(null); }}
+                className="px-4 py-2.5 min-h-[44px] bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+              >
+                {lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

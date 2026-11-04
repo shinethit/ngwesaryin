@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 export type LogoStyle = 'money_bag' | 'gold_ingot' | 'pixiu';
 
@@ -27,6 +27,11 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
 
   const currentSizeClass = sizeMap[size] || sizeMap.md;
 
+  // [v7.5.60 N2] Gradient IDs must be unique per instance: the same logo
+  // renders in the Navbar, the Sidebar and every picker option, and
+  // duplicate IDs make the browser resolve all of them to the first one.
+  const uid = useId().replace(/:/g, '');
+
   return (
     <div
       className={`relative inline-flex items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 p-0.5 shadow-sm shadow-amber-500/20 select-none ${currentSizeClass} ${className} ${
@@ -49,14 +54,14 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             {/* Bag Body */}
             <path
               d="M12 24C12 18 17 18 20 18H28C31 18 36 18 36 24C36 34 33 42 24 42C15 42 12 34 12 24Z"
-              fill="url(#goldGradient)"
+              fill="url(#${uid}-goldGradient)"
               stroke="#FDE047"
               strokeWidth="1.5"
             />
             {/* Bag Top Ruffles / Pleats */}
             <path
               d="M19 18C17 14 16 11 18 9C20 7 22 9 24 10C26 9 28 7 30 9C32 11 31 14 29 18"
-              fill="url(#goldLightGradient)"
+              fill="url(#${uid}-goldLightGradient)"
               stroke="#FDE047"
               strokeWidth="1.5"
               strokeLinejoin="round"
@@ -80,12 +85,12 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
 
             {/* Gradients */}
             <defs>
-              <linearGradient id="goldGradient" x1="24" y1="18" x2="24" y2="42" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-goldGradient`} x1="24" y1="18" x2="24" y2="42" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#FACC15" />
                 <stop offset="0.5" stopColor="#EAB308" />
                 <stop offset="1" stopColor="#CA8A04" />
               </linearGradient>
-              <linearGradient id="goldLightGradient" x1="24" y1="7" x2="24" y2="18" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-goldLightGradient`} x1="24" y1="7" x2="24" y2="18" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#FEF08A" />
                 <stop offset="1" stopColor="#EAB308" />
               </linearGradient>
@@ -104,7 +109,7 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             {/* Ingot Base & Wings */}
             <path
               d="M7 21C6 27 10 38 24 38C38 38 42 27 41 21C39 24 33 28 24 28C15 28 9 24 7 21Z"
-              fill="url(#ingotBaseGrad)"
+              fill="url(#${uid}-ingotBaseGrad)"
               stroke="#FDE047"
               strokeWidth="1.5"
             />
@@ -114,7 +119,7 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
               cy="21"
               rx="17"
               ry="7"
-              fill="url(#ingotTopGrad)"
+              fill="url(#${uid}-ingotTopGrad)"
               stroke="#FDE047"
               strokeWidth="1.5"
             />
@@ -124,7 +129,7 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
               cy="18"
               rx="9"
               ry="4.5"
-              fill="url(#ingotCrownGrad)"
+              fill="url(#${uid}-ingotCrownGrad)"
               stroke="#FEF08A"
               strokeWidth="1"
             />
@@ -136,17 +141,17 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             <path d="M35 15L36 17L37 15L36 13Z" fill="#FFF" opacity="0.9" />
 
             <defs>
-              <linearGradient id="ingotBaseGrad" x1="24" y1="21" x2="24" y2="38" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-ingotBaseGrad`} x1="24" y1="21" x2="24" y2="38" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#FACC15" />
                 <stop offset="0.6" stopColor="#CA8A04" />
                 <stop offset="1" stopColor="#854D0E" />
               </linearGradient>
-              <linearGradient id="ingotTopGrad" x1="24" y1="14" x2="24" y2="28" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-ingotTopGrad`} x1="24" y1="14" x2="24" y2="28" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#FEF08A" />
                 <stop offset="0.5" stopColor="#EAB308" />
                 <stop offset="1" stopColor="#CA8A04" />
               </linearGradient>
-              <linearGradient id="ingotCrownGrad" x1="24" y1="13" x2="24" y2="22" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-ingotCrownGrad`} x1="24" y1="13" x2="24" y2="22" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#FFFFFF" />
                 <stop offset="0.4" stopColor="#FEF08A" />
                 <stop offset="1" stopColor="#EAB308" />
@@ -164,20 +169,20 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             className="w-full h-full drop-shadow-md"
           >
             {/* Outer Circular Dark Textured Medallion Canvas */}
-            <circle cx="50" cy="50" r="48" fill="url(#pixiuBgGrad)" stroke="#CA8A04" strokeWidth="1.5" />
+            <circle cx="50" cy="50" r="48" fill="url(#${uid}-pixiuBgGrad)" stroke="#CA8A04" strokeWidth="1.5" />
             <circle cx="50" cy="50" r="46.5" stroke="#FDE047" strokeWidth="0.5" strokeDasharray="1 1.5" opacity="0.6" />
 
             {/* Winged Pixiu Creature Atop Coin */}
             {/* Left Wing */}
             <path
               d="M38 28C32 24 26 21 28 15C32 17 38 22 41 28Z"
-              fill="url(#pixiuGoldGrad2)"
+              fill="url(#${uid}-pixiuGoldGrad2)"
               stroke="#FDE047"
               strokeWidth="0.8"
             />
             <path
               d="M35 24C30 20 25 17 27 12C31 15 36 20 38 25Z"
-              fill="url(#pixiuGoldGrad1)"
+              fill="url(#${uid}-pixiuGoldGrad1)"
               stroke="#FEF08A"
               strokeWidth="0.5"
             />
@@ -185,13 +190,13 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             {/* Right Wing */}
             <path
               d="M62 28C68 24 74 21 72 15C68 17 62 22 59 28Z"
-              fill="url(#pixiuGoldGrad2)"
+              fill="url(#${uid}-pixiuGoldGrad2)"
               stroke="#FDE047"
               strokeWidth="0.8"
             />
             <path
               d="M65 24C70 20 75 17 73 12C69 15 64 20 62 25Z"
-              fill="url(#pixiuGoldGrad1)"
+              fill="url(#${uid}-pixiuGoldGrad1)"
               stroke="#FEF08A"
               strokeWidth="0.5"
             />
@@ -203,7 +208,7 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             {/* Head Body */}
             <path
               d="M42 18C42 13 46 11 50 11C54 11 58 13 58 18C58 23 55 26 50 26C45 26 42 23 42 18Z"
-              fill="url(#pixiuGoldGrad1)"
+              fill="url(#${uid}-pixiuGoldGrad1)"
               stroke="#FDE047"
               strokeWidth="1"
             />
@@ -224,7 +229,7 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             <ellipse cx="57" cy="29" rx="3.5" ry="2" fill="#EAB308" stroke="#78350F" strokeWidth="0.6" />
 
             {/* Large Ornate Gold Coin */}
-            <circle cx="50" cy="52" r="23" fill="url(#coinGoldGrad)" stroke="#FDE047" strokeWidth="1.5" />
+            <circle cx="50" cy="52" r="23" fill="url(#${uid}-coinGoldGrad)" stroke="#FDE047" strokeWidth="1.5" />
             <circle cx="50" cy="52" r="20" stroke="#B45309" strokeWidth="0.8" />
             <circle cx="50" cy="52" r="18.5" stroke="#FEF08A" strokeWidth="0.5" strokeDasharray="1.5 1.5" />
 
@@ -243,7 +248,7 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
             {/* Bottom Pedestal & Scrollwork Flourishes */}
             <path
               d="M20 71C30 63 38 78 50 78C62 78 70 63 80 71C72 84 62 88 50 88C38 88 28 84 20 71Z"
-              fill="url(#pedestalGrad)"
+              fill="url(#${uid}-pedestalGrad)"
               stroke="#FDE047"
               strokeWidth="1.2"
             />
@@ -264,27 +269,27 @@ export const FortuneLogo: React.FC<FortuneLogoProps> = ({
 
             {/* Gradients */}
             <defs>
-              <radialGradient id="pixiuBgGrad" cx="50%" cy="50%" r="50%">
+              <radialGradient id={`${uid}-pixiuBgGrad`} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#1E293B" />
                 <stop offset="70%" stopColor="#0F172A" />
                 <stop offset="100%" stopColor="#020617" />
               </radialGradient>
-              <linearGradient id="pixiuGoldGrad1" x1="50" y1="10" x2="50" y2="30" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-pixiuGoldGrad1`} x1="50" y1="10" x2="50" y2="30" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#FEF08A" />
                 <stop offset="50%" stopColor="#FACC15" />
                 <stop offset="100%" stopColor="#CA8A04" />
               </linearGradient>
-              <linearGradient id="pixiuGoldGrad2" x1="50" y1="10" x2="50" y2="30" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-pixiuGoldGrad2`} x1="50" y1="10" x2="50" y2="30" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#EAB308" />
                 <stop offset="100%" stopColor="#854D0E" />
               </linearGradient>
-              <linearGradient id="coinGoldGrad" x1="50" y1="29" x2="50" y2="75" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-coinGoldGrad`} x1="50" y1="29" x2="50" y2="75" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#FEF08A" />
                 <stop offset="35%" stopColor="#EAB308" />
                 <stop offset="70%" stopColor="#CA8A04" />
                 <stop offset="100%" stopColor="#78350F" />
               </linearGradient>
-              <linearGradient id="pedestalGrad" x1="50" y1="65" x2="50" y2="90" gradientUnits="userSpaceOnUse">
+              <linearGradient id={`${uid}-pedestalGrad`} x1="50" y1="65" x2="50" y2="90" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#FACC15" />
                 <stop offset="60%" stopColor="#CA8A04" />
                 <stop offset="100%" stopColor="#78350F" />

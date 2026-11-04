@@ -84,8 +84,18 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     }
   };
 
-  // [v7.5.4] Force update: clears caches + SW, reloads with cache-bust.
+  // [v7.5.60 N-50] Force update clears caches + reloads — ask first so
+  // a stray tap does not wipe the current session without warning.
   const handleForceUpdate = async () => {
+    if (
+      !window.confirm(
+        lang === 'my'
+          ? 'Update လုပ်ရန် စာမျက်နှာ ပြန်ဖွင့်မည် — သေချာပါသလား?'
+          : 'Update now? The page will reload to load the new version.'
+      )
+    ) {
+      return;
+    }
     try {
       if ('caches' in window) {
         const names = await caches.keys();
@@ -325,6 +335,15 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                         <span className="text-xs font-bold text-slate-400">
                           (Build #{item.buildNumber})
                         </span>
+                        {/* [v7.5.60 N-42] The ACTUAL current version (compared
+                            against CURRENT_APP_VERSION) gets a "လက်ရှိ" badge —
+                            only this one entry, never a stale tag. */}
+                        {isCurrent && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-600 text-white shadow-xs">
+                            <Sparkles className="w-3 h-3" />
+                            <span>{lang === 'my' ? 'လက်ရှိ' : 'Current'}</span>
+                          </span>
+                        )}
                         {getTagBadge(item)}
                       </div>
 

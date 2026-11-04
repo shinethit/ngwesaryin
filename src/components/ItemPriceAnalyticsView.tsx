@@ -14,7 +14,7 @@ import {
   Legend,
 } from 'recharts';
 import { Category, PlanType, Transaction, Wallet } from '../types';
-import { formatMMK, formatDateDisplay } from '../utils/formatters';
+import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
 
 // [v7.5.55 C19] Vehicle sub-categories are costs, not purchasable items —
@@ -28,7 +28,8 @@ const VEHICLE_SUB_CATEGORY_IDS = new Set([
   'sub_veh_license',
 ]);
 
-import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
+import { convertToMMK } from '../utils/currency';
 
 interface ItemPriceAnalyticsViewProps {
   transactions: Transaction[];
@@ -114,6 +115,27 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
+  // [v7.5.60 E12/S-72] Convert every price to MMK via the buying wallet
+  // and exclude Separate wallets (Dashboard scope). Unknown wallets are
+  // kept — their currency/scope cannot be judged.
+  const convertAmount = (amount: number, walletId: string) => {
+    const w = walletMap.get(walletId) || wallets.find((wall) => isWalletMatch(wall, walletId));
+    return convertToMMK(amount, w?.currency, w?.exchangeRate);
+  };
+  const isScopedTx = (t: Transaction) => {
+    const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
+    return !w || w.includeInTotals !== false;
+  };
+  // Currencies actually used (for the mixed-currency note).
+  const mixedCurrencies = useMemo(() => {
+    const set = new Set<string>();
+    transactions.forEach((t) => {
+      if (!isScopedTx(t)) return;
+      const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
+      if (w?.currency) set.add(w.currency);
+    });
+    return set;
+  }, [transactions, walletMap, wallets]);
 
   // Subcategory list mapping
   const subCategoryMap = useMemo(() => {
@@ -165,6 +187,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
     filteredTransactions.forEach((tx) => {
       if (tx.type !== 'expense' || isTransferTransaction(tx)) return;
+      if (!isScopedTx(tx)) return;
 
       // 1. Process breakdown shopping list items
       if (tx.items && tx.items.length > 0) {
@@ -177,12 +200,15 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
           const normalized = norm.key;
           const mapKey = normalized + '|' + norm.unit;
           const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
-          const unitPrice =
+          const rawUnitPrice =
             item.price > 0
               ? item.price
               : item.amount && qty > 0
               ? Math.round(item.amount / qty)
               : item.amount || 0;
+          // [v7.5.60 E12] Prices are in the buying wallet's currency —
+          // convert to MMK before comparing.
+          const unitPrice = Math.round(convertAmount(rawUnitPrice, tx.walletId));
 
           if (unitPrice <= 0) return;
 
@@ -203,7 +229,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             date: tx.date,
             unitPrice,
             quantity: qty,
-            totalAmount: item.amount || unitPrice * qty,
+            totalAmount: item.amount ? Math.round(convertAmount(item.amount, tx.walletId)) : unitPrice * qty,
             walletId: tx.walletId,
             categoryId: tx.category,
             note: tx.note,
@@ -243,9 +269,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               id: tx.id,
               txId: tx.id,
               date: tx.date,
-              unitPrice: tx.amount,
+              unitPrice: Math.round(convertAmount(tx.amount, tx.walletId)),
               quantity: 1,
-              totalAmount: tx.amount,
+              totalAmount: Math.round(convertAmount(tx.amount, tx.walletId)),
               walletId: tx.walletId,
               categoryId: tx.category,
               note: tx.note,
@@ -281,9 +307,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             id: tx.id,
             txId: tx.id,
             date: tx.date,
-            unitPrice: tx.amount,
+            unitPrice: Math.round(convertAmount(tx.amount, tx.walletId)),
             quantity: 1,
-            totalAmount: tx.amount,
+            totalAmount: Math.round(convertAmount(tx.amount, tx.walletId)),
             walletId: tx.walletId,
             categoryId: tx.category,
             note: tx.note,
@@ -551,8 +577,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-xl font-bold text-slate-900">
                   {lang === 'my'
-                    ? 'ကုန်ပစ္စည်းများ၏ ဝယ်ယူမှုအကြိမ်ရေနှင့် ဈေးနှုန်းခွဲခြမ်းစိတ်ဖြာချက်'
-                    : 'Item Purchase Frequency & Price Trends'}
+                    ? '🛒 ဈေးနှုန်း နှိုင်းယှဉ်'
+                    : '🛒 Compare Price'}
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100/70 text-indigo-800 border border-indigo-200">
                   {lang === 'my' ? 'စိတ်ကြိုက် နှိုင်းယှဉ်ချက်' : 'Custom Comparison'}
@@ -563,6 +589,20 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                   ? 'ဝယ်ခဲ့သမျှ ပစ္စည်းတစ်ခုချင်းစီ၏ ဝယ်ယူခဲ့သောအကြိမ်ရေ၊ ဈေးနှုန်းအတက်အကျ Trend များကို စိတ်ကြိုက်ရွေးချယ်ပြီး Chart ဖြင့် ကြည့်ရှုနိုင်ပါသည်'
                   : 'Select custom items to visualize price changes, purchase frequency, and total expenditure over time'}
               </p>
+              {/* [v7.5.60 E13/S-73] Consistent naming is what makes
+                  comparison work at all — say so on the screen. */}
+              <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
+                {lang === 'my'
+                  ? '💡 ပစ္စည်းအမည်ကို တစ်သမတ်တည်း ရေးမှ နှိုင်းယှဉ်နိုင်ပါတယ် (ဥပမာ — “ဆန်” ကို အမြဲ “ဆန်” လို့ပဲ ရေးပါ)'
+                  : '💡 Prices can only be compared when the item name is always written the same way (e.g. always write “rice” the same way)'}
+              </p>
+              {mixedCurrencies.size > 1 && (
+                <p className="text-[11px] text-indigo-800 bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1.5 mt-2">
+                  {lang === 'my'
+                    ? '💱 ငွေကြေး မတူသော ဝယ်ယူမှုများ ပါဝင်သည် — ဈေးနှုန်းအားလုံးကို ကျပ်သို့ ပြောင်းပြီး နှိုင်းယှဉ်ထားပါသည်'
+                    : '💱 Purchases in different currencies are included — all prices were converted to MMK before comparing'}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -781,7 +821,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                           <span>{item.totalPurchases} ကြိမ် ဝယ်ခဲ့</span>
                           <span>•</span>
                           <span className="font-mono text-slate-600">
-                            {formatMMK(item.latestPrice)}
+                            {formatLakhs(item.latestPrice, lang)}
                           </span>
                         </div>
                       </div>
@@ -850,8 +890,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                           ? 'နောက်ဆုံးစုစုပေါင်း'
                           : 'Latest Trip Total'}
                       </span>
-                      <span className="font-mono font-bold text-slate-900 text-xs">
-                        {formatMMK(item.hasUnitPrices ? item.latestPrice : item.latestTotal)}
+                      <span className="font-mono font-bold text-slate-900 text-xs" title={formatMMK(item.hasUnitPrices ? item.latestPrice : item.latestTotal)}>
+                        {formatLakhs(item.hasUnitPrices ? item.latestPrice : item.latestTotal, lang)}
                       </span>
                       {!item.hasUnitPrices && (
                         <span className="ml-1 px-1 py-px rounded bg-amber-50 text-amber-800 text-[9px] font-bold border border-amber-200">
@@ -864,8 +904,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       <span className="text-[10px] text-slate-400 block">
                         {lang === 'my' ? 'ပျမ်းမျှဈေး' : 'Average Price'}
                       </span>
-                      <span className="font-mono font-bold text-slate-700 text-xs">
-                        {item.hasUnitPrices ? formatMMK(item.avgPrice) : '—'}
+                      <span className="font-mono font-bold text-slate-700 text-xs" title={item.hasUnitPrices ? formatMMK(item.avgPrice) : ''}>
+                        {item.hasUnitPrices ? formatLakhs(item.avgPrice, lang) : '—'}
                       </span>
                     </div>
 
@@ -875,7 +915,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       </span>
                       <span className="font-mono text-[11px] text-slate-600 block truncate">
                         {item.hasUnitPrices
-                          ? `${formatMMK(item.minPrice)} ~ ${formatMMK(item.maxPrice)}`
+                          ? `${formatLakhs(item.minPrice, lang)} ~ ${formatLakhs(item.maxPrice, lang)}`
                           : '—'}
                       </span>
                     </div>
@@ -884,8 +924,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       <span className="text-[10px] text-slate-400 block">
                         {lang === 'my' ? 'စုစုပေါင်းကုန်ကျ' : 'Total Spent'}
                       </span>
-                      <span className="font-mono font-bold text-indigo-700 text-xs">
-                        {formatMMK(item.totalSpent)}
+                      <span className="font-mono font-bold text-indigo-700 text-xs" title={formatMMK(item.totalSpent)}>
+                        {formatLakhs(item.totalSpent, lang)}
                       </span>
                     </div>
                   </div>
@@ -908,7 +948,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       <span className="font-bold text-emerald-700">
                         {(item.cheapestShops || [item.cheapestShop]).join(', ')}
                       </span>
-                      <span className="font-mono text-slate-600"> · {formatMMK(item.cheapestPrice || 0)}</span>
+                      <span className="font-mono text-slate-600"> · {formatLakhs(item.cheapestPrice || 0, lang)}</span>
                       {(item.cheapestShops || []).length > 1 && (
                         <span className="ml-1 text-[10px] text-slate-400">
                           {lang === 'my' ? '(ဈေးတူ)' : '(tied)'}
@@ -918,8 +958,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         <span className="block text-[11px] text-amber-700 mt-0.5">
                           ⚠️{' '}
                           {lang === 'my'
-                            ? `အတန်ဆုံး ဝယ်ယူမှု (${formatMMK(item.cheapestNoShopPrice)}) တွင် ဆိုင်အမည် မပါဝင်ပါ`
-                            : `The cheapest purchase (${formatMMK(item.cheapestNoShopPrice)}) has no shop recorded`}
+                            ? `အတန်ဆုံး ဝယ်ယူမှု (${formatLakhs(item.cheapestNoShopPrice, lang)}) တွင် ဆိုင်အမည် မပါဝင်ပါ`
+                            : `The cheapest purchase (${formatLakhs(item.cheapestNoShopPrice, lang)}) has no shop recorded`}
                         </span>
                       )}
                       <span className="block text-[10px] text-slate-400 mt-0.5">
@@ -1003,9 +1043,11 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         type="number"
                         scale="time"
                         domain={['dataMin', 'dataMax']}
-                        tickFormatter={(ts: number) =>
-                          formatDateDisplay(new Date(ts).toISOString().slice(0, 10))
-                        }
+                        tickFormatter={(ts: number) => {
+                          const d = new Date(ts);
+                          return `${d.getDate()}/${d.getMonth() + 1}`;
+                        }}
+                        minTickGap={40}
                         tick={{ fontSize: 11, fill: '#64748B' }}
                         tickLine={false}
                         axisLine={{ stroke: '#CBD5E1' }}
@@ -1014,13 +1056,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         tick={{ fontSize: 11, fill: '#64748B' }}
                         tickLine={false}
                         axisLine={{ stroke: '#CBD5E1' }}
-                        tickFormatter={(val) =>
-                          val >= 1000000
-                            ? `${(val / 1000000).toFixed(1)}M`
-                            : val >= 1000
-                            ? `${Math.round(val / 1000)}k`
-                            : val
-                        }
+                        tickFormatter={(val) => formatLakhs(val, lang)}
                       />
                       <Tooltip
                         content={({ active, payload, label }) => {
@@ -1052,7 +1088,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                                       </span>
                                     </div>
                                     <span className="font-mono font-bold text-emerald-300 shrink-0">
-                                      {formatMMK(entry.value)}
+                                      {formatLakhs(entry.value, lang)}
                                     </span>
                                   </div>
                                 );
@@ -1098,6 +1134,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       tickLine={false}
                       axisLine={{ stroke: '#CBD5E1' }}
                       interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={70}
                     />
                     <YAxis
                       tick={{ fontSize: 11, fill: '#64748B' }}
@@ -1120,13 +1159,13 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                             <div className="text-slate-300 flex justify-between gap-4">
                               <span>စုစုပေါင်း ကုန်ကျငွေ:</span>
                               <span className="font-bold font-mono text-emerald-300">
-                                {formatMMK(data.totalSpent)}
+                                {formatLakhs(data.totalSpent, lang)}
                               </span>
                             </div>
                             <div className="text-slate-300 flex justify-between gap-4">
                               <span>ပျမ်းမျှ ဈေးနှုန်း:</span>
                               <span className="font-bold font-mono text-amber-300">
-                                {formatMMK(data.avgPrice)}
+                                {formatLakhs(data.avgPrice, lang)}
                               </span>
                             </div>
                           </div>
@@ -1233,11 +1272,11 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
                       <div className="text-right shrink-0">
                         <span className="font-mono font-bold text-slate-900 block">
-                          {formatMMK(log.unitPrice)}
+                          {formatLakhs(log.unitPrice, lang)}
                         </span>
                         {log.quantity > 1 && (
                           <span className="text-[10px] font-mono text-slate-400 block">
-                            (စုစုပေါင်း {formatMMK(log.totalAmount)})
+                            (စုစုပေါင်း {formatLakhs(log.totalAmount, lang)})
                           </span>
                         )}
                       </div>

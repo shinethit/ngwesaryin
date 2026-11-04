@@ -11,6 +11,10 @@ interface PinSetupModalProps {
    * Never pass plaintext.
    */
   onSavePin: (pinHash: string, pinSalt: string) => void;
+  // [v7.5.60 G-M2/M-25] Guest warning: guests have no account, so a
+  // forgotten PIN is unrecoverable — offer linking before enabling.
+  isGuest?: boolean;
+  onLinkAccount?: () => void;
 }
 
 export const PinSetupModal: React.FC<PinSetupModalProps> = ({
@@ -18,6 +22,8 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   onClose,
   lang,
   onSavePin,
+  isGuest = false,
+  onLinkAccount,
 }) => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -40,6 +46,23 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       setIsSaving(false);
     }
   }, [isOpen]);
+
+  // [v7.5.60 G-S11] Physical keyboard works like the lock screen
+  // (0-9 + Backspace). Re-registers when the entered PIN changes so
+  // the handler never reads stale state.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        handleKeyPress(e.key);
+      } else if (e.key === 'Backspace') {
+        handleDelete();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, pin, confirmPin, step, isSaving]);
 
   if (!isOpen) return null;
 
@@ -160,6 +183,27 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
             ? 'App ကို လော့ခ်ချပြီး ပြန်ဖွင့်တိုင်း ဤ PIN နံပါတ်ကို အသုံးပြုရမည်ဖြစ်သည်'
             : 'Use this PIN to quickly unlock your financial dashboard'}
         </p>
+
+        {/* [v7.5.60 G-M2/M-25] Guest warning, right where the PIN is
+            set — a forgotten guest PIN cannot be recovered by email. */}
+        {isGuest && (
+          <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-2 w-full">
+            <p className="text-[11px] text-amber-200 font-semibold leading-relaxed text-center">
+              {lang === 'my'
+                ? '⚠️ ဧည့်သည်အဖြစ် သုံးနေပါသည် — PIN မေ့သွားလျှင် Email ဖြင့် ပြန်ယူ၍ မရပါ။ PIN မဖွင့်မီ အကောင့် ချိတ်ဆက်ထားပါ။'
+                : '⚠️ Guest Mode — a forgotten PIN cannot be recovered by email. Link an account before setting a PIN.'}
+            </p>
+            {onLinkAccount && (
+              <button
+                type="button"
+                onClick={onLinkAccount}
+                className="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+              >
+                {lang === 'my' ? 'အရင် Google / Email အကောင့် ချိတ်ဆက်မည်' : 'Link a Google / Email account first'}
+              </button>
+            )}
+          </div>
+        )}
 
         <p className="text-[10px] text-slate-500 text-center mt-1 bg-slate-800/60 px-3 py-1 rounded-lg border border-slate-700/50">
           {lang === 'my'

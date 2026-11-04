@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Sparkles, Lock, PieChart, TrendingDown, AlertTriangle, CheckCircle, Plus, ArrowRight, ShieldAlert, Edit2, Trash2, Percent, Banknote, Wallet as WalletIcon, Layers, ChevronDown, ChevronUp, Calendar, ArrowUpDown, ShoppingBag } from 'lucide-react';
+import { Sparkles, Lock, PieChart, TrendingDown, AlertTriangle, CheckCircle, Plus, ArrowRight, ShieldAlert, Edit2, Trash2, Percent, Banknote, Wallet as WalletIcon, Layers, ChevronDown, ChevronUp, Calendar, ArrowUpDown } from 'lucide-react';
 import { BudgetConfig, Category, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { BudgetModal } from './BudgetModal';
 import { SpendingComparisonView } from './SpendingComparisonView';
-import { ItemPriceAnalyticsView } from './ItemPriceAnalyticsView';
 import { FinancialHealthModal } from './FinancialHealthModal';
 import { calculateFinancialHealth } from '../utils/financialHealth';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
@@ -38,7 +37,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   onDeleteBudget,
   onOpenUpgradeModal,
 }) => {
-  const [subTab, setSubTab] = useState<'budgets' | 'comparison' | 'price_trends'>('budgets');
+  const [subTab, setSubTab] = useState<'budgets' | 'comparison'>('budgets');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const today = new Date();
     const y = today.getFullYear();
@@ -49,6 +48,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   const [editingBudget, setEditingBudget] = useState<BudgetConfig | null>(null);
   const [expandedGeneral, setExpandedGeneral] = useState(false);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  // [v7.5.60 S-47] App-styled delete confirm (replaces window.confirm).
+  const [confirmDeleteCategoryId, setConfirmDeleteCategoryId] = useState<string | null>(null);
 
   const includedWalletIds = React.useMemo(
     () => getMatchingWalletIds(wallets.filter((w) => w.includeInTotals !== false)),
@@ -73,6 +74,15 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
     });
   }, [transactions, selectedMonth, walletScope, hasExcludedWallets, includedWalletIds, excludedWalletIds]);
 
+  // [v7.5.60 M-13] Per-budget math NEVER uses the scope filter — a budget
+  // linked to a Separate wallet showed spent 0 while scope was
+  // 'Included'. Only the budget's own walletId filters here; the scope
+  // toggle affects the summary cards (monthlyIncome/monthlyExpense)
+  // above, never the per-budget numbers below.
+  const monthTransactionsAll = React.useMemo(() => {
+    return transactions.filter((t) => t.date.startsWith(selectedMonth));
+  }, [transactions, selectedMonth]);
+
   const walletMap = React.useMemo(() => buildWalletMap(wallets), [wallets]);
   const catMap = React.useMemo(() => new Map<string, Category>(categories.map((c) => [c.id, c])), [categories]);
 
@@ -92,6 +102,15 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
     .reduce((sum, t) => sum + convertTxToMMK(t), 0);
   const monthlyExpense = monthTransactions
     .filter((t) => t.type === 'expense' && !isTransferTransaction(t))
+    .reduce((sum, t) => sum + convertTxToMMK(t), 0);
+
+  // [v7.5.60] BudgetModal % preview must NOT use the scope toggle -
+  // the saved % limit is computed from the budget's own wallet(s),
+  // so the preview uses the same unscoped all-wallets month income.
+  // (Approximation: the modal shows one income number, not the
+  // per-wallet base - the saved limit math itself is wallet-based.)
+  const monthlyIncomeAllWallets = monthTransactionsAll
+    .filter((t) => t.type === 'income' && !isTransferTransaction(t))
     .reduce((sum, t) => sum + convertTxToMMK(t), 0);
 
   const healthResult = React.useMemo(() => {
@@ -116,7 +135,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
     let spent = 0;
     const breakdown: Record<string, number> = {};
 
-    monthTransactions
+    monthTransactionsAll
       .filter((t) => t.type === 'expense' && !isTransferTransaction(t))
       .forEach((t) => {
         const targetW = b.walletId && b.walletId !== 'all' ? walletMap.get(b.walletId) : undefined;
@@ -139,9 +158,20 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         }
       });
 
+    // [v7.5.60 M-13] A % budget's income base is the income of ITS OWN
+    // wallet(s) only (unscoped) — the scope toggle must not move a
+    // budget's limit. walletId 'all'/unset = income across all wallets.
+    const budgetBaseIncome = monthTransactionsAll
+      .filter((t) => {
+        if (t.type !== 'income' || isTransferTransaction(t)) return false;
+        if (!b.walletId || b.walletId === 'all') return true;
+        const targetW = walletMap.get(b.walletId);
+        return targetW ? isWalletMatch(targetW, t.walletId) : t.walletId === b.walletId;
+      })
+      .reduce((sum, t) => sum + convertTxToMMK(t), 0);
     const limitMMK =
       b.calcType === 'percentage'
-        ? Math.round((monthlyIncome * b.value) / 100)
+        ? Math.round((budgetBaseIncome * b.value) / 100)
         : b.value;
 
     // [v7.5.55 D10] A % budget with zero income has limit 0: any spending is
@@ -157,6 +187,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
       isGeneral,
       spent,
       limitMMK,
+      budgetBaseIncome,
       percent,
       isOver,
       isNear,
@@ -174,6 +205,12 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
     0
   );
 
+  // [v7.5.60 N-17] % budgets summing past 100% of income means the caps
+  // promise more than the month earns — warn, don't silently allow it.
+  const totalPercentBudgets = budgets
+    .filter((b) => b.calcType === 'percentage')
+    .reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+
   // Check if unbudgeted pool exists
   const hasGeneralBudget = budgets.some(
     (b) => b.categoryId === UNBUDGETED_CATEGORY_ID
@@ -183,7 +220,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   // [v7.5.55 D11] Convert to MMK and exclude transfers, like the per-budget
   // math above (was raw amounts, transfers included).
   const unbudgetedSpentWithoutGeneral = !hasGeneralBudget
-    ? monthTransactions
+    ? monthTransactionsAll
         .filter(
           (t) =>
             t.type === 'expense' && !isTransferTransaction(t) && !explicitBudgetedCatIds.has(t.category)
@@ -259,22 +296,6 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
             <ArrowUpDown className="w-4 h-4 text-emerald-600" />
             <span>{lang === 'my' ? 'ကာလအလိုက် သုံးစွဲမှု' : 'Spending Comparison'}</span>
           </button>
-          <button
-            type="button"
-            id="subtab-price-trends"
-            onClick={() => setSubTab('price_trends')}
-            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-              subTab === 'price_trends'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <ShoppingBag className="w-4 h-4 text-amber-600" />
-            <span>{lang === 'my' ? 'ပစ္စည်းဈေးနှုန်းနှင့် အကြိမ်ရေ' : 'Item Price & Frequency'}</span>
-            <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-amber-100 text-amber-800">
-              NEW
-            </span>
-          </button>
         </div>
 
         <div className="text-right px-2 hidden md:block">
@@ -283,28 +304,15 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
               ? lang === 'my'
                 ? 'ကဏ္ဍအလိုက် ကန့်သတ်ချက်များ'
                 : 'Active budget rules'
-              : subTab === 'comparison'
-              ? lang === 'my'
-                ? 'ကာလနှစ်ခုကြား ကွာခြားချက်များ'
-                : 'Delta analysis'
               : lang === 'my'
-              ? 'ပစ္စည်းအလိုက် ဈေးနှုန်းနှင့် ဝယ်ယူမှုအကြိမ်ရေ Chart'
-              : 'Item price and frequency comparison'}
+              ? 'ကာလနှစ်ခုကြား ကွာခြားချက်များ'
+              : 'Delta analysis'}
           </span>
         </div>
       </div>
 
       {subTab === 'comparison' ? (
         <SpendingComparisonView
-          transactions={transactions}
-          categories={categories}
-          wallets={wallets}
-          plan={plan}
-          lang={lang}
-          onOpenUpgradeModal={onOpenUpgradeModal}
-        />
-      ) : subTab === 'price_trends' ? (
-        <ItemPriceAnalyticsView
           transactions={transactions}
           categories={categories}
           wallets={wallets}
@@ -484,8 +492,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
             <span>{lang === 'my' ? 'ယခုလ ဝင်ငွေ (အခြေခံ)' : 'Monthly Income'}</span>
             <Percent className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1">
-            {formatMMK(monthlyIncome)}
+          <div className="text-2xl font-bold text-emerald-700 mt-1" title={formatMMK(monthlyIncome)}>
+            {formatLakhs(monthlyIncome, lang)}
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
             {lang === 'my'
@@ -500,8 +508,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
             <span>{lang === 'my' ? 'စုစုပေါင်း ဘတ်ဂျက်' : 'Total Budget Cap'}</span>
             <PieChart className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-1">
-            {formatMMK(totalBudgetLimit)}
+          <div className="text-2xl font-bold text-slate-900 mt-1" title={formatMMK(totalBudgetLimit)}>
+            {formatLakhs(totalBudgetLimit, lang)}
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
             {budgets.length} {lang === 'my' ? 'ကဏ္ဍပေါင်းချုပ်' : 'categories combined'}
@@ -514,8 +522,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
             <span>{lang === 'my' ? 'ဘတ်ဂျက်အတွင်း သုံးစွဲပြီး' : 'Budgeted Spent'}</span>
             <TrendingDown className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="text-2xl font-bold text-rose-600 mt-1">
-            {formatMMK(totalBudgetSpent)}
+          <div className="text-2xl font-bold text-rose-600 mt-1" title={formatMMK(totalBudgetSpent)}>
+            {formatLakhs(totalBudgetSpent, lang)}
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
             {totalBudgetLimit > 0
@@ -541,7 +549,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                 : 'text-rose-600'
             }`}
           >
-            {formatMMK(totalBudgetLimit - totalBudgetSpent)}
+            <span title={formatMMK(totalBudgetLimit - totalBudgetSpent)}>{formatLakhs(totalBudgetLimit - totalBudgetSpent, lang)}</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
             {totalBudgetLimit - totalBudgetSpent >= 0
@@ -551,16 +559,35 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         </div>
       </div>
 
+      {/* [v7.5.60 N-17] % budgets total over 100% of monthly income. */}
+      {totalPercentBudgets > 100 && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold text-amber-900">
+              {lang === 'my'
+                ? `ဘတ်ဂျက်စုစုပေါင်းက လစဉ်ဝင်ငွေထက် များနေပါသည် (${totalPercentBudgets}%)`
+                : `Total budgets exceed monthly income (${totalPercentBudgets}%)`}
+            </span>
+            <p className="text-[11px] text-amber-800/80 mt-0.5">
+              {lang === 'my'
+                ? 'ရာခိုင်နှုန်း (%) ဘတ်ဂျက်များ ပေါင်းလိုက်ရင် ၁၀၀% ကျော်နေပါသည် — ဘတ်ဂျက်တစ်ခုချင်းစီကို ပြန်စစ်ပြီး လျှော့ချပါ။'
+                : 'Your % budgets add up to more than 100% of income — review and lower one of them.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Unbudgeted categories warning banner if no general pool configured */}
       {!hasGeneralBudget && unbudgetedSpentWithoutGeneral > 0 && (
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-amber-900">
+              <span className="font-bold text-amber-900" title={formatMMK(unbudgetedSpentWithoutGeneral)}>
                 {lang === 'my'
-                  ? `သီးသန့်ဘတ်ဂျက် မရှိသေးသော အခြားကဏ္ဍများတွင် သုံးစွဲငွေ: ${formatMMK(unbudgetedSpentWithoutGeneral)}`
-                  : `Spent in unbudgeted categories: ${formatMMK(unbudgetedSpentWithoutGeneral)}`}
+                  ? `သီးသန့်ဘတ်ဂျက် မရှိသေးသော အခြားကဏ္ဍများတွင် သုံးစွဲငွေ: ${formatLakhs(unbudgetedSpentWithoutGeneral, lang)}`
+                  : `Spent in unbudgeted categories: ${formatLakhs(unbudgetedSpentWithoutGeneral, lang)}`}
               </span>
               <p className="text-[11px] text-amber-800/80 mt-0.5">
                 {lang === 'my'
@@ -632,6 +659,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                 isGeneral,
                 spent,
                 limitMMK,
+                budgetBaseIncome,
                 percent,
                 isOver,
                 isNear,
@@ -759,16 +787,16 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                           <span className="text-slate-400 block text-[11px]">
                             {lang === 'my' ? 'သုံးစွဲပြီးငွေ:' : 'Actual Spent:'}
                           </span>
-                          <span className="font-bold text-slate-900 text-sm">
-                            {formatMMK(spent)}
+                          <span className="font-bold text-slate-900 text-sm" title={formatMMK(spent)}>
+                            {formatLakhs(spent, lang)}
                           </span>
                         </div>
                         <div>
                           <span className="text-slate-400 block text-[11px]">
                             {lang === 'my' ? 'သတ်မှတ်ဘတ်ဂျက်:' : 'Budget Limit:'}
                           </span>
-                          <span className="font-bold text-slate-900 text-sm">
-                            {formatMMK(limitMMK)}
+                          <span className="font-bold text-slate-900 text-sm" title={formatMMK(limitMMK)}>
+                            {formatLakhs(limitMMK, lang)}
                           </span>
                         </div>
                       </div>
@@ -779,12 +807,12 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                           <span className="font-semibold">{percent}% {lang === 'my' ? 'သုံးစွဲပြီး' : 'used'}</span>
                           <span>
                             {isOver ? (
-                              <span className="text-rose-600 font-bold">
-                                +{formatMMK(overAmount)} {lang === 'my' ? 'ပိုထွက်' : 'over'}
+                              <span className="text-rose-600 font-bold" title={formatMMK(overAmount)}>
+                                +{formatLakhs(overAmount, lang)} {lang === 'my' ? 'ပိုထွက်' : 'over'}
                               </span>
                             ) : (
-                              <span className="text-emerald-700 font-medium">
-                                {lang === 'my' ? 'ကျန်ငွေ:' : 'Left:'} {formatMMK(remaining)}
+                              <span className="text-emerald-700 font-medium" title={formatMMK(remaining)}>
+                                {lang === 'my' ? 'ကျန်ငွေ:' : 'Left:'} {formatLakhs(remaining, lang)}
                               </span>
                             )}
                           </span>
@@ -846,8 +874,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                                           : subCat?.nameEn || catId}
                                       </span>
                                     </div>
-                                    <span className="font-semibold">
-                                      {formatMMK(Number(amt))}
+                                    <span className="font-semibold" title={formatMMK(Number(amt))}>
+                                      {formatLakhs(Number(amt), lang)}
                                     </span>
                                   </div>
                                 );
@@ -863,10 +891,10 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                       <div className="text-[11px] text-slate-400">
                         {budget.calcType === 'percentage' && (
                           <span>
-                            {monthlyIncome > 0
+                            {budgetBaseIncome > 0
                               ? (lang === 'my'
-                                  ? `ဝင်ငွေ ${formatMMK(monthlyIncome)} ၏ ${budget.value}%`
-                                  : `${budget.value}% of ${formatMMK(monthlyIncome)} income`)
+                                  ? `ဝင်ငွေ ${formatLakhs(budgetBaseIncome, lang)} ၏ ${budget.value}%`
+                                  : `${budget.value}% of ${formatLakhs(budgetBaseIncome, lang)} income`)
                               : (lang === 'my'
                                   ? 'ယခုလ ဝင်ငွေ မရှိသေးပါ'
                                   : 'No income recorded yet')}
@@ -877,24 +905,14 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleEdit(budget)}
-                          className="px-2.5 py-1 rounded-lg text-xs font-semibold text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 transition-colors"
+                          className="px-2.5 py-2.5 rounded-lg text-xs font-semibold text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 transition-colors cursor-pointer"
                         >
                           <Edit2 className="w-3 h-3" />
                           <span>{lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}</span>
                         </button>
                         <button
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                lang === 'my'
-                                  ? 'ဤဘတ်ဂျက်ကဏ္ဍကို ပယ်ဖျက်ရန် သေချာပါသလား?'
-                                  : 'Remove this category budget?'
-                              )
-                            ) {
-                              onDeleteBudget(budget.categoryId);
-                            }
-                          }}
-                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          onClick={() => setConfirmDeleteCategoryId(budget.categoryId)}
+                          className="min-w-9 min-h-9 p-2.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer"
                           title="Remove budget"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -911,6 +929,38 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
       </>
       )}
 
+      {/* [v7.5.60 S-47] App-styled delete confirm (replaces window.confirm). */}
+      {confirmDeleteCategoryId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 p-5 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">
+              {lang === 'my' ? 'ဘတ်ဂျက်ကဏ္ဍ ပယ်ဖျက်မလား?' : 'Remove this budget category?'}
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {lang === 'my'
+                ? `“${confirmDeleteCategoryId === UNBUDGETED_CATEGORY_ID ? 'အထွေထွေ' : (catMap.get(confirmDeleteCategoryId)?.name || confirmDeleteCategoryId)}” ဘတ်ဂျက်ကို ပယ်ဖျက်ပါမည်။ ငွေစာရင်းမှတ်တမ်းများ မပျက်ပါ။`
+                : `The “${confirmDeleteCategoryId === UNBUDGETED_CATEGORY_ID ? 'General' : (catMap.get(confirmDeleteCategoryId)?.nameEn || confirmDeleteCategoryId)}” budget will be removed. Transactions are not affected.`}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteCategoryId(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { onDeleteBudget(confirmDeleteCategoryId); setConfirmDeleteCategoryId(null); }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 cursor-pointer"
+              >
+                {lang === 'my' ? 'ပယ်ဖျက်မည်' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Budget Modal for Adding & Editing */}
       <BudgetModal
         isOpen={isModalOpen}
@@ -918,7 +968,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         budgets={budgets}
         categories={categories}
         wallets={wallets}
-        monthlyIncome={monthlyIncome}
+        monthlyIncome={monthlyIncomeAllWallets}
         lang={lang}
         onClose={() => {
           setIsModalOpen(false);

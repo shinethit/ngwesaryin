@@ -1,26 +1,29 @@
 // =============================================================
 // i18n dictionary — centralized multilingual strings
-// Supported: Burmese (my), English (en), Chinese (zh), Thai (th)
+// [v7.5.60 G-M7] Supported: Burmese (my) + English (en) ONLY.
+// Chinese (zh) / Thai (th) were listed in the picker but the app
+// only ever rendered English for them — the choice was a lie.
+// The picker now offers my + en only. zh/th strings below are
+// kept for the toast/loading keys' fallback path only.
 // Pattern: add keys here, call t('section.key', lang) in code.
 // Fallback: target lang -> English (never Burmese by accident).
 // =============================================================
 
-export type Lang = 'my' | 'en' | 'zh' | 'th';
+export type Lang = 'my' | 'en';
 
 export const SUPPORTED_LANGS: { code: Lang; labelEn: string; nativeLabel: string }[] = [
   { code: 'my', labelEn: 'Burmese', nativeLabel: 'မြန်မာ' },
   { code: 'en', labelEn: 'English', nativeLabel: 'English' },
-  { code: 'zh', labelEn: 'Chinese', nativeLabel: '中文' },
-  { code: 'th', labelEn: 'Thai', nativeLabel: 'ไทย' },
 ];
 
 export const DEFAULT_LANG: Lang = 'my';
 
 export const isValidLang = (v: unknown): v is Lang =>
-  v === 'my' || v === 'en' || v === 'zh' || v === 'th';
+  v === 'my' || v === 'en';
 
 // Documentation of intended shape. Only 'my' and 'en' are required;
-// 'zh' and 'th' are optional and fall back to English.
+// legacy 'zh'/'th' entries below are optional leftovers and fall
+// back to English (the picker no longer offers them).
 type Entry = { my: string; en: string; zh?: string; th?: string };
 
 export const translations = {

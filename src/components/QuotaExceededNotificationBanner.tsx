@@ -16,6 +16,24 @@ export const QuotaExceededNotificationBanner: React.FC<QuotaExceededNotification
   const [isRetrying, setIsRetrying] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // [v7.5.60 N-20] Quota-exhausted and offline are different problems —
+  // say which one it is instead of one vague "connection" message.
+  // NOTE: no clock time is promised here: the exhausted flag
+  // (lib/firebase.ts isQuotaExhausted) resets at Pacific midnight, not
+  // UTC midnight, so a "06:30" claim would be wrong.
+  const [isOffline, setIsOffline] = useState(
+    () => typeof navigator !== 'undefined' && !navigator.onLine
+  );
+
+  useEffect(() => {
+    const update = () => setIsOffline(!navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
 
   const checkQuotaStatus = () => {
     const exhausted = isQuotaExhausted();
@@ -104,12 +122,18 @@ export const QuotaExceededNotificationBanner: React.FC<QuotaExceededNotification
                 ? (lang === 'my' ? 'ချိတ်ဆက်မှု အောင်မြင်သည်' : 'Delivery Confirmed')
                 : errorMsg
                 ? (lang === 'my' ? '❌ ဒေတာ မရောက်သေးပါ' : '❌ Data Not Delivered')
-                : (lang === 'my' ? '⚠️ ကွန်ရက် / ယာယီ ချိတ်ဆက်မှု အကန့်အသတ်ရှိနေပါသည်' : '⚠️ Temporary Connection / Quota Limit Notice')}
+                : isOffline
+                ? (lang === 'my' ? '📶 အင်တာနက် ချိတ်ဆက်မှု မရှိပါ' : '📶 No internet connection')
+                : (lang === 'my' ? '⚠️ Firestore နေ့စဉ် ရေးခွင့် (Quota) ပြည့်သွားပါပြီ' : '⚠️ Daily Firestore write quota exhausted')}
             </h4>
             <p className="text-[11px] sm:text-xs text-rose-100 opacity-95 break-words">
-              {successMsg || errorMsg || (lang === 'my'
-                ? 'အချက်အလက်များကို Cloud သို့ ပို့ဆောင်ရာတွင် အကန့်အသတ်ရှိနေပါသည်။ Retry ဖြင့် ထပ်မံကြိုးစားနိုင်ပါသည်။'
-                : 'Some records are pending delivery. Click Retry & Verify or check Sync Status for details.')}
+              {successMsg || errorMsg || (isOffline
+                ? (lang === 'my'
+                    ? 'အင်တာနက် ပြတ်နေပါသည် — ဒေတာများ စက်ထဲတွင် သိမ်းထားပြီး အင်တာနက်ရတာနဲ့ အလိုအလျောက် ပို့ပါမည်။'
+                    : 'You are offline — records are saved on this device and will sync automatically when you are back online.')
+                : (lang === 'my'
+                    ? 'ယနေ့အတွက် Cloud သို့ ရေးခွင့် ကုန်သွားပါပြီ — ဒေတာများ စက်ထဲတွင် သိမ်းထားပြီး quota ပြန်စတာနဲ့ အလိုအလျောက် ပို့ပါမည်။ Retry ဖြင့် ထပ်မံ စစ်ဆေးနိုင်ပါသည်။'
+                    : 'Today’s write quota is exhausted — records are saved on this device and will sync automatically once the quota resets. Retry to re-check.'))}
             </p>
           </div>
         </div>

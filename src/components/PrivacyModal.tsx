@@ -150,8 +150,8 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
             </h4>
             <p className="text-slate-600 pl-6">
               {lang === 'my'
-                ? 'သုံးစွဲသူများသည် မိမိတို့၏ စာရင်းဒေတာများကို အချိန်မရွေး Excel/JSON အဖြစ် စက်ထဲသို့ Export ထုတ်ယူနိုင်သကဲ့သို့ မလိုလားပါက "ဒေတာ အားလုံး ဖျက်မည်" ခလုတ်ဖြင့် အပြီးတိုင် ဖျက်ဆီးပစ်နိုင်ပါသည်။'
-                : 'Users retain full ownership of their financial records. You can export data anytime in Excel or JSON formats, or permanently delete all data via the Data Management menu.'}
+                ? 'သုံးစွဲသူများသည် မိမိတို့၏ စာရင်းဒေတာများကို ပိုင်ဆိုင်ပါသည်။ Premium အဖွဲ့ဝင်များက Excel/JSON အဖြစ် စက်ထဲသို့ Export ထုတ်ယူနိုင်ပြီး မလိုလားပါက "ဒေတာ အားလုံး ဖျက်မည်" ခလုတ်ဖြင့် အပြီးတိုင် ဖျက်ဆီးပစ်နိုင်ပါသည်။'
+                : 'Users retain full ownership of their financial records. Premium members can export data in Excel or JSON formats, or permanently delete all data via the Data Management menu.'}
             </p>
           </div>
         </div>

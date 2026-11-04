@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { BarChart3, TrendingUp, TrendingDown, Sparkles, Filter } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 
@@ -47,6 +47,12 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     let w = walletMap.get(tx.walletId);
     if (!w) w = wallets.find((wall) => isWalletMatch(wall, tx.walletId));
     return convertToMMK(tx.amount, w?.currency, w?.exchangeRate);
+  };
+  // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope). Unknown
+  // wallets are kept — their scope cannot be judged.
+  const isScopedTx = (tx: Transaction) => {
+    const w = walletMap.get(tx.walletId) || wallets.find((wall) => isWalletMatch(wall, tx.walletId));
+    return !w || w.includeInTotals !== false;
   };
   const [viewMode, setViewMode] = useState<'cashflow' | 'category_cost'>('cashflow');
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
@@ -89,6 +95,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     // Populate data with actual transactions (exclude internal transfers)
     transactions.forEach((tx) => {
       if (isTransferTransaction(tx)) return;
+      if (!isScopedTx(tx)) return;
       const monthKey = tx.date.slice(0, 7);
       if (monthsMap[monthKey]) {
         const amtMMK = convertTxToMMK(tx);
@@ -155,6 +162,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     // Populate category transaction metrics
     transactions.forEach((tx) => {
       if (tx.type !== 'expense' || isTransferTransaction(tx)) return;
+      if (!isScopedTx(tx)) return;
       const monthKey = tx.date.slice(0, 7);
       if (!monthCatMap[monthKey]) return;
 
@@ -247,20 +255,20 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
                 {lang === 'my' ? 'ဝင်ငွေ:' : 'Income:'}
               </span>
-              <span className="font-bold font-mono">+{formatMMK(data?.income || 0)}</span>
+              <span className="font-bold font-mono" title={formatMMK(data?.income || 0)}>+{formatLakhs(data?.income || 0, lang)}</span>
             </div>
             <div className="flex items-center justify-between gap-3 text-rose-700">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
                 {lang === 'my' ? 'ထွက်ငွေ:' : 'Expense:'}
               </span>
-              <span className="font-bold font-mono">-{formatMMK(data?.expense || 0)}</span>
+              <span className="font-bold font-mono" title={formatMMK(data?.expense || 0)}>-{formatLakhs(data?.expense || 0, lang)}</span>
             </div>
             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-3 font-semibold">
               <span className="text-slate-600">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
               <span className={`font-mono ${data?.net >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                 {data?.net >= 0 ? '+' : ''}
-                {formatMMK(data?.net || 0)}
+                {formatLakhs(data?.net || 0, lang)}
               </span>
             </div>
           </div>
@@ -286,11 +294,11 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block" />
                 {lang === 'my' ? 'ပျမ်းမျှ ကုန်ကျစရိတ်:' : 'Avg Cost / Item:'}
               </span>
-              <span className="font-bold font-mono">{formatMMK(data?.avgCost || 0)}</span>
+              <span className="font-bold font-mono" title={formatMMK(data?.avgCost || 0)}>{formatLakhs(data?.avgCost || 0, lang)}</span>
             </div>
             <div className="flex items-center justify-between gap-3 text-slate-600">
               <span>{lang === 'my' ? 'စုစုပေါင်း သုံးစွဲငွေ:' : 'Total Spent:'}</span>
-              <span className="font-bold font-mono text-slate-900">{formatMMK(data?.totalSpent || 0)}</span>
+              <span className="font-bold font-mono text-slate-900" title={formatMMK(data?.totalSpent || 0)}>{formatLakhs(data?.totalSpent || 0, lang)}</span>
             </div>
             <div className="flex items-center justify-between gap-3 text-slate-500 text-[11px] pt-1 border-t border-slate-100">
               <span>{lang === 'my' ? 'ဝယ်ယူမှု အကြိမ်/ပစ္စည်း:' : 'Entries / Items:'}</span>
@@ -466,8 +474,8 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
               <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider block">
                 {lang === 'my' ? 'ကာလတွင်း ဝင်ငွေစုစုပေါင်း' : 'Total Inflow'}
               </span>
-              <span className="text-xs sm:text-sm font-bold text-emerald-900 font-mono mt-0.5 block">
-                +{formatMMK(totalPeriodIncome)}
+              <span className="text-xs sm:text-sm font-bold text-emerald-900 font-mono mt-0.5 block truncate" title={formatMMK(totalPeriodIncome)}>
+                +{formatLakhs(totalPeriodIncome, lang)}
               </span>
             </div>
 
@@ -475,8 +483,8 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
               <span className="text-[10px] font-semibold text-rose-800 uppercase tracking-wider block">
                 {lang === 'my' ? 'ကာလတွင်း ထွက်ငွေစုစုပေါင်း' : 'Total Outflow'}
               </span>
-              <span className="text-xs sm:text-sm font-bold text-rose-900 font-mono mt-0.5 block">
-                -{formatMMK(totalPeriodExpense)}
+              <span className="text-xs sm:text-sm font-bold text-rose-900 font-mono mt-0.5 block truncate" title={formatMMK(totalPeriodExpense)}>
+                -{formatLakhs(totalPeriodExpense, lang)}
               </span>
             </div>
 
@@ -490,7 +498,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                 }`}
               >
                 {totalPeriodNet >= 0 ? '+' : ''}
-                {formatMMK(totalPeriodNet)}
+                {formatLakhs(totalPeriodNet, lang)}
               </span>
             </div>
           </div>
@@ -514,11 +522,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                     tick={{ fontSize: 10, fill: '#64748B' }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val) => {
-                      if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
-                      if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
-                      return val;
-                    }}
+                    tickFormatter={(val) => formatLakhs(val, lang)}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend
@@ -560,11 +564,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                     tick={{ fontSize: 10, fill: '#64748B' }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val) => {
-                      if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
-                      if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
-                      return val;
-                    }}
+                    tickFormatter={(val) => formatLakhs(val, lang)}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend
@@ -616,8 +616,8 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
               <span className="text-[10px] font-semibold text-indigo-800 uppercase tracking-wider block">
                 {lang === 'my' ? `${monthRange} လတာ ပျမ်းမျှ ကုန်ကျစရိတ်` : `${monthRange}-Month Average Cost`}
               </span>
-              <span className="text-xs sm:text-sm font-bold text-indigo-950 font-mono mt-0.5 block">
-                {formatMMK(categoryCostStats.overallAvgCost)}
+              <span className="text-xs sm:text-sm font-bold text-indigo-950 font-mono mt-0.5 block truncate" title={formatMMK(categoryCostStats.overallAvgCost)}>
+                {formatLakhs(categoryCostStats.overallAvgCost, lang)}
               </span>
             </div>
 
@@ -639,8 +639,8 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-xs sm:text-sm font-bold text-slate-900 font-mono mt-0.5 block">
-                {formatMMK(categoryCostStats.latestAvgCost)}
+              <span className="text-xs sm:text-sm font-bold text-slate-900 font-mono mt-0.5 block truncate" title={formatMMK(categoryCostStats.latestAvgCost)}>
+                {formatLakhs(categoryCostStats.latestAvgCost, lang)}
               </span>
             </div>
 
@@ -688,11 +688,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                     tick={{ fontSize: 10, fill: '#64748B' }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val) => {
-                      if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
-                      if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
-                      return val;
-                    }}
+                    tickFormatter={(val) => formatLakhs(val, lang)}
                   />
                   <Tooltip content={<CategoryCostTooltip />} />
                   <Legend
@@ -728,11 +724,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                     tick={{ fontSize: 10, fill: '#64748B' }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val) => {
-                      if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
-                      if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
-                      return val;
-                    }}
+                    tickFormatter={(val) => formatLakhs(val, lang)}
                   />
                   <Tooltip content={<CategoryCostTooltip />} />
                   <Legend

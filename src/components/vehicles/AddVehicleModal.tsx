@@ -90,6 +90,17 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
     e.preventDefault();
     if (!name.trim()) return;
 
+    // [v7.5.60 D-S12] Odometer 0 means km/L and part-due reminders never
+    // work — warn once instead of silently saving a useless 0.
+    if (Number(currentOdometer) === 0) {
+      const okZero = confirm(
+        lang === 'my'
+          ? 'မိုင်တာ မထည့်ထားပါ — ဆီစားနှုန်း (km/L) တွက်ချက်မှုနှင့် အပိုပစ္စည်း လဲရမည့်အချိန် သတိပေးချက်များ အလုပ်မလုပ်ပါ။ 0 အတိုင်း သိမ်းမလား?'
+          : 'No odometer entered — km/L calculation and part-due reminders will not work. Save with 0 anyway?'
+      );
+      if (!okZero) return;
+    }
+
     const vehId = editingVehicle?.id || `veh_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     onSave({
@@ -187,10 +198,19 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                     key={item.id}
                     onClick={() => {
                       setType(item.id as Vehicle['type']);
-                      if (item.id === 'motorcycle') {
-                        setFrontPsi(29);
-                        setRearPsi(33);
-                        setTankCapacity(5);
+                      // [v7.5.60 D-S10] Switching type re-applies that
+                      // type's defaults — but ONLY when adding a new
+                      // vehicle, never over an edited vehicle's saved values.
+                      if (!editingVehicle) {
+                        if (item.id === 'motorcycle') {
+                          setFrontPsi(29);
+                          setRearPsi(33);
+                          setTankCapacity(5);
+                        } else if (item.id === 'car') {
+                          setFrontPsi(32);
+                          setRearPsi(34);
+                          setTankCapacity(45);
+                        }
                       }
                     }}
                     className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition-all cursor-pointer ${
@@ -288,6 +308,12 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                 placeholder="0"
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
+              {/* [v7.5.60 D-S12] Say what the odometer is for. */}
+              <p className="text-[11px] text-slate-500 mt-1">
+                {lang === 'my'
+                  ? 'လက်ရှိ ဒိုင်ခွက်မိုင်ကို ထည့်ပါ — ဆီစားနှုန်း (km/L) နှင့် အပိုပစ္စည်း လဲရမည့်အချိန်ကို တွက်ရန် သုံးပါတယ်'
+                  : 'Enter the current odometer reading — it is used to calculate km/L and part-due reminders'}
+              </p>
             </div>
           </div>
 
@@ -382,17 +408,12 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
               {editingVehicle && onDelete && canDeleteVehicle && (
                 <button
                   type="button"
+                  // [v7.5.60 D-M1] No confirm here — the caller
+                  // (VehiclesView) shows the full-impact warning
+                  // (log counts + linked expenses + balance impact)
+                  // before this onDelete runs. Never delete directly.
                   onClick={() => {
-                    if (
-                      confirm(
-                        lang === 'my'
-                          ? 'ဤယာဉ်အချက်အလက်ကို ဖျက်ရန် သေချာပါသလား?'
-                          : 'Are you sure you want to delete this vehicle?'
-                      )
-                    ) {
-                      onDelete(editingVehicle.id);
-                      onClose();
-                    }
+                    onDelete(editingVehicle.id);
                   }}
                   className="px-3.5 py-2 text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
                 >

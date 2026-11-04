@@ -234,28 +234,32 @@ export function useDataHandlers({
     );
   };
 
+  // [v7.5.60 M1] The delete confirm now lives in CategoriesView (inline
+  // dialog with the real record count + fallback name) — this handler no
+  // longer asks again with window.confirm.
   const handleDeleteCategory = (categoryId: string) => {
     if (!canUseCustomCategories) {
       setIsPremiumModalOpen(true);
       return;
     }
-    
+
     const catToDelete = categories.find((c) => c.id === categoryId);
     if (!catToDelete) return;
-    
-    const relatedTxCount = transactions.filter(t => t.category === categoryId).length;
-    
-    if (relatedTxCount > 0) {
-       if (!window.confirm(lang === 'my' 
-           ? `ဤကဏ္ဍတွင် မှတ်တမ်း ${relatedTxCount} ခု ရှိပါသည်။ ဖျက်လိုက်ပါက ၎င်းတို့ကို 'အခြား' ကဏ္ဍသို့ ပြောင်းရွှေ့မည်ဖြစ်ပါသည်။ ဆက်လုပ်မည်လား?` 
-           : `There are ${relatedTxCount} transactions in this category. They will be reassigned to 'Other'. Continue?`)) {
-           return;
-       }
-       
-       const fallbackCat = categories.find(c => c.type === catToDelete.type && c.id !== categoryId);
+
+    const relatedTxs = transactions.filter((t) => t.category === categoryId);
+
+    if (relatedTxs.length > 0) {
+       // [v7.5.60 M1] Reassign to the matching "Other" category EXACTLY —
+       // never the first category of the type (that was cat_transfer for
+       // expenses, and transfer txs are excluded from income/expense
+       // totals, so the old fallback silently dropped these records
+       // from every total). Only when the Other category itself is gone
+       // do we fall back to the unbudgeted category.
+       const otherId = catToDelete.type === 'income' ? 'cat_income_other' : 'cat_expense_other';
+       const fallbackCat = categories.find((c) => c.id === otherId);
        const fallbackId = fallbackCat ? fallbackCat.id : UNBUDGETED_CATEGORY_ID;
-       
-       const nextTransactions = transactions.map(t => {
+
+       const nextTransactions = transactions.map((t) => {
          if (t.category === categoryId) {
            return { ...t, category: fallbackId, categoryId: fallbackId, subCategoryId: undefined };
          }
@@ -263,6 +267,20 @@ export function useDataHandlers({
        });
        setTransactions(nextTransactions);
        safeSetItem('ngwe_transactions', JSON.stringify(nextTransactions));
+       // [v7.5.60 M1] The reassigned txs must move in the cloud too, or
+       // the next cloud load would resurrect the old category on them.
+       if (user?.uid) {
+         const targetUid = activeWorkspaceId || user.uid;
+         relatedTxs.forEach((t) => {
+           reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', t.id), {
+             ...t,
+             category: fallbackId,
+             categoryId: fallbackId,
+             subCategoryId: undefined,
+             userId: targetUid,
+           }, { merge: true }));
+         });
+       }
     }
     
     const nextCategories = categories.filter((c) => c.id !== categoryId);
@@ -319,14 +337,17 @@ export function useDataHandlers({
   };
 
   const handleDeleteSubCategory = (categoryId: string, subCategoryId: string) => {
+    // [v7.5.60 M2] Name resolved from the current props (not from the
+    // setCategories updater, which runs later) so the toast can use it.
+    const deletedSub = categories
+      .find((c) => c.id === categoryId)
+      ?.subCategories?.find((s) => s.id === subCategoryId);
+    const deletedName = deletedSub?.name || '';
     let updatedParent: Category | null = null;
     let nextCategories: Category[] = [];
-    let deletedName = '';
     setCategories((prev) => {
       nextCategories = prev.map((c) => {
         if (c.id === categoryId) {
-          const target = (c.subCategories || []).find((s) => s.id === subCategoryId);
-          if (target) deletedName = target.name;
           updatedParent = {
             ...c,
             subCategories: (c.subCategories || []).filter((s) => s.id !== subCategoryId),
@@ -348,11 +369,36 @@ export function useDataHandlers({
         userId: targetUid,
       }, { merge: true }));
     }
+    // [v7.5.60 M2] Clear the deleted sub-category from every tx that
+    // used it — otherwise those txs keep a dangling subCategoryId and
+    // silently lose their sub-category label. The parent category stays.
+    const affectedTxs = transactions.filter((t) => t.subCategoryId === subCategoryId);
+    if (affectedTxs.length > 0) {
+      const nextTransactions = transactions.map((t) =>
+        t.subCategoryId === subCategoryId ? { ...t, subCategoryId: undefined } : t
+      );
+      setTransactions(nextTransactions);
+      safeSetItem('ngwe_transactions', JSON.stringify(nextTransactions));
+      if (user?.uid) {
+        const targetUid = activeWorkspaceId || user.uid;
+        affectedTxs.forEach((t) => {
+          reportCloudWrite(safeSetDoc(doc(db, 'users', targetUid, 'transactions', t.id), {
+            ...t,
+            subCategoryId: undefined,
+            userId: targetUid,
+          }, { merge: true }));
+        });
+      }
+    }
     if (deletedName) {
       showToast(
         lang === 'my'
-          ? `ကဏ္ဍခွဲ "${deletedName}" ကို ဖျက်ပြီးပါပြီ`
-          : `Deleted sub-category "${deletedName}"`
+          ? affectedTxs.length > 0
+            ? `ကဏ္ဍခွဲ "${deletedName}" ကို ဖျက်ပြီး မှတ်တမ်း ${affectedTxs.length} ခုမှ ကဏ္ဍခွဲ ဖယ်ရှားပြီးပါပြီ`
+            : `ကဏ္ဍခွဲ "${deletedName}" ကို ဖျက်ပြီးပါပြီ`
+          : affectedTxs.length > 0
+            ? `Deleted sub-category "${deletedName}" and cleared it from ${affectedTxs.length} transaction(s)`
+            : `Deleted sub-category "${deletedName}"`
       );
     }
   };

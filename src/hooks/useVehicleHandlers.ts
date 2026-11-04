@@ -61,9 +61,15 @@ export function useVehicleHandlers({
   // ==========================================
   const handleSaveVehicle = (vehicle: Vehicle) => {
     const vehId = vehicle.id || `veh_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // [v7.5.60 D-N9] Stamp the starting odometer once, at creation — it is
+    // the fallback when all logs are later deleted. Edits never overwrite
+    // an existing value.
+    const isNewVehicle = !vehicles.some((v) => v.id === vehId);
     const fullVehicle: Vehicle = {
       ...vehicle,
       id: vehId,
+      initialOdometer:
+        vehicle.initialOdometer ?? (isNewVehicle ? vehicle.currentOdometer : undefined),
       createdAt: vehicle.createdAt || Date.now(),
       updatedAt: Date.now(),
       version: (vehicle.version || 0) + 1,
@@ -96,10 +102,19 @@ export function useVehicleHandlers({
       ...mLogs.filter((m) => m.vehicleId === vehicleId).map((m) => m.odometer || 0),
       ...tLogs.filter((t) => t.vehicleId === vehicleId).map((t) => t.odometer || 0),
     ];
-    // မှတ်တမ်းတစ်စောင်မှ မကျန်တော့ရင် မိုင်တာကို 0 ပြန်မချဘဲ အရင်အတိုင်း ထားပါတယ် —
-    // မဟုတ်ရင် ယာဉ်အစမိုင်တာ ပျောက်သွားမှာပါ။
-    if (odos.length === 0) return;
-    const newOdo = Math.max(...odos);
+    // [v7.5.60 D-N9] No logs left: fall back to the starting odometer
+    // (when known) instead of keeping a reading no log supports — and
+    // never drop below the starting odometer either (backfilled old
+    // logs must not rewind the vehicle). Vehicles created before this
+    // version have no initialOdometer, so they keep the old behaviour.
+    if (odos.length === 0) {
+      const fallback = targetVehicle.initialOdometer ?? targetVehicle.currentOdometer;
+      if (fallback !== targetVehicle.currentOdometer) {
+        handleSaveVehicle({ ...targetVehicle, currentOdometer: fallback });
+      }
+      return;
+    }
+    const newOdo = Math.max(targetVehicle.initialOdometer ?? 0, ...odos);
     if (newOdo !== targetVehicle.currentOdometer) {
       handleSaveVehicle({ ...targetVehicle, currentOdometer: newOdo });
     }
@@ -512,9 +527,7 @@ export function useVehicleHandlers({
     }
 
     // တာယာမှတ်တမ်း သိမ်းချိန်မှာလည်း မိုင်တာ ပြန်တွက်ပေးပါတယ် (ဆီ/ပြုပြင်မှတ်တမ်းတွေလိုပဲ)
-    recalculateVehicleOdometer(log.vehicleId, fuelLogs, vehicleMaintenance, nextTire);
-
-    // Tire save also recalculates the odometer (fuel / maintenance already did).
+    // [v7.5.60 D-N8] Once only — the second identical call was a stray duplicate.
     recalculateVehicleOdometer(log.vehicleId, fuelLogs, vehicleMaintenance, nextTire);
 
     showToast(lang === 'my' ? 'တာယာလေဖိအား မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Tire pressure log saved ✓');

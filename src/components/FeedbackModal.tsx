@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, MessageSquareHeart, Send, X, Lightbulb, Bug, Smile, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FeedbackCategory, PlanType } from '../types';
@@ -31,6 +31,18 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  // [v7.5.60 S-91] A failed submit used to look like nothing happened.
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // [v7.5.60 N-51] The account can finish loading AFTER the modal opens,
+  // leaving name/email blank. Refill them when `user` arrives — but only
+  // into fields the user has not typed in yet.
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    const fallbackName = user.displayName || user.email?.split('@')[0] || '';
+    setUserName((prev) => (prev.trim() ? prev : fallbackName));
+    setUserEmail((prev) => (prev.trim() ? prev : user.email || ''));
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
@@ -76,6 +88,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     if (!comment.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       await submitFeedback({
         userId: user?.uid,
@@ -108,6 +121,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       }, 1800);
     } catch (err) {
       console.error('Failed to submit feedback:', err);
+      // [v7.5.60 S-91] Show the failure in the modal and KEEP the text so
+      // the user can retry instead of losing their feedback.
+      setSubmitError(
+        lang === 'my'
+          ? 'ပို့၍မရပါ — အင်တာနက်ကို စစ်ပြီး ပြန်ကြိုးစားပါ'
+          : 'Could not send — check your connection and try again'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -291,6 +311,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             </div>
 
             {/* Actions */}
+            {/* [v7.5.60 S-91] Submit-failure notice (text is kept for retry). */}
+            {submitError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs font-bold">
+                {submitError}
+              </div>
+            )}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"

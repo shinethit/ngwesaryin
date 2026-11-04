@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category } from '../types';
 import { INITIAL_CATEGORIES } from '../data/initialData';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
+import { formatLakhs, formatMMK } from '../utils/formatters';
 import { fetchContactInfo, saveContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';
 import { subscribeVisitors, getCountryFlag, deleteVisitorDoc } from '../lib/analyticsService';
 import { QuotaDashboard } from './QuotaDashboard';
@@ -756,7 +757,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     // look like @name. Empty strings keep the previously saved value
     // instead of overwriting good values with blanks.
     const phoneOk = (v?: string) => !v || /^\+?[0-9][0-9\s\-]{7,14}$/.test(v.trim());
-    for (const [label, v] of [['Viber', contactForm.viberPhone], ['KPay', contactForm.kpayPhone], ['Wave', contactForm.wavePhone]] as const) {
+    for (const [label, v] of [['Viber', contactForm.viberPhone], ['Direct Phone', contactForm.phone], ['KPay', contactForm.kpayPhone], ['Wave', contactForm.wavePhone]] as const) {
       if (v && !phoneOk(v)) {
         alert(lang === 'my' ? `${label} ဖုန်းနံပါတ် မမှန်ပါ — ဂဏန်း ၉-၁၅ လုံး ထည့်ပါ` : `${label} phone number is invalid — enter 9-15 digits`);
         return;
@@ -1478,7 +1479,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       alert(lang === 'my' ? 'မှတ်တမ်းတည်နေရာ ရှာမတွေ့ပါ။' : 'Document path not found.');
       return;
     }
-    if (!window.confirm(lang === 'my' ? `ဤစာရင်းမှတ်တမ်း "${tx.note || tx.category}" (${(tx.amount || 0).toLocaleString()} MMK) ကို Database ပေါ်မှ အပြီးတိုင် ဖျက်ပစ်ရန် သေချာပါသလား?` : `Delete this record (${(tx.amount || 0).toLocaleString()} MMK) permanently?`)) {
+    if (!window.confirm(lang === 'my' ? `ဤစာရင်းမှတ်တမ်း "${tx.note || tx.category}" (${formatLakhs(tx.amount || 0, lang)}) ကို Database ပေါ်မှ အပြီးတိုင် ဖျက်ပစ်ရန် သေချာပါသလား?` : `Delete this record (${formatLakhs(tx.amount || 0, lang)}) permanently?`)) {
       return;
     }
     try {
@@ -1577,29 +1578,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  // Delete an entire test user document and its subcollections
+  // Delete an entire test user document and ALL its subcollections
+  // [v7.5.60 M-19] The old version deleted only transactions, wallets and
+  // categories — debts, vehicles, fuel/maintenance/tire logs, budgets and
+  // shops were silently left behind, and the Firebase Auth login account
+  // can never be deleted from client code. Delete every known
+  // users/{uid}/... subcollection and say the login-account limit honestly.
   const handleDeleteUserAccount = async (userId: string, userEmail: string) => {
-    if (!window.confirm(lang === 'my' ? `⚠️ သတိပေးချက်: အကောင့် (${userEmail || userId}) နှင့် ၎င်း၏ ငွေစာရင်း၊ ပိုက်ဆံအိတ် စာရင်းအားလုံးကို Database မှ လုံးဝ ဖျက်ပစ်ရန် သေချာပါသလား?` : `Delete user account (${userEmail || userId}) and all associated data permanently?`)) {
+    if (!window.confirm(lang === 'my' ? `⚠️ သတိပေးချက်: အကောင့် (${userEmail || userId}) နှင့် ၎င်း၏ ငွေစာရင်း၊ ပိုက်ဆံအိတ်၊ အကြွေး၊ ယာဉ်၊ ဆီစာရင်း/ပြုပြင်မှတ်တမ်း၊ ဘတ်ဂျက်၊ ကဏ္ဍ၊ ဆိုင်မှတ်တမ်းများ အားလုံးကို Database မှ လုံးဝ ဖျက်ပစ်ရန် သေချာပါသလား? (မှတ်ချက်: login အကောင့်ကို ဤနေရာမှ ဖျက်၍ မရပါ — အဲဒီအသုံးပြုသူ Google ဖြင့် ပြန်ဝင်လာနိုင်ပါသည်။)` : `Delete user account (${userEmail || userId}) and ALL its data (transactions, wallets, debts, vehicles, fuel/maintenance/tire logs, budgets, categories, shops) permanently? Note: the login account itself cannot be deleted from here — the user could sign back in with Google.`)) {
       return;
     }
 
+    // Every subcollection that lives under users/{uid} (see syncQueue.ts
+    // SyncEntityType + all collection(db, 'users', uid, ...) call sites).
+    const SUBCOLLECTIONS = [
+      'transactions',
+      'wallets',
+      'categories',
+      'debts',
+      'vehicles',
+      'fuelLogs',
+      'vehicleMaintenance',
+      'tirePressureLogs',
+      'budgets',
+      'shops',
+    ] as const;
+
     try {
       setIsPurgingBatch(true);
-      // 1. Purge transactions subcollection
-      const txSnap = await getDocs(collection(db, 'users', userId, 'transactions'));
-      const txResults = await Promise.all(txSnap.docs.map((d) => safeDeleteDoc(d.ref)));
-
-      // 2. Purge wallets subcollection
-      const wlSnap = await getDocs(collection(db, 'users', userId, 'wallets'));
-      const wlResults = await Promise.all(wlSnap.docs.map((d) => safeDeleteDoc(d.ref)));
-
-      // 3. Purge categories subcollection
-      const catSnap = await getDocs(collection(db, 'users', userId, 'categories'));
-      const catResults = await Promise.all(catSnap.docs.map((d) => safeDeleteDoc(d.ref)));
+      let allOk = true;
+      for (const sub of SUBCOLLECTIONS) {
+        const snap = await getDocs(collection(db, 'users', userId, sub));
+        const results = await Promise.all(snap.docs.map((d) => safeDeleteDoc(d.ref)));
+        if (results.some((r) => !r)) allOk = false;
+      }
 
       // 4. Delete user document
       const userDocOk = await safeDeleteDoc(doc(db, 'users', userId));
-      if (!userDocOk || txResults.some((r) => !r) || wlResults.some((r) => !r) || catResults.some((r) => !r)) {
+      if (!userDocOk || !allOk) {
         alert(lang === 'my' ? '⚠️ အကောင့်၏ အချို့ ဒေတာများ ဖျက်၍ မရပါ — ကျန်ရှိသော ဒေတာများ ရှိနေနိုင်ပါသည်။ အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : '⚠️ Some of the account data could not be deleted — some data may remain. Check connection / permissions.');
         setIsPurgingBatch(false);
         return;
@@ -1656,13 +1672,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         {/* Unified 6 Tabs Navigation */}
+        {/* [v7.5.60 N-48] On phones the old horizontal scroll strip showed
+            only ~2 tabs at 11px. Now a 2-column grid on phones (3 on sm,
+            6 on lg) so every tab is visible without scrolling. */}
         <div className="relative">
-        <div ref={tabStripRef} className="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 sm:pt-3 pb-2 shrink-0 border-b border-slate-100 overflow-x-auto sm:overflow-visible -mx-1 px-1">
+        <div ref={tabStripRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 sm:pt-3 pb-2 shrink-0 border-b border-slate-100 -mx-1 px-1">
           <button
             type="button"
             data-tab="overview"
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'overview'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1694,7 +1713,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             type="button"
             data-tab="users_codes"
             onClick={() => setActiveTab('users_codes')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'users_codes'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1712,7 +1731,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             type="button"
             data-tab="broadcast"
             onClick={() => setActiveTab('broadcast')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'broadcast'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1730,7 +1749,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             type="button"
             data-tab="contact_info"
             onClick={() => setActiveTab('contact_info')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'contact_info'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1748,7 +1767,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             type="button"
             data-tab="analytics"
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 ${
               activeTab === 'analytics'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1961,7 +1980,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <select
                     value={summaryDatePreset}
                     onChange={(e) => applySummaryDatePreset(e.target.value as any)}
-                    className="text-[11px] font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                    className="text-base font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                   >
                     <option value="all">{lang === 'my' ? 'အားလုံး' : 'All Time'}</option>
                     <option value="today">{lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
@@ -1977,14 +1996,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         type="date"
                         value={summaryFrom}
                         onChange={(e) => setSummaryFrom(e.target.value)}
-                        className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                       />
                       <span className="text-slate-400 text-[11px]">→</span>
                       <input
                         type="date"
                         value={summaryTo}
                         onChange={(e) => setSummaryTo(e.target.value)}
-                        className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                       />
                     </div>
                   )}
@@ -2001,9 +2020,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-extrabold text-[10px]">
                       <th className="py-2 px-3">User</th>
-                      <th className="py-2 px-3 text-right">Income</th>
-                      <th className="py-2 px-3 text-right">Expense</th>
-                      <th className="py-2 px-3 text-right">Net</th>
+                      <th className="py-2 px-3 text-right">Income (သိန်း)</th>
+                      <th className="py-2 px-3 text-right">Expense (သိန်း)</th>
+                      <th className="py-2 px-3 text-right">Net (သိန်း)</th>
                       <th className="py-2 px-3 text-center">Records</th>
                     </tr>
                   </thead>
@@ -2039,14 +2058,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 {u.email || u.id}
                               </div>
                             </td>
-                            <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-bold whitespace-nowrap">
-                              +{income.toLocaleString()}
+                            <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-bold whitespace-nowrap" title={formatMMK(income)}>
+                              +{formatLakhs(income, lang)}
                             </td>
-                            <td className="py-2.5 px-3 text-right font-mono text-rose-700 font-bold whitespace-nowrap">
-                              -{expense.toLocaleString()}
+                            <td className="py-2.5 px-3 text-right font-mono text-rose-700 font-bold whitespace-nowrap" title={formatMMK(expense)}>
+                              -{formatLakhs(expense, lang)}
                             </td>
-                            <td className="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap text-slate-800">
-                              {net >= 0 ? '+' : ''}{net.toLocaleString()}
+                            <td className="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap text-slate-800" title={formatMMK(net)}>
+                              {formatLakhs(net, lang)}
                             </td>
                             <td className="py-2.5 px-3 text-center font-mono text-slate-600">
                               {userTxs.length}
@@ -2161,8 +2180,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             </button>
                             <div className="flex items-center gap-2 shrink-0">
                               {cat.amount > 0 && (
-                                <span className="text-[11px] font-mono text-slate-500">
-                                  {cat.amount.toLocaleString()} MMK
+                                <span className="text-[11px] font-mono text-slate-500" title={formatMMK(cat.amount)}>
+                                  {formatLakhs(cat.amount, lang)}
                                 </span>
                               )}
                               <span className="font-mono text-slate-800 font-bold">{cat.pct}%</span>
@@ -2192,7 +2211,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <select
                         value={selectedBenchmarkCat}
                         onChange={(e) => setSelectedBenchmarkCat(e.target.value)}
-                        className="text-[11px] font-semibold px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none"
+                        className="text-base font-semibold px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none"
                       >
                         <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး' : 'All Categories'}</option>
                         {liveSubCategoryBenchmarks.map((grp) => (
@@ -2211,8 +2230,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                               <span className="truncate max-w-[180px]">{grp.category}</span>
                               {grp.totalAmount > 0 && (
-                                <span className="text-[10px] font-mono text-indigo-600 font-normal">
-                                  {grp.totalAmount.toLocaleString()} MMK
+                                <span className="text-[10px] font-mono text-indigo-600 font-normal" title={formatMMK(grp.totalAmount)}>
+                                  {formatLakhs(grp.totalAmount, lang)}
                                 </span>
                               )}
                             </div>
@@ -2484,7 +2503,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <select
                   value={selectedMonths}
                   onChange={(e) => setSelectedMonths(Number(e.target.value))}
-                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-base font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
                   <option value={1}>1 Month (၁ လ)</option>
                   <option value={2}>2 Months (၂ လ)</option>
@@ -2505,7 +2524,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   max="50"
                   value={generateCount}
                   onChange={(e) => setGenerateCount(Number(e.target.value))}
-                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 w-24"
+                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-base font-semibold focus:outline-none focus:border-indigo-500 w-24"
                 />
               </div>
 
@@ -2604,7 +2623,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       ? 'ကုဒ် သို့မဟုတ် Email ဖြင့် ရှာပါ...'
                       : 'Search by code or user email...'
                   }
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:outline-none focus:border-indigo-500 font-medium"
+                  className="w-full pl-9 pr-3 py-1.5 text-base rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:outline-none focus:border-indigo-500 font-medium"
                 />
               </div>
             </div>
@@ -2820,7 +2839,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           return (
                             <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                               <td className="py-3 px-4">
-                                <div className="font-bold text-slate-900">
+                                {/* [v7.5.60 S-87] Long emails stretched the table
+                                    (codes list already truncates at 160px). */}
+                                <div className="font-bold text-slate-900 truncate max-w-[160px]" title={u.email || u.displayName || ''}>
                                   {u.email || u.displayName || 'Guest User'}
                                 </div>
                                 <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate max-w-[160px]">
@@ -2858,8 +2879,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                     )}
                                   </div>
                                   {userExpenseTotal > 0 && (
-                                    <div className="text-[11px] font-mono text-slate-600 font-bold">
-                                      {userExpenseTotal.toLocaleString()} MMK
+                                    <div className="text-[11px] font-mono text-slate-600 font-bold" title={formatMMK(userExpenseTotal)}>
+                                      {formatLakhs(userExpenseTotal, lang)}
                                     </div>
                                   )}
                                 </div>
@@ -2916,15 +2937,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                       : '✨ Grant'}
                                   </button>
 
-                                  {/* Delete the whole user account (E19) */}
+                                  {/* [v7.5.60 M-20] Two bare Trash2 icons sat side
+                                      by side — one deleted the WHOLE account,
+                                      the other only cleared records. On a phone
+                                      (no hover tooltip) that is a one-tap
+                                      disaster. Labelled buttons now. */}
                                   <button
                                     type="button"
                                     disabled={isPurgingBatch}
                                     onClick={() => handleDeleteUserAccount(u.id, u.email || u.id)}
-                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                    className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-rose-600 text-white hover:bg-rose-700 shadow-2xs disabled:opacity-50 inline-flex items-center gap-1"
                                     title={lang === 'my' ? 'အကောင့်တစ်ခုလုံး ဖျက်မည် (Delete Account)' : 'Delete entire user account'}
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
+                                    <span>{lang === 'my' ? 'အကောင့်ဖျက်မည်' : 'Delete Account'}</span>
                                   </button>
 
                                   {/* Purge user transactions if test account */}
@@ -2933,10 +2959,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                       type="button"
                                       disabled={isPurgingBatch}
                                       onClick={() => handlePurgeUserTransactions(u.id, u.email || u.id)}
-                                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 disabled:opacity-50 inline-flex items-center gap-1"
                                       title={lang === 'my' ? 'ဤ User ၏ စာရင်းအားလုံးကို ရှင်းလင်းမည်' : 'Purge all records of this user'}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
+                                      <span>{lang === 'my' ? 'စာရင်းရှင်းမည်' : 'Clear Records'}</span>
                                     </button>
                                   )}
                                 </div>
@@ -3004,7 +3031,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         ? 'ဥပမာ - ဗားရှင်းအသစ်ထွက်ရှိပါပြီ / ဆာဗာပြုပြင်ထိန်းသိမ်းမှု'
                         : 'e.g. New Version Released / Maintenance Alert'
                     }
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
@@ -3016,7 +3043,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <select
                     value={msgType}
                     onChange={(e) => setMsgType(e.target.value as AdminMessageType)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-base font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
                   >
                     <option value="announcement">📢 Announcement (ကြေညာချက်)</option>
                     <option value="notice">⚠️ Notice (သတိပေးချက်)</option>
@@ -3040,7 +3067,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       ? 'အသုံးပြုသူများထံ ဖော်ပြလိုသော ကြေညာချက် သို့မဟုတ် သတိပေးချက်ကို ရိုက်ထည့်ပါ...'
                       : 'Enter announcement text to be broadcasted to users...'
                   }
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-normal focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-base font-normal focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -3198,7 +3225,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             }`}
                             title="Click to toggle Marquee"
                           >
-                            {m.isMarquee ? '🏃 Marquee: ON' : 'Static: ON'}
+                            {/* [v7.5.60 N-43] "Static: ON" read like a feature
+                                switched on — it just means marquee is off. */}
+                            {m.isMarquee ? '🏃 Marquee: ON' : (lang === 'my' ? '⏸️ ငြိမ်သက်စွာ ပြမည်' : 'Marquee: OFF')}
                           </button>
 
                           <span className="text-[10px] text-slate-400">
@@ -3294,7 +3323,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
                       Telegram Username (e.g. @ankhsam or ankhsam)
                     </label>
                     <input
@@ -3303,12 +3332,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onChange={(e) => setContactForm({ ...contactForm, telegramUsername: e.target.value })}
                       placeholder="@ankhsam"
                       disabled={contactLoading}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-sky-500 focus:bg-white transition-all disabled:opacity-50"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-sky-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
                       Telegram Link (auto-derived from username)
                     </label>
                     <div className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 break-all">
@@ -3327,7 +3356,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
                       Viber / Contact Phone Number
                     </label>
                     <input
@@ -3336,7 +3365,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onChange={(e) => setContactForm({ ...contactForm, viberPhone: e.target.value })}
                       placeholder="09777123456"
                       disabled={contactLoading}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all disabled:opacity-50"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* [v7.5.60 S-98] The `phone` field existed in the type and
+                      was silently preserved from the saved snapshot, but no
+                      input ever showed or edited it. Now it has one. */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
+                      Direct Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={contactForm.phone || ''}
+                      onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                      placeholder="09777123456"
+                      disabled={contactLoading}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -3351,7 +3397,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
                       KPay Account (Phone & Name)
                     </label>
                     <input
@@ -3360,7 +3406,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onChange={(e) => setContactForm({ ...contactForm, kpayPhone: e.target.value })}
                       placeholder="09777123456"
                       disabled={contactLoading}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all disabled:opacity-50"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                     <input
                       type="text"
@@ -3368,12 +3414,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onChange={(e) => setContactForm({ ...contactForm, kpayName: e.target.value })}
                       placeholder="KPay account name"
                       disabled={contactLoading}
-                      className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all disabled:opacity-50"
+                      className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-emerald-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
                       WavePay Account (Phone & Name)
                     </label>
                     <input
@@ -3382,7 +3428,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onChange={(e) => setContactForm({ ...contactForm, wavePhone: e.target.value })}
                       placeholder="09777123456"
                       disabled={contactLoading}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all disabled:opacity-50"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                     <input
                       type="text"
@@ -3390,7 +3436,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onChange={(e) => setContactForm({ ...contactForm, waveName: e.target.value })}
                       placeholder="WaveMoney account name"
                       disabled={contactLoading}
-                      className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all disabled:opacity-50"
+                      className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -3405,26 +3451,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
                       Myanmar Note Text
                     </label>
                     <textarea
                       rows={2}
                       value={contactForm.contactNoteMy || ''}
                       onChange={(e) => setContactForm({ ...contactForm, contactNoteMy: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    <label className="block text-xs font-bold text-slate-600 mb-1">
                       English Note Text
                     </label>
                     <textarea
                       rows={2}
                       value={contactForm.contactNoteEn || ''}
                       onChange={(e) => setContactForm({ ...contactForm, contactNoteEn: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
                     />
                   </div>
                 </div>
@@ -3662,7 +3708,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       value={visitorSearch}
                       onChange={(e) => setVisitorSearch(e.target.value)}
                       placeholder={lang === 'my' ? 'ရှာဖွေရန် (Country, Device)...' : 'Search country, device...'}
-                      className="w-full pl-8 pr-3 py-1.5 bg-white text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full pl-8 pr-3 py-1.5 bg-white text-base border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                   </div>
@@ -3951,13 +3997,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
               {/* Category Filter */}
               <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                   {lang === 'my' ? '📁 ကဏ္ဍ ရွေးချယ်ရန်' : 'Filter Category'}
                 </label>
                 <select
                   value={selectedFilterCategory}
                   onChange={(e) => setSelectedFilterCategory(e.target.value)}
-                  className="w-full text-xs font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full text-base font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="all">{lang === 'my' ? 'ကဏ္ဍ အားလုံး (All Categories)' : 'All Categories'}</option>
                   {allMergedCategories.map((c) => (
@@ -3980,13 +4026,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               {/* User Filter */}
               <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                   {lang === 'my' ? '👤 အသုံးပြုသူ ရွေးချယ်ရန်' : 'Filter User'}
                 </label>
                 <select
                   value={selectedFilterUser}
                   onChange={(e) => setSelectedFilterUser(e.target.value)}
-                  className="w-full text-xs font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full text-base font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="all">{lang === 'my' ? 'အသုံးပြုသူ အားလုံး (All Users)' : 'All Users'}</option>
                   {usersList.map((u) => (
@@ -3999,7 +4045,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               {/* Sort Order Filter */}
               <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
                   <span>{lang === 'my' ? '↕️ ရက်စွဲ / စီစဉ်ရန်' : 'Sort Records'}</span>
                   <span className="text-[9px] text-indigo-600 font-bold">
                     {txSortOrder === 'desc' ? '▼ Newest' : '▲ Oldest'}
@@ -4012,7 +4058,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     setTxSortBy(by);
                     setTxSortOrder(order);
                   }}
-                  className="w-full text-xs font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full text-base font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="date-desc">{lang === 'my' ? '📅 ရက်စွဲ (အသစ်ဆုံး အရင် - Newest)' : '📅 Date (Newest First)'}</option>
                   <option value="date-asc">{lang === 'my' ? '📅 ရက်စွဲ (အဟောင်းဆုံး အရင် - Oldest)' : '📅 Date (Oldest First)'}</option>
@@ -4025,7 +4071,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               {/* Search Query */}
               <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1">
                   {lang === 'my' ? '🔍 ရှာဖွေရန်' : 'Search Note / Amount'}
                 </label>
                 <div className="relative">
@@ -4034,7 +4080,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     value={searchTxQuery}
                     onChange={(e) => setSearchTxQuery(e.target.value)}
                     placeholder={lang === 'my' ? 'အကြောင်းအရာ၊ ငွေပမာဏ...' : 'Search note, amount...'}
-                    className="w-full text-xs font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full text-base font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                   {searchTxQuery && (
                     <button
@@ -4059,7 +4105,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <select
                   value={txDatePreset}
                   onChange={(e) => applyTxDatePreset(e.target.value as any)}
-                  className="text-[11px] font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  className="text-base font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                 >
                   <option value="all">{lang === 'my' ? 'အားလုံး' : 'All Time'}</option>
                   <option value="today">{lang === 'my' ? 'ဒီနေ့' : 'Today'}</option>
@@ -4077,14 +4123,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       type="date"
                       value={txDateFrom}
                       onChange={(e) => setTxDateFrom(e.target.value)}
-                      className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                     <span className="text-slate-400 text-[11px]">→</span>
                     <input
                       type="date"
                       value={txDateTo}
                       onChange={(e) => setTxDateTo(e.target.value)}
-                      className="text-[11px] font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
                 )}
@@ -4371,8 +4417,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             {tx.note || <span className="text-slate-400 italic">—</span>}
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-                            <span className={tx.type === 'income' ? 'text-emerald-600' : 'text-slate-800'}>
-                              {tx.type === 'income' ? '+' : '-'}{(tx.amount || 0).toLocaleString()} MMK
+                            <span className={tx.type === 'income' ? 'text-emerald-600' : 'text-slate-800'} title={formatMMK(tx.amount || 0)}>
+                              {tx.type === 'income' ? '+' : '-'}{formatLakhs(tx.amount || 0, lang)}
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">

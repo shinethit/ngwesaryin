@@ -151,7 +151,20 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
 
   // Label for trigger button
   const getTriggerLabel = () => {
-    if (isAllSelected) {
+    // [v7.5.60 M2] Untouched default ([]) is included-only, NOT "all":
+    // say how many are included and how many Separate wallets are left
+    // out. Only an explicit Select All (full id list) may say "all".
+    if (selectedWalletIds.length === 0) {
+      if (separateCount > 0) {
+        return lang === 'my'
+          ? `🌟 ပါဝင်သည့် အိတ် ${includedCount} ခု (ခွဲထား ${separateCount} ခု မပါ)`
+          : `🌟 ${includedCount} included wallets (${separateCount} separate excluded)`;
+      }
+      return lang === 'my'
+        ? `🌟 Wallet အားလုံးပေါင်း (${wallets.length} ခု)`
+        : `🌟 All Wallets (${wallets.length})`;
+    }
+    if (isExplicitAllSelected) {
       return lang === 'my'
         ? `🌟 Wallet အားလုံးပေါင်း (${wallets.length} ခု)`
         : `🌟 All Wallets (${wallets.length})`;
@@ -229,7 +242,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
             <button
               type="button"
               onClick={handleSelectAll}
-              className={`px-2.5 py-1 rounded-lg font-bold border transition-all cursor-pointer ${
+              className={`min-h-11 px-2.5 py-2 rounded-lg font-bold border transition-all cursor-pointer ${
                 isExplicitAllSelected
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
@@ -237,17 +250,33 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
             >
               🌟 {lang === 'my' ? 'အားလုံးပေါင်း' : 'Select All'}
             </button>
+            {/* [v7.5.60 M3] The "included only" preset existed as dead code
+                (handleSelectIncludedOnly was never wired to a button) — now
+                it is the way back to the default scope after Select All. */}
+            <button
+              type="button"
+              onClick={handleSelectIncludedOnly}
+              className={`min-h-11 px-2.5 py-2 rounded-lg font-bold border transition-all cursor-pointer ${
+                selectedWalletIds.length === includedCount &&
+                selectedWalletIds.length > 0 &&
+                selectedWalletIds.every((id) => wallets.some((w) => w.id === id && w.includeInTotals !== false))
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+            >
+              ✅ {lang === 'my' ? 'ပါဝင်သည့် အိတ် သာ' : 'Included only'}
+            </button>
             <button
               type="button"
               onClick={handleSelectPersonalOnly}
-              className="px-2.5 py-1 rounded-lg font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+              className="min-h-11 px-2.5 py-2 rounded-lg font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer"
             >
               👤 {lang === 'my' ? 'ကိုယ်ပိုင်သာ' : 'Personal'}
             </button>
             <button
               type="button"
               onClick={handleSelectSharedOnly}
-              className="px-2.5 py-1 rounded-lg font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+              className="min-h-11 px-2.5 py-2 rounded-lg font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer"
             >
               🤝 {lang === 'my' ? 'Shared သာ' : 'Shared'}
             </button>
@@ -269,7 +298,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
                 placeholder={lang === 'my' ? 'Wallet အမည်ဖြင့် ရှာရန်...' : 'Search wallet...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full pl-8 pr-2.5 py-2 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </div>
           )}
@@ -286,7 +315,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
                 <div
                   key={w.id}
                   onClick={() => handleToggleWallet(w.id)}
-                  className={`flex items-center justify-between p-2 rounded-xl text-xs cursor-pointer transition-all border ${
+                  className={`flex items-center justify-between p-2 min-h-11 rounded-xl text-xs cursor-pointer transition-all border ${
                     checked
                       ? 'bg-emerald-50/80 border-emerald-200 text-slate-900 font-bold'
                       : 'bg-white border-transparent hover:bg-slate-50 text-slate-600'
@@ -355,7 +384,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
             <button
               type="button"
               onClick={() => { setIsOpen(false); setPresetNotice(null); }}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
+              className="min-h-11 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
             >
               {/* [v7.5.55] Selection applies live on toggle; this button only
                   closes the popover, so it is labelled Close, not Apply. */}

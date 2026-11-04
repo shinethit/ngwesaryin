@@ -316,18 +316,18 @@ export function useTransactionHandlers({
     setIsDebtModalOpen(true);
   };
 
+  // [v7.5.60 S2] Returns false when the save is blocked (permission /
+  // rolling-30-day limit) so the modal stays open and the typed entry
+  // is not lost; returns true on success. The modal is closed ONLY
+  // after all validation passes — never up-front.
   const handleAddTransaction = (
     newTx: Omit<Transaction, 'id' | 'createdAt'>,
     vehicleLinkData?: VehicleLinkData
-  ) => {
-    // Explicitly close modal immediately to prevent repeat clicks
-    setIsTxModalOpen(false);
+  ): boolean => {
     const cleanAmount = Math.abs(Number(newTx.amount) || 0);
     const sanitizedTx = { ...newTx, amount: cleanAmount };
 
     if (editingTransaction) {
-      setEditingTransaction(null);
-      setTxModalInitialWalletId(undefined);
       const editWallet = wallets.find((w) => isWalletMatch(w, editingTransaction.walletId));
       const editTargetWallet =
         computedWallets.find((w) => isWalletMatch(w, sanitizedTx.walletId)) ||
@@ -345,8 +345,10 @@ export function useTransactionHandlers({
               : 'Permission denied: changing income ↔ expense needs edit permission for both the old and the new type')
             : denyEditMsg(editingTransaction.type)
         );
-        return;
+        return false;
       }
+      setEditingTransaction(null);
+      setTxModalInitialWalletId(undefined);
 
       // [v7.5.56 A1] createdBy/createdByName are stamped on add and NEVER
       // overwritten on edit (a legacy tx with no author stays authorless).
@@ -554,7 +556,9 @@ export function useTransactionHandlers({
 
       setEditingTransaction(null);
       showToast(lang === 'my' ? 'ပြင်ဆင်ပြီးပါပြီ ✓' : 'Updated successfully ✓');
-      return;
+      // [v7.5.60 S2] Close only now that the edit has landed.
+      setIsTxModalOpen(false);
+      return true;
     }
 
     const targetWallet = computedWallets.find((w) => isWalletMatch(w, sanitizedTx.walletId));
@@ -566,7 +570,7 @@ export function useTransactionHandlers({
           ? `⚠️ ဤ Wallet ပိုင်ရှင်မှ ${sanitizedTx.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} အသစ်ထည့်သွင်းခွင့် ပိတ်ထားပါသည်`
           : 'Permission denied: wallet owner has disabled adding transactions'
       );
-      return;
+      return false;
     }
 
     if (plan === 'guest') {
@@ -577,7 +581,8 @@ export function useTransactionHandlers({
           : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days. Please Sign In with Google.`)) {
           setIsAuthModalOpen(true);
         }
-        return;
+        // [v7.5.60 S2] Blocked: keep the modal open, typed data intact.
+        return false;
       }
     }
 
@@ -700,7 +705,9 @@ export function useTransactionHandlers({
       }
 
       showToast(lang === 'my' ? 'ငွေလွှဲပြောင်းမှု ထည့်သွင်းပြီးပါပြီ ✓' : 'Transfer recorded successfully ✓');
-      return;
+      // [v7.5.60 S2] Close only now that the transfer has landed.
+      setIsTxModalOpen(false);
+      return true;
     }
 
     // [v7.5.55] C8: a free 0-Ks tire-pressure check creates NO expense
@@ -743,7 +750,9 @@ export function useTransactionHandlers({
         handleSaveVehicle({ ...targetVehicle, currentOdometer: odo });
       }
       showToast(lang === 'my' ? 'လေချိန် စစ်ဆေးမှု မှတ်တမ်းတင်ပြီးပါပြီ ✓ (အခမဲ့ — ငွေစာရင်း မထည့်ပါ)' : 'Tire pressure check recorded ✓ (free — no expense recorded)');
-      return;
+      // [v7.5.60 S2] Close only now that the check has landed.
+      setIsTxModalOpen(false);
+      return true;
     }
 
     // [v7.5.56 A7] Random suffix so two adds in the same millisecond
@@ -939,10 +948,15 @@ export function useTransactionHandlers({
           ? 'ငွေစာရင်းနှင့် ယာဉ်မှတ်တမ်း (Vehicle Log) သို့ တစ်ပြိုင်တည်း ထည့်သွင်းပြီးပါပြီ ✓'
           : 'Transaction & Vehicle record synced successfully ✓'
       );
-      return;
+      // [v7.5.60 S2] Close only now that the record has landed.
+      setIsTxModalOpen(false);
+      return true;
     }
 
     showToast(lang === 'my' ? 'မှတ်တမ်း အသစ်ထည့်သွင်းပြီးပါပြီ' : 'Transaction added');
+    // [v7.5.60 S2] Close only now that the record has landed.
+    setIsTxModalOpen(false);
+    return true;
   };
 
   const handleDeleteTransaction = async (id: string) => {

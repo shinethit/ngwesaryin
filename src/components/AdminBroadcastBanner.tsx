@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { AdminSystemMessage, AdminMessageType } from '../types';
-import { Megaphone, AlertTriangle, FileText, X, ChevronRight, Info, Clock, Sparkles } from 'lucide-react';
+import { Megaphone, AlertTriangle, FileText, X, ChevronRight, ChevronLeft, Info, Clock, Sparkles } from 'lucide-react';
 
 interface AdminBroadcastBannerProps {
   lang: 'my' | 'en';
@@ -75,6 +75,11 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
     }
   };
 
+  // [v7.5.60] Cycle through ALL active broadcasts with prev/next (F-S4) —
+  // previously only the first (marquee-first) message was ever shown, so a
+  // second active broadcast was invisible until the first was dismissed.
+  const [bannerIndex, setBannerIndex] = useState(0);
+
   // Filter messages that haven't been dismissed in this session
   const visibleMessages = activeMessages.filter((m) => !dismissedIds.includes(m.id));
 
@@ -82,9 +87,9 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
     return null;
   }
 
-  // Priority: first visible marquee message or first visible banner message
-  const marqueeMessage = visibleMessages.find((m) => m.isMarquee);
-  const currentMsg = marqueeMessage || visibleMessages[0];
+  const safeIndex = bannerIndex % visibleMessages.length;
+  const currentMsg = visibleMessages[safeIndex];
+  const hasMore = visibleMessages.length > 1;
 
   const getTypeTheme = (type: AdminMessageType) => {
     switch (type) {
@@ -168,8 +173,36 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
             )}
           </div>
 
-          {/* Right Controls: Read details & Dismiss */}
+          {/* Right Controls: Prev/Next, Read details & Dismiss */}
           <div className="flex items-center gap-1.5 shrink-0 z-10">
+            {/* [v7.5.60] Prev/next + counter so every active broadcast can
+                be seen (F-S4). */}
+            {hasMore && (
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setBannerIndex((i) => (i - 1 + visibleMessages.length) % visibleMessages.length)}
+                  className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+                  title={lang === 'my' ? 'ရှေ့ ကြေညာချက်' : 'Previous broadcast'}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span
+                  className="text-[11px] font-bold px-1 whitespace-nowrap"
+                  title={lang === 'my' ? `နောက်ထပ် ${visibleMessages.length - 1} စောင် ရှိသည်` : `${visibleMessages.length - 1} more broadcast(s)`}
+                >
+                  {safeIndex + 1}/{visibleMessages.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setBannerIndex((i) => (i + 1) % visibleMessages.length)}
+                  className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+                  title={lang === 'my' ? 'နောက် ကြေညာချက်' : 'Next broadcast'}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setSelectedMessage(currentMsg)}

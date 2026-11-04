@@ -23,6 +23,12 @@ export const TransactionSyncDetailModal: React.FC<TransactionSyncDetailModalProp
   onRefreshSync,
 }) => {
   const [isRetrying, setIsRetrying] = React.useState(false);
+  // [v7.5.60] Retry result shown in the modal (F-S10) — never report
+  // success without checking whether the item actually left the queue.
+  const [retryResult, setRetryResult] = React.useState<'success' | 'failed' | null>(null);
+  React.useEffect(() => {
+    setRetryResult(null);
+  }, [transaction?.id]);
 
   if (!transaction) return null;
 
@@ -31,6 +37,7 @@ export const TransactionSyncDetailModal: React.FC<TransactionSyncDetailModalProp
 
   const handleRetry = async () => {
     setIsRetrying(true);
+    setRetryResult(null);
     try {
       syncQueue.enqueue(
         'transactions',
@@ -39,10 +46,19 @@ export const TransactionSyncDetailModal: React.FC<TransactionSyncDetailModalProp
         transaction.userId || 'guest',
         transaction
       );
-      await syncQueue.processQueue();
+      const result = await syncQueue.processQueue();
+      // Verify honestly: success only if the queue confirms it (same
+      // client-side proxy as SyncStatusDrawer S-93 — the item is gone
+      // from the pending queue / listed as succeeded).
+      const succeeded =
+        result.succeededEntityIds.some(
+          (e) => e.entityType === 'transactions' && e.entityId === transaction.id
+        ) || !syncQueue.isEntityPending('transactions', transaction.id);
+      setRetryResult(succeeded ? 'success' : 'failed');
       onRefreshSync();
     } catch (err) {
       console.error('Retry sync failed:', err);
+      setRetryResult('failed');
     } finally {
       setIsRetrying(false);
     }
@@ -143,17 +159,51 @@ export const TransactionSyncDetailModal: React.FC<TransactionSyncDetailModalProp
           </div>
         )}
 
+        {/* [v7.5.60] Retry result (F-S10) — shown in the modal so the user
+            knows whether the retry actually worked. */}
+        {retryResult && (
+          <div
+            className={`p-3.5 rounded-2xl border text-xs flex items-center gap-2 ${
+              retryResult === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-rose-50 border-rose-200 text-rose-900'
+            }`}
+          >
+            {retryResult === 'success' ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  {lang === 'my' ? '✅ Cloud ရောက်သွားပြီ' : '✅ Synced to the Cloud'}
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>
+                  {lang === 'my'
+                    ? '❌ မရသေးပါ — အင်တာနက်ကို စစ်ပြီး နောက်တစ်ကြိမ် ကြိုးစားပါ'
+                    : '❌ Not synced yet — check your connection and try again'}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex items-center gap-2 pt-2">
-          <button
-            type="button"
-            onClick={handleRetry}
-            disabled={isRetrying}
-            className="flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
-            <span>{lang === 'my' ? 'ထပ်မံ စင့်ခ်လုပ်မည် (Retry Sync)' : 'Retry Sync'}</span>
-          </button>
+          {/* [v7.5.60] No Retry button for an already-synced record (F-S10) —
+              retrying it is meaningless. */}
+          {syncInfo.state !== 'synced' && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              disabled={isRetrying}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+              <span>{lang === 'my' ? 'ထပ်မံ စင့်ခ်လုပ်မည် (Retry Sync)' : 'Retry Sync'}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

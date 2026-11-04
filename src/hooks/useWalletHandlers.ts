@@ -16,6 +16,9 @@ import {
 } from '../lib/sharedWalletService';
 import { deleteRefsForWallet } from '../lib/sharedWalletRefs';
 import { isWalletMatch } from '../utils/walletBalance';
+import { formatLakhs } from '../utils/formatters';
+import { formatCurrency } from '../utils/currency';
+import { getLocalDateString } from '../utils/dateUtils';
 import { DEFAULT_WALLET_PERMISSIONS, getCollaboratorPermissions } from '../utils/permissions';
 import { markWalletDeleted, unmarkWalletDeleted } from '../utils/deletedMarkers';
 import type {
@@ -82,15 +85,89 @@ export function useWalletHandlers({
     }).catch(() => {});
   };
 
+  // [v7.5.60 S-45] Rolling-30-day transaction limit, enforced UNIFORMLY
+  // for auto-transactions too (transfer = 2 txs, reconcile = 1 tx) — the
+  // same rule useTransactionHandlers applies to manual adds (count txs
+  // dated within the last 30 days against the CURRENT plan's
+  // maxTransactions; block the moment the count is reached).
+  // EXCEPTION (documented, not silent): a write to a shared wallet owned
+  // by someone else never counts toward MY limit (v7.5.56 A8), so the
+  // check is skipped when EVERY wallet the new tx(s) touch is such a
+  // wallet. Own/shared-owned wallets always count.
+  const countsTowardMyLimit = (t: Transaction): boolean => {
+    if (user?.uid && t.createdBy && t.createdBy !== user.uid) return false;
+    const w =
+      wallets.find((x) => isWalletMatch(x, t.walletId)) ||
+      computedWallets.find((x) => isWalletMatch(x, t.walletId));
+    if (!w) return true;
+    if (w.isSharedFromOther && w.ownerUid && user?.uid && w.ownerUid !== user.uid) return false;
+    return true;
+  };
+  const countRolling30DayTransactions = (txs: Transaction[]) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    const start = getLocalDateString(d);
+    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
+  };
+  // Returns true when the auto-transaction(s) may proceed. Blocks with
+  // the same clear error UX as a manual add (toast + sign-in for Guest,
+  // toast + Premium modal for Free) when the rolling-30-day limit would
+  // be exceeded by the `needed` new transaction(s).
+  const checkRollingLimitForAutoTx = (needed: number, ...ws: (Wallet | null | undefined)[]): boolean => {
+    const allForeignShared = ws.length > 0 && ws.every(
+      (w) => !!w && w.isSharedFromOther && !!w.ownerUid && !!user?.uid && w.ownerUid !== user.uid
+    );
+    if (allForeignShared) return true;
+    const used = countRolling30DayTransactions(transactions);
+    if (used + needed > limits.maxTransactions) {
+      if (plan === 'guest') {
+        showToast(
+          lang === 'my'
+            ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
+            : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please Sign in with Google.`
+        );
+        setIsAuthModalOpen(true);
+      } else {
+        showToast(
+          lang === 'my'
+            ? `Free Plan တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ`
+            : `Free Plan allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please upgrade to Premium.`
+        );
+        setIsPremiumModalOpen(true);
+      }
+      return false;
+    }
+    return true;
+  };
+
+  // [v7.5.60 S-44] Linked debts for a wallet, read from the persisted
+  // debt list (the same store App state is persisted from). Neither this
+  // hook nor WalletsView receives the debts state, so a wallet with
+  // linked debts cannot be re-pointed here — deletion is BLOCKED with a
+  // clear message instead of orphaning the debts. Full reassign-to-
+  // fallback needs App.tsx to pass debts/setDebts into this hook.
+  const countLinkedDebts = (walletId: string): number => {
+    try {
+      const raw = localStorage.getItem('ngwe_debts');
+      if (!raw) return 0;
+      const list = JSON.parse(raw) as { walletId?: string }[];
+      if (!Array.isArray(list)) return 0;
+      return list.filter((d) => d && d.walletId === walletId).length;
+    } catch {
+      return 0;
+    }
+  };
+
   const handleAddWallet = (walletData: Omit<Wallet, 'id'>) => {
     const ownWalletsCount = wallets.filter((w) => !w.isSharedFromOther).length;
     if (ownWalletsCount >= limits.maxWallets) {
       if (plan === 'guest') {
-        if (window.confirm(lang === 'my'
-          ? 'Guest Mode တွင် Wallet (၁) ခုသာ အသုံးပြုနိုင်ပါသည်။ အကောင့်သစ် ထပ်တိုးရန် Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
-          : 'Guest Mode allows 1 wallet only. Please Sign in with Google to add more wallets.')) {
-          setIsAuthModalOpen(true);
-        }
+        // [v7.5.60 S-47] No native confirm — the sign-in prompt opens
+        // directly (the user can dismiss it); the reason is toasted.
+        showToast(lang === 'my'
+          ? 'Guest Mode တွင် Wallet (၁) ခုသာ အသုံးပြုနိုင်ပါသည် — အကောင့်သစ် ထပ်တိုးရန် Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
+          : 'Guest Mode allows 1 wallet only. Please Sign in with Google to add more wallets.');
+        setIsAuthModalOpen(true);
         return;
       }
       setIsPremiumModalOpen(true);
@@ -157,27 +234,21 @@ export function useWalletHandlers({
     if (!target) return;
 
     // 1. COLLABORATOR LEAVING SHARED WALLET
+    // [v7.5.60 S-47] The caller (WalletsView) confirms in its own modal
+    // before invoking this handler — no window.confirm here.
     if (target.isSharedFromOther) {
-      if (
-        window.confirm(
-          lang === 'my'
-            ? `ဤ Shared Wallet (${target.name}) မှ ထွက်ခွာမည်မှာ သေချာပါသလား?\n(မှတ်ချက် - Shared Wallet ကို ပိုင်ရှင်သာ ဖျက်ပိုင်ခွင့်ရှိပြီး၊ ဖိတ်ခေါ်ခံထားရသူသည် ထွက်ခွာခြင်းသာ ပြုလုပ်နိုင်ပါသည်)`
-            : `Are you sure you want to leave this shared wallet (${target.nameEn || target.name})?`
-        )
-      ) {
-        let left = false;
-        if (user?.email) {
-          left = await leaveSharedWallet(walletId, user.email, target.sharedDocId, target.ownerUid);
-        }
-        setWallets((prev) => prev.filter((w) => w.id !== walletId));
-        // [v7.5.56] Honest toast — if the leave write did not land, the
-        // wallet can resurrect on the next sync; say so instead of
-        // claiming success.
-        if (left) {
-          showToast(lang === 'my' ? 'Shared Wallet မှ ထွက်ခွာပြီးပါပြီ' : 'Left shared wallet');
-        } else {
-          showToast(cloudPendingMsg);
-        }
+      let left = false;
+      if (user?.email) {
+        left = await leaveSharedWallet(walletId, user.email, target.sharedDocId, target.ownerUid);
+      }
+      setWallets((prev) => prev.filter((w) => w.id !== walletId));
+      // [v7.5.56] Honest toast — if the leave write did not land, the
+      // wallet can resurrect on the next sync; say so instead of
+      // claiming success.
+      if (left) {
+        showToast(lang === 'my' ? 'Shared Wallet မှ ထွက်ခွာပြီးပါပြီ' : 'Left shared wallet');
+      } else {
+        showToast(cloudPendingMsg);
       }
       return;
     }
@@ -185,7 +256,7 @@ export function useWalletHandlers({
     // 2. OWNER DELETING WALLET
     const ownWallets = wallets.filter((w) => !w.isSharedFromOther);
     if (ownWallets.length <= 1) {
-      alert(
+      showToast(
         lang === 'my'
           ? 'အနည်းဆုံး Wallet တစ်ခု ရှိရပါမည်။ ဤ Wallet ကို မဖျက်မီ အခြား Wallet တစ်ခု အရင်ထည့်သွင်းပါ'
           : 'At least one wallet is required. Please add another wallet before deleting this one.'
@@ -198,35 +269,26 @@ export function useWalletHandlers({
       ownWallets.find((w) => w.id !== walletId);
 
     if (!fallbackWallet) {
-      alert(lang === 'my' ? 'အနည်းဆုံး အကောင့်တစ်ခု ရှိရပါမည်။' : 'At least one wallet is required.');
+      showToast(lang === 'my' ? 'အနည်းဆုံး အကောင့်တစ်ခု ရှိရပါမည်။' : 'At least one wallet is required.');
+      return;
+    }
+
+    // [v7.5.60 S-44] A wallet with linked debts cannot be deleted here —
+    // the debts would be orphaned (their walletId would point at a wallet
+    // that no longer exists). Move the debts to another wallet first (or
+    // delete them), then delete this wallet.
+    const linkedDebtCount = countLinkedDebts(walletId);
+    if (linkedDebtCount > 0) {
+      showToast(
+        lang === 'my'
+          ? `ဤအကောင့်နှင့် ချိတ်ထားသော အကြွေး ${linkedDebtCount} ခု ရှိပါသည် — အကြွေးများကို အခြားအကောင့်သို့ ဦးစွာ ပြောင်းရွှေ့ပြီးမှ ဤအကောင့်ကို ဖျက်နိုင်ပါသည်`
+          : `This wallet has ${linkedDebtCount} linked debt(s) — move them to another wallet first, then delete this wallet`
+      );
       return;
     }
 
     const isShared = Boolean(target.sharedWith && target.sharedWith.length > 0);
     const relatedTxCount = transactions.filter((t) => t.walletId === walletId).length;
-
-    let confirmMsg = '';
-    if (lang === 'my') {
-      confirmMsg = `ဤအကောင့် (${target.name}) ကို ဖျက်ရန် သေချာပါသလား?`;
-      if (isShared) {
-        confirmMsg += `\n⚠️ ဤ Wallet ကို ပိုင်ရှင်မှ ဖျက်လိုက်ပါက မျှဝေထားသော သူများအားလုံးထံမှလည်း အပြီးတိုင် ပျက်သွားပါမည်။`;
-      }
-      if (relatedTxCount > 0) {
-        confirmMsg += `\nရှိပြီးသား စာရင်းမှတ်တမ်း ${relatedTxCount} ခုကို '${fallbackWallet.name}' သို့ အလိုအလျောက် ပြောင်းရွှေ့ပေးပါမည်။`;
-      }
-    } else {
-      confirmMsg = `Are you sure you want to delete this wallet (${target.nameEn || target.name})?`;
-      if (isShared) {
-        confirmMsg += `\n⚠️ Deleting as owner will remove it from all shared collaborators immediately.`;
-      }
-      if (relatedTxCount > 0) {
-        confirmMsg += `\n${relatedTxCount} transactions will be reassigned to '${fallbackWallet.nameEn || fallbackWallet.name}'.`;
-      }
-    }
-
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
 
     let updatedTransactions = transactions;
     if (relatedTxCount > 0) {
@@ -362,6 +424,24 @@ export function useWalletHandlers({
       }
     }
 
+    // [v7.5.60 M-10] Never transfer more than the source wallet holds —
+    // a negative balance is not allowed (a loan-style wallet is a
+    // separate decision; overdrawing by accident is not).
+    const fromBalance = Number(fromWallet?.balance) || 0;
+    if (cleanAmount > fromBalance) {
+      const balanceText = (fromWallet?.currency || 'MMK') === 'MMK'
+        ? formatLakhs(fromBalance, lang)
+        : formatCurrency(fromBalance, fromWallet?.currency || 'MMK');
+      showToast(lang === 'my'
+        ? `လက်ကျန်ငွေ မလောက်ပါ — ${fromName} တွင် လက်ကျန် ${balanceText} သာ ရှိပါသည်`
+        : `Insufficient balance — ${fromName} holds only ${balanceText}`);
+      return false;
+    }
+
+    // [v7.5.60 S-45] A transfer creates 2 transactions — both count
+    // toward the rolling-30-day limit.
+    if (!checkRollingLimitForAutoTx(2, fromWallet, toWallet)) return false;
+
     const nowStr = new Date().toISOString().split('T')[0];
     const outId = `tx_tf_out_${Date.now()}`;
     const inId = `tx_tf_in_${Date.now() + 1}`;
@@ -461,12 +541,13 @@ export function useWalletHandlers({
     // Guest gate UP FRONT — guests cannot share at all. Refuse with an
     // honest sign-in message and no success toast, before the modal can
     // show any success state.
+    // [v7.5.60 S-47] No native confirm — the sign-in prompt opens
+    // directly (dismissible); the reason is toasted.
     if (plan === 'guest' || !user?.uid || !limits.hasWalletSharing) {
-      if (window.confirm(lang === 'my'
-        ? 'Guest Mode တွင် Wallet မျှဝေခြင်း မရရှိနိုင်ပါ။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
-        : 'Wallet sharing is not available in Guest mode. Please Sign in with Google.')) {
-        setIsAuthModalOpen(true);
-      }
+      showToast(lang === 'my'
+        ? 'Guest Mode တွင် Wallet မျှဝေခြင်း မရရှိနိုင်ပါ — Google Account ဖြင့် Sign in ပြုလုပ်ပါ'
+        : 'Wallet sharing is not available in Guest mode. Please Sign in with Google.');
+      setIsAuthModalOpen(true);
       return false;
     }
 
@@ -579,11 +660,8 @@ export function useWalletHandlers({
 
     // [v7.5.56] Confirm FIRST, explaining that past spending stays in
     // the balance — unsharing only cuts off future access.
-    const confirmed = window.confirm(lang === 'my'
-      ? `${cleanEmail} အား ဤ Wallet (${target.name}) မှ ဖယ်ရှားမည်မှာ သေချာပါသလား?\n(မှတ်ချက် — ယခင် သုံးစွဲခဲ့သော စာရင်းများနှင့် လက်ကျန်ငွေသည် Wallet ထဲတွင် ဆက်လက်ရှိနေမည်။ ဖယ်ရှားခံရသူသည် ဤ Wallet ကို ဆက်လက် မြင်ရ/သုံးရ တော့မည် မဟုတ်ပါ)`
-      : `Remove ${cleanEmail} from this wallet (${target.nameEn || target.name})?\n(Note — past spending and the balance stay in the wallet. The removed person will no longer see or use it.)`);
-    if (!confirmed) return false;
-
+    // [v7.5.60 S-47] The caller (ShareWalletModal) confirms in its own
+    // modal before invoking this handler — no window.confirm here.
     // [v7.5.56] Capture the recipient list BEFORE filtering — the
     // ref-deletion service needs the pre-filter list. The removed
     // person's ref would otherwise never be deleted, and unsharing the
@@ -728,6 +806,10 @@ export function useWalletHandlers({
     }
 
     if (recordTransaction && difference !== 0) {
+      // [v7.5.60 S-45] A recorded reconcile creates 1 transaction — it
+      // counts toward the rolling-30-day limit like any other.
+      if (!checkRollingLimitForAutoTx(1, targetWallet)) return false;
+
       const isIncome = difference > 0;
       const absDiff = Math.abs(difference);
       const walletName = targetWallet
@@ -736,18 +818,19 @@ export function useWalletHandlers({
           : targetWallet.nameEn || targetWallet.name
         : 'Wallet';
 
-      const adjCategory =
-        categories.find((c) =>
-          isIncome
-            ? c.id === 'other_income' || c.type === 'income'
-            : c.id === 'other_expense' || c.type === 'expense'
-        ) || (isIncome ? categories[0] : categories[1]);
+      // [v7.5.60 M-09] Reconcile adjustments ALWAYS use the dedicated
+      // cat_reconcile category ("စာရင်းညှိချက်") — never the first income
+      // category (salary) / first expense category (food). The old
+      // 'other_income' / 'other_expense' lookup never matched a real
+      // category id, so every surplus landed in Salary and every deficit
+      // in Food.
+      const adjCategoryId = 'cat_reconcile';
 
       const newTx: Transaction = {
         id: `reconcile_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         type: isIncome ? 'income' : 'expense',
         amount: absDiff,
-        category: adjCategory?.id || 'other',
+        category: adjCategoryId,
         date: new Date().toISOString().split('T')[0],
         note: note
           ? `[စာရင်းညှိ] ${note} (${walletName})`
@@ -841,11 +924,9 @@ export function useWalletHandlers({
       return false;
     }
 
-    const confirmed = window.confirm(lang === 'my'
-      ? `ဤ Wallet (${wallet.name}) ၏ ပိုင်ဆိုင်မှုကို ${cleanEmail} သို့ လွှဲပြောင်းမည်မှာ သေချာပါသလား?\n(မှတ်ချက် — လွှဲပြောင်းပြီးနောက် သင်သည် ပိုင်ရှင် မဟုတ်တော့ပါ။ Wallet ကို ဖျက်ခြင်း/မျှဝေခြင်း လုပ်ပိုင်ခွင့်များသည် ပိုင်ရှင်အသစ်ထံသို့ ရောက်သွားပါမည်)`
-      : `Transfer ownership of this wallet (${wallet.nameEn || wallet.name}) to ${cleanEmail}?\n(Note — after the transfer you will no longer be the owner. Delete/share rights move to the new owner.)`);
-    if (!confirmed) return false;
-
+    // [v7.5.60 S-47] The caller (WalletsView) confirms in its own modal
+    // (email input + loss-of-rights note) before invoking this handler —
+    // no window.confirm here.
     // ownerUid must be a Firebase UID for the rules' owner check to work
     // for the new owner, so resolve the member's UID from their email.
     // [v7.5.56] Primary source: the shared doc's memberUids map

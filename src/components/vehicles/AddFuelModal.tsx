@@ -74,7 +74,15 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
   };
 
   const handleDeleteStation = (name: string) => {
-    if (!window.confirm(`Delete "${name}" from your stations?`)) return;
+    // [v7.5.60 D-N7] Bilingual confirm, not English-only.
+    if (
+      !window.confirm(
+        lang === 'my'
+          ? `"${name}" ကို ဆီဆိုင်စာရင်းမှ ဖျက်မလား?`
+          : `Delete "${name}" from your stations?`
+      )
+    )
+      return;
     setCustomStations((prev) => prev.filter((s) => s !== name));
     if (gasStation === name) setGasStation(DEFAULT_GAS_STATIONS[0]);
   };
@@ -132,7 +140,17 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
       setDate(new Date().toISOString().split('T')[0]);
       setOdometer(v?.currentOdometer ?? '');
       setLiters('');
-      setPricePerLiter(3100);
+      // [v7.5.60 D-N1] Default to the last log's price for this vehicle —
+      // 3100 is only the fallback when there is no previous log.
+      const vLogs = (fuelLogs || [])
+        .filter((l) => l.vehicleId === vId && l.pricePerLiter > 0)
+        .sort((a, b) => {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          if (dateA !== dateB) return dateB - dateA;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        });
+      setPricePerLiter(vLogs[0]?.pricePerLiter || 3100);
       setTotalCost('');
       setIsFullTank(true);
       setFuelType(v?.fuelType || 'Octane 92');
@@ -164,6 +182,18 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
     // `num > 0` guard left the previous liters value standing.
     if (parsed !== '' && pricePerLiter !== '' && Number(pricePerLiter) > 0) {
       setLiters(Number((parsed / Number(pricePerLiter)).toFixed(2)));
+    }
+  };
+
+  // [v7.5.60 D-S9] Liters is editable BOTH ways: typing liters fills the
+  // total (liters × price/L), typing the total fills liters — the guide
+  // used to say "enter liters" while the field was read-only.
+  const handleLitersChange = (val: string) => {
+    const num = val.trim() === '' ? '' : parseMyanmarNumber(val);
+    const parsed = num === '' || Number.isNaN(num as number) ? '' : (num as number);
+    setLiters(parsed);
+    if (parsed !== '' && pricePerLiter !== '' && Number(pricePerLiter) > 0) {
+      setTotalCost(Number((parsed * Number(pricePerLiter)).toFixed(0)));
     }
   };
 
@@ -284,7 +314,20 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
                   if (selected.walletId) setWalletId(selected.walletId);
                   // [v7.5.55 C11] Refresh the odometer prefill to the NEW
                   // vehicle's current odometer — never keep the old one's.
-                  if (!editingLog) setOdometer(selected.currentOdometer ?? '');
+                  if (!editingLog) {
+                    setOdometer(selected.currentOdometer ?? '');
+                  } else {
+                    // [v7.5.60 D-N13] Editing + vehicle changed: the old
+                    // odometer belongs to the other vehicle — offer to
+                    // refill from the new vehicle instead of leaving a
+                    // stale value that only the "ယခင်:" hint contradicts.
+                    const okRefill = window.confirm(
+                      lang === 'my'
+                        ? `ယာဉ် ပြောင်းလိုက်ပါသည်။ မိုင်တာကို ယာဉ်အသစ်၏ လက်ရှိမိုင်တာ (${(selected.currentOdometer ?? 0).toLocaleString()} ${selected.odometerUnit || 'km'}) ဖြင့် ပြန်ဖြည့်မလား?`
+                        : `Vehicle changed. Refill the odometer with the new vehicle's current reading (${(selected.currentOdometer ?? 0).toLocaleString()} ${selected.odometerUnit || 'km'})?`
+                    );
+                    if (okRefill) setOdometer(selected.currentOdometer ?? '');
+                  }
                 }
               }}
               className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium cursor-pointer"
@@ -355,23 +398,28 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
             </div>
           </div>
 
-          {/* Liters (Read Only, Auto Calculated) */}
+          {/* Liters (Auto Calculated — editable both ways) */}
           <div className="p-3.5 bg-amber-50/80 border border-amber-200/70 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-xs text-amber-800 font-medium block">
                 {lang === 'my' ? 'ဆီပမာဏ (လီတာ)' : 'Fuel Liters'}
               </span>
               <span className="text-[11px] text-amber-600">
-                {totalCost && pricePerLiter ? `${totalCost} Ks ÷ ${pricePerLiter} Ks/L` : 'အလိုအလျောက် တွက်ချက်ထားသည်'}
+                {totalCost && pricePerLiter
+                  ? `${Number(totalCost).toLocaleString()} Ks ÷ ${Number(pricePerLiter).toLocaleString()} Ks/L`
+                  : lang === 'my'
+                  ? 'လီတာ (သို့) စုစုပေါင်းကျသင့်ငွေ တစ်ခုခု ရိုက်လျှင် ကျန်တစ်ခုကို အလိုအလျောက် တွက်ပေးသည်'
+                  : 'Enter liters or total cost — the other is calculated automatically'}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <input
-                type="number"
-                readOnly
+                type="text"
+                inputMode="decimal"
                 value={liters}
+                onChange={(e) => handleLitersChange(e.target.value)}
                 placeholder="0"
-                className="w-32 px-2.5 py-1.5 text-right font-mono text-base font-bold text-amber-900 bg-slate-100 border border-amber-300 rounded-xl focus:outline-none cursor-not-allowed"
+                className="w-32 px-2.5 py-1.5 text-right font-mono text-base font-bold text-amber-900 bg-white border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
               <span className="text-xs font-bold text-amber-900">L</span>
             </div>

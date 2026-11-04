@@ -70,7 +70,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               }`}
             >
               {plan === 'premium' ? <Crown className="w-3.5 h-3.5 text-amber-600" /> : null}
-              <span>{plan === 'premium' ? 'Premium Active' : 'Free Plan'}</span>
+              <span>{plan === 'premium' ? 'Premium Active' : isGuest ? (lang === 'my' ? 'Guest' : 'Guest') : 'Free Plan'}</span>
             </span>
           </div>
         </div>
@@ -170,25 +170,32 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           const txTotal = transactions.length;
           const txCloud = cloudTxIds ? cloudTxIds.size : 0;
           const txPending = Math.max(0, txTotal - txCloud);
-          const txPct = txTotal > 0 ? Math.round((txCloud / txTotal) * 100) : 100;
-          const allSynced = txPending === 0;
+          // [v7.5.60 S-92] 0/0 is NOT "100% synced" — there is nothing to
+          // sync yet. Say so honestly instead of a false perfect score.
+          const txPct = txTotal > 0 ? Math.round((txCloud / txTotal) * 100) : 0;
+          const hasNoRecords = txTotal === 0;
+          const allSynced = !hasNoRecords && txPending === 0;
 
           return (
             <div className="space-y-4">
               {/* Big banner — Transactions only (has confirmed cloudTxIds set) */}
-              <div className={`p-4 rounded-2xl flex items-center justify-between flex-wrap gap-3 ${allSynced ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
+              <div className={`p-4 rounded-2xl flex items-center justify-between flex-wrap gap-3 ${hasNoRecords ? 'bg-slate-50 border border-slate-200' : allSynced ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
                 <div className="flex items-center gap-2.5 min-w-0">
-                  {allSynced ? (
+                  {hasNoRecords ? (
+                    <Database className="w-6 h-6 text-slate-400 shrink-0" />
+                  ) : allSynced ? (
                     <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
                   ) : (
                     <CloudOff className="w-6 h-6 text-amber-600 shrink-0" />
                   )}
                   <div className="min-w-0">
-                    <div className={`font-bold text-sm ${allSynced ? 'text-emerald-900' : 'text-amber-900'}`}>
+                    <div className={`font-bold text-sm ${hasNoRecords ? 'text-slate-700' : allSynced ? 'text-emerald-900' : 'text-amber-900'}`}>
                       {lang === 'my' ? 'စာရင်းမှတ်တမ်းများ (Transactions)' : 'Transactions'}
                     </div>
-                    <div className={`text-[11px] mt-0.5 ${allSynced ? 'text-emerald-700' : 'text-amber-700'}`}>
-                      {allSynced
+                    <div className={`text-[11px] mt-0.5 ${hasNoRecords ? 'text-slate-500' : allSynced ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {hasNoRecords
+                        ? (lang === 'my' ? 'မှတ်တမ်း မရှိသေးပါ — စစ်ဆေးစရာ မရှိပါ' : 'No records yet — nothing to sync')
+                        : allSynced
                         ? (lang === 'my' ? '✓ အားလုံး Cloud Database ပေါ် ရောက်ရှိပြီးဖြစ်သည်' : '✓ All records synced to Cloud')
                         : (lang === 'my'
                           ? `⚠️ ${txPending} ခု စက်တွင်းတွင် ကျန်ရှိသည် (Cloud ရောက်ရန် စောင့်ဆိုင်းနေသည်)`
@@ -197,11 +204,11 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className={`font-mono font-black text-2xl leading-none ${allSynced ? 'text-emerald-700' : 'text-amber-800'}`}>
+                  <div className={`font-mono font-black text-2xl leading-none ${hasNoRecords ? 'text-slate-500' : allSynced ? 'text-emerald-700' : 'text-amber-800'}`}>
                     {txCloud}/{txTotal}
                   </div>
-                  <div className={`text-[10px] font-bold mt-1 ${allSynced ? 'text-emerald-600' : 'text-amber-700'}`}>
-                    {txPct}% synced
+                  <div className={`text-[10px] font-bold mt-1 ${hasNoRecords ? 'text-slate-400' : allSynced ? 'text-emerald-600' : 'text-amber-700'}`}>
+                    {hasNoRecords ? '—' : `${txPct}% synced`}
                   </div>
                 </div>
               </div>
@@ -209,7 +216,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               {/* Progress bar */}
               <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${allSynced ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  className={`h-full rounded-full transition-all ${hasNoRecords ? 'bg-slate-300' : allSynced ? 'bg-emerald-500' : 'bg-amber-500'}`}
                   style={{ width: `${txPct}%` }}
                 />
               </div>
@@ -223,7 +230,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{debts.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                   <div className="flex items-center gap-1.5 text-slate-400 mb-1">
@@ -232,7 +239,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{wallets.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                   <div className="flex items-center gap-1.5 text-slate-400 mb-1">
@@ -241,7 +248,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{categories.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                   <div className="flex items-center gap-1.5 text-slate-400 mb-1">
@@ -250,7 +257,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{budgets.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? 'စက်တွင်း' : 'local'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
                 </div>
               </div>
 
@@ -296,8 +303,8 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               </span>
               <span className="text-rose-800/90 text-[11px]">
                 {lang === 'my'
-                  ? 'မဖျက်မီ JSON Backup အား သိမ်းဆည်းထားရန် အကြံပြုအပ်ပါသည်။'
-                  : 'Please download a JSON backup first if you might need this data later.'}
+                  ? 'မဖျက်မီ JSON Backup အား သိမ်းဆည်းထားရန် အကြံပြုအပ်ပါသည်။ ဖျက်လိုက်တာနဲ့ backup JSON ဖိုင် တစ်ခု အလိုအလျောက် download ဆွဲပေးပါမည် — ဖိုင်ကို သေချာသိမ်းထားပါ။'
+                  : 'Please download a JSON backup first if you might need this data later. A backup JSON file will also download automatically when you delete — keep that file safe.'}
               </span>
             </div>
           </div>

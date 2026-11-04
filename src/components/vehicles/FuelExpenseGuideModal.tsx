@@ -126,7 +126,7 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
                 <p>
                   {lang === 'my' ? (
                     <>
-                      <strong className="text-amber-900 font-bold">"ယာဉ်စီမံမှု"</strong> တက်ဘ်ရှိ <strong className="text-amber-900 font-bold">'+ ဆီထည့်စာရင်း'</strong> မှဖြစ်စေ၊ ပင်မ ထွက်ငွေဖြည့်သွင်းရာတွင် <strong className="text-amber-900 font-bold">'ဆီစားနှုန်းပါ တွက်မည်'</strong> ကို ရွေး၍ဖြစ်စေ ဆီလီတာ (Liters)၊ ၁ လီတာဈေးနှင့် ဒိုင်ခွက်မိုင် (km) ပါ ထည့်သွင်းခြင်း ဖြစ်ပါသည်။
+                      <strong className="text-amber-900 font-bold">"ယာဉ်စီမံမှု"</strong> တက်ဘ်ရှိ <strong className="text-amber-900 font-bold">'+ ဆီထည့်စာရင်း'</strong> မှဖြစ်စေ၊ ပင်မ ထွက်ငွေဖြည့်သွင်းရာတွင် <strong className="text-amber-900 font-bold">'ဆီစားနှုန်းပါ တွက်မည်'</strong> ကို ရွေး၍ဖြစ်စေ ၁ လီတာဈေး၊ စုစုပေါင်းကျသင့်ငွေ (သို့မဟုတ်) ဆီလီတာ (Liters) နှင့် ဒိုင်ခွက်မိုင် (km) ပါ ထည့်သွင်းခြင်း ဖြစ်ပါသည်။ စုစုပေါင်းကျသင့်ငွေ ရိုက်လိုက်လျှင် လီတာကို အလိုအလျောက် တွက်ပေးပြီး၊ လီတာ ရိုက်လိုက်လျှင်လည်း စုစုပေါင်းကျသင့်ငွေကို အလိုအလျောက် တွက်ပေးပါသည်။
                     </>
                   ) : (
                     'Enter via "+ Add Fuel" in Vehicle Management, or select "Calculate Mileage" in the main expense form. Provide liters and odometer.'

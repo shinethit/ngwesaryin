@@ -13,7 +13,17 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
   lang,
   onClick,
 }) => {
-  const { theme, emoji, tier } = health;
+  const { theme, emoji, tier, metrics } = health;
+
+  // [v7.5.60 E-S68] A wallet balance alone (no income/expense/debt
+  // records at all) scores a false "100% perfect" — show the no-data
+  // state instead of a score the user never earned.
+  const showNoData =
+    tier !== 'no_data' &&
+    metrics.totalIncome === 0 &&
+    metrics.totalExpense === 0 &&
+    metrics.totalPayableDebt === 0 &&
+    metrics.totalReceivableDebt === 0;
 
   return (
     <div
@@ -30,9 +40,11 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
         </div>
 
         <span
-          className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full whitespace-nowrap tracking-wide border ${theme.badgeBg} ${theme.badgeText}`}
+          className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full whitespace-nowrap tracking-wide border ${showNoData ? 'bg-slate-500 text-white border-slate-400' : `${theme.badgeBg} ${theme.badgeText}`}`}
         >
-          {lang === 'my' ? health.badgeText.my : health.badgeText.en}
+          {showNoData
+            ? (lang === 'my' ? '📭 ဒေတာ မလုံလောက်သေးပါ' : '📭 Not enough data yet')
+            : (lang === 'my' ? health.badgeText.my : health.badgeText.en)}
         </span>
       </div>
 
@@ -54,7 +66,9 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
             theme.isDarkTheme ? 'text-rose-300' : theme.subtitleColor
           }`}
         >
-          {lang === 'my' ? health.statusText.my : health.statusText.en}
+          {showNoData
+            ? (lang === 'my' ? 'ဒေတာ မလုံလောက်သေးပါ' : 'Not enough data yet')
+            : (lang === 'my' ? health.statusText.my : health.statusText.en)}
         </div>
 
         {/* Mini progress / health bar */}
@@ -64,10 +78,11 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
             style={{
               width:
                 // [v7.5.55 D6] No data yet: empty bar, not a fake score.
-                tier === 'no_data'
+                // [v7.5.60 S17] Negative (deficit) is also an EMPTY bar:
+                // a full bar reads as "good" and looks identical to the
+                // best tier — only the colour differed.
+                tier === 'no_data' || showNoData || tier === 'negative'
                   ? '0%'
-                  : tier === 'negative'
-                  ? '100%'
                   : tier === 'super_surplus'
                   ? '100%'
                   : `${Math.max(10, Math.min(100, health.score))}%`,
@@ -77,7 +92,9 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
 
         <div className="flex items-center justify-between text-[10px] font-bold pt-1 opacity-80">
           <span className={theme.isDarkTheme ? 'text-slate-300' : 'text-slate-500'}>
-            {lang === 'my' ? health.colorName.my : health.colorName.en}
+            {tier === 'negative'
+              ? (lang === 'my' ? '⚠️ အနှုတ် — ထွက်ငွေက ဝင်ငွေထက် များနေသည်' : '⚠️ Deficit — spending exceeds income')
+              : (lang === 'my' ? health.colorName.my : health.colorName.en)}
           </span>
           <span className={theme.isDarkTheme ? 'text-rose-300 underline' : 'text-indigo-600 underline'}>
             {lang === 'my' ? 'အသေးစိတ် ❯' : 'Details ❯'}

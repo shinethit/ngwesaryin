@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Crown, Lock, Plus, Sparkles, Edit2, Trash2, Tag, Layers, ArrowUpRight, ArrowDownLeft, Search, Check, X } from 'lucide-react';
-import { Category, PlanType, SubCategory, TransactionType } from '../types';
+import { Category, PlanType, SubCategory, Transaction, TransactionType, UNBUDGETED_CATEGORY_ID } from '../types';
 import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
 import { CategoryIcon, AVAILABLE_CATEGORY_ICONS } from './CategoryIcon';
 import { useSearchSeed } from '../hooks/useSearchSeed';
+import { safeGetItem } from '../utils/storage';
 
 interface CategoriesViewProps {
   categories: Category[];
@@ -93,6 +94,54 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
     nameEn: string;
   } | null>(null);
 
+  // [v7.5.60 S10/M1/M2] Inline delete confirm (replaces window.confirm).
+  // Counts come from the same localStorage key the handlers persist on
+  // every change — this view receives no transactions prop.
+  type DeleteConfirm =
+    | { kind: 'category'; category: Category; txCount: number; fallbackName: string }
+    | { kind: 'sub'; categoryId: string; sub: SubCategory; txCount: number };
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(null);
+  const readStoredTransactions = (): Transaction[] => {
+    try {
+      const raw = safeGetItem('ngwe_transactions');
+      if (!raw) return [];
+      const txs = JSON.parse(raw) as Transaction[];
+      return Array.isArray(txs) ? txs : [];
+    } catch {
+      return [];
+    }
+  };
+  const getDeleteFallbackName = (cat: Category): string => {
+    const otherId = cat.type === 'income' ? 'cat_income_other' : 'cat_expense_other';
+    const other = categories.find((c) => c.id === otherId);
+    if (other) return lang === 'my' ? other.name : other.nameEn;
+    const unbudgeted = categories.find((c) => c.id === UNBUDGETED_CATEGORY_ID);
+    if (unbudgeted) return lang === 'my' ? unbudgeted.name : unbudgeted.nameEn;
+    return lang === 'my' ? 'အခြား' : 'Other';
+  };
+  const askDeleteCategory = (category: Category) => {
+    const txCount = readStoredTransactions().filter((t) => t.category === category.id).length;
+    setDeleteConfirm({ kind: 'category', category, txCount, fallbackName: getDeleteFallbackName(category) });
+  };
+  const askDeleteSubCategory = (categoryId: string, sub: SubCategory) => {
+    const txCount = readStoredTransactions().filter((t) => t.subCategoryId === sub.id).length;
+    setDeleteConfirm({ kind: 'sub', categoryId, sub, txCount });
+  };
+  const confirmDelete = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.kind === 'category') {
+      onDeleteCategory(deleteConfirm.category.id);
+    } else {
+      onDeleteSubCategory(deleteConfirm.categoryId, deleteConfirm.sub.id);
+      setEditingSubModal(null);
+    }
+    setDeleteConfirm(null);
+  };
+
+  // [v7.5.60 N3] Shown inside the add/edit form when the name is blank
+  // instead of silently closing (the old code just returned).
+  const [catFormError, setCatFormError] = useState('');
+
   // Filter categories
   const filteredCategories = categories.filter((c) => {
     if (activeTypeTab !== 'all' && c.type !== activeTypeTab) return false;
@@ -120,6 +169,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
     setCatColor(activeTypeTab === 'income' ? '#10B981' : '#EF4444');
     setInitialSubCats([]);
     setNewSubInput('');
+    setCatFormError('');
     setIsAddCatModalOpen(true);
   };
 
@@ -134,12 +184,17 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
     setCatNameEn(cat.nameEn);
     setCatIcon(cat.icon);
     setCatColor(cat.color);
+    setCatFormError('');
     setIsAddCatModalOpen(true);
   };
 
   const handleSaveCategory = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!catNameMy.trim()) return;
+    if (!catNameMy.trim()) {
+      setCatFormError(lang === 'my' ? 'ကဏ္ဍ အမည် ထည့်ပေးပါ' : 'Please enter a category name');
+      return;
+    }
+    setCatFormError('');
 
     if (editingCategory) {
       // Update existing
@@ -412,7 +467,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full pl-9 pr-3 py-2 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           {searchQuery && (
             <button
@@ -427,6 +482,29 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* [v7.5.60 S8] Empty state — the old code rendered a blank page
+            when the search matched nothing. */}
+        {filteredCategories.length === 0 && (
+          <div className="md:col-span-2 py-12 text-center bg-white rounded-2xl border border-slate-200 space-y-3 px-4">
+            <Search className="w-10 h-10 mx-auto text-slate-300" />
+            <p className="text-sm font-medium text-slate-600">
+              {searchQuery.trim()
+                ? (lang === 'my'
+                  ? `“${searchQuery.trim()}” နှင့် ကိုက်ညီသော ကဏ္ဍ မတွေ့ပါ`
+                  : `No categories match "${searchQuery.trim()}"`)
+                : (lang === 'my' ? 'ကဏ္ဍ မရှိသေးပါ' : 'No categories yet.')}
+            </p>
+            {searchQuery.trim() && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer"
+              >
+                {lang === 'my' ? '🔍 ရှာဖွေမှု ရှင်းပြီး အားလုံးကြည့်မည်' : '🔍 Clear Search & Show All'}
+              </button>
+            )}
+          </div>
+        )}
         {filteredCategories.map((category) => {
           const isIncome = category.type === 'income';
           const subCats = category.subCategories || [];
@@ -499,17 +577,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                         {category.isCustom && (
                           <button
                             type="button"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  lang === 'my'
-                                    ? `"${category.name}" ကဏ္ဍကို ဖျက်ရန် သေချာပါသလား?`
-                                    : `Delete category "${category.nameEn}"?`
-                                )
-                              ) {
-                                onDeleteCategory(category.id);
-                              }
-                            }}
+                            onClick={() => askDeleteCategory(category)}
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             title={lang === 'my' ? 'ကဏ္ဍ ဖျက်ရန်' : 'Delete Category'}
                           >
@@ -609,24 +677,20 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                         return (
                           <div
                             key={sub.id}
-                            className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-50 hover:bg-emerald-50/70 border border-slate-200 hover:border-emerald-300 text-slate-800 transition-all cursor-pointer"
-                            onClick={() => openEditSubModal(category, sub)}
-                            title={lang === 'my' ? 'ကဏ္ဍခွဲ ပြင်ဆင်ရန် နှိပ်ပါ' : 'Click to edit sub-category'}
+                            className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-50 border border-slate-200 text-slate-800 transition-all"
+                            title={lang === 'my' ? sub.name : (sub.nameEn || sub.name)}
                           >
                             <span className="max-w-[180px] truncate">{lang === 'my' ? sub.name : (sub.nameEn || sub.name)}</span>
 
                             {/* Sub category actions: Edit & Delete */}
-                            <div
-                              className="flex items-center gap-0.5 ml-0.5"
-                              onClick={(e) => e.stopPropagation()}
-                            >
+                            <div className="flex items-center gap-0.5 ml-0.5">
                               <button
                                 type="button"
                                 onClick={() => openEditSubModal(category, sub)}
-                                className="p-0.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-100 rounded transition-colors"
+                                className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-100 rounded transition-colors"
                                 title={lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit Sub-Category'}
                               >
-                                <Edit2 className="w-2.5 h-2.5" />
+                                <Edit2 className="w-4 h-4" />
                               </button>
                               <button
                                 type="button"
@@ -635,20 +699,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                                     onOpenUpgradeModal();
                                     return;
                                   }
-                                  if (
-                                    window.confirm(
-                                      lang === 'my'
-                                        ? `"${sub.name}" ကဏ္ဍခွဲကို ဖျက်ရန် သေချာပါသလား?`
-                                        : `Delete sub-category "${sub.name}"?`
-                                    )
-                                  ) {
-                                    onDeleteSubCategory(category.id, sub.id);
-                                  }
+                                  askDeleteSubCategory(category.id, sub);
                                 }}
-                                className="p-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded transition-colors"
+                                className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-100 rounded transition-colors"
                                 title={lang === 'my' ? 'ဖျက်မည်' : 'Delete Sub-Category'}
                               >
-                                <X className="w-2.5 h-2.5" />
+                                <X className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
@@ -682,7 +738,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                         handleAddInlineSub(category.id);
                       }
                     }}
-                    className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 text-base bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
                   />
                   <button
                     type="button"
@@ -795,9 +851,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   required
                   placeholder={lang === 'my' ? 'ဥပမာ - အိမ်မွေးတိရစ္ဆာန် သို့မဟုတ် သင်တန်းကြေး' : 'e.g. Pets or Education'}
                   value={catNameMy}
-                  onChange={(e) => setCatNameMy(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                  onChange={(e) => { setCatNameMy(e.target.value); if (catFormError) setCatFormError(''); }}
+                  className="w-full p-2.5 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                 />
+                {catFormError && (
+                  <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">{catFormError}</div>
+                )}
               </div>
 
               {/* Category Name (English) */}
@@ -810,7 +869,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   placeholder="e.g. Pets & Care"
                   value={catNameEn}
                   onChange={(e) => setCatNameEn(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                  className="w-full p-2.5 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                 />
               </div>
 
@@ -889,7 +948,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                           }
                         }
                       }}
-                      className="flex-1 min-w-0 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                      className="flex-1 min-w-0 p-2 bg-slate-50 border border-slate-200 rounded-lg text-base"
                     />
                     <button
                       type="button"
@@ -1041,18 +1100,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      lang === 'my'
-                        ? `"${editingSubModal.name}" ကဏ္ဍခွဲကို ဖျက်ရန် သေချာပါသလား?`
-                        : `Delete sub-category "${editingSubModal.name}"?`
-                    )
-                  ) {
-                    onDeleteSubCategory(editingSubModal.categoryId, editingSubModal.subCategory.id);
-                    setEditingSubModal(null);
-                  }
-                }}
+                onClick={() => askDeleteSubCategory(editingSubModal.categoryId, editingSubModal.subCategory)}
                 className="px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1084,6 +1132,54 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   {lang === 'my' ? 'ပြင်ဆင်မှု သိမ်းမည်' : 'Save Changes'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [v7.5.60 S10/M1/M2] Inline delete confirm (replaces
+          window.confirm) — shows the real record count and, for a
+          category, the real "Other" fallback name. */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-200 p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-base text-slate-900">
+              {deleteConfirm.kind === 'category'
+                ? (lang === 'my' ? 'ဤကဏ္ဍကို ဖျက်ရန် သေချာပါသလား?' : 'Delete this category?')
+                : (lang === 'my' ? 'ဤကဏ္ဍခွဲကို ဖျက်ရန် သေချာပါသလား?' : 'Delete this sub-category?')}
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {deleteConfirm.kind === 'category'
+                ? (deleteConfirm.txCount > 0
+                  ? (lang === 'my'
+                    ? `“${deleteConfirm.category.name}” တွင် မှတ်တမ်း ${deleteConfirm.txCount} ခု ရှိပါသည်။ ဖျက်လိုက်ပါက ထိုမှတ်တမ်းများကို “${deleteConfirm.fallbackName}” ကဏ္ဍသို့ ပြောင်းရွှေ့မည်။`
+                    : `“${deleteConfirm.category.nameEn}” has ${deleteConfirm.txCount} transaction(s). They will be moved to “${deleteConfirm.fallbackName}”.`)
+                  : (lang === 'my'
+                    ? `“${deleteConfirm.category.name}” တွင် မှတ်တမ်း မရှိပါ။ ဖျက်လိုက်လျှင် ကဏ္ဍသာ ပျောက်သွားမည်။`
+                    : `“${deleteConfirm.category.nameEn}” has no transactions. Only the category will be removed.`))
+                : (deleteConfirm.txCount > 0
+                  ? (lang === 'my'
+                    ? `“${deleteConfirm.sub.name}” ကို မှတ်တမ်း ${deleteConfirm.txCount} ခုတွင် သုံးထားပါသည်။ ဖျက်လိုက်ပါက ထိုမှတ်တမ်းများမှ ကဏ္ဍခွဲကို ဖယ်ရှားမည် (အဓိက ကဏ္ဍထဲမှာပဲ ကျန်ပါမည်)။`
+                    : `“${deleteConfirm.sub.nameEn || deleteConfirm.sub.name}” is used by ${deleteConfirm.txCount} transaction(s). They will keep their main category, without a sub-category.`)
+                  : (lang === 'my'
+                    ? `“${deleteConfirm.sub.name}” ကို မှတ်တမ်းတစ်ခုမှ သုံးထားခြင်း မရှိပါ။`
+                    : `“${deleteConfirm.sub.nameEn || deleteConfirm.sub.name}” is not used by any transaction.`))}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-xs cursor-pointer"
+              >
+                {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer"
+              >
+                {lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

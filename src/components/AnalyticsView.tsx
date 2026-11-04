@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, Wallet } from 'lucide-react';
+import { BarChart3, Wallet, ShoppingBag } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
+import { ItemPriceAnalyticsView } from './ItemPriceAnalyticsView';
 
 import { BudgetAnalyticsView } from './BudgetAnalyticsView';
 import { MonthlySavingsTarget } from './MonthlySavingsTarget';
@@ -17,7 +18,7 @@ import { MonthlyComparisonCard } from './MonthlyComparisonCard';
 import { MonthlySummaryChart } from './MonthlySummaryChart';
 import { ClayCategoryCard } from './ClayIllustrations';
 import { calculateFinancialHealth } from '../utils/financialHealth';
-import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 
 interface AnalyticsViewProps {
   transactions: Transaction[];
@@ -35,7 +36,7 @@ interface AnalyticsViewProps {
   onSelectTab?: (tab: string) => void;
 }
 
-type SubTab = 'reports' | 'budget';
+type SubTab = 'reports' | 'budget' | 'compare';
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   transactions, categories, wallets, debts, budgets,
@@ -45,8 +46,31 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 }) => {
   const [subTab, setSubTab] = useState<SubTab>('reports');
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  // [v7.5.60 A-S12] Financial-system toggle for the summary table
+  // (Opening/Closing <-> Inflow/Outflow) — the table already supports
+  // both, the Transactions tab already toggles it, Analytics did not.
+  const [financialSystem, setFinancialSystem] = useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
 
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
+
+  // [v7.5.60 M-01/E1] Dashboard scope: only "included"
+  // (includeInTotals !== false) wallets count in Analysis totals, Donut,
+  // Trend and Monthly charts — exactly like the Dashboard's
+  // scopedTransactions. Transactions whose wallet cannot be matched are
+  // dropped here (Dashboard does the same via scopedWallets).
+  const scopedWallets = useMemo(
+    () => wallets.filter((w) => w.includeInTotals !== false),
+    [wallets]
+  );
+  const scopedWalletIds = useMemo(
+    () => getMatchingWalletIds(scopedWallets),
+    [scopedWallets]
+  );
+  const excludedWalletCount = wallets.length - scopedWallets.length;
+  const scopedTransactions = useMemo(
+    () => transactions.filter((t) => scopedWalletIds.has(t.walletId)),
+    [transactions, scopedWalletIds]
+  );
 
   const convertTxToMMK = (t: Transaction) => {
     let w = walletMap.get(t.walletId);
@@ -54,11 +78,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
   };
 
-  const totalIncome = transactions
+  const totalIncome = scopedTransactions
     .filter((t) => t.type === 'income' && !isTransferTransaction(t))
     .reduce((s, t) => s + convertTxToMMK(t), 0);
 
-  const totalExpense = transactions
+  const totalExpense = scopedTransactions
     .filter((t) => t.type === 'expense' && !isTransferTransaction(t))
     .reduce((s, t) => s + convertTxToMMK(t), 0);
 
@@ -79,10 +103,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     const n = new Date();
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
   })();
-  const currentMonthIncome = transactions
+  const currentMonthIncome = scopedTransactions
     .filter((t) => t.type === 'income' && !isTransferTransaction(t) && t.date?.startsWith(currentMonthKey))
     .reduce((s, t) => s + convertTxToMMK(t), 0);
-  const currentMonthExpense = transactions
+  const currentMonthExpense = scopedTransactions
     .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && t.date?.startsWith(currentMonthKey))
     .reduce((s, t) => s + convertTxToMMK(t), 0);
 
@@ -122,7 +146,27 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <Wallet className="w-4 h-4" />
           {lang === 'my' ? '💰 ဘတ်ဂျက်' : '💰 Budget'}
         </button>
+        {/* [v7.5.60 M-04] Compare Price is its own tab now — it is not a
+            budget, so it no longer hides under the Budget tab. */}
+        <button type="button" onClick={() => setSubTab('compare')}
+          className={'flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
+            (subTab === 'compare'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50')}>
+          <ShoppingBag className="w-4 h-4" />
+          {lang === 'my' ? '🛒 ဈေးနှုန်း နှိုင်းယှဉ်' : '🛒 Compare Price'}
+        </button>
       </div>
+
+      {/* [v7.5.60 M-01] Scope note — Separate wallets are excluded from
+          every total on this screen, same as the Dashboard. */}
+      {excludedWalletCount > 0 && (
+        <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          {lang === 'my'
+            ? `ပါဝင်သည့် ပိုက်ဆံအိတ် ${scopedWallets.length} ခု (သီးသန့် ${excludedWalletCount} ခု မပါ) — စုစုပေါင်း အားလုံးမှာ ပါဝင်သည့် အိတ်များသာ တွက်ထားပါသည်`
+            : `Included wallets: ${scopedWallets.length} (Separate: ${excludedWalletCount} excluded) — all totals on this screen count included wallets only`}
+        </p>
+      )}
 
       {/* REPORTS SUB-TAB */}
       {subTab === 'reports' && (
@@ -139,7 +183,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <ClayCategoryCard
               type="alpha"
               title={lang === 'my' ? 'စုငွေ' : 'Savings'}
-              subtitle={formatMMK(netSavings)}
+              // [v7.5.60 E2] Lakhs, not full kyat — a 13-char full-kyat
+              // value overflows the ~106px card on a 390px phone. The
+              // exact kyat value is the card's title tooltip.
+              subtitle={formatLakhs(netSavings, lang)}
               badge="Net"
               // [v7.5.55 D27] Was onSelectTab('analytics') while already on
               // Analytics (a no-op). Now opens the Budget tab, where the
@@ -157,21 +204,42 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <ClayCategoryCard
               type="clipboard"
               title={lang === 'my' ? 'မှတ်တမ်း' : 'Records'}
-              subtitle={transactions.length + ' ' + (lang === 'my' ? 'ခု' : 'entries')}
+              subtitle={scopedTransactions.length + ' ' + (lang === 'my' ? 'ခု' : 'entries')}
               badge="Total"
               onClick={() => onSelectTab && onSelectTab('transactions')}
             />
+          </div>
+
+          {/* [v7.5.60 A-S12] Financial-system toggle — same two views as
+              the Transactions tab. */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setFinancialSystem('opening_closing')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${financialSystem === 'opening_closing' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              {lang === 'my' ? 'အစ / အဆုံး လက်ကျန်' : 'Opening / Closing'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFinancialSystem('inflow_outflow')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${financialSystem === 'inflow_outflow' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              {lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ' : 'Inflow / Outflow'}
+            </button>
           </div>
 
           {/* Summary Table */}
           <FinancialSummaryTable
             income={totalIncome}
             expense={totalExpense}
-            incomeCount={transactions.filter((t) => t.type === 'income' && !isTransferTransaction(t)).length}
-            expenseCount={transactions.filter((t) => t.type === 'expense' && !isTransferTransaction(t)).length}
-            selectedWallets={wallets}
-            transactions={transactions}
+            incomeCount={scopedTransactions.filter((t) => t.type === 'income' && !isTransferTransaction(t)).length}
+            expenseCount={scopedTransactions.filter((t) => t.type === 'expense' && !isTransferTransaction(t)).length}
+            selectedWallets={scopedWallets}
+            transactions={scopedTransactions}
             lang={lang}
+            financialSystem={financialSystem}
+            onChangeFinancialSystem={setFinancialSystem}
           />
 
           {/* Income vs Expense Ratio */}
@@ -186,13 +254,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                   <div style={{ width: ((totalExpense / (totalIncome + totalExpense)) * 100) + '%' }} className="bg-rose-500" />
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-600">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                    <span>{Math.round((totalIncome / (totalIncome + totalExpense)) * 100)}% ({formatMMK(totalIncome)})</span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="truncate" title={formatMMK(totalIncome)}>{Math.round((totalIncome / (totalIncome + totalExpense)) * 100)}% ({formatLakhs(totalIncome, lang)})</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-rose-500" />
-                    <span>{Math.round((totalExpense / (totalIncome + totalExpense)) * 100)}% ({formatMMK(totalExpense)})</span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-3 h-3 rounded-full bg-rose-500 shrink-0" />
+                    <span className="truncate" title={formatMMK(totalExpense)}>{Math.round((totalExpense / (totalIncome + totalExpense)) * 100)}% ({formatLakhs(totalExpense, lang)})</span>
                   </div>
                 </div>
               </div>
@@ -203,7 +271,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
           {/* Donut Chart */}
           <CurrentMonthExpenseDonutChart
-            transactions={transactions}
+            transactions={scopedTransactions}
             categories={categories}
             wallets={wallets}
             lang={lang}
@@ -211,7 +279,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
           {/* Trend Line Chart */}
           <CategorySpendingTrendLineChart
-            transactions={transactions}
+            transactions={scopedTransactions}
             categories={categories}
             wallets={wallets}
             lang={lang}
@@ -219,7 +287,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
           {/* Monthly Comparison */}
           <MonthlyComparisonCard
-            transactions={transactions}
+            transactions={scopedTransactions}
             categories={categories}
             wallets={wallets}
             lang={lang}
@@ -228,12 +296,24 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
           {/* Monthly Summary */}
           <MonthlySummaryChart
-            transactions={transactions}
+            transactions={scopedTransactions}
             categories={categories}
             wallets={wallets}
             lang={lang}
           />
         </div>
+      )}
+
+      {/* COMPARE PRICE SUB-TAB — [v7.5.60 M-04] its own tab, not under Budget */}
+      {subTab === 'compare' && (
+        <ItemPriceAnalyticsView
+          transactions={scopedTransactions}
+          categories={categories}
+          wallets={wallets}
+          plan={plan}
+          lang={lang}
+          onOpenUpgradeModal={onOpenUpgradeModal}
+        />
       )}
 
       {/* BUDGET SUB-TAB */}
@@ -247,8 +327,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             onOpenUpgrade={onOpenUpgradeModal}
           />
 
+          {/* [v7.5.60 M-01] Daily limit must use the same scoped
+              transactions as the rest of Analytics — raw `transactions`
+              included Separate wallets and disagreed with the Dashboard. */}
           <DailySpendingLimitCard
-            transactions={transactions}
+            transactions={scopedTransactions}
             wallets={wallets}
             lang={lang}
           />

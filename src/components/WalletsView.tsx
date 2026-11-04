@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { WalletCards, Plus, ArrowRightLeft, Lock, Edit2, Trash2, TrendingUp, Scale, UserPlus, Users, LogOut, Building2, CreditCard, Smartphone, Coins, PiggyBank, DollarSign, Globe, Landmark, ShieldCheck, ChevronDown, ChevronUp, Calculator, Crown } from 'lucide-react';
 import { PlanType, Wallet, WalletPermissions, Transaction } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, formatLakhs } from '../utils/formatters';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyInfo,
@@ -33,7 +33,10 @@ interface WalletsViewProps {
   onUpdateWallet?: (wallet: Wallet) => void;
   onUpdateWalletBalance: (id: string, newBalance: number) => void;
   onDeleteWallet: (id: string) => void;
-  onTransferFunds: (fromWalletId: string, toWalletId: string, amount: number, note?: string) => void;
+  // [v7.5.60 M-10] Returns false when the transfer was refused (e.g.
+  // insufficient balance / rolling limit) so the modal stays open with
+  // the error instead of closing on a failed transfer.
+  onTransferFunds: (fromWalletId: string, toWalletId: string, amount: number, note?: string) => Promise<boolean> | boolean | void;
   onOpenUpgradeModal: () => void;
   onOpenReconcileModal: (walletId?: string) => void;
   onAddTransaction?: (type?: 'income' | 'expense', walletId?: string) => void;
@@ -119,6 +122,20 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   const [transferTo, setTransferTo] = useState(wallets[1]?.id || '');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
+  const [transferError, setTransferError] = useState('');
+  // [v7.5.60 S-47] App-styled confirm modal for wallet delete / leave
+  // (replaces the handler's window.confirm). `blocked` = the wallet
+  // cannot be deleted at all (linked debts) — info only, no confirm.
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    wallet: Wallet;
+    message: string;
+    blocked?: boolean;
+  } | null>(null);
+  // [v7.5.60 S-47] Ownership transfer is a small modal with an email
+  // input (replaces window.prompt + window.alert).
+  const [transferOwnerWallet, setTransferOwnerWallet] = useState<Wallet | null>(null);
+  const [transferOwnerEmail, setTransferOwnerEmail] = useState('');
+  const [transferOwnerError, setTransferOwnerError] = useState('');
 
   const handleOpenTransferModal = (fromId?: string) => {
     const validFrom = fromId && wallets.some((w) => w.id === fromId) ? fromId : wallets[0]?.id || '';
@@ -128,6 +145,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     setTransferTo(validTo);
     setTransferAmount('');
     setTransferNote('');
+    setTransferError('');
     setShowTransferModal(true);
   };
 
@@ -197,23 +215,102 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     }
   };
 
-  // [v7.5.56] Owner-only ownership transfer entry point (wallet menu).
-  // The new owner must already be a member — the handler enforces it
-  // and confirms before writing anything.
+  // [v7.5.60 S-47] Owner-only ownership transfer entry point (wallet
+  // menu). Opens the small email-input modal — no window.prompt/alert.
+  // The handler itself enforces member-only + confirms nothing (the
+  // modal already asked); the loss-of-rights note is in the modal.
   const handleTransferOwnershipClick = (wallet: Wallet) => {
     if (!onTransferOwnership) return;
-    const raw = window.prompt(
-      lang === 'my'
-        ? `ပိုင်ဆိုင်မှု လွှဲပြောင်းမည့် အဖွဲ့ဝင်၏ Email ကို ထည့်ပါ:\n(ဤ Wallet ၏ လက်ရှိ အဖွဲ့ဝင် ဖြစ်ရပါမည်)`
-        : 'Enter the email of the member to transfer ownership to:\n(They must already be a member of this wallet)'
-    );
-    if (raw === null) return;
-    const email = raw.trim().toLowerCase();
+    setTransferOwnerWallet(wallet);
+    setTransferOwnerEmail('');
+    setTransferOwnerError('');
+  };
+
+  const handleTransferOwnershipSubmit = () => {
+    if (!transferOwnerWallet || !onTransferOwnership) return;
+    const email = transferOwnerEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-      window.alert(lang === 'my' ? 'မှန်ကန်သော Email လိပ်စာ ဖြစ်ရပါမည်' : 'Please enter a valid email address');
+      setTransferOwnerError(lang === 'my' ? 'မှန်ကန်သော Email လိပ်စာ ဖြစ်ရပါမည်' : 'Please enter a valid email address');
       return;
     }
+    const wallet = transferOwnerWallet;
+    setTransferOwnerWallet(null);
+    setTransferOwnerEmail('');
     onTransferOwnership(wallet, email);
+  };
+
+  // [v7.5.60 S-47 + S-44] Delete/leave confirmation lives here (the
+  // handler no longer asks). The message names the fallback wallet, the
+  // transaction count, the shared warning AND the linked-debt count.
+  // A wallet with linked debts cannot be deleted at all (the debts
+  // would be orphaned) — the modal says so with no confirm button.
+  const countLinkedDebts = (walletId: string): number => {
+    try {
+      const raw = localStorage.getItem('ngwe_debts');
+      if (!raw) return 0;
+      const list = JSON.parse(raw) as { walletId?: string }[];
+      if (!Array.isArray(list)) return 0;
+      return list.filter((d) => d && d.walletId === walletId).length;
+    } catch {
+      return 0;
+    }
+  };
+
+  const requestDeleteWallet = (wallet: Wallet) => {
+    if (wallet.isSharedFromOther || (activeWorkspaceId && activeWorkspaceId !== user?.uid)) {
+      setDeleteConfirm({
+        wallet,
+        message: lang === 'my'
+          ? `ဤ Shared Wallet (${wallet.name}) မှ ထွက်ခွာမည်မှာ သေချာပါသလား?\n(မှတ်ချက် — Shared Wallet ကို ပိုင်ရှင်သာ ဖျက်ပိုင်ခွင့်ရှိပြီး၊ ဖိတ်ခေါ်ခံထားရသူသည် ထွက်ခွာခြင်းသာ ပြုလုပ်နိုင်ပါသည်)`
+          : `Are you sure you want to leave this shared wallet (${wallet.nameEn || wallet.name})?`,
+      });
+      return;
+    }
+    const ownWallets = wallets.filter((w) => !w.isSharedFromOther);
+    if (ownWallets.length <= 1) {
+      // The handler toasts the reason — no confirm to show.
+      onDeleteWallet(wallet.id);
+      return;
+    }
+    const fallbackWallet =
+      ownWallets.find((w) => w.id !== wallet.id && w.isDefault) ||
+      ownWallets.find((w) => w.id !== wallet.id);
+    if (!fallbackWallet) {
+      onDeleteWallet(wallet.id);
+      return;
+    }
+    const linkedDebtCount = countLinkedDebts(wallet.id);
+    if (linkedDebtCount > 0) {
+      setDeleteConfirm({
+        wallet,
+        blocked: true,
+        message: lang === 'my'
+          ? `ဤအကောင့် (${wallet.name}) နှင့် ချိတ်ထားသော အကြွေး ${linkedDebtCount} ခု ရှိပါသည်။\nအကြွေးများကို အခြားအကောင့်သို့ ဦးစွာ ပြောင်းရွှေ့ပြီးမှ (သို့မဟုတ် အကြွေးများကို ဖျက်ပြီးမှ) ဤအကောင့်ကို ဖျက်နိုင်ပါသည် — မဟုတ်ပါက အကြွေးစာရင်းများ အချက်အလက် မှားကုန်ပါမည်။`
+          : `This wallet (${wallet.nameEn || wallet.name}) has ${linkedDebtCount} linked debt(s).\nMove the debts to another wallet first (or delete them) — otherwise the debt records would point at a wallet that no longer exists.`,
+      });
+      return;
+    }
+    const isShared = Boolean(wallet.sharedWith && wallet.sharedWith.length > 0);
+    const relatedTxCount = transactions.filter((t) => t.walletId === wallet.id).length;
+    let msg = '';
+    if (lang === 'my') {
+      msg = `ဤအကောင့် (${wallet.name}) ကို ဖျက်ရန် သေချာပါသလား?`;
+      if (isShared) {
+        msg += `\n⚠️ ဤ Wallet ကို ပိုင်ရှင်မှ ဖျက်လိုက်ပါက မျှဝေထားသော သူများအားလုံးထံမှလည်း အပြီးတိုင် ပျက်သွားပါမည်။`;
+      }
+      if (relatedTxCount > 0) {
+        msg += `\nရှိပြီးသား စာရင်းမှတ်တမ်း ${relatedTxCount} ခုကို '${fallbackWallet.name}' သို့ အလိုအလျောက် ပြောင်းရွှေ့ပေးပါမည်။`;
+      }
+    } else {
+      msg = `Are you sure you want to delete this wallet (${wallet.nameEn || wallet.name})?`;
+      if (isShared) {
+        msg += `\n⚠️ Deleting as owner will remove it from all shared collaborators immediately.`;
+      }
+      if (relatedTxCount > 0) {
+        msg += `\n${relatedTxCount} transactions will be reassigned to '${fallbackWallet.nameEn || fallbackWallet.name}'.`;
+      }
+    }
+    setDeleteConfirm({ wallet, message: msg });
   };
 
   // [v7.5.56] Display name of the person a wallet is shared by — never
@@ -286,16 +383,36 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   const isAtLimit =
     (plan === 'free' || plan === 'guest') && wallets.filter((w) => !w.isSharedFromOther).length >= maxFreeWallets;
 
-  const handleTransferSubmit = (e: React.FormEvent) => {
+  const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseMyanmarNumber(transferAmount);
-    if (!amt || amt <= 0) return;
-    if (transferFrom === transferTo) return;
-
-    onTransferFunds(transferFrom, transferTo, amt, transferNote);
+    if (!amt || amt <= 0) {
+      setTransferError(lang === 'my' ? 'လွှဲပြောင်းမည့် ပမာဏ မှန်ကန်စွာ ထည့်ပါ (0 ထက် ကြီးရမည်)' : 'Please enter a valid amount greater than 0');
+      return;
+    }
+    if (transferFrom === transferTo) {
+      setTransferError(lang === 'my' ? 'ငွေထုတ်မည့် အကောင့်နှင့် ထည့်မည့် အကောင့် တူညီနေပါသည်' : 'Source and destination wallets must be different');
+      return;
+    }
+    // [v7.5.60 M-10] Show the shortfall inline and keep the modal open
+    // when the handler refuses (insufficient balance / rolling limit).
+    const fromWallet = wallets.find((w) => isWalletMatch(w, transferFrom));
+    const fromBalance = Number(fromWallet?.balance) || 0;
+    if (amt > fromBalance) {
+      const balanceText = (fromWallet?.currency || 'MMK') === 'MMK'
+        ? formatLakhs(fromBalance, lang)
+        : formatCurrency(fromBalance, fromWallet?.currency || 'MMK');
+      setTransferError(lang === 'my'
+        ? `လက်ကျန်ငွေ မလောက်ပါ — ${fromWallet ? (lang === 'my' ? fromWallet.name : fromWallet.nameEn) : ''} တွင် လက်ကျန် ${balanceText} သာ ရှိပါသည်`
+        : `Insufficient balance — only ${balanceText} available`);
+      return;
+    }
+    const result = await onTransferFunds(transferFrom, transferTo, amt, transferNote);
+    if (result === false) return; // handler already toasted the reason
     setShowTransferModal(false);
     setTransferAmount('');
     setTransferNote('');
+    setTransferError('');
   };
 
   // [v7.5.56] Transfer dropdown label — shared wallets are marked so
@@ -361,6 +478,16 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
               ? 'ငွေသား၊ KPay၊ WavePay၊ ဘဏ်အကောင့်များနှင့် နိုင်ငံခြားငွေ (USD, THB, SGD) စာရင်းများ စီမံပါ'
               : 'Manage Cash, Mobile Pay, Banks, and Foreign Currencies with real-time exchange rates'}
           </p>
+          {/* [v7.5.60 S-43] Usage is ALWAYS visible, not only at the
+              limit — "ပိုက်ဆံအိတ် ၁/၂ ခု" like the budget quota chip.
+              Shared-from-other wallets don't count toward the limit. */}
+          <div className="mt-2">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+              {plan === 'premium'
+                ? (lang === 'my' ? `ပိုက်ဆံအိတ် ${wallets.filter((w) => !w.isSharedFromOther).length} ခု` : `${wallets.filter((w) => !w.isSharedFromOther).length} wallets`)
+                : (lang === 'my' ? `ပိုက်ဆံအိတ် ${wallets.filter((w) => !w.isSharedFromOther).length}/${maxFreeWallets} ခု` : `Wallets ${wallets.filter((w) => !w.isSharedFromOther).length}/${maxFreeWallets}`)}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
@@ -384,25 +511,9 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             )}
           </button>
 
-          {/* Reconcile Balance Button */}
-          <button
-            type="button"
-            onClick={() => onOpenReconcileModal()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer active:scale-95 shadow-2xs"
-            title="Reconcile physical cash with recorded balance"
-          >
-            <Scale className="w-4 h-4 text-slate-600" />
-            <span>{lang === 'my' ? 'စာရင်းညှိမည်' : 'Reconcile'}</span>
-          </button>
-
-          {/* Transfer Funds Button */}
-          <button
-            onClick={() => handleOpenTransferModal()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/80 transition-all cursor-pointer active:scale-95"
-          >
-            <ArrowRightLeft className="w-4 h-4 text-slate-600" />
-            <span>{lang === 'my' ? 'ငွေလွှဲရန်' : 'Transfer'}</span>
-          </button>
+          {/* [v7.5.60 N-16] Reconcile / Transfer live ONLY under the totals
+              banner below (they were duplicated here and there) — the
+              header keeps just Rates + Add Wallet. */}
 
           {/* Add Wallet Button */}
           <button
@@ -456,35 +567,37 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
               )}
             </div>
 
-            <div className="text-3xl sm:text-4xl font-black mt-1 tracking-tight">
-              {formatMMK(totalIncludedMMK)}
+            {/* [v7.5.60 S-40] DISPLAY in lakhs (input stays full kyat);
+                the exact kyat value is the title tooltip. */}
+            <div className="text-3xl sm:text-4xl font-black mt-1 tracking-tight" title={formatMMK(totalIncludedMMK)}>
+              {formatLakhs(totalIncludedMMK, lang)}
             </div>
 
             {/* [v7.5.56] "Of which shared" line on the banner total. */}
             {hasSharedWallets && (
-              <div className="mt-1.5 text-xs font-semibold text-indigo-300">
+              <div className="mt-1.5 text-xs font-semibold text-indigo-300" title={formatMMK(totalSharedIncludedMMK)}>
                 🤝{' '}
                 {lang === 'my'
-                  ? `ယင်းအထဲက မျှဝေထားသော အကောင့်: ${formatMMK(totalSharedIncludedMMK)}`
-                  : `of which shared: ${formatMMK(totalSharedIncludedMMK)}`}
+                  ? `ယင်းအထဲက မျှဝေထားသော အကောင့်: ${formatLakhs(totalSharedIncludedMMK, lang)}`
+                  : `of which shared: ${formatLakhs(totalSharedIncludedMMK, lang)}`}
               </div>
             )}
 
             {/* If some wallets are excluded, show separate breakdown badge */}
             {excludedWallets.length > 0 && (
               <div className="mt-2 flex items-center gap-2 flex-wrap text-xs">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold" title={formatMMK(totalExcludedMMK)}>
                   <span>🚫</span>
                   <span>
                     {lang === 'my'
-                      ? `သီးသန့် (မရောပါ) ${excludedWallets.length} ခု: ${formatMMK(totalExcludedMMK)}`
-                      : `Excluded (Separate) ${excludedWallets.length} wallets: ${formatMMK(totalExcludedMMK)}`}
+                      ? `သီးသန့် (မရောပါ) ${excludedWallets.length} ခု: ${formatLakhs(totalExcludedMMK, lang)}`
+                      : `Excluded (Separate) ${excludedWallets.length} wallets: ${formatLakhs(totalExcludedMMK, lang)}`}
                   </span>
                 </span>
-                <span className="text-slate-400 text-[11px]">
+                <span className="text-slate-400 text-[11px]" title={formatMMK(grandTotalAllMMK)}>
                   {lang === 'my'
-                    ? `(အကောင့်အားလုံး စုစုပေါင်း: ${formatMMK(grandTotalAllMMK)})`
-                    : `(Combined All: ${formatMMK(grandTotalAllMMK)})`}
+                    ? `(အကောင့်အားလုံး စုစုပေါင်း: ${formatLakhs(grandTotalAllMMK, lang)})`
+                    : `(Combined All: ${formatLakhs(grandTotalAllMMK, lang)})`}
                 </span>
               </div>
             )}
@@ -499,8 +612,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 backdrop-blur-xs text-xs font-semibold text-slate-200 border border-white/15"
                   >
                     <span>{info.flag}</span>
-                    <span className="text-white font-bold">
-                      {formatCurrency(data.total, code)}
+                    <span className="text-white font-bold" title={code === 'MMK' ? formatMMK(data.total) : undefined}>
+                      {code === 'MMK' ? formatLakhs(data.total, lang) : formatCurrency(data.total, code)}
                     </span>
                     {code !== 'MMK' && (
                       <span className="text-[10px] text-emerald-300 opacity-90">
@@ -693,7 +806,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
           <button
             type="button"
             onClick={() => setWalletFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               walletFilter === 'all'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -704,7 +817,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
           <button
             type="button"
             onClick={() => setWalletFilter('included')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               walletFilter === 'included'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-emerald-700'
@@ -718,7 +831,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
           <button
             type="button"
             onClick={() => setWalletFilter('excluded')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               walletFilter === 'excluded'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -804,8 +917,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                       {/* Collaborator: Only can leave the shared wallet. Cannot delete or edit. */}
                       {wallet.isSharedFromOther || (activeWorkspaceId && activeWorkspaceId !== user?.uid) ? (
                         <button
-                          onClick={() => onDeleteWallet(wallet.id)}
-                          className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors"
+                          onClick={() => requestDeleteWallet(wallet)}
+                          className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors flex items-center justify-center"
                           title={lang === 'my' ? 'Shared Wallet မှ ထွက်ခွာမည် (Leave)' : 'Leave Shared Wallet'}
                         >
                           <LogOut className="w-4 h-4 text-amber-600" />
@@ -816,7 +929,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                           {/* Share Wallet Button & Permissions Setup */}
                           <button
                             onClick={() => setSelectedWalletForShare(wallet)}
-                            className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                            className={`min-w-9 min-h-9 p-2.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center ${
                               wallet.sharedWith && wallet.sharedWith.length > 0
                                 ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
                                 : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
@@ -829,7 +942,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                           {/* Edit Wallet Modal Button */}
                           <button
                             onClick={() => handleOpenEditWallet(wallet)}
-                            className="p-1.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
+                            className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors flex items-center justify-center"
                             title={lang === 'my' ? 'အကောင့် ပြင်ဆင်မည်' : 'Edit Wallet'}
                           >
                             <Edit2 className="w-4 h-4 text-slate-600" />
@@ -837,8 +950,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
                           {/* Delete Wallet Button */}
                           <button
-                            onClick={() => onDeleteWallet(wallet.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors"
+                            onClick={() => requestDeleteWallet(wallet)}
+                            className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors flex items-center justify-center"
                             title={
                               wallet.sharedWith && wallet.sharedWith.length > 0
                                 ? (lang === 'my' ? 'Shared Wallet အပြီးဖျက်မည်' : 'Delete Shared Wallet')
@@ -853,7 +966,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                           {wallet.sharedWith && wallet.sharedWith.length > 0 && onTransferOwnership && (
                             <button
                               onClick={() => handleTransferOwnershipClick(wallet)}
-                              className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors"
+                              className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors flex items-center justify-center"
                               title={lang === 'my' ? 'ပိုင်ဆိုင်မှု လွှဲပြောင်းမည်' : 'Transfer ownership'}
                             >
                               <Crown className="w-4 h-4 text-amber-600" />
@@ -989,9 +1102,17 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   )}
                 </div>
 
-                {/* Primary Balance in Wallet's Native Currency */}
-                <div className="text-2xl font-black text-slate-900 tracking-tight">
-                  {formatCurrency(wallet.balance, wallet.currency)}
+                {/* Primary Balance in Wallet's Native Currency
+                    [v7.5.60 S-40] MMK wallets DISPLAY in lakhs (input stays
+                    full kyat); exact kyat is the title tooltip. Foreign
+                    wallets keep their own currency format. */}
+                <div
+                  className="text-2xl font-black text-slate-900 tracking-tight"
+                  title={(wallet.currency || 'MMK') === 'MMK' ? formatMMK(wallet.balance) : undefined}
+                >
+                  {(wallet.currency || 'MMK') === 'MMK'
+                    ? formatLakhs(wallet.balance, lang)
+                    : formatCurrency(wallet.balance, wallet.currency)}
                 </div>
 
                 {/* [v7.5.56] This-month flow (compact single line) —
@@ -1007,19 +1128,22 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   const inflow = toWalletCurrency(stats.inflowMMK);
                   const outflow = toWalletCurrency(stats.outflowMMK);
                   const net = inflow - outflow;
+                  // [v7.5.60 S-40] MMK flow figures DISPLAY in lakhs.
+                  const fmtFlow = (v: number) =>
+                    code === 'MMK' ? formatLakhs(v, lang) : formatCurrency(v, code);
                   return (
                     <div className="flex items-center gap-2 text-[11px] font-mono flex-wrap">
                       <span className="text-slate-400 font-sans text-[10px]">
                         {lang === 'my' ? 'ဒီလ' : 'This month'}
                       </span>
                       {inflow > 0 && (
-                        <span className="text-emerald-600 font-bold">↗ +{formatCurrency(inflow, code)}</span>
+                        <span className="text-emerald-600 font-bold" title={code === 'MMK' ? formatMMK(inflow) : undefined}>↗ +{fmtFlow(inflow)}</span>
                       )}
                       {outflow > 0 && (
-                        <span className="text-rose-600 font-bold">↘ -{formatCurrency(outflow, code)}</span>
+                        <span className="text-rose-600 font-bold" title={code === 'MMK' ? formatMMK(outflow) : undefined}>↘ -{fmtFlow(outflow)}</span>
                       )}
-                      <span className={'font-bold ' + (net >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
-                        = {net >= 0 ? '+' : '-'}{formatCurrency(Math.abs(net), code)}
+                      <span className={'font-bold ' + (net >= 0 ? 'text-emerald-700' : 'text-rose-700')} title={code === 'MMK' ? formatMMK(net) : undefined}>
+                        = {net >= 0 ? '+' : '-'}{fmtFlow(Math.abs(net))}
                       </span>
                     </div>
                   );
@@ -1113,7 +1237,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleTransferSubmit} className="space-y-3 text-xs sm:text-sm">
+            <form onSubmit={handleTransferSubmit} className="space-y-3 text-base sm:text-sm">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
                   {lang === 'my' ? 'ငွေထုတ်ယူမည့် အကောင့် (From):' : 'From Wallet:'}
@@ -1123,6 +1247,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   onChange={(e) => {
                     const newFrom = e.target.value;
                     setTransferFrom(newFrom);
+                    setTransferError('');
                     if (newFrom === transferTo) {
                       const fallback = wallets.find((w) => w.id !== newFrom);
                       if (fallback) setTransferTo(fallback.id);
@@ -1136,6 +1261,19 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     </option>
                   ))}
                 </select>
+                {/* [v7.5.60 M-10] The source balance is always visible, so
+                    an overdraw is caught before submitting. */}
+                {(() => {
+                  const fromW = wallets.find((w) => isWalletMatch(w, transferFrom));
+                  if (!fromW) return null;
+                  const cur = (fromW.currency || 'MMK').toUpperCase();
+                  return (
+                    <p className="text-[11px] font-bold text-slate-600 mt-1" title={cur === 'MMK' ? formatMMK(fromW.balance) : undefined}>
+                      {lang === 'my' ? 'လက်ကျန်ငွေ:' : 'Available balance:'}{' '}
+                      {cur === 'MMK' ? formatLakhs(fromW.balance, lang) : formatCurrency(fromW.balance, fromW.currency)}
+                    </p>
+                  );
+                })()}
               </div>
 
               <div>
@@ -1184,6 +1322,12 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                 />
               </div>
+
+              {transferError && (
+                <p className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+                  ⚠️ {transferError}
+                </p>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
@@ -1274,6 +1418,107 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
         maxCollaborators={maxCollaborators}
         onOpenSignIn={onOpenSignIn}
       />
+
+      {/* [v7.5.60 S-47] App-styled delete / leave confirm (replaces
+          window.confirm). Blocked = linked debts exist: info only. */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-slate-200 p-6 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">
+              {deleteConfirm.blocked
+                ? (lang === 'my' ? 'ဤအကောင့်ကို ဖျက်၍ မရပါ' : 'This wallet cannot be deleted')
+                : (lang === 'my' ? 'အကောင့် ဖျက်မလား?' : 'Delete this wallet?')}
+            </h3>
+            <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">{deleteConfirm.message}</p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              {deleteConfirm.blocked ? (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm cursor-pointer"
+                >
+                  {lang === 'my' ? 'နားလည်ပါပြီ' : 'Understood'}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirm(null)}
+                    className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-sm cursor-pointer"
+                  >
+                    {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const w = deleteConfirm.wallet;
+                      setDeleteConfirm(null);
+                      onDeleteWallet(w.id);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm cursor-pointer"
+                  >
+                    {deleteConfirm.wallet.isSharedFromOther
+                      ? (lang === 'my' ? 'ထွက်ခွာမည်' : 'Leave')
+                      : (lang === 'my' ? 'ဖျက်မည်' : 'Delete')}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [v7.5.60 S-47] Ownership transfer modal with an email input
+          (replaces window.prompt + window.alert). */}
+      {transferOwnerWallet && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-slate-200 p-6 space-y-4">
+            <h3 className="font-bold text-base text-slate-900">
+              {lang === 'my' ? 'ပိုင်ဆိုင်မှု လွှဲပြောင်းမည်' : 'Transfer ownership'}
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {lang === 'my'
+                ? `“${transferOwnerWallet.name}” ၏ ပိုင်ဆိုင်မှုကို လွှဲပြောင်းမည့် အဖွဲ့ဝင်၏ Email ကို ထည့်ပါ။ (ဤ Wallet ၏ လက်ရှိ အဖွဲ့ဝင် ဖြစ်ရပါမည်)`
+                : `Enter the email of the member to transfer ownership of "${transferOwnerWallet.nameEn || transferOwnerWallet.name}" to. (They must already be a member of this wallet.)`}
+            </p>
+            <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              {lang === 'my'
+                ? '⚠️ လွှဲပြောင်းပြီးနောက် သင်သည် ပိုင်ရှင် မဟုတ်တော့ပါ။ Wallet ကို ဖျက်ခြင်း/မျှဝေခြင်း လုပ်ပိုင်ခွင့်များသည် ပိုင်ရှင်အသစ်ထံသို့ ရောက်သွားပါမည်။'
+                : '⚠️ After the transfer you will no longer be the owner. Delete/share rights move to the new owner.'}
+            </p>
+            <div>
+              <input
+                type="email"
+                autoFocus
+                placeholder="member@gmail.com"
+                value={transferOwnerEmail}
+                onChange={(e) => { setTransferOwnerEmail(e.target.value); setTransferOwnerError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleTransferOwnershipSubmit(); } }}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900"
+              />
+              {transferOwnerError && (
+                <p className="text-xs font-semibold text-rose-700 mt-1.5">⚠️ {transferOwnerError}</p>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => { setTransferOwnerWallet(null); setTransferOwnerEmail(''); setTransferOwnerError(''); }}
+                className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-sm cursor-pointer"
+              >
+                {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleTransferOwnershipSubmit}
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm cursor-pointer"
+              >
+                {lang === 'my' ? 'ပိုင်ဆိုင်မှု လွှဲပြောင်းမည်' : 'Transfer Ownership'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

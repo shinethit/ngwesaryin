@@ -159,6 +159,24 @@ export const INITIAL_CATEGORIES: Category[] = [
       { id: 'sub_tf_in', name: 'ငွေလွှဲဝင်', nameEn: 'Transfer In' },
     ],
   },
+  {
+    // [v7.5.60 M-09] Dedicated category for reconcile adjustments —
+    // NEVER salary/food. Used for BOTH directions (surplus = income tx,
+    // deficit = expense tx); the tx's own `type` drives the totals, this
+    // `type` only places the category in the expense picker/list.
+    // Seeded here so the cloud sync merge (useSyncOperations) adds it to
+    // existing users' category lists too.
+    id: 'cat_reconcile',
+    name: 'စာရင်းညှိချက်',
+    nameEn: 'Balance Adjustment',
+    type: 'expense',
+    icon: 'Scale',
+    color: '#64748B',
+    subCategories: [
+      { id: 'sub_rec_surplus', name: 'ပိုငွေညှိချက်', nameEn: 'Surplus Adjustment' },
+      { id: 'sub_rec_deficit', name: 'လိုငွေညှိချက်', nameEn: 'Deficit Adjustment' },
+    ],
+  },
 
   // Expense categories
   {

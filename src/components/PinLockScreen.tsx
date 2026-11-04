@@ -244,11 +244,13 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
             </button>
           ))}
           <div className="flex items-center justify-center">
+            {/* [v7.5.60 G-N1] Forgot-PIN is now text-sm/slate-300 (was
+                text-[11px] text-slate-400 — too small and too faint). */}
             {onForgotPin && (
               <button
                 type="button"
                 onClick={onForgotPin}
-                className="text-[11px] text-slate-400 hover:text-slate-200 text-center underline font-medium p-2"
+                className="text-sm text-slate-300 hover:text-white text-center underline font-medium px-3 py-2 min-h-11"
                 title="Forgot PIN"
               >
                 {lang === 'my' ? 'မေ့သွားပြီ' : 'Forgot?'}

@@ -41,10 +41,13 @@ if (typeof window !== 'undefined') {
     console.error('Global window error:', event.error || event.message);
     const root = document.getElementById('root');
     if (root && (!root.innerHTML || root.innerHTML.trim() === '')) {
+      // [v7.5.60 G-S8] Startup fallback was English-only — show Myanmar
+      // when the device language is Myanmar.
+      const isMy = typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('my');
       root.innerHTML = `<div style="padding: 24px; font-family: sans-serif; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; margin: 20px; border-radius: 12px; max-width: 600px; margin: 40px auto; text-align: center;">
-        <h3 style="margin-top:0; font-size: 18px; font-weight: bold;">App Startup Error</h3>
+        <h3 style="margin-top:0; font-size: 18px; font-weight: bold;">${isMy ? 'အက်ပ် စတင်ရာတွင် အမှားရှိပါသည်' : 'App Startup Error'}</h3>
         <p style="font-size: 14px; color: #475569;">${event.message || 'Error initializing application'}</p>
-        <button onclick="window.location.reload()" style="margin-top: 12px; padding: 8px 16px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Reload Application</button>
+        <button onclick="window.location.reload()" style="margin-top: 12px; padding: 8px 16px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">${isMy ? 'ပြန်ဖွင့်မည်' : 'Reload Application'}</button>
       </div>`;
     }
   });

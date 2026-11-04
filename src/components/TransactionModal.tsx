@@ -1564,14 +1564,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </button>
           </div>
 
+          {/* [v7.5.61] Entry-mode switcher is now vehicle-only: the three
+              general modes (item / unit x qty / shopping list) live in the
+              tabs below, so offering them here too was a duplicate. The
+              switcher only appears when a vehicle mode can apply. */}
+          {(isVehicleRelatedCategory || showModelSelector) && (
           <div className="px-3 py-2 border-b border-slate-100 shrink-0">
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setMoreOpen(!moreOpen)} className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
                 <span className="flex items-center gap-2 min-w-0">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   <span className="truncate">
-                    {lang === 'my' ? 'ထည့်သွင်းပုံစံ: ' : 'Entry mode: '}
-                    {entryModel === 'tire_pressure' ? (lang === 'my' ? '🛞 လေချိန်' : '🛞 Tire Pressure') : entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : entryMode === 'unit_qty' ? (lang === 'my' ? '📦 ဈေး × အရေအတွက်' : '📦 Unit × Qty') : entryMode === 'shopping_list' ? (lang === 'my' ? '🛒 ဈေးဝယ်စာရင်း' : '🛒 Shopping List') : (lang === 'my' ? '📝 ပစ္စည်းအမည်' : '📝 Item Name')}
+                    {entryModel === 'general'
+                      ? (lang === 'my' ? '🚗 ယာဉ် မှတ်တမ်း' : '🚗 Vehicle entry')
+                      : entryModel === 'tire_pressure' ? (lang === 'my' ? '🛞 လေချိန်' : '🛞 Tire Pressure') : entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : (lang === 'my' ? '🚗 ယာဉ် မှတ်တမ်း' : '🚗 Vehicle entry')}
                   </span>
                 </span>
                 {moreOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
@@ -1599,21 +1605,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <button type="button" onClick={() => { handleSwitchModel("tire_pressure"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "tire_pressure" ? "bg-teal-50 text-teal-800" : "text-slate-700 hover:bg-slate-50")}>
                       <Gauge className="w-4 h-4" /><span>{lang === 'my' ? 'လေချိန် (PSI)' : 'Tire Pressure (PSI)'}</span>{entryModel === "tire_pressure" && <Check className="w-3.5 h-3.5 ml-auto text-teal-600" strokeWidth={3} />}
                     </button>
-                    <div className="h-px bg-slate-100 my-0.5" />
                   </>
                 )}
-                <button type="button" onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "unit_qty" && entryModel === "general" ? "bg-indigo-50 text-indigo-800" : "text-slate-700 hover:bg-slate-50")}>
-                  <Boxes className="w-4 h-4" /><span>{lang === 'my' ? 'ဈေး × အရေအတွက်' : 'Unit Price × Qty'}</span>{entryMode === "unit_qty" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-indigo-600" strokeWidth={3} />}
-                </button>
-                <button type="button" onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); setShowQuickAddSub(false); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryMode === "shopping_list" && entryModel === "general" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}>
-                  <ShoppingCart className="w-4 h-4" /><span>{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>{entryMode === "shopping_list" && entryModel === "general" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
-                </button>
-                <button type="button" onClick={() => { setShowQuickAddSub(true); setEntryMode("direct"); setEntryModel("general"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (showQuickAddSub ? "bg-slate-100 text-slate-800" : "text-slate-700 hover:bg-slate-50")}>
-                  <FileText className="w-4 h-4" /><span>{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</span>{showQuickAddSub && <Check className="w-3.5 h-3.5 ml-auto text-slate-700" strokeWidth={3} />}
-                </button>
               </div>
             )}
           </div>
+          )}
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
             {formError && (

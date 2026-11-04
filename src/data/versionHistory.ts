@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.60';
-export const CURRENT_BUILD_NUMBER = 275;
+export const CURRENT_APP_VERSION = 'v7.5.61';
+export const CURRENT_BUILD_NUMBER = 276;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.61',
+    buildNumber: 276,
+    releaseDate: '2026-11-04',
+    releaseTime: '7:00 PM (MMT)',
+    titleMy: 'ထည့်သွင်းပုံစံ ထပ်နေတာ ပြင်ဆင်ခြင်း',
+    titleEn: 'Entry-Mode Duplication Removed',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းထည့်တဲ့အခါ "ထည့်သွင်းပုံစံ" က နှစ်နေရာမှာ ထပ်နေတာကို ပြင်လိုက်ပါသည် — အပေါ်က dropdown နဲ့ အောက်က ခလုတ် ၃ ခုက တူညီတဲ့ ရွေးချယ်မှုပဲ ဖြစ်နေလို့ ရှုပ်နေတာပါ။ အခု ခလုတ် ၃ ခုတည်း သန့်သန့်ရှင်းရှင်း ကျန်ပြီး dropdown က ယာဉ်ပုံစံ (ဆီဖိုး / ဝန်ဆောင်မှု / တာယာ / လေချိန်) အတွက်ပဲ ပေါ်တော့မည်။ ကဏ္ဍရွေးတဲ့နေရာမှာလည်း "အထွေထွေ (ကဏ္ဍခွဲမရှိ)" ဆိုတဲ့ စာသားအရှည်ကြီးကို "အထွေထွေ" လို့ တိုလိုက်ပါသည် — ကဏ္ဍအကြီးတခုတည်း ရွေးလို့ရတဲ့ လုပ်ဆောင်ချက်ကတော့ အရင်အတိုင်း ရှိပါတယ်။',
+    descriptionEn: 'Fixed the duplicated entry-mode controls in the add-transaction form — the top dropdown and the three buttons below offered the same three choices. Now the three buttons stand alone and the dropdown only appears for vehicle entries (fuel / service / tire / pressure). Also shortened the "General (no sub-category)" row in the category picker to just "General" — picking a parent category on its own still works exactly as before.',
+    changesMy: [
+      '🧭 ထည့်သွင်းပုံစံ ထပ်နေတာ ပျောက်သွားပါပြီ — ခလုတ် ၃ ခုတည်း သန့်သန့်ရှင်းရှင်း ကျန်ပါတယ်',
+      '🚗 ယာဉ်ပုံစံ (ဆီဖိုး / ဝန်ဆောင်မှု / တာယာ / လေချိန်) ရွေးတဲ့ dropdown က ယာဉ်ကဏ္ဍမှာပဲ ပေါ်တော့မည်',
+      '🏷️ ကဏ္ဍရွေးတဲ့နေရာမှာ "အထွေထွေ (ကဏ္ဍခွဲမရှိ)" ကို "အထွေထွေ" လို့ တိုလိုက်ပါပြီ',
+    ],
+    changesEn: [
+      '🧭 No more duplicated entry-mode controls — just the three buttons, clean',
+      '🚗 The vehicle-entry dropdown (fuel / service / tire / pressure) only appears for vehicle categories',
+      '🏷️ "General (no sub-category)" in the category picker is now just "General"',
+    ],
+  },
   {
     version: 'v7.5.60',
     buildNumber: 275,

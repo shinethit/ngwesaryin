@@ -232,7 +232,8 @@ export const CategoryPickerModal: React.FC<Props> = ({
                     {/* [v7.5.60 S4] A category with sub-categories can now
                         be picked on its own ("General") — before, tapping
                         it only expanded the list and a sub-category was
-                        forced. */}
+                        forced. [v7.5.61] Label shortened — "(ကဏ္ဍခွဲမရှိ)"
+                        in every category was noisy; "အထွေထွေ" says it. */}
                     <button type="button"
                       onClick={() => handleSelectMainOnly(cat)}
                       className={'relative w-full flex items-center gap-3 pl-3 pr-3 py-2.5 rounded-xl text-left transition-colors ' +
@@ -244,7 +245,7 @@ export const CategoryPickerModal: React.FC<Props> = ({
                       </div>
                       <span className={'flex-1 text-xs font-semibold truncate ' +
                         (isCatSelected ? 'text-emerald-800' : 'text-slate-700')}>
-                        {lang === 'my' ? 'အထွေထွေ (ကဏ္ဍခွဲမရှိ)' : 'General (no sub-category)'}
+                        {lang === 'my' ? 'အထွေထွေ' : 'General'}
                       </span>
                       {isCatSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
                     </button>

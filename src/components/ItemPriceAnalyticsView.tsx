@@ -488,27 +488,39 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       (a, b) => new Date(a).getTime() - new Date(b).getTime()
     );
 
-    return sortedDates.map((dateStr) => {
-      const point: Record<string, any> = {
-        date: dateStr,
-        displayDate: formatDateDisplay(dateStr),
-        // [v7.5.55 C31] Real timestamp for a true time-scale X axis.
-        ts: new Date(dateStr + 'T00:00:00').getTime(),
-      };
-
-      activeSelectedItems.forEach((item) => {
-        // Find latest price record for this date
-        const matchingRecords = item.records.filter((r) => r.date === dateStr);
-        if (matchingRecords.length > 0) {
-          const lastRecord = matchingRecords[matchingRecords.length - 1];
-          point[item.chartKey] = lastRecord.unitPrice;
-          point[`${item.chartKey}_qty`] = lastRecord.quantity;
-          point[`${item.chartKey}_total`] = lastRecord.totalAmount;
-        }
-      });
-
-      return point;
+    // [v7.5.62] Plot EVERY purchase, not just the last one per date —
+    // one point per purchase index (N = max records any selected item
+    // has on that date). The j-th point carries each item's j-th
+    // record that day, ts spaced 1h apart so same-day points order
+    // left-to-right by purchase order. A series with no j-th record
+    // simply has no key at that point (connectNulls bridges).
+    const points: Record<string, any>[] = [];
+    sortedDates.forEach((dateStr) => {
+      const baseTs = new Date(dateStr + 'T00:00:00').getTime();
+      const maxCount = Math.max(
+        ...activeSelectedItems.map(
+          (item) => item.records.filter((r) => r.date === dateStr).length
+        )
+      );
+      for (let j = 0; j < maxCount; j++) {
+        const point: Record<string, any> = {
+          date: dateStr,
+          displayDate: formatDateDisplay(dateStr),
+          // [v7.5.55 C31] Real timestamp for a true time-scale X axis.
+          ts: baseTs + j * 3600000,
+        };
+        activeSelectedItems.forEach((item) => {
+          const record = item.records.filter((r) => r.date === dateStr)[j];
+          if (record) {
+            point[item.chartKey] = record.unitPrice;
+            point[`${item.chartKey}_qty`] = record.quantity;
+            point[`${item.chartKey}_total`] = record.totalAmount;
+          }
+        });
+        points.push(point);
+      }
     });
+    return points;
   }, [activeSelectedItems]);
 
   // Build Purchase Frequency & Total Spending Bar Chart Data
@@ -541,6 +553,16 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
     // Sort descending by date
     return logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeSelectedItems]);
+
+  // [v7.5.62] The "စုစုပေါင်း" badge only means something when the
+  // visible history mixes trip totals and unit prices — when every
+  // row is the same kind, the badge is redundant noise on every row.
+  const hasMixedTypes = useMemo(
+    () =>
+      selectedItemsPurchaseLogs.some((l) => l.isTripTotal) &&
+      selectedItemsPurchaseLogs.some((l) => !l.isTripTotal),
+    [selectedItemsPurchaseLogs]
+  );
 
   // [v7.5.55 C13d] The cheapest shop is computed over the selected range.
   const timeRangeLabel =
@@ -678,7 +700,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               onClick={handleSelectAllTop}
               className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
             >
-              {lang === 'my' ? '⚡ အများဆုံး ၃ မျိုး ရွေးမည်' : '⚡ Top 3 Items'}
+              {lang === 'my' ? '⚡ ထိပ်ဆုံး ၃ မျိုး ရွေးမည်' : '⚡ Top 3 Items'}
             </button>
             {selectedItemNames !== null && (
               <button
@@ -821,7 +843,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                           <span>{item.totalPurchases} ကြိမ် ဝယ်ခဲ့</span>
                           <span>•</span>
                           <span className="font-mono text-slate-600">
-                            {formatLakhs(item.latestPrice, lang)}
+                            {formatLakhs(item.hasUnitPrices ? item.latestPrice : item.latestTotal, lang)}
                           </span>
                         </div>
                       </div>
@@ -1061,10 +1083,13 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       <Tooltip
                         content={({ active, payload, label }) => {
                           if (!active || !payload || !payload.length) return null;
-                          const labelStr =
-                            typeof label === 'number'
-                              ? formatDateDisplay(new Date(label).toISOString().slice(0, 10))
-                              : String(label ?? '');
+                          // [v7.5.62] Tooltip date must use LOCAL date parts —
+                          // toISOString() is UTC, so for UTC+6:30 it showed
+                          // the previous day (a 3 Nov purchase read as 2 Nov).
+                          const labelDate = typeof label === 'number' ? new Date(label) : null;
+                          const labelStr = labelDate
+                            ? formatDateDisplay(`${labelDate.getFullYear()}-${String(labelDate.getMonth() + 1).padStart(2, '0')}-${String(labelDate.getDate()).padStart(2, '0')}`)
+                            : String(label ?? '');
                           return (
                             <div className="bg-slate-900/95 text-white p-3 rounded-2xl shadow-xl text-xs space-y-1.5 border border-slate-700 max-w-[280px]">
                               <div className="text-[11px] text-slate-400 font-semibold border-b border-slate-800 pb-1 flex items-center justify-between gap-2">
@@ -1241,26 +1266,29 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                               </span>
                             )}
                             {/* [v7.5.55 C9] Trip totals are labelled as
-                                totals, never shown as per-unit prices. */}
-                            {log.isTripTotal && (
+                                totals, never shown as per-unit prices.
+                                [v7.5.62] Only when the visible history
+                                actually mixes both kinds — otherwise
+                                the badge repeats on every row. */}
+                            {log.isTripTotal && hasMixedTypes && (
                               <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200">
                                 {lang === 'my' ? 'စုစုပေါင်း' : 'Trip Total'}
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                            <span className="font-mono">{log.date}</span>
+                            <span className="font-mono whitespace-nowrap shrink-0">{log.date}</span>
                             {wallet && (
                               <>
-                                <span>•</span>
-                                <span className="text-slate-600">
+                                <span className="shrink-0">•</span>
+                                <span className="text-slate-600 whitespace-nowrap truncate max-w-[110px]">
                                   {lang === 'my' ? wallet.name : wallet.nameEn || wallet.name}
                                 </span>
                               </>
                             )}
                             {log.note && (
                               <>
-                                <span>•</span>
+                                <span className="shrink-0">•</span>
                                 <span className="truncate max-w-[140px] italic text-slate-500">
                                   {log.note}
                                 </span>

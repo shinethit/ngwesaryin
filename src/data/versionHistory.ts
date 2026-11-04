@@ -16,10 +16,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.61';
-export const CURRENT_BUILD_NUMBER = 276;
+export const CURRENT_APP_VERSION = 'v7.5.62';
+export const CURRENT_BUILD_NUMBER = 277;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.62',
+    buildNumber: 277,
+    releaseDate: '2026-11-04',
+    releaseTime: '8:30 PM (MMT)',
+    titleMy: 'ဈေးနှုန်း နှိုင်းယှဉ်နဲ့ စာရင်းအတန်း ပြင်ဆင်ခြင်း',
+    titleEn: 'Compare Price & Transaction Rows Polished',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဈေးနှုန်း နှိုင်းယှဉ်မှာ "0 သိန်း" ပြနေတာ၊ chart မှာ ဝယ်ခဲ့တာ အကုန်မပြတာ၊ ရက်စွဲနဲ့ ပိုက်ဆံအိတ်နာမည် ကျိုးနေတာ၊ စာရင်းအတန်းမှာ နာမည်ညှပ်ပြီး ပိုက်ဆံအိတ် အညွှန်း ထပ်နေတာတွေကို ပြင်လိုက်ပါသည်။ Chart က ဝယ်ခဲ့တဲ့ အကြိမ်တိုင်း ပြတော့မည်၊ ပိုက်ဆံအိတ် အညွှန်းက အိတ်များနေမှသာ ပေါ်တော့မည်။ Chart ရဲ့ tooltip မှာလည်း ရက်စွဲ တစ်ရက် နောက်ကျ ပြနေတာ (၃ ရက်နေ့ ဝယ်တာ ၂ ရက်နေ့လို့ ပြတာ) ကိုပါ ပြင်လိုက်ပါသည်။ ဂဏန်းပြပုံ (သိန်း ဒဿမ ၅ လုံး) နဲ့ "-100%" အမှတ်တို့က ရည်ရွယ်ချက်ရှိရှိ လုပ်ထားတာမို့ မပြောင်းထားပါ။',
+    descriptionEn: 'Fixed the Compare Price picker showing "0" for trip-total items, the price chart hiding same-day purchases, wrapping dates and wallet names in the purchase history, squeezed category names and the repeated wallet pill in transaction rows, and the misleading "Top 3" label. The chart now plots every purchase, and the wallet pill only appears when it tells rows apart. The chart tooltip also showed the previous day\'s date (UTC vs Myanmar time); it now shows the correct purchase date. Number precision (5 decimals in lakhs) and the "-100%" health score are deliberate and unchanged.',
+    changesMy: [
+      '🛒 ဈေးနှုန်း ရွေးတဲ့နေရာမှာ "0 သိန်း" အစား နောက်ဆုံး ဝယ်ခဲ့တဲ့ စုစုပေါင်း ပြတော့မည်',
+      '📈 Chart က ဝယ်ခဲ့တဲ့ အကြိမ်တိုင်း အစက်အဖြစ် ပြတော့မည် — တစ်ရက်တည်း အကြိမ်များလည်း မပျောက်တော့ဘူး',
+      '📅 မှတ်တမ်းစာရင်းမှာ ရက်စွဲနဲ့ ပိုက်ဆံအိတ်နာမည် မကျိုးတော့ဘူး၊ "စုစုပေါင်း" အညွှန်းက ရောနေမှသာ ပြမည်',
+      '📅 Chart ရဲ့ tooltip မှာ ရက်စွဲ တစ်ရက် နောက်ကျ ပြနေတာ (၃ ရက်နေ့ ဝယ်တာ ၂ ရက်နေ့လို့ ပြတာ) ကိုပါ ပြင်လိုက်ပါပြီ',
+      '📋 စာရင်းအတန်းမှာ ကဏ္ဍအမည် မညှပ်တော့ဘူး၊ ပိုက်ဆံအိတ် အညွှန်းက အိတ်များနေမှသာ ပေါ်မည်၊ အကြောင်းအရာ မရှိတဲ့ စာကြောင်းအလွတ် ပျောက်သွားပြီ',
+      '🏷️ "အများဆုံး ၃ မျိုး" ကို "ထိပ်ဆုံး ၃ မျိုး ရွေးမည်" လို့ ပြင်လိုက်ပါပြီ',
+    ],
+    changesEn: [
+      '🛒 The item picker now shows the latest trip total instead of "0" for items bought as trip totals',
+      '📈 The chart plots every purchase — same-day purchases no longer collapse into one point',
+      '📅 History rows no longer wrap the date or wallet name; the "Trip Total" badge only appears when the list mixes both kinds',
+      '📅 The chart tooltip showed the previous day\'s date (UTC vs Myanmar time) — now shows the correct purchase date',
+      '📋 Transaction rows no longer squeeze the category name, the wallet pill only shows when it tells rows apart, and empty note lines are gone',
+      '🏷️ The misleading "Top 3" label is now "Top 3 Items" in Myanmar too',
+    ],
+  },
   {
     version: 'v7.5.61',
     buildNumber: 276,

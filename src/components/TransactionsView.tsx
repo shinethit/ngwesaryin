@@ -809,6 +809,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           <div className="divide-y divide-slate-200/90">
             {groupedByDate.slice(0, visibleDays).map((group) => {
               const formattedDate = formatLocalizedDate(group.date, lang);
+              // [v7.5.62] The wallet pill is only informative when a
+              // day's rows use more than one wallet — when every row
+              // uses the same wallet it just repeats the same name.
+              const showWalletPill =
+                new Set(group.transactions.map((t) => t.walletId)).size > 1;
               return (
                 <div key={group.date} className="bg-white">
                   {/* Daily Date Header with Subtotals */}
@@ -864,6 +869,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       // wallets keep their own currency format.
                       const amountMMK = convertToMMK(t.amount, wallet?.currency, wallet?.exchangeRate);
                       const isMMK = !wallet?.currency || wallet.currency === 'MMK';
+                      // [v7.5.62] Line 3 only exists when it has content —
+                      // an empty div still costs pt-0.5 + space-y-1 on
+                      // every row.
+                      const hasLine3Content =
+                        !!t.note ||
+                        (t.items && t.items.length > 0) ||
+                        (isSharedWallet(wallet) &&
+                          !!(t.createdByName || (t.createdBy && t.createdBy === user?.uid)));
 
                       return (
                         <div
@@ -883,11 +896,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             <div className="min-w-0 flex-1 space-y-1">
                               {/* Line 1: Category & Subcategory */}
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className="font-bold text-sm sm:text-base text-slate-900 truncate">
+                                <span className="font-bold text-sm sm:text-base text-slate-900 truncate min-w-0 flex-1">
                                   {getCategoryDisplayName(t.category, categories, lang)}
                                 </span>
                                 {subCat && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200 max-w-[45%] shrink-0">
                                     <Tag className="w-2.5 h-2.5 text-slate-400 shrink-0" />
                                     <span className="truncate">{lang === 'my' ? subCat.name : subCat.nameEn}</span>
                                   </span>
@@ -911,7 +924,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     wallets show "Shared" text + 🤝 + owner
                                     name, not just a different colour. An
                                     unresolvable wallet shows a neutral label,
-                                    never the raw walletId. */}
+                                    never the raw walletId.
+                                    [v7.5.62] Shown only when it tells the
+                                    rows apart (mixed wallets that day) or
+                                    the wallet is shared (🤝 + owner info). */}
+                                {(showWalletPill || isSharedWallet(wallet)) && (
                                 <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
                                   isSharedWallet(wallet)
                                     ? 'bg-amber-50 text-amber-900 border-amber-300'
@@ -929,9 +946,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     <span>{lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'Wallet'}</span>
                                   )}
                                 </span>
+                                )}
                               </div>
 
                               {/* Line 3: Note / Shopping / Package */}
+                              {hasLine3Content && (
                               <div className="flex items-center gap-2 min-w-0 flex-wrap text-xs text-slate-500 pt-0.5">
                                 {/* [v7.5.56] Who added it (finding 38): the
                                     creator's name on rows in shared wallets.
@@ -980,6 +999,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   </div>
                                 )}
                               </div>
+                              )}
 
                               {/* Expandable Shopping List Table */}
                               {t.items && t.items.length > 0 && expandedShoppingTxIds[t.id] && (

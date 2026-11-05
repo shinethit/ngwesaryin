@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, query, orderBy, limit, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, query, orderBy, limit, onSnapshot, setDoc, deleteDoc, getCountFromServer } from 'firebase/firestore';
 import { db, isQuotaExhausted, safeDeleteDoc } from './firebase';
 import { VisitorDoc } from '../types';
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/storage';
@@ -359,6 +359,20 @@ export function subscribeVisitors(
     if (onError) onError(err);
     return () => {};
   }
+}
+
+/**
+ * [v7.5.65] True total visitor count via a Firestore aggregate count
+ * query. The visitors listener (subscribeVisitors) is capped at the
+ * latest 500 docs, so the headline "total visitors" number must come
+ * from here — never from the capped list. Throws on error; the caller
+ * (Admin Panel) catches and falls back to the deduped list count.
+ * No rules change needed: visitors `allow get, list: if isAdmin()`
+ * already covers aggregate count queries for a signed-in admin.
+ */
+export async function getVisitorsTotalCount(): Promise<number> {
+  const snapshot = await getCountFromServer(collection(db, 'visitors'));
+  return snapshot.data().count;
 }
 
 

@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.64';
-export const CURRENT_BUILD_NUMBER = 279;
+export const CURRENT_APP_VERSION = 'v7.5.65';
+export const CURRENT_BUILD_NUMBER = 280;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.65',
+    buildNumber: 280,
+    releaseDate: '2026-11-05',
+    releaseTime: '1:50 PM (MMT)',
+    titleMy: 'ဝင်ရောက်သူ စုစုပေါင်း အမှန်အရေအတွက် ပြင်ဆင်ခြင်း',
+    titleEn: 'True Total Visitors Count',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Admin Panel မှာ "ဝင်ရောက်သူ စုစုပေါင်း" က ၅၀၀ မှာ ရပ်နေတာ ပြင်လိုက်တယ် — အရင်က နောက်ဆုံး ၅၀၀ မှတ်တမ်းကိုပဲ ဆွဲပြီး အဲဒီထဲကပဲ ရေတွက်ထားလို့ ဖြစ်တာ။ အခု စုစုပေါင်းကို မှတ်တမ်းအားလုံး ရေတွက်ပြီး ပြတော့မယ် (မိနစ်တိုင်း အပ်ဒိတ်ဖြစ်မယ်)။ ဇယားနဲ့ ခွဲခြမ်းစိတ်ဖြာမှုကတော့ နောက်ဆုံး ၅၀၀ ကိုပဲ အခြေခံထားဆဲဆိုတာ စာသား ရှင်းရှင်းရေးထားတယ်။',
+    descriptionEn: 'Fixed the Admin Panel "total visitors" number sticking at 500 — it used to count only the latest 500 records it had downloaded. The total now counts all visitor records (refreshed every minute). The table and breakdowns still cover the latest 500 records, and the note now says so clearly.',
+    changesMy: [
+      '👥 ဝင်ရောက်သူ စုစုပေါင်း အမှန်အရေအတွက် ပြတော့မည် — ၅၀၀ ကျော်လည်း အမှန်အတိုင်း ပေါ်မည်',
+      '📊 ဇယားနဲ့ ခွဲခြမ်းစိတ်ဖြာမှုက နောက်ဆုံး ၅၀၀ ကိုသာ အခြေခံထားကြောင်း စာသား ရှင်းရှင်းရေးထားသည်',
+    ],
+    changesEn: [
+      '👥 The total visitors number now counts all records — it no longer stops at 500',
+      '📊 The note now clearly says the table and breakdowns cover the latest 500 records',
+    ],
+  },
   {
     version: 'v7.5.64',
     buildNumber: 279,

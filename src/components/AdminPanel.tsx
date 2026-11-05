@@ -18,7 +18,7 @@ import { INITIAL_CATEGORIES } from '../data/initialData';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { formatLakhs, formatMMK } from '../utils/formatters';
 import { fetchContactInfo, saveContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';
-import { subscribeVisitors, getCountryFlag, deleteVisitorDoc } from '../lib/analyticsService';
+import { subscribeVisitors, getVisitorsTotalCount, getCountryFlag, deleteVisitorDoc } from '../lib/analyticsService';
 import { fetchMyRefs, deleteSharedWalletRef } from '../lib/sharedWalletRefs';
 import { logAdminAction, subscribeAdminAuditLog, AdminAuditLogEntry } from '../lib/adminAuditLog';
 import { QuotaDashboard } from './QuotaDashboard';
@@ -80,6 +80,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Visitor & Analytics state
   const [visitorsList, setVisitorsList] = useState<VisitorDoc[]>([]);
+  // [v7.5.65] True total visitor count via aggregate query (the list is
+  // capped at the latest 500 docs). Null until loaded / on failure —
+  // the display falls back to the deduped list count.
+  const [visitorsTotalCount, setVisitorsTotalCount] = useState<number | null>(null);
   const [visitorFilter, setVisitorFilter] = useState<'all' | 'guest' | 'member' | 'active'>('all');
   const [visitorSearch, setVisitorSearch] = useState('');
   // [v7.5.64 B-12] Admin audit trail — latest 50 actions (read-only view).
@@ -559,6 +563,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setAnalyticsError(lang === 'my' ? 'ဧည့်သည် မှတ်တမ်းများ ဆွဲယူ၍ မရပါ — ပြသထားသော ကိန်းဂဏန်းများသည် အမှန်မဟုတ်နိုင်ပါ' : 'Could not load visitor logs — numbers shown may be wrong.');
     });
 
+    // 4b. [v7.5.65] True total visitor count (aggregate query) — the
+    // listener above is capped at the latest 500 docs, so the headline
+    // total must come from here. Refresh every 60s; on failure leave
+    // the previous value (the display falls back to the deduped count).
+    // NOT re-fetched on every list update — that would spam count queries.
+    const refreshVisitorsTotalCount = () => {
+      getVisitorsTotalCount()
+        .then((count) => setVisitorsTotalCount(count))
+        .catch((err) => console.warn('Could not load total visitor count:', err));
+    };
+    refreshVisitorsTotalCount();
+    const visitorsTotalCountTimer = setInterval(refreshVisitorsTotalCount, 60000);
+
     // 5. Live Admin Audit Log Listener
     const unsubAuditLog = subscribeAdminAuditLog((list) => {
       setAuditLog(list);
@@ -623,6 +640,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       unsubDefaultUsers();
       unsubMsgs();
       unsubVisitors();
+      clearInterval(visitorsTotalCountTimer);
       unsubAuditLog();
       unsubSystemTxs();
       unsubSystemWallets();
@@ -2608,8 +2626,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
 
-              {/* [v7.5.64 A-03] Unique visitors, not sessions — the value is the
-                  deduplicated visitor count. */}
+              {/* [v7.5.64 A-03 / v7.5.65] Unique visitors, not sessions.
+                  The value is the true total via an aggregate count query
+                  (falls back to the deduped latest-500 count while loading). */}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-1">
                 <div className="flex items-center justify-between text-slate-500">
                   <span className="text-[11px] font-bold uppercase tracking-wider">
@@ -2618,17 +2637,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <Activity className="w-4 h-4 text-purple-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 font-mono">
-                  {analyticsError ? '—' : analyticsStats.total}
+                  {analyticsError ? '—' : (visitorsTotalCount ?? analyticsStats.total)}
                 </div>
                 <div className="text-[11px] text-purple-700 font-medium">
                   {analyticsError
                     ? (lang === 'my' ? 'ဒေတာ ဆွဲယူ၍ မရပါ' : 'Could not load')
                     : `${analyticsStats.countriesSorted.length} ${lang === 'my' ? 'နိုင်ငံမှ ဝင်ရောက်' : 'countries recorded'}`}
                 </div>
-                {/* [v7.5.64 A-04] Visitor stats are the latest 500 docs only. */}
+                {/* [v7.5.65] The total above is the TRUE count — only the
+                    table & breakdowns cover the latest 500 records. */}
                 {visitorsList.length === 500 && (
                   <div className="text-[10px] text-slate-400 font-medium">
-                    {lang === 'my' ? 'ဧည့်သည် မှတ်တမ်း အများဆုံး ၅၀၀ သာ ပြထားသည်' : 'Showing latest 500 visitor records only'}
+                    {lang === 'my' ? 'စုစုပေါင်း အမှန်ပါ — ဇယားနဲ့ ခွဲခြမ်းစိတ်ဖြာမှုက နောက်ဆုံး ၅၀၀ မှတ်တမ်းကိုသာ အခြေခံသည်' : 'True total — table & breakdowns cover the latest 500 records only'}
                   </div>
                 )}
                 {/* [v7.5.64 A-09] Visitor telemetry is unauthenticated — counts are indicative, not audited. */}
@@ -4671,14 +4691,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </span>
                   <Eye className="w-4 h-4 text-indigo-200" />
                 </div>
-                <div className="text-2xl font-black font-mono">{analyticsStats.total}</div>
+                <div className="text-2xl font-black font-mono">{visitorsTotalCount ?? analyticsStats.total}</div>
                 <div className="text-[10px] text-indigo-200">
-                  {lang === 'my' ? 'ခြေရာခံထားသော ဝင်ရောက်မှုများ' : 'Tracked sessions'}
+                  {lang === 'my' ? 'မှတ်တမ်းအားလုံး ရေတွက်ပြီး' : 'Counting all visitor records'}
                 </div>
-                {/* [v7.5.64 A-04 / C-09] Visitor stats are the latest 500 docs only. */}
+                {/* [v7.5.65] The total above is the TRUE count — only the
+                    table & breakdowns cover the latest 500 records. */}
                 {visitorsList.length === 500 && (
                   <div className="text-[10px] text-indigo-200/80 font-medium">
-                    {lang === 'my' ? 'ဧည့်သည် မှတ်တမ်း အများဆုံး ၅၀၀ သာ ပြထားသည်' : 'Showing latest 500 visitor records only'}
+                    {lang === 'my' ? 'စုစုပေါင်း အမှန်ပါ — ဇယားနဲ့ ခွဲခြမ်းစိတ်ဖြာမှုက နောက်ဆုံး ၅၀၀ မှတ်တမ်းကိုသာ အခြေခံသည်' : 'True total — table & breakdowns cover the latest 500 records only'}
                   </div>
                 )}
                 {/* [v7.5.64 A-09] Visitor telemetry is unauthenticated — counts are indicative, not audited. */}

@@ -43,7 +43,7 @@ interface DashboardProps {
   sharedWalletScopeOverrides?: Record<string, boolean>;
 }
 
-type TimeFilterOption = 'all' | 'this_month' | 'this_week' | 'last_30' | 'this_year' | 'custom';
+type TimeFilterOption = 'all' | 'this_month' | 'last_month' | 'this_week' | 'last_30' | 'this_year' | 'custom';
 
 export const Dashboard: React.FC<DashboardProps> = ({
   transactions, debts, wallets, categories, plan,
@@ -124,6 +124,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     switch (f) {
       case 'this_week': return l === 'my' ? 'ဒီအပတ်' : 'This Week';
       case 'last_30':   return l === 'my' ? '၃၀ ရက်' : 'Last 30';
+      // [v7.5.66] 'last_month' (ယခင်လ) — was missing from the dropdown.
+      case 'last_month': return l === 'my' ? 'ယခင်လ' : 'Last Month';
       case 'this_year': return l === 'my' ? 'ဒီနှစ်' : 'This Year';
       case 'custom': {
         if (!r) return l === 'my' ? 'စိတ်ကြိုက်' : 'Custom';
@@ -150,6 +152,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     switch (timeFilter) {
       case 'all': return null;
       case 'this_month': return { from: y + '-' + String(m + 1).padStart(2, '0') + '-01', to: toStr(now) };
+      // [v7.5.66] Previous month, first day through last day. January
+      // works: new Date(y, -1, 1) = Dec 1 of the prior year and
+      // new Date(y, 0, 0) = Dec 31 of the prior year.
+      case 'last_month': { const first = new Date(y, m - 1, 1); const last = new Date(y, m, 0); return { from: toStr(first), to: toStr(last) }; }
       case 'this_week': {
         const day = now.getDay();
         const diff = day === 0 ? 6 : day - 1;
@@ -439,8 +445,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
             {isPeriodDropdownOpen && (
-              <div className="absolute top-full mt-1 right-0 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 min-w-[230px]">
-                {(['this_month', 'all', 'this_week', 'last_30', 'this_year'] as const).map((f) => (
+              <div className="absolute top-full mt-1 left-0 sm:left-auto sm:right-0 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 min-w-[230px]">
+                {(['this_month', 'last_month', 'all', 'this_week', 'last_30', 'this_year'] as const).map((f) => (
                   <button
                     key={f} type="button"
                     onClick={() => { handleSetTimeFilter(f); setIsPeriodDropdownOpen(false); }}

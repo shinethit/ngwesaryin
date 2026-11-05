@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.65';
-export const CURRENT_BUILD_NUMBER = 280;
+export const CURRENT_APP_VERSION = 'v7.5.66';
+export const CURRENT_BUILD_NUMBER = 281;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.66',
+    buildNumber: 281,
+    releaseDate: '2026-11-05',
+    releaseTime: '5:22 PM (MMT)',
+    titleMy: 'ရက်စွဲ ရွေးချယ်မှု ပြင်ဆင်ခြင်း',
+    titleEn: 'Date Filter Fixed + Last Month Added',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Dashboard က ရက်စွဲ ရွေးချယ်တဲ့ menu က ဖုန်းမှာ ဘေးကို ထွက်သွားပြီး ရွေးစရာတွေ မမြင်ရတာ ပြင်လိုက်တယ် — အခု menu က စခရင်ထဲမှာ အပြည့်အဝ ပေါ်တော့မယ်။ ပြီးတော့ "ယခင်လ" ရွေးချယ်မှု အသစ် ထည့်ပေးလိုက်တယ် — ယခုလရဲ့ အောက်မှာ တစ်တန်း ပေါ်မယ်၊ နှိပ်ရင် ပြီးခဲ့တဲ့လ အစကနေ အဆုံးထိ ပြမယ်။',
+    descriptionEn: 'Fixed the Dashboard date-filter menu sliding off-screen on phones so the options could not be seen or tapped — the menu now opens fully inside the screen. Also added a "Last Month" option right under "This Month" — tapping it shows the previous month from its first day to its last.',
+    changesMy: [
+      '📅 ရက်စွဲ ရွေးချယ်တဲ့ menu က ဖုန်းမှာ စခရင်ထဲမှာ အပြည့်အဝ ပေါ်တော့မည် — ရွေးစရာတွေ မြင်ရပြီး နှိပ်လို့ရတော့မည်',
+      '📆 "ယခင်လ" ရွေးချယ်မှု အသစ် — နှိပ်ရင် ပြီးခဲ့တဲ့လ အစကနေ အဆုံးထိ ပြမည်',
+    ],
+    changesEn: [
+      '📅 The date-filter menu now opens fully inside the screen on phones — all options visible and tappable',
+      '📆 New "Last Month" option — shows the previous month from its first day to its last',
+    ],
+  },
   {
     version: 'v7.5.65',
     buildNumber: 280,

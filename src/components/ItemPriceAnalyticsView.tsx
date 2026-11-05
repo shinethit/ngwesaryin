@@ -1253,8 +1253,10 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                           style={{ backgroundColor: log.color }}
                         />
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 truncate">{log.itemName}</span>
+                          {/* [v7.5.63] No truncation — a long item name wraps
+                              and the badges drop below it. */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-slate-900">{log.itemName}</span>
                             {log.quantity > 1 && (
                               <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-bold">
                                 x{log.quantity}
@@ -1281,20 +1283,16 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                             {wallet && (
                               <>
                                 <span className="shrink-0">•</span>
-                                <span className="text-slate-600 whitespace-nowrap truncate max-w-[110px]">
+                                <span className="text-slate-600 whitespace-nowrap">
                                   {lang === 'my' ? wallet.name : wallet.nameEn || wallet.name}
                                 </span>
                               </>
                             )}
-                            {log.note && (
-                              <>
-                                <span className="shrink-0">•</span>
-                                <span className="truncate max-w-[140px] italic text-slate-500">
-                                  {log.note}
-                                </span>
-                              </>
-                            )}
                           </div>
+                          {/* [v7.5.63] Note on its own line — full text, wraps. */}
+                          {log.note && (
+                            <div className="text-[11px] italic text-slate-500 mt-0.5">{log.note}</div>
+                          )}
                         </div>
                       </div>
 

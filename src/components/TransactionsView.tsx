@@ -814,6 +814,20 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               // uses the same wallet it just repeats the same name.
               const showWalletPill =
                 new Set(group.transactions.map((t) => t.walletId)).size > 1;
+              // [v7.5.63] Majority rule: the wallet most rows use that day is the
+              // "default" — its rows show no wallet pill. Only rows using a minority
+              // wallet get a pill (full text). If no single wallet is the majority
+              // (tie), fall back to the old rule (show when the day mixes wallets,
+              // or the wallet is shared).
+              const walletCounts = new Map<string, number>();
+              group.transactions.forEach((tx) => {
+                walletCounts.set(tx.walletId, (walletCounts.get(tx.walletId) ?? 0) + 1);
+              });
+              const maxWalletCount = Math.max(0, ...walletCounts.values());
+              const majorityWalletIds = [...walletCounts.entries()]
+                .filter(([, count]) => count === maxWalletCount)
+                .map(([id]) => id);
+              const defaultWalletId = majorityWalletIds.length === 1 ? majorityWalletIds[0] : null;
               return (
                 <div key={group.date} className="bg-white">
                   {/* Daily Date Header with Subtotals */}
@@ -895,14 +909,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                             <div className="min-w-0 flex-1 space-y-1">
                               {/* Line 1: Category & Subcategory */}
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="font-bold text-sm sm:text-base text-slate-900 truncate min-w-0 flex-1">
+                              {/* [v7.5.63] No truncation — the name wraps to
+                                  a second line and the pill drops to its own
+                                  line when it does not fit beside the name. */}
+                              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                <span className="font-bold text-sm sm:text-base text-slate-900 min-w-0 flex-1">
                                   {getCategoryDisplayName(t.category, categories, lang)}
                                 </span>
                                 {subCat && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200 max-w-[45%] shrink-0">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200 shrink-0">
                                     <Tag className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                                    <span className="truncate">{lang === 'my' ? subCat.name : subCat.nameEn}</span>
+                                    <span>{lang === 'my' ? subCat.name : subCat.nameEn}</span>
                                   </span>
                                 )}
                               </div>
@@ -928,8 +945,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     [v7.5.62] Shown only when it tells the
                                     rows apart (mixed wallets that day) or
                                     the wallet is shared (🤝 + owner info). */}
-                                {(showWalletPill || isSharedWallet(wallet)) && (
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                                {(defaultWalletId === null
+                                  ? (showWalletPill || isSharedWallet(wallet))
+                                  : t.walletId !== defaultWalletId) && (
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border max-w-full flex-wrap ${
                                   isSharedWallet(wallet)
                                     ? 'bg-amber-50 text-amber-900 border-amber-300'
                                     : 'bg-indigo-50 text-indigo-900 border-indigo-200'
@@ -937,9 +956,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   {wallet ? (
                                     <>
                                       {isSharedWallet(wallet) && <span>{lang === 'my' ? '🤝 မျှဝေထား' : '🤝 Shared'}</span>}
-                                      <span className="truncate max-w-[100px] sm:max-w-[150px]">{(lang === 'my' ? wallet.name : wallet.nameEn) || wallet.name}</span>
+                                      <span>{(lang === 'my' ? wallet.name : wallet.nameEn) || wallet.name}</span>
                                       {isSharedWallet(wallet) && getWalletOwnerName(wallet) && (
-                                        <span className="truncate max-w-[90px]">({getWalletOwnerName(wallet)})</span>
+                                        <span>({getWalletOwnerName(wallet)})</span>
                                       )}
                                     </>
                                   ) : (
@@ -962,7 +981,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   </span>
                                 )}
                                 {t.note && (
-                                  <span className="truncate text-slate-600 italic text-[11px] max-w-[200px]">
+                                  <span className="text-slate-600 italic text-[11px]">
                                     "{t.note}"
                                   </span>
                                 )}
@@ -1045,14 +1064,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   {syncInfo.state === 'pending' && <Clock className="w-3 h-3 text-amber-600 shrink-0" />}
                                   {syncInfo.state === 'failed' && <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0 animate-bounce" />}
                                   {syncInfo.state === 'offline' && <WifiOff className="w-3 h-3 text-slate-500 shrink-0" />}
+                                  {syncInfo.state !== 'synced' && (
                                   <span>
                                     {/* [v7.5.60 S11] Short label on phones too
                                         (was icon-only), in Myanmar when the
-                                        app language is Myanmar. */}
+                                        app language is Myanmar.
+                                        [v7.5.63] Synced rows are icon-only by
+                                        design — the green cloud chip is the
+                                        synced cue and "သိမ်း" repeated on
+                                        every row. Other states keep the
+                                        short label. */}
                                     {lang === 'my'
-                                      ? (syncInfo.state === 'synced' ? 'သိမ်း' : syncInfo.state === 'pending' ? 'စောင့်' : syncInfo.state === 'failed' ? 'အမှား' : 'အော့ဖ်လိုင်း')
-                                      : (syncInfo.state === 'synced' ? 'DB' : syncInfo.state === 'pending' ? 'Local' : syncInfo.state === 'failed' ? 'Error' : 'Offline')}
+                                      ? (syncInfo.state === 'pending' ? 'စောင့်' : syncInfo.state === 'failed' ? 'အမှား' : 'အော့ဖ်လိုင်း')
+                                      : (syncInfo.state === 'pending' ? 'Local' : syncInfo.state === 'failed' ? 'Error' : 'Offline')}
                                   </span>
+                                  )}
                                 </button>
                               );
                             })()}

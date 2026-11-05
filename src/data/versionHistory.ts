@@ -16,10 +16,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.62';
-export const CURRENT_BUILD_NUMBER = 277;
+export const CURRENT_APP_VERSION = 'v7.5.63';
+export const CURRENT_BUILD_NUMBER = 278;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.63',
+    buildNumber: 278,
+    releaseDate: '2026-11-04',
+    releaseTime: '9:30 PM (MMT)',
+    titleMy: 'စာရင်းအတန်း စာအပြည့်အစုံ ပေါ်အောင် ပြင်ဆင်ခြင်း',
+    titleEn: 'Transaction Rows Show Full Text',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းအတန်းမှာ စာတွေ ဖြတ်နေတာ ("ယာဉ်စီမံခန်..."၊ "Lovely Thi...") နဲ့ ထပ်နေတာ ("ငွေသား (လက်ဝယ်)" အတန်းတိုင်း၊ "သိမ်း" အတန်းတိုင်း) တွေကို ပြင်လိုက်ပါသည်။ ကဏ္ဍအမည်၊ ကဏ္ဍခွဲအညွှန်း၊ မှတ်ချက်၊ ပစ္စည်းအမည် အားလုံး စာအပြည့် ပေါ်တော့မည် — ရှည်ရင် အောက်ကြောင်းကျိုးမည်၊ ဖြတ်တာ မရှိတော့ဘူး။ ပိုက်ဆံအိတ် အညွှန်းက တစ်ရက်မှာ အသုံးအများဆုံး အိတ်ကလွဲပြီး ကျန်အိတ်တွေမှာပဲ ပြတော့မည်။ သိမ်းပြီးသား အတန်းတွေမှာ "သိမ်း" စာအစား cloud icon လေးပဲ ပြတော့မည်။',
+    descriptionEn: 'Fixed truncated text ("ယာဉ်စီမံခန်...", "Lovely Thi...", "ငွေသား (...") and repeated text ("ငွေသား (လက်ဝယ်)" on every row, "သိမ်း" on every row) in the transaction list. Category names, subcategory pills, notes, and item names now show in full — long text wraps to the next line instead of being cut off. The wallet pill only appears on rows using a minority wallet that day (the most-used wallet is the default and needs no label). Synced rows show a small cloud icon instead of the "သိမ်း" label.',
+    changesMy: [
+      '📋 ကဏ္ဍအမည် + ကဏ္ဍခွဲအညွှန်း စာအပြည့်ပြတော့မည် — ရှည်ရင် အောက်ကြောင်းကျိုးမည်၊ ဖြတ်တာ မရှိတော့ဘူး',
+      '👛 ပိုက်ဆံအိတ် အညွှန်းက တစ်ရက်မှာ အသုံးအများဆုံး အိတ်ကလွဲပြီး ကျန်အိတ်တွေမှာပဲ ပြတော့မည်',
+      '☁️ သိမ်းပြီးသား အတန်းတွေမှာ "သိမ်း" စာအစား cloud icon လေးပဲ ပြတော့မည်',
+      '📝 မှတ်ချက် စာအပြည့်ပြတော့မည်',
+      '🛒 ဈေးနှိုင်းယှဉ် မှတ်တမ်းမှာ ပိုက်ဆံအိတ်နာမည် အပြည့် + မှတ်ချက် သီးခြားတစ်ကြောင်း ပြတော့မည်',
+      '🏷️ ပစ္စည်းအမည် စာအပြည့်ပြတော့မည်',
+    ],
+    changesEn: [
+      '📋 Category + subcategory show full text — long text wraps, nothing is cut off',
+      '👛 The wallet pill only appears on minority-wallet rows (the most-used wallet that day is the default)',
+      '☁️ Synced rows show a cloud icon only instead of the "သိမ်း" label',
+      '📝 Notes show full text',
+      '🛒 Price history shows the full wallet name and the note on its own line',
+      '🏷️ Item names show full text',
+    ],
+  },
   {
     version: 'v7.5.62',
     buildNumber: 277,

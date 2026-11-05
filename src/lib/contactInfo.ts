@@ -57,11 +57,17 @@ export async function saveContactInfo(info: ContactInfo): Promise<void> {
   };
 
   // Ensure telegramUrl is well formed
+  // [v7.5.64 C-14] Clearing the username must clear the URL too — the
+  // old URL used to keep pointing at the removed Telegram account.
   if (updatedInfo.telegramUsername) {
     const cleanUsername = updatedInfo.telegramUsername.replace(/^@/, '').trim();
     if (cleanUsername) {
       updatedInfo.telegramUrl = `https://t.me/${cleanUsername}`;
+    } else {
+      updatedInfo.telegramUrl = '';
     }
+  } else {
+    updatedInfo.telegramUrl = '';
   }
 
   // Save to Firestore — safeSetDoc returns false (never throws) on

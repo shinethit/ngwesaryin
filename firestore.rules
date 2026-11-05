@@ -180,6 +180,15 @@ service cloud.firestore {
     }
 
     // =========================================================
+    // [v7.5.64 B-12] /adminAuditLog/{logId} — append-only admin audit trail
+    // =========================================================
+    match /adminAuditLog/{logId} {
+      allow create: if isAdmin();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // =========================================================
     // 4. /activationCodes/{codeId} — FIXED (was: any user can update)
     // =========================================================
     match /activationCodes/{codeId} {
@@ -194,7 +203,8 @@ service cloud.firestore {
         && request.resource.data.months == resource.data.months
         && request.resource.data.code == resource.data.code
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy;
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.expiresAt == resource.data.expiresAt;
     }
 
     // =========================================================
@@ -288,9 +298,11 @@ service cloud.firestore {
     // =========================================================
     match /sharedWalletRefs/{email}/wallets/{docId} {
       // Only the owner of the email may read their refs.
+      // [v7.5.64 B-03] Admins may also read refs — needed to clean up a
+      // deleted user's discovery refs. Refs carry no financial data.
       allow get, list: if isSignedIn()
-        && request.auth.token.email != null
-        && request.auth.token.email.lower() == email;
+        && ((request.auth.token.email != null
+        && request.auth.token.email.lower() == email) || isAdmin());
 
       // [v6.21.0] Only the owner (auth.uid == ownerUid) may create a ref.
       // Prevents fake refs pointed at arbitrary wallets or owners.
@@ -331,10 +343,12 @@ service cloud.firestore {
 
       // Deletion: allow the recipient to remove their own ref, or the
       // owner to clean up refs they created.
+      // [v7.5.64 B-03] Admins may also delete refs (deleted-user cleanup).
       allow delete: if isSignedIn()
         && (
           (request.auth.token.email != null && request.auth.token.email.lower() == email)
           || resource.data.ownerUid == request.auth.uid
+          || isAdmin()
         );
     }
 
@@ -593,7 +607,7 @@ service cloud.firestore {
           && request.resource.data.date is string
           && request.resource.data.date.size() >= 8
           && request.resource.data.date.size() <= 30;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Debts -----
@@ -613,7 +627,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == debtId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Wallets -----
@@ -622,7 +636,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == walletId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Categories -----
@@ -631,7 +645,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == categoryId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Budgets (doc id = categoryId, no id field required) -----
@@ -639,7 +653,7 @@ service cloud.firestore {
         allow read: if canAccess(userId);
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Savings Targets -----
@@ -647,7 +661,7 @@ service cloud.firestore {
         allow read: if canAccess(userId);
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Shops -----
@@ -656,7 +670,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == shopId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Vehicles -----
@@ -665,7 +679,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == vehicleId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Fuel Logs -----
@@ -674,7 +688,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == fuelLogId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Vehicle Maintenance -----
@@ -683,7 +697,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == maintenanceId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
       // ----- Tire Pressure Logs -----
@@ -692,7 +706,7 @@ service cloud.firestore {
         allow create, update: if canWriteOwnerOnly(userId)
           && request.resource.data.userId == userId
           && request.resource.data.id == logId;
-        allow delete: if canWriteOwnerOnly(userId);
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
     }
   }

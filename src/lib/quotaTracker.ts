@@ -77,15 +77,24 @@ const STORAGE_KEY_PREFIX = 'ngwe_fs_quota_';
 const EVENT_NAME = 'ngwe_fs_quota_update';
 
 // [v7.5.60 S-51] The date bucket AND the "resets at" countdown MUST use
-// ONE timezone — UTC for both. Was America/Los_Angeles here while
-// getTimeUntilUTCMidnight counted to UTC midnight, so the countdown hit
-// 0 at 06:30 Myanmar time but the bucket did not roll over until the PT
-// midnight (~13:30 Myanmar time). getTimeUntilUTCMidnight is UTC too.
+// ONE timezone.
+// [v7.5.64 A-05] That timezone is now Pacific (America/Los_Angeles) —
+// Google's real Firestore quota resets at Pacific midnight (~13:30
+// Myanmar time), not UTC midnight (06:30 MMT). The UTC bucket used to
+// roll over 7h before the real reset, so the dashboard claimed a fresh
+// day while writes were still refused as quota-exhausted.
+// getPacificNow() returns a Date whose wall-clock fields ARE the
+// current Pacific time (same toLocaleString trick isQuotaExhausted()
+// in firebase.ts uses to find the Pacific midnight).
+function getPacificNow(): Date {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+}
+
 function getTodayKey(): string {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(now.getUTCDate()).padStart(2, '0');
+  const pt = getPacificNow();
+  const y = pt.getFullYear();
+  const m = String(pt.getMonth() + 1).padStart(2, '0');
+  const d = String(pt.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
 
@@ -191,12 +200,13 @@ function getStatusLevel(used: number, limit: number): 'normal' | 'moderate' | 'w
   return 'normal';
 }
 
-export function getTimeUntilUTCMidnight(): { hours: number; minutes: number; seconds: number; formatted: string } {
-  // [v7.5.55 E9] Was computing midnight in America/Los_Angeles despite
-  // the name/label "(00:00 UTC)". True UTC midnight now.
-  const now = new Date();
-  const nextReset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-  const diffMs = Math.max(0, nextReset.getTime() - now.getTime());
+export function getTimeUntilPacificMidnight(): { hours: number; minutes: number; seconds: number; formatted: string } {
+  // [v7.5.64 A-05] Counts to the next Pacific midnight (Google's real
+  // quota reset, ~13:30 MMT) — was UTC midnight. Both operands are in
+  // the getPacificNow() shifted frame, so the difference is real ms.
+  const pt = getPacificNow();
+  const nextReset = new Date(pt.getFullYear(), pt.getMonth(), pt.getDate() + 1, 0, 0, 0);
+  const diffMs = Math.max(0, nextReset.getTime() - pt.getTime());
   const totalSeconds = Math.floor(diffMs / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -257,7 +267,7 @@ export function getQuotaOverviewStats(): QuotaOverviewStats {
     overallStatus,
     cachedReadsSaved: data.cachedReadsSaved,
     lastOperationAt: data.lastOperationAt,
-    timeUntilReset: getTimeUntilUTCMidnight(),
+    timeUntilReset: getTimeUntilPacificMidnight(),
     collections: data.collections,
   };
 }
@@ -312,17 +322,45 @@ export function estimateFirestoreStorage(counts: {
   activationCodes: number;
   systemMessages: number;
   visitors: number;
+  // [v7.5.64 A-08] Optional extra collections (0 when not supplied).
+  // sharedWallets is deliberately NOT here: Firestore rules disable
+  // list on /sharedWallets, so an admin client cannot count it.
+  categories?: number;
+  debts?: number;
+  vehicles?: number;
+  fuelLogs?: number;
+  vehicleMaintenance?: number;
+  tirePressureLogs?: number;
+  budgets?: number;
+  savingsTargets?: number;
+  shops?: number;
+  feedbacks?: number;
+  admins?: number;
 }): { totalKB: number; totalMB: number; percentOfGB: number; documentCount: number } {
   // Approximate average doc sizes including index overhead:
   // Transaction: ~0.8 KB, Wallet: ~0.5 KB, User: ~1.2 KB, Code: ~0.4 KB, Msg: ~0.6 KB, Visitor: ~0.9 KB
+  // Category: ~0.4 KB, Debt: ~0.7 KB, Vehicle: ~0.8 KB, Fuel log: ~0.7 KB, Maintenance: ~0.7 KB,
+  // Tire log: ~0.5 KB, Budget: ~0.4 KB, Savings target: ~0.5 KB, Shop: ~0.5 KB, Feedback: ~0.8 KB, Admin: ~0.6 KB
   const txKB = counts.transactions * 0.8;
   const walletKB = counts.wallets * 0.5;
   const userKB = counts.users * 1.2;
   const codeKB = counts.activationCodes * 0.4;
   const msgKB = counts.systemMessages * 0.6;
   const visitorKB = counts.visitors * 0.9;
+  const extraKB =
+    (counts.categories ?? 0) * 0.4 +
+    (counts.debts ?? 0) * 0.7 +
+    (counts.vehicles ?? 0) * 0.8 +
+    (counts.fuelLogs ?? 0) * 0.7 +
+    (counts.vehicleMaintenance ?? 0) * 0.7 +
+    (counts.tirePressureLogs ?? 0) * 0.5 +
+    (counts.budgets ?? 0) * 0.4 +
+    (counts.savingsTargets ?? 0) * 0.5 +
+    (counts.shops ?? 0) * 0.5 +
+    (counts.feedbacks ?? 0) * 0.8 +
+    (counts.admins ?? 0) * 0.6;
 
-  const totalKB = Math.round((txKB + walletKB + userKB + codeKB + msgKB + visitorKB) * 10) / 10;
+  const totalKB = Math.round((txKB + walletKB + userKB + codeKB + msgKB + visitorKB + extraKB) * 10) / 10;
   const totalMB = Math.round((totalKB / 1024) * 100) / 100;
   const percentOfGB = Math.round((totalMB / 1024) * 1000) / 10;
   const documentCount =
@@ -331,7 +369,18 @@ export function estimateFirestoreStorage(counts: {
     counts.users +
     counts.activationCodes +
     counts.systemMessages +
-    counts.visitors;
+    counts.visitors +
+    (counts.categories ?? 0) +
+    (counts.debts ?? 0) +
+    (counts.vehicles ?? 0) +
+    (counts.fuelLogs ?? 0) +
+    (counts.vehicleMaintenance ?? 0) +
+    (counts.tirePressureLogs ?? 0) +
+    (counts.budgets ?? 0) +
+    (counts.savingsTargets ?? 0) +
+    (counts.shops ?? 0) +
+    (counts.feedbacks ?? 0) +
+    (counts.admins ?? 0);
 
   return { totalKB, totalMB, percentOfGB, documentCount };
 }

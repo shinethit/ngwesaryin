@@ -16,10 +16,53 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.63';
-export const CURRENT_BUILD_NUMBER = 278;
+export const CURRENT_APP_VERSION = 'v7.5.64';
+export const CURRENT_BUILD_NUMBER = 279;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.64',
+    buildNumber: 279,
+    releaseDate: '2026-11-04',
+    releaseTime: '11:30 PM (MMT)',
+    titleMy: 'Admin Panel အပြည့်အစုံ ပြင်ဆင်ခြင်း',
+    titleEn: 'Admin Panel Fully Reviewed & Fixed',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Admin Panel ကို code ဖတ်ပြီး အပြည့်အစုံ စစ်ခဲ့တယ် — တွေ့ရှိချက် ၅၈ ချက် ရှိပြီး ရှင်းရှင်းလင်းလင်း ပြင်လို့ရတာ ၄၇ ချက်ကို ဒီ version မှာ ပေါင်းထည့်ထားတယ်။ အရေးကြီးဆုံးက Admin က တခြားအသုံးပြုသူရဲ့ ဒေတာ ဖျက်/ရှင်းတာ လုံးဝ အလုပ်မလုပ်ခဲ့တာ (Firestore စည်းမျဉ်းက တားနေတာ) ကို ပြင်လိုက်တယ် — စည်းမျဉ်းကိုတော့ Firebase Console မှာ သီးသန့် publish လုပ်ပေးရမယ်။ Quota "Unlock" ခလုတ်က ဘာမှ မလုပ်ဘဲ အောင်မြင်တယ်လို့ ပြနေတာ၊ ကဏ္ဍရှင်းရင် filter ကို လျစ်လျူရှုပြီး လူတိုင်းရဲ့ မှတ်တမ်း ဖျက်ပစ်တာ၊ အကောင့်ဖျက်ရင် ဒေတာ ကျန်ခဲ့တာ၊ ကုဒ် ပြန်ရုပ်သိမ်းရင် ဖျက်ပြီးသား အကောင့် ပြန်ပေါ်လာတာ စတဲ့ ဒေတာ ဆုံးရှုံးနိုင်တဲ့ ပြဿနာတွေကိုပါ ပြင်လိုက်တယ်။ ဖုန်းမှာလည်း Admin ဇယားတွေ ကတ်ပုံစံ ဖြစ်သွားပြီ။ ဆုံးဖြတ်ချက် လိုတဲ့ နောက်ထပ် ၁၂ ချက်ကိုလည်း ဒီ version မှာပဲ ထည့်ထားတယ် — Quota reset က အမှန်အတိုင်း Pacific (~13:30 MMT) ဖြစ်သွားပြီ၊ Admin လုပ်ရပ် မှတ်တမ်း (Audit Log) အသစ် ပါလာပြီ၊ သုံးပြီးသား ကုဒ်ကို ဖျက်မရအောင် ပိတ်ထားပြီ၊ ကြေညာချက် စာလုံး ကန့်သတ်ချက် ပါလာပြီ။',
+    descriptionEn: 'The Admin Panel was fully reviewed by reading the code — 58 findings, 47 of which were clear fixes folded into this version. Most importantly, admin delete/purge of other user data never worked at all (the Firestore rules blocked it); the rules are fixed in the repo, but they must be published separately in Firebase Console. Also fixed: the Quota "Unlock Network" button that reported success while doing nothing, purge-category ignoring the on-screen filters and deleting records of every user, delete-user orphaning data, and revoke resurrecting deleted accounts. On phones, the admin tables now show as cards with full text. The 12 items that needed a decision are also folded into this version — the quota reset now follows the real Pacific midnight (~13:30 MMT), there is a new admin audit log, used codes cannot be deleted until revoked, and broadcasts have length caps.',
+    changesMy: [
+      '📱 Admin ဇယားတွေ ဖုန်းမှာ ကတ်ပုံစံ ဖြစ်သွားပြီ — email/UID အပြည့်၊ ခလုတ် စာမကျိုး၊ ဘေးတိုက် ဆွဲစရာ မလို',
+      '🗑️ Admin က တခြားသူရဲ့ ဒေတာ ဖျက်/ရှင်းတာ အခု တကယ် အလုပ်လုပ်ပြီ (Firestore စည်းမျဉ်း ပြင် — Console မှာ publish လုပ်ရမယ်)',
+      '🔓 Quota "Unlock Network" ခလုတ် တကယ် အလုပ်လုပ်ပြီ — အရင်က ဘာမှ မလုပ်ဘဲ အောင်မြင်တယ်လို့ ပြနေတာ',
+      '🛡️ အကောင့်ဖျက်တာ၊ ကဏ္ဍရှင်းတာ၊ ကုဒ် ပြန်ရုပ်သိမ်းတာတွေမှာ ဒေတာ ဆုံးရှုံးနိုင်တဲ့ ပြဿနာတွေ ပြင်ပြီ',
+      '📊 Overview/Analytics ဂဏန်းတွေ မှန်ကန်အောင် ပြင်ပြီ — "Total Sessions" က Unique Visitors ဖြစ်သွားပြီ၊ ၅၀၀ cap အကြောင်း ပြထားပြီ',
+      '🔍 မှတ်တမ်း ရှာတာ ပိုကောင်းပြီ — အသုံးပြုသူ၊ ရက်စွဲ၊ ပိုက်ဆံအိတ်၊ မြန်မာ ဂဏန်း နဲ့ပါ ရှာလို့ရ',
+      '🏷️ ကုဒ် သက်တမ်း (Expired) ပြတော့မည်၊ Premium သက်တမ်းကုန်တဲ့ အသုံးပြုသူ မှန်မှန်ပြတော့မည်',
+      '🇲🇲 Admin Panel မှာ မြန်မာ စာသားတွေ ပိုပြည့်စုံပြီ',
+      '📞 ဆက်သွယ်ရန် ဖုန်း/ငွေပေးချေမှု အချက်အလက် မှားပြီး သိမ်းမိတဲ့ အန္တရာယ် ပြင်ပြီ',
+      '⏰ Quota reset အချိန် အမှန်ဖြစ်သွားပြီ — Pacific သန်းခေါင် (~13:30 MMT)',
+      '📜 Admin လုပ်ရပ် မှတ်တမ်း (Audit Log) အသစ် — ဘယ်သူ ဘာလုပ်ခဲ့လဲ ပြန်ကြည့်လို့ရ',
+      '🔒 သုံးပြီးသား ကုဒ်ကို ဖျက်မရတော့ဘူး — အရင် ရုပ်သိမ်းရမယ်',
+      '📣 ကြေညာချက် ခေါင်းစဉ် ၈၀ / အကြောင်းအရာ ၃၀၀ စာလုံး ကန့်သတ်ချက် + ရှာလို့ရ',
+    ],
+    changesEn: [
+      '📱 Admin tables show as cards on phones — full email/UID, buttons never wrap, no sideways scrolling',
+      '🗑️ Admin delete/purge of other user data actually works now (Firestore rules fixed — publish them in Console)',
+      '🔓 The Quota "Unlock Network" button really works now — before it did nothing while reporting success',
+      '🛡️ Data-loss risks in delete-account, purge-category and code-revoke are fixed',
+      '📊 Overview/Analytics numbers are honest now — "Total Sessions" is Unique Visitors, the 500-record cap is disclosed',
+      '🔍 Records search is better — search by user, date, wallet, and Myanmar digits too',
+      '🏷️ Code expiry (Expired) is shown, and expired-Premium users display correctly',
+      '🇲🇲 More Myanmar text across the Admin Panel',
+      '📞 Fixed the risk of overwriting real contact/payment numbers with placeholder defaults',
+      '⏰ The quota reset now follows the real Pacific midnight (~13:30 MMT)',
+      '📜 New admin audit log — see who did what, to whom, and when',
+      '🔒 Used codes can no longer be deleted until revoked first',
+      '📣 Broadcasts have length caps (title 80 / content 300) and list search',
+    ],
+  },
   {
     version: 'v7.5.63',
     buildNumber: 278,

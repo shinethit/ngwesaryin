@@ -55,6 +55,9 @@ async function fetchGeoLocation(): Promise<{
   countryCode: string;
   city: string;
   ip?: string;
+  // [v7.5.64 C-10] True when the location is a local fallback (both IP
+  // lookups failed), not a measured lookup.
+  geoInferred?: boolean;
 }> {
   // 1. Check cache
   const cached = localStorage.getItem('ngwe_geo_cache');
@@ -86,6 +89,7 @@ async function fetchGeoLocation(): Promise<{
           countryCode: data.country_code || 'MM',
           city: data.city || 'Yangon',
           ip: data.ip || undefined,
+          geoInferred: false,
         };
       }
     }
@@ -106,6 +110,7 @@ async function fetchGeoLocation(): Promise<{
             countryCode: data.countryCode || 'MM',
             city: data.city || 'Yangon',
             ip: data.query || undefined,
+            geoInferred: false,
           };
         }
       }
@@ -129,6 +134,9 @@ function fetchGeoLocationFallback() {
     country: inferred.country,
     countryCode: inferred.countryCode,
     city: inferred.city,
+    // [v7.5.64 C-10] No IP lookup succeeded — this location is inferred
+    // from the device timezone (or the Myanmar default), not measured.
+    geoInferred: true,
   };
 }
 
@@ -144,15 +152,16 @@ function getDeviceAndBrowserInfo(): {
 
   if (/ipad|tablet|playbook|silk/i.test(ua)) {
     device = 'tablet';
-  } else if (/mobile|iphone|android|touch/i.test(ua)) {
+  } else if (/mobile|iphone|android|ipod/i.test(ua)) {
     device = 'mobile';
   }
 
   let browser = 'Unknown';
-  if (ua.includes('chrome')) browser = 'Chrome';
+  if (ua.includes('edg') || ua.includes('edge')) browser = 'Edge';
+  else if (ua.includes('opr') || ua.includes('opera')) browser = 'Opera';
+  else if (ua.includes('chrome')) browser = 'Chrome';
   else if (ua.includes('safari')) browser = 'Safari';
   else if (ua.includes('firefox')) browser = 'Firefox';
-  else if (ua.includes('edge')) browser = 'Edge';
 
   return { device, browser };
 }
@@ -247,6 +256,9 @@ export async function trackVisitorSession(user?: {
         country: geo.country || prevData?.country || 'Myanmar',
         countryCode: geo.countryCode || prevData?.countryCode || 'MM',
         city: geo.city || prevData?.city || 'Yangon',
+        // [v7.5.64 C-10] Carry the inference flag so the Admin Panel can
+        // mark this row as estimated and keep it out of the country chart.
+        geoInferred: !!geo.geoInferred,
         device,
         browser,
         visitCount: newVisitCount,
@@ -271,6 +283,7 @@ export async function trackVisitorSession(user?: {
           country: geo.country || 'Myanmar',
           countryCode: geo.countryCode || 'MM',
           city: geo.city || 'Yangon',
+          geoInferred: !!geo.geoInferred,
           device,
           browser,
           visitCount: 1,
@@ -289,6 +302,8 @@ export async function trackVisitorSession(user?: {
         country: geo.country || prevData?.country || 'Myanmar',
         countryCode: geo.countryCode || prevData?.countryCode || 'MM',
         city: geo.city || prevData?.city || 'Yangon',
+        // [v7.5.64 C-10] Carry the inference flag (see member payload).
+        geoInferred: !!geo.geoInferred,
         device,
         browser,
         visitCount: newVisitCount,
@@ -379,6 +394,9 @@ export async function backfillMemberVisitors(
         country: 'Myanmar',
         countryCode: 'MM',
         city: 'Yangon',
+        // [v7.5.64 C-10] Backfilled rows never had an IP lookup — honest
+        // to mark them inferred like the runtime fallback.
+        geoInferred: true,
         device: 'desktop',
         browser: 'Unknown',
         visitCount: 1,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, Clock, Flame, HardDrive, Layers, RefreshCw, RotateCcw, ShieldAlert, Zap } from 'lucide-react';
-import { getQuotaOverviewStats, subscribeQuotaUpdates, clearTodayQuotaStats, estimateFirestoreStorage, QuotaOverviewStats, getTimeUntilUTCMidnight } from '../lib/quotaTracker';
+import { getQuotaOverviewStats, subscribeQuotaUpdates, clearTodayQuotaStats, estimateFirestoreStorage, QuotaOverviewStats, getTimeUntilPacificMidnight } from '../lib/quotaTracker';
 import {
   testFirestoreQuotaPing,
   resumeNetworkFromQuota,
@@ -16,6 +16,19 @@ interface QuotaDashboardProps {
   codesCount?: number;
   messagesCount?: number;
   visitorsCount?: number;
+  // [v7.5.64 A-08] Extra storage collections (categories reuses the
+  // already-fetched systemCategories; the rest come from AdminPanel).
+  categoriesCount?: number;
+  debtsCount?: number;
+  vehiclesCount?: number;
+  fuelLogsCount?: number;
+  vehicleMaintenanceCount?: number;
+  tirePressureLogsCount?: number;
+  budgetsCount?: number;
+  savingsTargetsCount?: number;
+  shopsCount?: number;
+  feedbacksCount?: number;
+  adminsCount?: number;
   onRefreshData?: () => void;
 }
 
@@ -27,6 +40,17 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
   codesCount = 0,
   messagesCount = 0,
   visitorsCount = 0,
+  categoriesCount = 0,
+  debtsCount = 0,
+  vehiclesCount = 0,
+  fuelLogsCount = 0,
+  vehicleMaintenanceCount = 0,
+  tirePressureLogsCount = 0,
+  budgetsCount = 0,
+  savingsTargetsCount = 0,
+  shopsCount = 0,
+  feedbacksCount = 0,
+  adminsCount = 0,
   onRefreshData,
 }) => {
   const [stats, setStats] = useState<QuotaOverviewStats>(getQuotaOverviewStats);
@@ -39,7 +63,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
   } | null>(null);
   const [isResumingNetwork, setIsResumingNetwork] = useState(false);
   const [networkResumeMsg, setNetworkResumeMsg] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(getTimeUntilUTCMidnight());
+  const [countdown, setCountdown] = useState(getTimeUntilPacificMidnight());
   // [v7.5.60 S-47] App-styled clear confirm (replaces window.confirm).
   const [confirmClearStats, setConfirmClearStats] = useState(false);
 
@@ -51,7 +75,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
 
     // Countdown tick every second
     const interval = setInterval(() => {
-      setCountdown(getTimeUntilUTCMidnight());
+      setCountdown(getTimeUntilPacificMidnight());
     }, 1000);
 
     return () => {
@@ -69,8 +93,19 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
       activationCodes: codesCount,
       systemMessages: messagesCount,
       visitors: visitorsCount,
+      categories: categoriesCount,
+      debts: debtsCount,
+      vehicles: vehiclesCount,
+      fuelLogs: fuelLogsCount,
+      vehicleMaintenance: vehicleMaintenanceCount,
+      tirePressureLogs: tirePressureLogsCount,
+      budgets: budgetsCount,
+      savingsTargets: savingsTargetsCount,
+      shops: shopsCount,
+      feedbacks: feedbacksCount,
+      admins: adminsCount,
     });
-  }, [transactionsCount, walletsCount, usersCount, codesCount, messagesCount, visitorsCount]);
+  }, [transactionsCount, walletsCount, usersCount, codesCount, messagesCount, visitorsCount, categoriesCount, debtsCount, vehiclesCount, fuelLogsCount, vehicleMaintenanceCount, tirePressureLogsCount, budgetsCount, savingsTargetsCount, shopsCount, feedbacksCount, adminsCount]);
 
   const handleRunPingTest = async () => {
     setIsTestingPing(true);
@@ -292,7 +327,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
             <span className="font-mono font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/30">
               {countdown.formatted}
             </span>
-            <span className="text-[11px] text-slate-400">(00:00 UTC)</span>
+            <span className="text-[11px] text-slate-400">(00:00 Pacific / 13:30 MMT)</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -476,7 +511,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
               <p className="text-xs text-slate-500">
                 {lang === 'my'
                   ? 'Firestore 1 GB (1,024 MB) အခမဲ့ Storage ပေါ်ရှိ လက်ရှိ သိမ်းဆည်းထားမှု'
-                  : 'Total volume of stored records across all collections'}
+                  : 'Total volume of stored records across 17 collections'}
               </p>
             </div>
           </div>
@@ -547,7 +582,114 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
               {visitorsCount.toLocaleString()}
             </span>
           </div>
+
+          {/* [v7.5.64 A-08] Extra storage collections */}
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '📂 ကဏ္ဍများ' : 'Categories'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {categoriesCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '💸 အကြွေးများ' : 'Debts'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {debtsCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '🚗 ယာဉ်များ' : 'Vehicles'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {vehiclesCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '⛽ ဆီမှတ်တမ်းများ' : 'Fuel Logs'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {fuelLogsCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '🔧 ပြုပြင်ထိန်းသိမ်းမှု' : 'Maintenance'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {vehicleMaintenanceCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '🛞 တာယာဖိအား' : 'Tire Pressure'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {tirePressureLogsCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '🎯 ဘတ်ဂျက်များ' : 'Budgets'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {budgetsCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '💰 စုငွေပန်းတိုင်များ' : 'Savings Targets'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {savingsTargetsCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '🏪 ဆိုင်များ' : 'Shops'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {shopsCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '💬 အကြံပြုချက်များ' : 'Feedback'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {feedbacksCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 text-center">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              {lang === 'my' ? '🛡️ Admin များ' : 'Admins'}
+            </span>
+            <span className="text-lg font-black text-slate-800 font-mono mt-0.5 block">
+              {adminsCount.toLocaleString()}
+            </span>
+          </div>
         </div>
+
+        {/* [v7.5.64 A-08] sharedWallets cannot be counted: Firestore rules disable admin listing of /sharedWallets. */}
+        <p className="text-[11px] text-slate-400 mt-3">
+          {lang === 'my'
+            ? 'Shared wallet များကို မရေတွက်ပါ — Firestore စည်းမျဉ်းအရ admin က shared wallet စာရင်း ဆွဲ၍ မရပါ။'
+            : 'Shared wallets are not counted — Firestore rules disable admin listing of shared wallets.'}
+        </p>
       </div>
 
       {/* Collection-Level Operations Breakdown Table */}
@@ -622,10 +764,10 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
                   : 'Built-in IndexedDB persistent caching serves repeated queries locally, preserving your 50,000 daily read limit.'}
               </li>
               <li>
-                <strong>Daily Reset (00:00 UTC):</strong>{' '}
+                <strong>Daily Reset (00:00 Pacific):</strong>{' '}
                 {lang === 'my'
-                  ? 'နေ့စဉ် မြန်မာစံတော်ချိန် မနက် ၆:၃၀ နာရီ (00:00 UTC) တွင် Google Firestore Quota အလိုအလျောက် သုညမှ ပြန်စတင်ပါသည်။'
-                  : 'Daily quota resets automatically at 00:00 UTC every 24 hours.'}
+                  ? 'နေ့စဉ် မြန်မာစံတော်ချိန် နေ့လယ် ၁:၃၀ နာရီ (00:00 Pacific) တွင် Google Firestore Quota အလိုအလျောက် သုညမှ ပြန်စတင်ပါသည်။'
+                  : 'Daily quota resets automatically at 00:00 Pacific (13:30 MMT) every 24 hours.'}
               </li>
               <li>
                 <strong>User Capacity:</strong>{' '}

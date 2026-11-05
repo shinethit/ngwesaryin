@@ -319,6 +319,10 @@ export interface VisitorDoc {
   device: 'mobile' | 'desktop' | 'tablet';
   browser: string;
   ip?: string;
+  // [v7.5.64 C-10] True when the country/city is a local fallback because
+  // the IP lookup failed (not a measured location) — shown as "ခန့်မှန်း"
+  // in the Admin Panel and excluded from the country chart.
+  geoInferred?: boolean;
   visitCount: number;
   firstSeenAt: number;
   lastActiveAt: number;

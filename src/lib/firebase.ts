@@ -306,7 +306,13 @@ export async function pauseNetworkDueToQuota() {
 }
 
 export async function resumeNetworkFromQuota(): Promise<boolean> {
-  return true;
+  try {
+    clearQuotaExhaustedFlag();
+    await enableNetwork(db);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Ensure network is active on boot and clear any stale quota locks from localStorage
@@ -635,7 +641,7 @@ export async function testFirestoreQuotaPing(): Promise<{
   try {
     // Attempt a light read from publicly allowed systemSettings or test collection
     const { getDoc, doc } = await import('firebase/firestore');
-    const testDocRef = doc(db, 'systemSettings', 'contact_info');
+    const testDocRef = doc(db, 'systemSettings', 'contactInfo');
     await getDoc(testDocRef);
     const latencyMs = Date.now() - startTime;
     recordFirestoreOp('read', 'system', 1);

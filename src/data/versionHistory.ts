@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.66';
-export const CURRENT_BUILD_NUMBER = 281;
+export const CURRENT_APP_VERSION = 'v7.5.67';
+export const CURRENT_BUILD_NUMBER = 282;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.67',
+    buildNumber: 282,
+    releaseDate: '2026-11-05',
+    releaseTime: '8:16 PM (MMT)',
+    titleMy: 'ပျောက်နေသော အသုံးပြုသူများ ပြန်ပေါ်လာခြင်း',
+    titleEn: 'Missing Users Reappear in Admin Panel',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Admin Panel က အသုံးပြုသူစာရင်းမှာ ၉ ဦးရှိတဲ့အနက် ၇ ဦးပဲ ပြနေတာ ပြင်လိုက်တယ် — အကောင့်ဖွင့်တဲ့ ရက်စွဲ မရှိတဲ့ profile တွေကို စာရင်းက ချန်ထားခဲ့တာ။ အခု စာရင်းက အသုံးပြုသူ အားလုံးကို ပြပြီး၊ အသစ်ဆုံးက အရင်ဆုံး စီမယ်။ ရက်စွဲ မရှိတဲ့သူက အောက်ဆုံးမှာ ပေါ်မယ်။',
+    descriptionEn: 'Fixed the Admin Panel user list showing only 7 of 9 users — profiles without a join date were silently excluded from the list. The list now shows all users, newest first, with dateless profiles at the bottom.',
+    changesMy: [
+      '👥 အသုံးပြုသူ စုစုပေါင်း အမှန်ပြတော့မည် — ပျောက်နေတဲ့ ၂ ဦး (Admin အကောင့်အပါအဝင်) ပြန်ပေါ်လာမည်',
+      '📅 ရက်စွဲ မရှိတဲ့ profile တွေကို စာရင်းက ချန်မထားတော့ပါ',
+    ],
+    changesEn: [
+      '👥 The total user count is now correct — the 2 missing users (including the Admin account) reappear',
+      '📅 Profiles without a join date are no longer excluded from the list',
+    ],
+  },
   {
     version: 'v7.5.66',
     buildNumber: 281,

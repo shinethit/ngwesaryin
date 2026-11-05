@@ -61,6 +61,14 @@ interface AdminPanelProps {
 // ⚠️ Master Admin Email — must match AuthContext and Firestore rules
 const MASTER_ADMIN_EMAIL = 'khunthanshwe@gmail.com';
 
+// [v7.5.67] Newest users first, sorted CLIENT-SIDE. Firestore
+// orderBy('createdAt') silently EXCLUDES documents that lack the
+// field — that is how 2 of 9 user profiles went missing from the
+// Admin Panel. ISO date strings sort lexicographically =
+// chronologically; a missing/empty createdAt sorts last.
+const sortUsersNewestFirst = (users: UserDoc[]): UserDoc[] =>
+  [...users].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   isOpen,
   onClose,
@@ -483,6 +491,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             premiumActivatedAt: new Date().toISOString(),
             premiumMonths: 999,
             updatedAt: new Date().toISOString(),
+            // [v7.5.67] Only when CREATING the profile (uData == null):
+            // a profile without createdAt is invisible to the Admin
+            // users list. Never overwrite a real join date when the
+            // doc already exists (only the plan is being fixed).
+            ...(uData ? {} : { createdAt: new Date().toISOString() }),
           }, { merge: true }).catch((err) => console.warn('Failed to auto-heal admin profile:', err));
         }
       }).catch((e) => console.warn('Admin user doc check err:', e));
@@ -513,11 +526,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       primary.forEach((u) => {
         if (u && u.id) mergedMap.set(u.id, u);
       });
-      setUsersList(Array.from(mergedMap.values()));
+      setUsersList(sortUsersNewestFirst(Array.from(mergedMap.values())));
     };
 
-    // [v7.5.64 B-07] Newest users first (mirrors the codes query).
-    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    // [v7.5.67] No orderBy here on purpose: Firestore orderBy('createdAt')
+    // silently drops profiles that lack createdAt (2 of 9 users went
+    // missing). Ordering happens client-side in mergeAndSetUsersList.
+    const usersQuery = query(collection(db, 'users'));
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
       dbUsers = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as UserDoc));
       mergeAndSetUsersList(dbUsers, defaultDbUsers);
@@ -525,7 +540,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       console.warn('Realtime users sync notice:', err);
     });
 
-    const defaultUsersQuery = query(collection(defaultDb, 'users'), orderBy('createdAt', 'desc'));
+    const defaultUsersQuery = query(collection(defaultDb, 'users'));
     const unsubDefaultUsers = onSnapshot(defaultUsersQuery, (snapshot) => {
       defaultDbUsers = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as UserDoc));
       mergeAndSetUsersList(dbUsers, defaultDbUsers);
@@ -1126,9 +1141,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setCodes(codesData);
 
       // 2. Fetch users from both db and defaultDb
-      // [v7.5.64 B-07] Newest users first (mirrors the codes query).
-      const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-      const defaultUsersQuery = query(collection(defaultDb, 'users'), orderBy('createdAt', 'desc'));
+      // [v7.5.67] No orderBy here on purpose: Firestore orderBy('createdAt')
+      // silently drops profiles that lack createdAt (2 of 9 users went
+      // missing). Ordering happens client-side below (sortUsersNewestFirst).
+      const usersQuery = query(collection(db, 'users'));
+      const defaultUsersQuery = query(collection(defaultDb, 'users'));
       
       const [usersSnap, defaultUsersSnap] = await Promise.all([
         getDocs(usersQuery).catch(() => null),
@@ -1145,7 +1162,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       primaryUsers.forEach((u) => {
         if (u && u.id) mergedMap.set(u.id, u);
       });
-      setUsersList(Array.from(mergedMap.values()));
+      setUsersList(sortUsersNewestFirst(Array.from(mergedMap.values())));
 
       // 3. Fetch system-wide transactions, wallets, and categories across all users
       await loadSystemWideData();

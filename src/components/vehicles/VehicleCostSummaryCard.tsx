@@ -145,7 +145,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
               key={p.id}
               type="button"
               onClick={() => onPresetChange(p.id)}
-              className={`px-2.5 py-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-3 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                 preset === p.id
                   ? 'bg-white text-indigo-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'

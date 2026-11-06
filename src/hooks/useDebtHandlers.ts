@@ -25,6 +25,7 @@ interface UseDebtHandlersParams {
   showToast: (msg: string) => void;
   setIsAuthModalOpen: (open: boolean) => void;
   setIsPremiumModalOpen: (open: boolean) => void;
+  setShowPremiumTxLimitNotice: (show: boolean) => void;
   debts: Debt[];
   setDebts: Dispatch<SetStateAction<Debt[]>>;
   wallets: Wallet[];
@@ -47,6 +48,7 @@ export function useDebtHandlers({
   showToast,
   setIsAuthModalOpen,
   setIsPremiumModalOpen,
+  setShowPremiumTxLimitNotice,
   debts,
   setDebts,
   wallets,
@@ -166,11 +168,12 @@ export function useDebtHandlers({
   // edit, repayments). Same rule as delete.
   const canMutateSharedDebt = (debt: Debt): boolean => canDeleteSharedDebt(debt);
 
-  // [v7.5.60 S-45] Rolling-30-day transaction limit, enforced UNIFORMLY
-  // for auto-transactions too (debt add = 1 tx, repayment = 1 tx,
+  // [v7.5.60 S-45] Transaction limit, enforced UNIFORMLY for
+  // auto-transactions too (debt add = 1 tx, repayment = 1 tx,
   // auto-settle = 1 tx) — the same rule useTransactionHandlers applies
-  // to manual adds (count txs dated within the last 30 days against the
-  // CURRENT plan's maxTransactions).
+  // to manual adds (both Guest and Free: calendar month — v7.5.68;
+  // count txs dated within the window against the CURRENT
+  // plan's maxTransactions).
   // EXCEPTION (documented, not silent): a write to a shared wallet owned
   // by someone else never counts toward MY limit (v7.5.56 A8), so the
   // check is skipped when the debt's wallet is such a wallet.
@@ -187,26 +190,37 @@ export function useDebtHandlers({
     const start = getLocalDateString(d);
     return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
   };
+  // [v7.5.68] Transaction limit is per CALENDAR MONTH for both Guest
+  // and Free (user decision 2026-11-06): count transactions dated
+  // on/after the 1st of the current month. The count resets to 0 on
+  // the 1st of each month.
+  const countCalendarMonthTransactions = (txs: Transaction[]) => {
+    const now = new Date();
+    const start = getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
+    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
+  };
   // Returns true when the auto-transaction may proceed. Blocks with the
   // same clear error UX as a manual add (toast + sign-in for Guest,
   // toast + Premium modal for Free).
   const checkRollingLimitForAutoTx = (needed: number, wallet?: Wallet | null): boolean => {
     if (wallet && wallet.isSharedFromOther && wallet.ownerUid && user?.uid && wallet.ownerUid !== user.uid) return true;
-    const used = countRolling30DayTransactions(transactions);
+    // [v7.5.68] Both Guest and Free count the calendar month.
+    const used = countCalendarMonthTransactions(transactions);
     if (used + needed > limits.maxTransactions) {
       if (plan === 'guest') {
         showToast(
           lang === 'my'
-            ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
-            : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please Sign in with Google.`
+            ? `Guest Mode တွင် ဒီလ အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
+            : `Guest Mode allows up to ${limits.maxTransactions} transactions this month — this action needs ${needed} more. Please Sign in with Google.`
         );
         setIsAuthModalOpen(true);
       } else {
         showToast(
           lang === 'my'
-            ? `Free Plan တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ`
-            : `Free Plan allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please upgrade to Premium.`
+            ? `Free Plan တွင် ဒီလ အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ`
+            : `Free Plan allows up to ${limits.maxTransactions} transactions this month — this action needs ${needed} more. Please upgrade to Premium.`
         );
+        if (plan === 'free') setShowPremiumTxLimitNotice(true);
         setIsPremiumModalOpen(true);
       }
       return false;
@@ -219,7 +233,7 @@ export function useDebtHandlers({
     // [v7.5.55 D12] The debt amount is denominated in its wallet's currency.
     const debtWallet = wallets.find((w) => w.id === newDebt.walletId);
     // [v7.5.60 S-45] Adding a debt auto-creates 1 wallet transaction —
-    // block the whole add when the rolling-30-day limit is reached, so
+    // block the whole add when the plan limit is reached, so
     // the debt is never created without its linked transaction.
     if (!checkRollingLimitForAutoTx(1, debtWallet)) return;
     // [v7.5.56 B] Shared-wallet debt: mirror it for the other member.
@@ -476,7 +490,7 @@ export function useDebtHandlers({
       const remaining = targetDebt.totalAmount - currentPaid;
       if (remaining > 0) {
         // [v7.5.60 S-45] Auto-settle creates 1 wallet transaction — it
-        // counts toward the rolling-30-day limit.
+        // counts toward the plan limit.
         if (!checkRollingLimitForAutoTx(1, walletOfDebt(targetDebt))) return;
         const settlementTxId = `tx_rep_${id}_settle_${Date.now()}_${randomSuffix()}`;
         updatedRepayments = [{
@@ -862,7 +876,7 @@ export function useDebtHandlers({
       }
 
       // [v7.5.60 S-45] A repayment auto-creates 1 wallet transaction —
-      // it counts toward the rolling-30-day limit.
+      // it counts toward the plan limit.
       const repWalletForLimit = wallets.find((w) => isWalletMatch(w, walletId));
       if (!checkRollingLimitForAutoTx(1, repWalletForLimit)) return;
 

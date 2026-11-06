@@ -28,7 +28,8 @@ const VEHICLE_SUB_CATEGORY_IDS = new Set([
   'sub_veh_license',
 ]);
 
-import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 import { convertToMMK } from '../utils/currency';
 
 interface ItemPriceAnalyticsViewProps {
@@ -112,6 +113,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   // [] = the user explicitly deselected everything — that must stay
   // empty with an honest empty state, never snap back to the top 2.
   const [selectedItemNames, setSelectedItemNames] = useState<string[] | null>(null);
+  const [limitNotice, setLimitNotice] = useState(false);
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
@@ -122,9 +124,12 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
     const w = walletMap.get(walletId) || wallets.find((wall) => isWalletMatch(wall, walletId));
     return convertToMMK(amount, w?.currency, w?.exchangeRate);
   };
+  // [v7.5.68] Per-viewer shared-wallet scope overrides.
+  const { sharedWalletScopeOverrides } = useAuth();
+
   const isScopedTx = (t: Transaction) => {
     const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return !w || w.includeInTotals !== false;
+    return !w || effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
   };
   // Currencies actually used (for the mixed-currency note).
   const mixedCurrencies = useMemo(() => {
@@ -135,7 +140,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       if (w?.currency) set.add(w.currency);
     });
     return set;
-  }, [transactions, walletMap, wallets]);
+  }, [transactions, walletMap, wallets, sharedWalletScopeOverrides]);
 
   // Subcategory list mapping
   const subCategoryMap = useMemo(() => {
@@ -404,7 +409,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
     // Sort by purchase count descending
     return summaries.sort((a, b) => b.totalPurchases - a.totalPurchases || b.totalSpent - a.totalSpent);
-  }, [filteredTransactions, subCategoryMap, lang]);
+  }, [filteredTransactions, subCategoryMap, lang, sharedWalletScopeOverrides]);
 
   // Filtered item list according to category and search
   const displayedItems = useMemo(() => {
@@ -452,11 +457,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         if (currentList.length >= 5) {
           // [v7.5.55 C17] A 6th item must WARN and not be added — never
           // silently replace the 5th.
-          alert(
-            lang === 'my'
-              ? 'ပစ္စည်း ၅ မျိုးထိသာ တစ်ပြိုင်နက် နှိုင်းယှဉ်နိုင်ပါသည် — တစ်ခုခု ဖယ်ထုတ်ပြီးမှ အသစ်ထည့်ပါ'
-              : 'You can compare up to 5 items at once — remove one first to add another'
-          );
+          setLimitNotice(true);
           return currentList;
         }
         return [...currentList, chartKey];
@@ -588,6 +589,18 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {limitNotice && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start justify-between gap-3">
+          <p className="text-sm text-amber-900 leading-relaxed">
+            {lang === 'my'
+              ? 'ပစ္စည်း ၅ မျိုးထိသာ တစ်ပြိုင်နက် နှိုင်းယှဉ်နိုင်ပါသည် — တစ်ခုခု ဖယ်ထုတ်ပြီးမှ အသစ်ထည့်ပါ'
+              : 'You can compare up to 5 items at once — remove one first to add another'}
+          </p>
+          <button type="button" onClick={() => setLimitNotice(false)} className="px-4 py-2 min-h-[44px] bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl cursor-pointer shrink-0">
+            {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
+          </button>
+        </div>
+      )}
       {/* Top Banner & Introduction */}
       <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

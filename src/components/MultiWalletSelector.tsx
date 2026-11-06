@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Wallet as WalletIcon, ChevronDown, Check, X, Search, Filter } from 'lucide-react';
 import { Wallet } from '../types';
 import { formatCurrency } from '../utils/currency';
+import { effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 
 
 interface MultiWalletSelectorProps {
@@ -28,6 +30,9 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   // [v7.5.55] Inline notice when a preset has no matching wallets (A3).
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
+  // [v7.5.68] Per-viewer shared-wallet scope overrides — the "included"
+  // counts and presets below must follow the viewer's effective scope.
+  const { sharedWalletScopeOverrides } = useAuth();
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -69,7 +74,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
 
   // [v7.5.55] "Separate" wallets (includeInTotals === false) are excluded
   // from the Dashboard balance when all wallets are shown (A14).
-  const includedCount = wallets.filter((w) => w.includeInTotals !== false).length;
+  const includedCount = wallets.filter((w) => effectiveIncludeInTotals(w, sharedWalletScopeOverrides)).length;
   const separateCount = wallets.length - includedCount;
 
   const isSelected = (id: string) => {
@@ -137,7 +142,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
   };
 
   const handleSelectIncludedOnly = () => {
-    const includedIds = wallets.filter((w) => w.includeInTotals !== false).map((w) => w.id);
+    const includedIds = wallets.filter((w) => effectiveIncludeInTotals(w, sharedWalletScopeOverrides)).map((w) => w.id);
     // [v7.5.55] Empty set: leave the selection unchanged and say so
     // (was: silently selecting ALL wallets).
     if (includedIds.length === 0) {
@@ -259,7 +264,7 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
               className={`min-h-11 px-2.5 py-2 rounded-lg font-bold border transition-all cursor-pointer ${
                 selectedWalletIds.length === includedCount &&
                 selectedWalletIds.length > 0 &&
-                selectedWalletIds.every((id) => wallets.some((w) => w.id === id && w.includeInTotals !== false))
+                selectedWalletIds.every((id) => wallets.some((w) => w.id === id && effectiveIncludeInTotals(w, sharedWalletScopeOverrides)))
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
               }`}

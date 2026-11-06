@@ -16,10 +16,53 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.67';
-export const CURRENT_BUILD_NUMBER = 282;
+export const CURRENT_APP_VERSION = 'v7.5.68';
+export const CURRENT_BUILD_NUMBER = 283;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.68',
+    buildNumber: 283,
+    releaseDate: '2026-11-06',
+    releaseTime: '7:00 AM (MMT)',
+    titleMy: 'ကန့်သတ်ချက် လအလိုက် + scope + ဖုန်း ပြင်ဆင်မှုများ',
+    titleEn: 'Calendar-Month Limits + Scope + Phone Fixes',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ကန့်သတ်ချက် လအလိုက် ပြောင်းပြီ (Guest ၁၅ ခု၊ Free ၁၅၀ ခု၊ လကုန်ရင် Count ၀ ပြန်ဖြစ်မယ်) + ကန့်သတ်ချက် ပြည့်လို့ Premium စာမျက်နှာ ပွင့်လာရင် အကြောင်းပြချက် ပြတယ်။ Dashboard နဲ့ Analysis နံပါတ် တူအောင် ပြင်ပြီး၊ ပိုက်ဆံအိတ် scope ခလုတ်၊ "မှတ်တမ်းများအရ" အဖွင့်လက်ကျန်၊ စကားလုံး ၉ ခု၊ ဖုန်းမှာ စာညှပ်ထွက်တာ၊ အင်တာနက် မရှိရင် သတိပေးစာတန်း၊ Version "နောက်မှ" ၂၄ နာရီ ပြန်မေးတာ၊ ခလုတ် အရွယ်ကြီးတာ — အကုန် တစ်ဗားရှင်းတည်း ပြင်ထားတယ်။',
+    descriptionEn: 'Limits are now per calendar month (Guest 15, Free 150, count resets to 0 on the 1st) and the Premium page now says why it opened when the limit is reached. Dashboard and Analysis numbers now agree, the wallet scope toggle works, "From records" includes the opening balance, 9 wording fixes, phone text clipping fixed, an offline banner, the version prompt asks again after 24 hours, and bigger tap targets — all in one version.',
+    changesMy: [
+      '🗓️ ကန့်သတ်ချက် လအလိုက် ပြောင်းပြီ — Guest ၁၅ ခု၊ Free ၁၅၀ ခု၊ လကုန်ရင် Count ၀ ပြန်ဖြစ်မယ် (အရင် ရက် ၃၀ နည်းက တစ်ခု တစ်ခု လွတ်တာ ရှုပ်လို့)',
+      '🔔 ကန့်သတ်ချက် ပြည့်လို့ Premium စာမျက်နှာ ပွင့်လာရင် အကြောင်းပြချက် ပြတော့မယ် — "ဒီလ မှတ်တမ်း ၁၅၀ ပြည့်ပြီ၊ နောက်လ ၁ ရက်နေ့မှာ ပြန်စလို့ ရတယ်"',
+      '📊 Dashboard နဲ့ Analysis နံပါတ် တူသွားပြီ — Separate (ခွဲထား) အိတ်ကို Analysis, Budget, Donut, ဇယားတွေကလည်း Dashboard လိုပဲ ဖယ်ထားတော့မယ် (မျှဝေထားတဲ့ အိတ်မှာ ကိုယ်ရွေးထားတဲ့ scope ကိုလည်း လိုက်နာမယ်)',
+      '🔄 ပိုက်ဆံအိတ် "ရောမည် / မရောပါ" ခလုတ် နှိပ်ပြီး မပြောင်းဘူးဆိုတာ ပြင်ပြီ — နှိပ်တာနဲ့ တန်း ပြောင်းတော့မယ်',
+      '⚖️ "မှတ်တမ်းများအရ" ခလုတ်က အဖွင့်လက်ကျန် ထည့်တွက်တော့မယ် — အရင်က အဖွင့်လက်ကျန်ကို ချန်ထားလို့ နည်းနေတာ',
+      '✏️ "အကုန်" → "အားလုံး" — ခလုတ် ၉ ခုမှာ စကားလုံး ပြင်ဆင်ခြင်း',
+      '🔒 Guest စာမျက်နှာမှာ "Premium လိုတယ်" လို့ မှားရေးထားတာ ပြင်ပြီ — Free နဲ့ပင် ရပါသည် (Analysis နဲ့ အကြွေး နှစ်ခုလုံး)',
+      '📱 ဖုန်းမှာ စာညှပ်ထွက်တာ ပြင်ပြီ — Dashboard hero ပမာဏ၊ Quick Access ခလုတ်တွေ၊ ပြက္ခဒိန် လ၊ Transactions ခလုတ်တွေ၊ Wallets စုစုပေါင်း စာတွေ အပြည့်မြင်ရတော့မယ်',
+      '⌨️ ကာလ ရွေးတဲ့ menu ကို Escape နှိပ်ပြီး ပိတ်လို့ရပြီ',
+      '📶 အင်တာနက် မရှိရင် အပေါ်မှာ သတိပေးစာတန်း ပေါ်တော့မယ် — စက်ထဲက ဒေတာနဲ့ သုံးနေပြီး အင်တာနက် ပြန်ရရင် အလိုအလျောက် Sync လုပ်မယ်လို့ ပြမယ်',
+      '🔔 Version အသစ် "နောက်မှ" နှိပ်ရင် ၂၄ နာရီကြာမှ ပြန်မေးတော့မယ် (အရင်က လုံးဝ ပြန်မမေးဘူး)',
+      '🛒 ဈေးနှုန်း နှိုင်းယှဉ်မှာ ၅ မျိုး ပြည့်ရင် alert အကြီးအစား စာတန်းလေး ပေါ်တော့မယ် — ပိတ်လို့ရတယ်',
+      '👆 ခလုတ်တွေ နှိပ်ရ ပိုလွယ်သွားပြီ — Transactions, ယာဉ်, Admin ခလုတ်တွေ အရွယ်ကြီးလာတယ်',
+    ],
+    changesEn: [
+      '🗓️ Limits are now per calendar month — Guest 15, Free 150, count resets to 0 on the 1st (the old rolling-30-day rule freed slots one by one, which was confusing)',
+      '🔔 When the Premium page opens because the limit is reached, it now says why — "You reached 150 records this month, you can add records again on the 1st of next month"',
+      '📊 Dashboard and Analysis numbers now match — Separate wallets are excluded in Analysis, Budget, Donut and charts just like on the Dashboard (shared wallets follow your own scope choice too)',
+      '🔄 The wallet "include / exclude" toggle now flips at once — before, tapping it sometimes changed nothing',
+      '⚖️ "From records" now includes the opening balance — it used to leave it out, so the figure was too low',
+      '✏️ "အကုန်" → "အားလုံး" — wording updated on 9 buttons',
+      '🔒 Guest pages no longer wrongly say Premium is needed — Free is enough (Analysis and Debts)',
+      '📱 Fixed clipped text on phones — Dashboard hero amount, Quick Access tiles, calendar month, Transactions chips, Wallets total now show in full',
+      '⌨️ The period menu can now be closed with the Escape key',
+      '📶 An offline banner now appears at the top when there is no internet — it says you are using on-device data and it will sync automatically when back online',
+      '🔔 Tapping "Later" on a new-version prompt now asks again after 24 hours (before, it never asked again)',
+      '🛒 In Compare Price, reaching 5 items now shows a small dismissible notice instead of a big alert',
+      '👆 Buttons are easier to tap — Transactions, Vehicles and Admin buttons are bigger',
+    ],
+  },
   {
     version: 'v7.5.67',
     buildNumber: 282,

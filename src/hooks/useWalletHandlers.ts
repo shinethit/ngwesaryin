@@ -39,6 +39,7 @@ interface UseWalletHandlersParams {
   showToast: (msg: string) => void;
   setIsAuthModalOpen: (open: boolean) => void;
   setIsPremiumModalOpen: (open: boolean) => void;
+  setShowPremiumTxLimitNotice: (show: boolean) => void;
   wallets: Wallet[];
   setWallets: Dispatch<SetStateAction<Wallet[]>>;
   computedWallets: Wallet[];
@@ -62,6 +63,7 @@ export function useWalletHandlers({
   showToast,
   setIsAuthModalOpen,
   setIsPremiumModalOpen,
+  setShowPremiumTxLimitNotice,
   wallets,
   setWallets,
   computedWallets,
@@ -85,11 +87,12 @@ export function useWalletHandlers({
     }).catch(() => {});
   };
 
-  // [v7.5.60 S-45] Rolling-30-day transaction limit, enforced UNIFORMLY
-  // for auto-transactions too (transfer = 2 txs, reconcile = 1 tx) — the
-  // same rule useTransactionHandlers applies to manual adds (count txs
-  // dated within the last 30 days against the CURRENT plan's
-  // maxTransactions; block the moment the count is reached).
+  // [v7.5.60 S-45] Transaction limit, enforced UNIFORMLY for
+  // auto-transactions too (transfer = 2 txs, reconcile = 1 tx) — the
+  // same rule useTransactionHandlers applies to manual adds (both
+  // Guest and Free: calendar month — v7.5.68; count txs dated within
+  // the window against the CURRENT plan's maxTransactions; block the
+  // moment the count is reached).
   // EXCEPTION (documented, not silent): a write to a shared wallet owned
   // by someone else never counts toward MY limit (v7.5.56 A8), so the
   // check is skipped when EVERY wallet the new tx(s) touch is such a
@@ -109,30 +112,41 @@ export function useWalletHandlers({
     const start = getLocalDateString(d);
     return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
   };
+  // [v7.5.68] Transaction limit is per CALENDAR MONTH for both Guest
+  // and Free (user decision 2026-11-06): count transactions dated
+  // on/after the 1st of the current month. The count resets to 0 on
+  // the 1st of each month.
+  const countCalendarMonthTransactions = (txs: Transaction[]) => {
+    const now = new Date();
+    const start = getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
+    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
+  };
   // Returns true when the auto-transaction(s) may proceed. Blocks with
   // the same clear error UX as a manual add (toast + sign-in for Guest,
-  // toast + Premium modal for Free) when the rolling-30-day limit would
-  // be exceeded by the `needed` new transaction(s).
+  // toast + Premium modal for Free) when the plan limit would be
+  // exceeded by the `needed` new transaction(s).
   const checkRollingLimitForAutoTx = (needed: number, ...ws: (Wallet | null | undefined)[]): boolean => {
     const allForeignShared = ws.length > 0 && ws.every(
       (w) => !!w && w.isSharedFromOther && !!w.ownerUid && !!user?.uid && w.ownerUid !== user.uid
     );
     if (allForeignShared) return true;
-    const used = countRolling30DayTransactions(transactions);
+    // [v7.5.68] Both Guest and Free count the calendar month.
+    const used = countCalendarMonthTransactions(transactions);
     if (used + needed > limits.maxTransactions) {
       if (plan === 'guest') {
         showToast(
           lang === 'my'
-            ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
-            : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please Sign in with Google.`
+            ? `Guest Mode တွင် ဒီလ အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
+            : `Guest Mode allows up to ${limits.maxTransactions} transactions this month — this action needs ${needed} more. Please Sign in with Google.`
         );
         setIsAuthModalOpen(true);
       } else {
         showToast(
           lang === 'my'
-            ? `Free Plan တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ`
-            : `Free Plan allows up to ${limits.maxTransactions} transactions within 30 days — this action needs ${needed} more. Please upgrade to Premium.`
+            ? `Free Plan တွင် ဒီလ အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည် — ယခု လုပ်ဆောင်ချက်အတွက် မှတ်တမ်း (${needed}) ခု လိုအပ်ပါသည်။ Premium သို့ အဆင့်မြှင့်ပါ`
+            : `Free Plan allows up to ${limits.maxTransactions} transactions this month — this action needs ${needed} more. Please upgrade to Premium.`
         );
+        if (plan === 'free') setShowPremiumTxLimitNotice(true);
         setIsPremiumModalOpen(true);
       }
       return false;
@@ -439,7 +453,7 @@ export function useWalletHandlers({
     }
 
     // [v7.5.60 S-45] A transfer creates 2 transactions — both count
-    // toward the rolling-30-day limit.
+    // toward the plan limit.
     if (!checkRollingLimitForAutoTx(2, fromWallet, toWallet)) return false;
 
     const nowStr = new Date().toISOString().split('T')[0];
@@ -807,7 +821,7 @@ export function useWalletHandlers({
 
     if (recordTransaction && difference !== 0) {
       // [v7.5.60 S-45] A recorded reconcile creates 1 transaction — it
-      // counts toward the rolling-30-day limit like any other.
+      // counts toward the plan limit like any other.
       if (!checkRollingLimitForAutoTx(1, targetWallet)) return false;
 
       const isIncome = difference > 0;

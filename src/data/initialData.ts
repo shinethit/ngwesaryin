@@ -4,10 +4,12 @@ export const DEFAULT_PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   // [v7.5.55] SINGLE SOURCE OF TRUTH for plan limits. Every handler/modal
   // must read the CURRENT plan's row — Guest and Free each enforce their OWN
   // numbers, never shared, never falling back to another plan's row.
-  // maxTransactions = per ROLLING 30 days (count transactions dated within
-  // the last 30 days; block the moment the count reaches the limit).
+  // maxTransactions window: per CALENDAR MONTH for both Guest and Free
+  // (count transactions dated on/after the 1st of the current month;
+  // resets to 0 on the 1st of next month). Block the moment the count
+  // reaches the limit. Guest = 15, Free = 150 (user decision 2026-11-06).
   guest: {
-    maxTransactions: 30,
+    maxTransactions: 15,
     maxDebts: 0,
     maxWallets: 1,
     maxBudgetCategories: 0,
@@ -24,7 +26,7 @@ export const DEFAULT_PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     hasAdvancedCharts: false,
   },
   free: {
-    maxTransactions: 100,
+    maxTransactions: 150,
     maxDebts: 5,
     maxWallets: 2,
     maxBudgetCategories: 5,

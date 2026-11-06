@@ -188,7 +188,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
                 }`}
               >
                 {copiedText ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedText ? (lang === 'my' ? 'ကူးပြီး' : 'Copied') : (lang === 'my' ? 'အကုန်ကူးမည်' : 'Copy All')}</span>
+                <span>{copiedText ? (lang === 'my' ? 'ကူးပြီး' : 'Copied') : (lang === 'my' ? 'အားလုံးကူးမည်' : 'Copy All')}</span>
               </button>
             </div>
             <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-600 whitespace-pre-wrap break-words select-all leading-relaxed">

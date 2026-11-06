@@ -17,7 +17,7 @@ import {
   type RateSnapshot,
 } from '../lib/exchangeRates';
 import { getCollaboratorPermissions, DEFAULT_WALLET_PERMISSIONS } from '../utils/permissions';
-import { isWalletMatch } from '../utils/walletBalance';
+import { isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { ShareWalletModal } from './ShareWalletModal';
 import { WalletModal } from './WalletModal';
@@ -94,7 +94,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   // exposed from AuthContext by another worker — the per-viewer Separate
   // toggle for shared wallets (never writes includeInTotals to the
   // shared doc).
-  const { user, activeWorkspaceId, invitedWorkspaces, switchWorkspace, updateSharedWalletScopeOverride } = useAuth();
+  const { user, activeWorkspaceId, invitedWorkspaces, switchWorkspace, updateSharedWalletScopeOverride, sharedWalletScopeOverrides } = useAuth();
   const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -153,8 +153,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   const [walletFilter, setWalletFilter] = useState<'all' | 'included' | 'excluded'>('all');
 
   // Wallets categorization: included in totals vs excluded
-  const includedWallets = useMemo(() => wallets.filter((w) => w.includeInTotals !== false), [wallets]);
-  const excludedWallets = useMemo(() => wallets.filter((w) => w.includeInTotals === false), [wallets]);
+  const includedWallets = useMemo(() => wallets.filter((w) => effectiveIncludeInTotals(w, sharedWalletScopeOverrides)), [wallets, sharedWalletScopeOverrides]);
+  const excludedWallets = useMemo(() => wallets.filter((w) => !effectiveIncludeInTotals(w, sharedWalletScopeOverrides)), [wallets, sharedWalletScopeOverrides]);
 
   // Calculate total net assets for included wallets (converted to MMK)
   const totalIncludedMMK = useMemo(() => {
@@ -193,7 +193,10 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   // onUpdateWallet.
   const handleToggleIncludeInTotals = async (wallet: Wallet, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const nextState = wallet.includeInTotals === false ? true : false;
+    // [v7.5.68] Next state comes from the EFFECTIVE scope, not the raw
+    // flag: with an override in place the raw flag is stale, and the
+    // toggle would write the same value back (a visible no-op).
+    const nextState = !effectiveIncludeInTotals(wallet, sharedWalletScopeOverrides);
     const isSharedWallet = Boolean(wallet.isSharedFromOther || (wallet.sharedWith && wallet.sharedWith.length > 0));
     if (isSharedWallet) {
       if (typeof updateSharedWalletScopeOverride === 'function' && user?.uid) {
@@ -568,8 +571,9 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             </div>
 
             {/* [v7.5.60 S-40] DISPLAY in lakhs (input stays full kyat);
-                the exact kyat value is the title tooltip. */}
-            <div className="text-3xl sm:text-4xl font-black mt-1 tracking-tight" title={formatMMK(totalIncludedMMK)}>
+                the exact kyat value is the title tooltip.
+                [v7.5.68 R8] leading loosened — same descender clipping as the Dashboard hero. */}
+            <div className="text-3xl sm:text-4xl font-black mt-1 tracking-tight leading-[1.4]" title={formatMMK(totalIncludedMMK)}>
               {formatLakhs(totalIncludedMMK, lang)}
             </div>
 
@@ -879,6 +883,12 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             const canReconcile = myPerms.canAddIncome && myPerms.canAddExpense;
             const canTransferFrom = myPerms.canAddExpense;
 
+            // [v7.5.68] Effective scope for THIS viewer: a shared wallet
+            // honours the viewer's own override; otherwise the wallet's
+            // includeInTotals. Without this the badge below never flipped
+            // after a tap (the write path was already correct).
+            const effectiveScope = effectiveIncludeInTotals(wallet, sharedWalletScopeOverrides);
+
             return (
               <div
                 key={wallet.id}
@@ -994,17 +1004,17 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                         type="button"
                         onClick={(e) => handleToggleIncludeInTotals(wallet, e)}
                         className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer active:scale-95 ${
-                          wallet.includeInTotals !== false
+                          effectiveScope
                             ? 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-300 shadow-2xs'
                             : 'text-amber-900 bg-amber-50 hover:bg-amber-100 border-amber-300'
                         }`}
                         title={
-                          wallet.includeInTotals !== false
+                          effectiveScope
                             ? (lang === 'my' ? 'စုစုပေါင်းထဲ ရောပြမည် (နှိပ်၍ သီးသန့်ခွဲထားပါ)' : 'Included in totals (Click to exclude)')
                             : (lang === 'my' ? 'စုစုပေါင်းထဲ မရောပါ (နှိပ်၍ စုစုပေါင်းထဲ ရောပြပါ)' : 'Excluded from totals (Click to include)')
                         }
                       >
-                        {wallet.includeInTotals !== false ? (
+                        {effectiveScope ? (
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             <span>{lang === 'my' ? '📊 စုစုပေါင်းထဲ ရောမည်' : 'In Totals'}</span>

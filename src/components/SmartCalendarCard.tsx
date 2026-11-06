@@ -300,7 +300,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           </div>
         </div>
 
-        {/* Month Switcher */}
+        {/* Month Switcher — [v7.5.68 R3] month pill is nowrap so it stays the same height as the ‹ › buttons. */}
         <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl self-start sm:self-auto border border-slate-200/80">
           <button
             type="button"
@@ -310,7 +310,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="px-3 text-xs font-black text-slate-800 font-mono">
+          <span className="px-3 text-xs font-black text-slate-800 font-mono whitespace-nowrap shrink-0 leading-relaxed">
             {currentMonthTitle}
           </span>
           <button
@@ -547,15 +547,15 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           <div className="grid grid-cols-3 gap-2.5 text-xs font-mono font-bold">
             <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-emerald-700">{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</div>
-              <button type="button" onClick={toggleExactAmounts} className="text-xs sm:text-sm font-black cursor-pointer" title={`+${formatMMK(selectedDaySummary.income)}`}>+{fmtCell(selectedDaySummary.income)}</button>
+              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`+${formatMMK(selectedDaySummary.income)}`}>+{fmtCell(selectedDaySummary.income)}</button>
             </div>
             <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-900 border border-rose-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-rose-700">{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</div>
-              <button type="button" onClick={toggleExactAmounts} className="text-xs sm:text-sm font-black cursor-pointer" title={`-${formatMMK(selectedDaySummary.expense)}`}>-{fmtCell(selectedDaySummary.expense)}</button>
+              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`-${formatMMK(selectedDaySummary.expense)}`}>-{fmtCell(selectedDaySummary.expense)}</button>
             </div>
             <div className={`p-2.5 rounded-2xl border text-center shadow-2xs ${selectedDaySummary.net >= 0 ? 'bg-indigo-50 text-indigo-950 border-indigo-200' : 'bg-rose-50 text-rose-950 border-rose-200'}`}>
               <div className="text-[10px] font-sans font-semibold opacity-85">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
-              <button type="button" onClick={toggleExactAmounts} className="text-xs sm:text-sm font-black cursor-pointer" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net >= 0 ? '+' : ''}{fmtCell(selectedDaySummary.net)}</button>
+              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net >= 0 ? '+' : ''}{fmtCell(selectedDaySummary.net)}</button>
             </div>
           </div>
 
@@ -625,7 +625,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                         </td>
                         <td className="py-3 px-3 text-right shrink-0 whitespace-nowrap">
                           <button type="button" onClick={toggleExactAmounts}
-                            className={`font-mono font-bold text-xs sm:text-sm cursor-pointer ${isInc ? 'text-emerald-700' : 'text-rose-600'}`}
+                            className={`inline-block max-w-full truncate font-mono font-bold text-xs sm:text-sm cursor-pointer ${isInc ? 'text-emerald-700' : 'text-rose-600'}`}
                             title={isInc ? `+${formatMMK(t.amount)}` : `-${formatMMK(t.amount)}`}>
                             {isInc ? `+${fmtCell(t.amount)}` : `-${fmtCell(t.amount)}`}
                           </button>

@@ -4,7 +4,8 @@ import { Budget, Category, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '.
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
-import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 
 interface CurrentMonthBudgetSummaryCardProps {
   budgets: Budget[];
@@ -40,11 +41,14 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
   //  - wallet scope defaults to "Included" (exclude includeInTotals === false),
   //    matching the detail view's default scope
   //  - near-limit threshold >= 80 and percent capped at 150, like the detail view
+  // [v7.5.68] Per-viewer shared-wallet scope overrides.
+  const { sharedWalletScopeOverrides } = useAuth();
+
   const includedWalletIds = React.useMemo(
-    () => getMatchingWalletIds(wallets.filter((w) => w.includeInTotals !== false)),
-    [wallets]
+    () => getMatchingWalletIds(wallets.filter((w) => effectiveIncludeInTotals(w, sharedWalletScopeOverrides))),
+    [wallets, sharedWalletScopeOverrides]
   );
-  const hasExcludedWallets = wallets.some((w) => w.includeInTotals === false);
+  const hasExcludedWallets = wallets.some((w) => !effectiveIncludeInTotals(w, sharedWalletScopeOverrides));
 
   const monthTransactions = React.useMemo(() => {
     return transactions.filter((t) => {

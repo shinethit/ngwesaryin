@@ -3,7 +3,8 @@ import { PieChart, Tag } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
-import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 import { CategoryIcon } from './CategoryIcon';
 
 interface CurrentMonthExpenseDonutChartProps {
@@ -41,6 +42,9 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
+  // [v7.5.68] Per-viewer shared-wallet scope overrides.
+  const { sharedWalletScopeOverrides } = useAuth();
+
   // Filter current month expenses
   const currentMonthExpenses = useMemo(() => {
     return transactions.filter((t) => {
@@ -49,10 +53,10 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
       if (!t.date || !t.date.startsWith(currentYearMonth)) return false;
       // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope).
       const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
-      if (w && w.includeInTotals === false) return false;
+      if (w && !effectiveIncludeInTotals(w, sharedWalletScopeOverrides)) return false;
       return true;
     });
-  }, [transactions, currentYearMonth]);
+  }, [transactions, currentYearMonth, sharedWalletScopeOverrides]);
 
   const totalExpense = useMemo(() => {
     return currentMonthExpenses.reduce((sum, t) => sum + convertTxToMMK(t), 0);

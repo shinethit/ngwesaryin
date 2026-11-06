@@ -9,14 +9,15 @@ export const FinancialInsightCard: React.FC<{
   type: 'alpha' | 'robot' | 'avatar' | 'clipboard';
   title: string;
   subtitle: string;
+  subtitleTitle?: string;
   badge?: string;
   active?: boolean;
   onClick?: () => void;
-}> = ({ type, title, subtitle, badge, active, onClick }) => {
+}> = ({ type, title, subtitle, subtitleTitle, badge, active, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer p-4 sm:p-4.5 rounded-2xl transition-all duration-200 relative overflow-hidden select-none border ${
+      className={`group cursor-pointer p-3 sm:p-4.5 rounded-2xl transition-all duration-200 relative overflow-hidden select-none border ${
         active
           ? 'bg-white border-slate-400 shadow-sm ring-2 ring-slate-900/5'
           : 'bg-white hover:bg-slate-50/80 border-slate-200/80 shadow-xs hover:border-slate-300'
@@ -59,7 +60,7 @@ export const FinancialInsightCard: React.FC<{
         <h4 className="font-bold text-xs sm:text-sm text-slate-800 tracking-tight">
           {title}
         </h4>
-        <div className="text-xs font-semibold text-slate-600 truncate" title={subtitle}>
+        <div className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate" title={subtitleTitle ?? subtitle}>
           {subtitle}
         </div>
       </div>

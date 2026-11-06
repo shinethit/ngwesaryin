@@ -3,12 +3,13 @@ import { Sparkles, Lock, PieChart, TrendingDown, AlertTriangle, CheckCircle, Plu
 import { BudgetConfig, Category, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
+import { useAuth } from '../context/AuthContext';
 import { CategoryIcon } from './CategoryIcon';
 import { BudgetModal } from './BudgetModal';
 import { SpendingComparisonView } from './SpendingComparisonView';
 import { FinancialHealthModal } from './FinancialHealthModal';
 import { calculateFinancialHealth } from '../utils/financialHealth';
-import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
 
 interface BudgetAnalyticsViewProps {
   transactions: Transaction[];
@@ -51,13 +52,17 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   // [v7.5.60 S-47] App-styled delete confirm (replaces window.confirm).
   const [confirmDeleteCategoryId, setConfirmDeleteCategoryId] = useState<string | null>(null);
 
+  // [v7.5.68] Per-viewer shared-wallet scope overrides (Dashboard honours
+  // them; Budget did not — see included/excludedWalletIds below).
+  const { sharedWalletScopeOverrides } = useAuth();
+
   const includedWalletIds = React.useMemo(
-    () => getMatchingWalletIds(wallets.filter((w) => w.includeInTotals !== false)),
-    [wallets]
+    () => getMatchingWalletIds(wallets.filter((w) => effectiveIncludeInTotals(w, sharedWalletScopeOverrides))),
+    [wallets, sharedWalletScopeOverrides]
   );
   const excludedWalletIds = React.useMemo(
-    () => getMatchingWalletIds(wallets.filter((w) => w.includeInTotals === false)),
-    [wallets]
+    () => getMatchingWalletIds(wallets.filter((w) => !effectiveIncludeInTotals(w, sharedWalletScopeOverrides))),
+    [wallets, sharedWalletScopeOverrides]
   );
   const hasExcludedWallets = excludedWalletIds.size > 0;
   const [walletScope, setWalletScope] = useState<'all' | 'included' | 'separate'>('included');

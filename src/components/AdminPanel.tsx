@@ -3970,7 +3970,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                     type="button"
                                     disabled={isPurgingBatch}
                                     onClick={() => handleDeleteUserAccount(u.id, u.email || u.id)}
-                                    className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-rose-600 text-white hover:bg-rose-700 shadow-2xs disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
+                                    className="px-2.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-rose-600 text-white hover:bg-rose-700 shadow-2xs disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
                                     title={lang === 'my' ? 'အကောင့်တစ်ခုလုံး ဖျက်မည် (Delete Account)' : 'Delete entire user account'}
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -3983,7 +3983,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                       type="button"
                                       disabled={isPurgingBatch}
                                       onClick={() => handlePurgeUserTransactions(u.id, u.email || u.id)}
-                                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
+                                      className="px-2.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
                                       title={lang === 'my' ? 'ဤ User ၏ စာရင်းအားလုံးကို ရှင်းလင်းမည်' : 'Purge all records of this user'}
                                     >
                                       <Eraser className="w-3.5 h-3.5" />
@@ -4104,7 +4104,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             type="button"
                             disabled={isPurgingBatch}
                             onClick={() => handleDeleteUserAccount(u.id, u.email || u.id)}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-rose-600 text-white hover:bg-rose-700 shadow-2xs disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
+                            className="px-2.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-rose-600 text-white hover:bg-rose-700 shadow-2xs disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
                             title={lang === 'my' ? 'အကောင့်တစ်ခုလုံး ဖျက်မည် (Delete Account)' : 'Delete entire user account'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -4115,7 +4115,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               type="button"
                               disabled={isPurgingBatch}
                               onClick={() => handlePurgeUserTransactions(u.id, u.email || u.id)}
-                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
+                              className="px-2.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
                               title={lang === 'my' ? 'ဤ User ၏ စာရင်းအားလုံးကို ရှင်းလင်းမည်' : 'Purge all records of this user'}
                             >
                               <Eraser className="w-3.5 h-3.5" />

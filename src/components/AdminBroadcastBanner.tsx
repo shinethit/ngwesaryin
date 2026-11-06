@@ -182,7 +182,7 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
                 <button
                   type="button"
                   onClick={() => setBannerIndex((i) => (i - 1 + visibleMessages.length) % visibleMessages.length)}
-                  className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+                  className="p-2.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
                   title={lang === 'my' ? 'ရှေ့ ကြေညာချက်' : 'Previous broadcast'}
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -196,7 +196,7 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
                 <button
                   type="button"
                   onClick={() => setBannerIndex((i) => (i + 1) % visibleMessages.length)}
-                  className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+                  className="p-2.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
                   title={lang === 'my' ? 'နောက် ကြေညာချက်' : 'Next broadcast'}
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -215,7 +215,7 @@ export const AdminBroadcastBanner: React.FC<AdminBroadcastBannerProps> = ({ lang
             <button
               type="button"
               onClick={(e) => handleDismiss(currentMsg.id, e)}
-              className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+              className="p-2.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
               title={lang === 'my' ? 'ပိတ်မည်' : 'Dismiss'}
             >
               <X className="w-4 h-4" />

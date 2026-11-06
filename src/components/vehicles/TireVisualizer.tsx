@@ -197,7 +197,7 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[11px] font-bold text-slate-700">
                     {lang === 'my' ? 'ရှေ့ ဘယ် (FL)' : 'Front Left'}
                   </span>
-                  <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recFront} PSI</span>
+                  <span className="text-[11px] text-slate-400 mb-1.5">Rec: {recFront} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.frontLeftPsi ?? '--'} <span className="text-[10px]">PSI</span>
                     {/* [v7.5.55 C24] Show the status label, not just colour. */}
@@ -215,7 +215,7 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[11px] font-bold text-slate-700">
                     {lang === 'my' ? 'ရှေ့ ညာ (FR)' : 'Front Right'}
                   </span>
-                  <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recFront} PSI</span>
+                  <span className="text-[11px] text-slate-400 mb-1.5">Rec: {recFront} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.frontRightPsi ?? '--'} <span className="text-[10px]">PSI</span>
                     {/* [v7.5.55 C24] Show the status label, not just colour. */}
@@ -241,7 +241,7 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[11px] font-bold text-slate-700">
                     {lang === 'my' ? 'နောက် ဘယ် (RL)' : 'Rear Left'}
                   </span>
-                  <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recRear} PSI</span>
+                  <span className="text-[11px] text-slate-400 mb-1.5">Rec: {recRear} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.rearLeftPsi ?? '--'} <span className="text-[10px]">PSI</span>
                     {/* [v7.5.55 C24] Show the status label, not just colour. */}
@@ -259,7 +259,7 @@ export const TireVisualizer: React.FC<TireVisualizerProps> = ({
                   <span className="text-[11px] font-bold text-slate-700">
                     {lang === 'my' ? 'နောက် ညာ (RR)' : 'Rear Right'}
                   </span>
-                  <span className="text-[9px] text-slate-400 mb-1.5">Rec: {recRear} PSI</span>
+                  <span className="text-[11px] text-slate-400 mb-1.5">Rec: {recRear} PSI</span>
                   <div className={`w-full py-1 rounded-xl font-mono font-bold text-sm border ${status.color}`}>
                     {latestLog?.rearRightPsi ?? '--'} <span className="text-[10px]">PSI</span>
                     {/* [v7.5.55 C24] Show the status label, not just colour. */}

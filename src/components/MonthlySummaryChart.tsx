@@ -15,7 +15,8 @@ import { BarChart3, TrendingUp, TrendingDown, Sparkles, Filter } from 'lucide-re
 import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
-import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 
 
 interface MonthlySummaryChartProps {
@@ -48,11 +49,14 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     if (!w) w = wallets.find((wall) => isWalletMatch(wall, tx.walletId));
     return convertToMMK(tx.amount, w?.currency, w?.exchangeRate);
   };
+  // [v7.5.68] Per-viewer shared-wallet scope overrides.
+  const { sharedWalletScopeOverrides } = useAuth();
+
   // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope). Unknown
   // wallets are kept — their scope cannot be judged.
   const isScopedTx = (tx: Transaction) => {
     const w = walletMap.get(tx.walletId) || wallets.find((wall) => isWalletMatch(wall, tx.walletId));
-    return !w || w.includeInTotals !== false;
+    return !w || effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
   };
   const [viewMode, setViewMode] = useState<'cashflow' | 'category_cost'>('cashflow');
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
@@ -109,7 +113,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     });
 
     return Object.values(monthsMap);
-  }, [transactions, monthRange, lang, walletMap, wallets]);
+  }, [transactions, monthRange, lang, walletMap, wallets, sharedWalletScopeOverrides]);
 
   // Calculations for cashflow summary pills
   const totalPeriodIncome = useMemo(
@@ -190,7 +194,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
     });
 
     return result;
-  }, [transactions, monthRange, lang, selectedCategoryId, walletMap, wallets]);
+  }, [transactions, monthRange, lang, selectedCategoryId, walletMap, wallets, sharedWalletScopeOverrides]);
 
   // Summary stats for category average cost
   const categoryCostStats = useMemo(() => {

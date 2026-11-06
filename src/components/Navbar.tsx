@@ -264,7 +264,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <div className="min-w-0 shrink-0 flex items-center gap-1 sm:gap-2">
               <span
-                className="font-extrabold text-xs sm:text-lg text-slate-900 tracking-tight whitespace-nowrap cursor-pointer"
+                className="hidden min-[400px]:inline font-extrabold text-xs sm:text-lg text-slate-900 tracking-tight whitespace-nowrap cursor-pointer"
                 onClick={() => setActiveTab('dashboard')}
                 title={lang === 'my' ? 'ပင်မ စာမျက်နှာ ပြန်ရန်' : 'Go to Dashboard'}
               >

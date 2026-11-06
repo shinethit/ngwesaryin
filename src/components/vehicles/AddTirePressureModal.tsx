@@ -280,9 +280,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     type="text" inputMode="decimal"
                     value={frontLeftPsi}
                     onChange={(e) => setFrontLeftPsi(handleNumberInput(e.target.value))}
-                    className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
+                    className="w-20 text-center py-2 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">PSI</span>
                 </div>
 
                 <div className="bg-white p-2.5 rounded-2xl border border-teal-200 text-center shadow-xs">
@@ -293,9 +293,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     type="text" inputMode="decimal"
                     value={frontRightPsi}
                     onChange={(e) => setFrontRightPsi(handleNumberInput(e.target.value))}
-                    className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
+                    className="w-20 text-center py-2 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">PSI</span>
                 </div>
 
                 <div className="bg-white p-2.5 rounded-2xl border border-teal-200 text-center shadow-xs">
@@ -306,9 +306,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     type="text" inputMode="decimal"
                     value={rearLeftPsi}
                     onChange={(e) => setRearLeftPsi(handleNumberInput(e.target.value))}
-                    className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
+                    className="w-20 text-center py-2 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">PSI</span>
                 </div>
 
                 <div className="bg-white p-2.5 rounded-2xl border border-teal-200 text-center shadow-xs">
@@ -319,9 +319,9 @@ export const AddTirePressureModal: React.FC<AddTirePressureModalProps> = ({
                     type="text" inputMode="decimal"
                     value={rearRightPsi}
                     onChange={(e) => setRearRightPsi(handleNumberInput(e.target.value))}
-                    className="w-16 text-center py-1 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
+                    className="w-20 text-center py-2 text-base font-bold font-mono text-teal-900 bg-teal-50/50 border border-teal-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mx-auto"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-0.5">PSI</span>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">PSI</span>
                 </div>
               </div>
             )}

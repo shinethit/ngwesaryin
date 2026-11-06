@@ -13,7 +13,8 @@ import { TrendingUp } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
-import { buildWalletMap, isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 
 interface CategorySpendingTrendLineChartProps {
   transactions: Transaction[];
@@ -39,11 +40,14 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
   };
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  // [v7.5.68] Per-viewer shared-wallet scope overrides.
+  const { sharedWalletScopeOverrides } = useAuth();
+
   // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope). Unknown
   // wallets are kept — their scope cannot be judged.
   const isScopedTx = (t: Transaction) => {
     const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return !w || w.includeInTotals !== false;
+    return !w || effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
   };
 
   // 1. Determine last 6 months in chronological order
@@ -80,7 +84,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       .map(([catId]) => catId);
 
     return sorted.slice(0, selectedTopCount);
-  }, [transactions, lastSixMonths, selectedTopCount, walletMap, wallets]);
+  }, [transactions, lastSixMonths, selectedTopCount, walletMap, wallets, sharedWalletScopeOverrides]);
 
   // 3. Build chart data array with monthly spending per top category
   const chartData = useMemo(() => {
@@ -107,7 +111,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       row[lang === 'my' ? 'စုစုပေါင်းထွက်ငွေ' : 'Total Expense'] = totalMonthExpense;
       return row;
     });
-  }, [lastSixMonths, topCategories, transactions, catMap, lang, walletMap, wallets]);
+  }, [lastSixMonths, topCategories, transactions, catMap, lang, walletMap, wallets, sharedWalletScopeOverrides]);
 
   const categoryColors = ['#10B981', '#6366F1', '#EC4899', '#F59E0B', '#3B82F6', '#8B5CF6'];
 

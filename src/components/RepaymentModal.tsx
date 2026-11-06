@@ -245,7 +245,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
                 onClick={() => { setAmount(remaining.toString()); setLakhConverted(true); }}
                 className="text-emerald-700 hover:underline font-semibold"
               >
-                {lang === 'my' ? 'အကြွေးအကုန်ဆပ်မည် (Pay in full)' : 'Pay full balance'}
+                {lang === 'my' ? 'အကြွေးအားလုံးဆပ်မည် (Pay in full)' : 'Pay full balance'}
               </button>
               {/* [v7.5.55 D32] "Pay 50%" is always shown now — it used to be
                   hidden for small debts (remaining <= 50000) with no reason given. */}

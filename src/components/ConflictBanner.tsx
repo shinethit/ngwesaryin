@@ -186,7 +186,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
   return (
     <>
       {/* Small floating banner */}
-      <div className="fixed top-3 right-3 z-40 max-w-xs">
+      <div className="fixed top-16 sm:top-20 right-3 z-40 max-w-xs">
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}

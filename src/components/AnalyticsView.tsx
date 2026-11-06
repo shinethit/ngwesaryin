@@ -3,6 +3,7 @@ import { BarChart3, Wallet, ShoppingBag } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
+import { useAuth } from '../context/AuthContext';
 import { ItemPriceAnalyticsView } from './ItemPriceAnalyticsView';
 
 import { BudgetAnalyticsView } from './BudgetAnalyticsView';
@@ -18,7 +19,7 @@ import { MonthlyComparisonCard } from './MonthlyComparisonCard';
 import { MonthlySummaryChart } from './MonthlySummaryChart';
 import { ClayCategoryCard } from './ClayIllustrations';
 import { calculateFinancialHealth } from '../utils/financialHealth';
-import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
 
 interface AnalyticsViewProps {
   transactions: Transaction[];
@@ -51,6 +52,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   // both, the Transactions tab already toggles it, Analytics did not.
   const [financialSystem, setFinancialSystem] = useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
 
+  // [v7.5.68] Per-viewer shared-wallet scope overrides (Dashboard honours
+  // them; Analysis did not — see scopedWallets below).
+  const { sharedWalletScopeOverrides } = useAuth();
+
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
 
   // [v7.5.60 M-01/E1] Dashboard scope: only "included"
@@ -59,8 +64,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   // scopedTransactions. Transactions whose wallet cannot be matched are
   // dropped here (Dashboard does the same via scopedWallets).
   const scopedWallets = useMemo(
-    () => wallets.filter((w) => w.includeInTotals !== false),
-    [wallets]
+    () => wallets.filter((w) => effectiveIncludeInTotals(w, sharedWalletScopeOverrides)),
+    [wallets, sharedWalletScopeOverrides]
   );
   const scopedWalletIds = useMemo(
     () => getMatchingWalletIds(scopedWallets),
@@ -91,7 +96,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   // [v7.5.55 D13] Same wallet scope as the Dashboard: exclude "separate"
   // (includeInTotals === false) wallets from the health inputs.
   const totalWalletBalance = wallets
-    .filter((w) => w.includeInTotals !== false)
+    .filter((w) => effectiveIncludeInTotals(w, sharedWalletScopeOverrides))
     .reduce(
       (s, w) => s + convertToMMK(w.balance, w.currency, w.exchangeRate), 0
     );
@@ -112,14 +117,22 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
   const activeDebts = debts.filter((d) => d.status === 'active');
 
+  // [v7.5.68 M-01] Debts follow the same wallet scope as the Dashboard
+  // hero health badge: a debt tied to a Separate (out-of-scope) wallet
+  // must not move the Analytics health tier. Debts with no wallet id
+  // are not tied to any wallet, so they stay included.
+  const scopedActiveDebts = activeDebts.filter(
+    (d) => !d.walletId || scopedWallets.some((w) => isWalletMatch(w, d.walletId))
+  );
+
   const convertDebtToMMK = (d: Debt) => {
     let w = walletMap.get(d.walletId);
     if (!w) w = wallets.find((wall) => isWalletMatch(wall, d.walletId));
     return convertToMMK(Math.max(0, d.totalAmount - d.paidAmount), w?.currency, w?.exchangeRate);
   };
 
-  const totalReceivable = activeDebts.filter((d) => d.type === 'receivable').reduce((s, d) => s + convertDebtToMMK(d), 0);
-  const totalPayable = activeDebts.filter((d) => d.type === 'payable').reduce((s, d) => s + convertDebtToMMK(d), 0);
+  const totalReceivable = scopedActiveDebts.filter((d) => d.type === 'receivable').reduce((s, d) => s + convertDebtToMMK(d), 0);
+  const totalPayable = scopedActiveDebts.filter((d) => d.type === 'payable').reduce((s, d) => s + convertDebtToMMK(d), 0);
 
   const financialHealth = useMemo(() =>
     calculateFinancialHealth(totalIncome, totalExpense, totalPayable, totalReceivable, totalWalletBalance),
@@ -187,6 +200,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
               // value overflows the ~106px card on a 390px phone. The
               // exact kyat value is the card's title tooltip.
               subtitle={formatLakhs(netSavings, lang)}
+              subtitleTitle={formatMMK(netSavings)}
               badge="Net"
               // [v7.5.55 D27] Was onSelectTab('analytics') while already on
               // Analytics (a no-op). Now opens the Budget tab, where the

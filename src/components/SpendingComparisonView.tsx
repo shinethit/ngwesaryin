@@ -3,7 +3,8 @@ import { ArrowUpDown, TrendingUp, TrendingDown, Minus, Search, Wallet as WalletI
 import { Category, PlanType, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
-import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 import { convertToMMK } from '../utils/currency';
 
 interface SpendingComparisonViewProps {
@@ -215,6 +216,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
 
+  // [v7.5.68] Per-viewer shared-wallet scope overrides.
+  const { sharedWalletScopeOverrides } = useAuth();
+
   // Filter transactions based on periods
   const {
     txA,
@@ -234,7 +238,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       if (walletFilter === 'all') {
         const w = walletMap.get(t.walletId);
         if (!w) return true;
-        return w.includeInTotals !== false;
+        return effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
       }
       const targetW = walletMap.get(walletFilter);
       if (targetW) return isWalletMatch(targetW, t.walletId);
@@ -270,7 +274,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
     }
 
     return { txA: tA, txB: tB, labelA: lA, labelB: lB };
-  }, [effectivePeriodType, effectiveMonthA, effectiveMonthB, startA, endA, startB, endB, walletFilter, transactions, lang, walletMap]);
+  }, [effectivePeriodType, effectiveMonthA, effectiveMonthB, startA, endA, startB, endB, walletFilter, transactions, lang, walletMap, sharedWalletScopeOverrides]);
 
   // Financial aggregates for Period A and Period B
   const stats = useMemo(() => {

@@ -17,6 +17,9 @@ interface PremiumModalProps {
   onSelectPlan: (plan: PlanType) => void;
   lang: 'my' | 'en';
   onOpenLogin?: () => void;
+  // [v7.5.68] Shown ONLY when the modal opened because the Free
+  // transaction limit was reached — explains why it opened.
+  showTxLimitNotice?: boolean;
 }
 
 export const PremiumModal: React.FC<PremiumModalProps> = ({
@@ -26,6 +29,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
   onSelectPlan,
   lang,
   onOpenLogin,
+  showTxLimitNotice,
 }) => {
   const [activeTab, setActiveTab] = useState<'code' | 'payment' | 'features'>('code');
   const [planDuration, setPlanDuration] = useState<'1' | '2' | '3' | '6' | '12'>('6');
@@ -303,7 +307,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     {
       titleMy: 'ဝင်ငွေ/ထွက်ငွေ မှတ်တမ်း',
       titleEn: 'Transactions Recording',
-      free: lang === 'my' ? `ရက် ၃၀ အတွင်း ${toMyanmarDigits(freeLimits.maxTransactions)} ခု` : `${freeLimits.maxTransactions} per rolling 30 days`,
+      free: lang === 'my' ? `တစ်လ အတွင်း ${toMyanmarDigits(freeLimits.maxTransactions)} ခု` : `${freeLimits.maxTransactions} per calendar month`,
       premium: lang === 'my' ? 'အကန့်အသတ်မရှိ (Unlimited)' : 'Unlimited',
     },
     {
@@ -400,6 +404,16 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* [v7.5.68] Why-this-opened notice — shown ONLY when the modal
+            opened because the Free transaction limit was reached. */}
+        {showTxLimitNotice && (
+          <div className="px-4 sm:px-6 py-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs sm:text-sm font-medium leading-relaxed shrink-0">
+            {lang === 'my'
+              ? `ဒီလ အတွင်း မှတ်တမ်း ${toMyanmarDigits(freeLimits.maxTransactions)} ပြည့်သွားပါပြီ — နောက်လ ၁ ရက်နေ့မှာ ပြန်စလို့ ရပါမယ်`
+              : `You've reached ${freeLimits.maxTransactions} records this month — you can add records again on the 1st of next month.`}
+          </div>
+        )}
 
         {/* Tab Selector Navigation */}
         <div className="flex border-b border-slate-200 bg-slate-50 text-xs sm:text-sm font-semibold shrink-0">

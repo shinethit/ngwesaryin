@@ -76,13 +76,14 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
       <button
         type="button"
         onClick={() => setShowExact((v) => !v)}
-        className={`rounded-lg px-2 py-1.5 border ${toneCls} min-w-0 text-left w-full cursor-pointer`}
+        className={`rounded-lg px-2 py-2 border ${toneCls} min-w-0 text-left w-full cursor-pointer`}
         title={tip}
       >
-        <div className="text-[9px] font-bold uppercase tracking-wide opacity-70 leading-none mb-1 truncate">
+        {/* [v7.5.68 R6] Relaxed leading: label + value are truncate/overflow-hidden, so tight leading cut Burmese descenders. */}
+        <div className="text-[9px] font-bold uppercase tracking-wide opacity-70 leading-[1.5] mb-1 truncate">
           {label}
         </div>
-        <div className="text-[11px] font-black font-mono truncate leading-tight" title={tip}>
+        <div className="text-[11px] font-black font-mono truncate leading-[1.5]" title={tip}>
           {value}
         </div>
       </button>

@@ -14,7 +14,8 @@ import { BarChart3, TrendingUp, TrendingDown, Calendar, ArrowRight, Sparkles } f
 import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
-import { isTransferTransaction, buildWalletMap, isWalletMatch } from '../utils/walletBalance';
+import { isTransferTransaction, buildWalletMap, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { useAuth } from '../context/AuthContext';
 import { CategoryIcon } from './CategoryIcon';
 
 interface MonthlyComparisonCardProps {
@@ -95,6 +96,9 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
 
+  // [v7.5.68] Per-viewer shared-wallet scope overrides.
+  const { sharedWalletScopeOverrides } = useAuth();
+
   const convertTxToMMK = useMemo(() => {
     return (tx: Transaction) => {
       let w = walletMap.get(tx.walletId);
@@ -122,7 +126,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
       if (tx.type !== 'expense') return;
       // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope).
       const w = walletMap.get(tx.walletId) || wallets.find((wall) => isWalletMatch(wall, tx.walletId));
-      if (w && w.includeInTotals === false) return;
+      if (w && !effectiveIncludeInTotals(w, sharedWalletScopeOverrides)) return;
 
       const txDate = tx.date;
       const txMonth = txDate.slice(0, 7);
@@ -173,7 +177,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
       categoryComparisonData: topCats,
       prevDayCount: currentDay,
     };
-  }, [transactions, currentMonthKey, prevMonthKey, comparisonPeriod, currentDay, catMap, lang]);
+  }, [transactions, currentMonthKey, prevMonthKey, comparisonPeriod, currentDay, catMap, lang, sharedWalletScopeOverrides]);
 
   const diffAmount = thisMonthTotal - prevMonthTotal;
   const isSpendingIncreased = diffAmount > 0;

@@ -66,6 +66,25 @@ export interface IsWalletMatchOptions {
  * opt-in via { allowNameMatch: true }, and is only used by the legacy
  * repair path.
  */
+/**
+ * Effective include-in-totals for ONE wallet, for THIS viewer: for a shared
+ * wallet the viewer's own scope override (keyed by shared doc id, then the
+ * wallet id) wins when set; otherwise the wallet's includeInTotals. Own
+ * wallets use includeInTotals as before. Same key rule as the Dashboard's
+ * inline effectiveIncludeInTotals (v7.5.56).
+ */
+export function effectiveIncludeInTotals(
+  wallet: Wallet,
+  scopeOverrides?: Record<string, boolean>
+): boolean {
+  if (wallet.isSharedFromOther || (wallet.sharedWith && wallet.sharedWith.length > 0)) {
+    const key = wallet.sharedDocId || wallet.originalId || wallet.id;
+    const ov = scopeOverrides?.[key] ?? scopeOverrides?.[wallet.id];
+    if (typeof ov === 'boolean') return ov;
+  }
+  return wallet.includeInTotals !== false;
+}
+
 export function isWalletMatch(
   wallet: Wallet,
   targetWalletId: string | undefined | null,

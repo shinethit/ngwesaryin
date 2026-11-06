@@ -41,6 +41,7 @@ interface UseTransactionHandlersParams {
   setIsTxModalOpen: (open: boolean) => void;
   setIsAuthModalOpen: (open: boolean) => void;
   setIsPremiumModalOpen: (open: boolean) => void;
+  setShowPremiumTxLimitNotice: (show: boolean) => void;
   setIsDebtModalOpen: (open: boolean) => void;
   setTxModalInitialType: (t: TransactionType) => void;
   setTxModalInitialWalletId: (id: string | undefined) => void;
@@ -74,6 +75,7 @@ export function useTransactionHandlers({
   setIsTxModalOpen,
   setIsAuthModalOpen,
   setIsPremiumModalOpen,
+  setShowPremiumTxLimitNotice,
   setIsDebtModalOpen,
   setTxModalInitialType,
   setTxModalInitialWalletId,
@@ -200,11 +202,13 @@ export function useTransactionHandlers({
   // Signed effect of a tx on its wallet balance (+income, −expense).
   const txEffect = (t: Transaction): number => (t.type === 'income' ? t.amount : -t.amount);
 
-  // [v7.5.55] Decision 1 — transaction limit is per ROLLING 30 days:
-  // count transactions dated within the last 30 days (local YYYY-MM-DD
-  // compare). The count blocks the moment it reaches the CURRENT plan's
+  // [v7.5.55] Decision 1 — transaction limit window (v7.5.68: BOTH
+  // Guest and Free are per CALENDAR MONTH — user decision 2026-11-06:
+  // Guest 15, Free 150 per month): count transactions dated within
+  // the window (local YYYY-MM-DD compare).
+  // The count blocks the moment it reaches the CURRENT plan's
   // maxTransactions (guest 30, free 100), even if reached in 10 days.
-  // [v7.5.56 A8] A tx counts toward MY rolling limit iff I created it
+  // [v7.5.56 A8] A tx counts toward MY plan limit iff I created it
   // (legacy txs with no createdBy still count) AND its wallet is mine
   // or a shared wallet I own. A collaborator's tx in someone else's
   // shared wallet never counts toward my limit.
@@ -221,6 +225,16 @@ export function useTransactionHandlers({
     const d = new Date();
     d.setDate(d.getDate() - 29);
     const start = getLocalDateString(d);
+    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
+  };
+  // [v7.5.68] Transaction limit is per CALENDAR MONTH for both Guest
+  // and Free (user decision 2026-11-06): count transactions dated
+  // on/after the 1st of the current month. The count resets to 0 on
+  // the 1st of each month — start on the 1st or the 20th, it resets
+  // at month end.
+  const countCalendarMonthTransactions = (txs: Transaction[]) => {
+    const now = new Date();
+    const start = getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
     return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
   };
 
@@ -261,19 +275,22 @@ export function useTransactionHandlers({
     targetWalletId?: string,
     initialModel: 'general' | 'fuel' | 'vehicle_service' = 'general'
   ) => {
-    // [v7.5.55] Rolling-30-day count against the CURRENT plan's row.
-    const rollingTxCount = countRolling30DayTransactions(transactions);
+    // [v7.5.55] Count against the CURRENT plan's row — both Guest and
+    // Free count the calendar month (v7.5.68; user decision 2026-11-06:
+    // Guest 15, Free 150 per calendar month).
+    const monthTxCount = countCalendarMonthTransactions(transactions);
 
-    if (plan === 'guest' && rollingTxCount >= limits.maxTransactions) {
+    if (plan === 'guest' && monthTxCount >= limits.maxTransactions) {
       if (window.confirm(lang === 'my'
-        ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ သို့မဟုတ် Premium သို့ တိုးမြှင့်ပါ`
-        : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days. Please Sign In with Google or Upgrade.`)) {
+        ? `Guest Mode တွင် ဒီလ အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ သို့မဟုတ် Premium သို့ တိုးမြှင့်ပါ`
+        : `Guest Mode allows up to ${limits.maxTransactions} transactions this month. Please Sign In with Google or Upgrade.`)) {
         setIsAuthModalOpen(true);
       }
       return;
     }
 
-    if (plan === 'free' && rollingTxCount >= limits.maxTransactions) {
+    if (plan === 'free' && monthTxCount >= limits.maxTransactions) {
+      setShowPremiumTxLimitNotice(true);
       setIsPremiumModalOpen(true);
       return;
     }
@@ -317,7 +334,7 @@ export function useTransactionHandlers({
   };
 
   // [v7.5.60 S2] Returns false when the save is blocked (permission /
-  // rolling-30-day limit) so the modal stays open and the typed entry
+  // plan limit) so the modal stays open and the typed entry
   // is not lost; returns true on success. The modal is closed ONLY
   // after all validation passes — never up-front.
   const handleAddTransaction = (
@@ -574,16 +591,27 @@ export function useTransactionHandlers({
     }
 
     if (plan === 'guest') {
-      // [v7.5.55] Rolling-30-day re-check (same rule as handleOpenAddTx).
-      if (countRolling30DayTransactions(transactions) >= limits.maxTransactions) {
+      // [v7.5.55] Calendar-month re-check (same rule as handleOpenAddTx).
+      if (countCalendarMonthTransactions(transactions) >= limits.maxTransactions) {
         if (window.confirm(lang === 'my'
-          ? `Guest Mode တွင် ရက် (၃၀) အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
-          : `Guest Mode allows up to ${limits.maxTransactions} transactions within 30 days. Please Sign In with Google.`)) {
+          ? `Guest Mode တွင် ဒီလ အတွင်း မှတ်တမ်း (${limits.maxTransactions}) ခုသာ ထည့်သွင်းနိုင်ပါသည်။ Google Account ဖြင့် Sign in ပြုလုပ်ပါ`
+          : `Guest Mode allows up to ${limits.maxTransactions} transactions this month. Please Sign In with Google.`)) {
           setIsAuthModalOpen(true);
         }
         // [v7.5.60 S2] Blocked: keep the modal open, typed data intact.
         return false;
       }
+    }
+
+    // [v7.5.68 S2] Free-plan calendar-month re-check at save time (same
+    // rule as handleOpenAddTx): the limit can be reached after the modal
+    // was opened (e.g. a record added on another device). Returning false
+    // keeps the modal open with the typed entry intact, like the Guest
+    // re-check above.
+    if (plan === 'free' && countCalendarMonthTransactions(transactions) >= limits.maxTransactions) {
+      setShowPremiumTxLimitNotice(true);
+      setIsPremiumModalOpen(true);
+      return false;
     }
 
     // Ensure vehicle linked transactions use dedicated cat_vehicle

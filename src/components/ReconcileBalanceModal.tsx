@@ -51,14 +51,19 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
   const currentWallet = wallets.find((w) => w.id === selectedWalletId) || wallets[0];
 
   // Calculate sum of transactions for this wallet
+  // [v7.5.68] "မှတ်တမ်းများအရ" must include the opening balance: live
+  // balance = initialBalance + transactions (walletBalance.ts
+  // calculateWalletLiveBalance). The old tx-only sum understated the
+  // balance by exactly the opening balance.
   const calculatedBalanceFromTxs = useMemo(() => {
     if (!currentWallet || !transactions) return 0;
+    const openingBalance = Number(currentWallet.initialBalance) || 0;
     const walletTxs = transactions.filter((t) => isWalletMatch(currentWallet, t.walletId));
     return walletTxs.reduce((sum, t) => {
       if (t.type === 'income') return sum + (Number(t.amount) || 0);
       if (t.type === 'expense') return sum - (Number(t.amount) || 0);
       return sum;
-    }, 0);
+    }, openingBalance);
   }, [currentWallet, transactions]);
 
   useEffect(() => {

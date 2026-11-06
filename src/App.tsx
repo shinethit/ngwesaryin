@@ -308,6 +308,9 @@ export default function App() {
   const [selectedDebtForRepayment, setSelectedDebtForRepayment] = useState<Debt | null>(null);
   const [editingRepayment, setEditingRepayment] = useState<{ id: string; amount: number; date: string; walletId: string; note?: string } | null>(null);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  // [v7.5.68] Why-the-Premium-modal-opened notice — set ONLY when it
+  // opens because the Free transaction limit was reached; cleared on close.
+  const [showPremiumTxLimitNotice, setShowPremiumTxLimitNotice] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isReconcileModalOpen, setIsReconcileModalOpen] = useState(false);
@@ -404,6 +407,20 @@ export default function App() {
   // don't render with a green success check.
   const [toastType, setToastType] = useState<ToastType>('success');
 
+  // [v7.5.68] Offline indicator — no navigator.onLine handling existed
+  // anywhere before this.
+  const [isOnline, setIsOnline] = useState<boolean>(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
   // [v7.2.5] Log version on EVERY app boot so it's visible in console.
   useEffect(() => {
     const ts = new Date().toLocaleString('en-GB', { hour12: false });
@@ -455,8 +472,11 @@ export default function App() {
         if (!cloudVersion) return;
         if (cloudVersion === CURRENT_APP_VERSION) return;
         if (cloudBuild && cloudBuild <= CURRENT_BUILD_NUMBER) return;
-        const laterFor = safeGetItem('ngwe_version_later');
-        if (laterFor === cloudVersion) return;
+        const laterFor = safeGetItem('ngwe_version_later') || '';
+        const [laterVersion, laterAt] = laterFor.split('|');
+        // "Later" snoozes this version for 24h instead of hiding it
+        // forever — a user who taps Later by accident still gets asked.
+        if (laterVersion === cloudVersion && laterAt && Date.now() - Number(laterAt) < 24 * 60 * 60 * 1000) return;
         console.log('[NgweSarYin] Update available: ' + cloudVersion + ' (local: ' + CURRENT_APP_VERSION + ')');
         setUpdateAvailable({ version: cloudVersion, buildNumber: cloudBuild });
       } catch (e) {
@@ -486,7 +506,7 @@ export default function App() {
 
   const handleUpdateLater = () => {
     if (updateAvailable) {
-      safeSetItem('ngwe_version_later', updateAvailable.version);
+      safeSetItem('ngwe_version_later', `${updateAvailable.version}|${Date.now()}`);
     }
     setUpdateAvailable(null);
   };
@@ -1304,14 +1324,18 @@ export default function App() {
   // [v7.5.60 C-N1] Compact one-line plan/usage chip for the Navbar —
   // "Free · မှတ်တမ်း 82/100 · အကြွေး 3/5". The big PlanBanner stays
   // removed (user's choice); this chip is the one-place summary. The
-  // rolling-30-day count uses the SAME rule as the limit enforcement
-  // (useWalletHandlers countsTowardMyLimit): txs dated within the last
-  // 30 days, excluding transactions created by someone else / on a
-  // foreign shared wallet.
+  // count uses the SAME rule as the limit enforcement
+  // (useWalletHandlers countsTowardMyLimit): Guest and Free count the
+  // calendar month (v7.5.68) — txs dated within the window, excluding
+  // transactions created by someone else / on a foreign shared wallet.
   const usageChip = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 29);
-    const start = getLocalDateString(d);
+    const start = (() => {
+      const now = new Date();
+      if (plan === 'free' || plan === 'guest') return getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
+      const d = new Date(now);
+      d.setDate(d.getDate() - 29);
+      return getLocalDateString(d);
+    })();
     const usedTx = transactions.filter((t) => {
       if (!t.date || t.date < start) return false;
       if (user?.uid && t.createdBy && t.createdBy !== user.uid) return false;
@@ -1769,6 +1793,7 @@ export default function App() {
     setIsTxModalOpen,
     setIsAuthModalOpen,
     setIsPremiumModalOpen,
+    setShowPremiumTxLimitNotice,
     setIsDebtModalOpen,
     setTxModalInitialType,
     setTxModalInitialWalletId,
@@ -1809,6 +1834,7 @@ export default function App() {
     showToast,
     setIsAuthModalOpen,
     setIsPremiumModalOpen,
+    setShowPremiumTxLimitNotice,
     debts,
     setDebts,
     wallets,
@@ -1839,6 +1865,7 @@ export default function App() {
     showToast,
     setIsAuthModalOpen,
     setIsPremiumModalOpen,
+    setShowPremiumTxLimitNotice,
     wallets,
     setWallets,
     computedWallets,
@@ -2051,6 +2078,11 @@ export default function App() {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-emerald-500 selection:text-white pb-24 relative">
       <QuotaExceededNotificationBanner lang={lang} onOpenSyncStatus={() => setIsSyncStatusDrawerOpen(true)} />
       <ConflictBanner lang={lang} />
+      {!isOnline && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-xs font-semibold text-amber-900">
+          {lang === 'my' ? '📶 အင်တာနက် မရှိပါ — စက်ထဲက ဒေတာဖြင့် သုံးနေပါသည်။ အင်တာနက် ပြန်ရလျှင် အလိုအလျောက် Sync လုပ်ပါမည်။' : '📶 You are offline — using data stored on this device. It will sync automatically when you are back online.'}
+        </div>
+      )}
       {pwaPromptReady && <PWAInstallPrompt lang={lang} />}
 
       <Navbar
@@ -2251,8 +2283,8 @@ export default function App() {
                   </h2>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">
                     {lang === 'my'
-                      ? 'အကြွေးနှင့် အရစ်ကျ မှတ်တမ်းများ ထည့်သွင်းရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ (သို့မဟုတ်) Premium သို့ အဆင့်မြှင့်ပါ'
-                      : 'To track debts and repayments, please Sign in with Google or Upgrade to Premium.'}
+                      ? 'အကြွေးနှင့် အရစ်ကျ မှတ်တမ်းများ ထည့်သွင်းရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ — Free အစီအစဉ်နဲ့ပင် ရပါသည် (Premium မလိုပါ)'
+                      : 'To track debts and repayments, please Sign in with Google for free — even on the Free plan, no Premium needed.'}
                   </p>
                 </div>
                 <button
@@ -2361,8 +2393,8 @@ export default function App() {
                   </ul>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">
                     {lang === 'my'
-                      ? 'အထက်ပါ feature တွေ သုံးနိုင်ရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ (သို့မဟုတ်) Premium သို့ အဆင့်မြှင့်ပါ'
-                      : 'To use the features above, please Sign in with Google for free (or) Upgrade to Premium.'}
+                      ? 'Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ရုံနဲ့ အထက်ပါ feature တွေ သုံးနိုင်ပါပြီ — Free အစီအစဉ်နဲ့ပင် ရပါသည် (Premium မလိုပါ)'
+                      : 'Just sign in with Google for free to use the features above — even on the Free plan, no Premium needed.'}
                   </p>
                 </div>
                 <button
@@ -2453,7 +2485,7 @@ export default function App() {
                     </div>
 
                     <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? `ရက် ၃၀ အတွင်း မှတ်တမ်း ${guestLimits.maxTransactions} ခု` : `${guestLimits.maxTransactions} tx / rolling 30 days`}</li>
+                      <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? `တစ်လ အတွင်း မှတ်တမ်း ${guestLimits.maxTransactions} ခု` : `${guestLimits.maxTransactions} tx / calendar month`}</li>
                       <li className="flex items-center gap-1.5 font-medium">✓ {lang === 'my' ? `Wallet ${guestLimits.maxWallets} ခုသာ (Cash)` : `${guestLimits.maxWallets} Wallet only`}</li>
                       <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'အကြွေး စာရင်း (မရပါ)' : 'No Debt Tracking'}</li>
                       <li className="flex items-center gap-1.5 text-rose-600 font-medium">✕ {lang === 'my' ? 'စုငွေ ပန်းတိုင် (မရပါ)' : 'No Savings Target'}</li>
@@ -2497,7 +2529,7 @@ export default function App() {
                     </div>
 
                     <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `ရက် ၃၀ အတွင်း မှတ်တမ်း ${freeLimits.maxTransactions} ခု` : `${freeLimits.maxTransactions} tx / rolling 30 days`}</li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `တစ်လ အတွင်း မှတ်တမ်း ${freeLimits.maxTransactions} ခု` : `${freeLimits.maxTransactions} tx / calendar month`}</li>
                       <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `အကြွေးစာရင်း ${freeLimits.maxDebts} ခု` : `Up to ${freeLimits.maxDebts} Debts`}</li>
                       <li className="flex items-center gap-1.5 font-semibold text-emerald-800">✓ {lang === 'my' ? `Wallet ${freeLimits.maxWallets} ခု` : `${freeLimits.maxWallets} Wallets`}</li>
                       <li className="flex items-center gap-1.5 font-semibold text-indigo-700">✓ {lang === 'my' ? `Wallet မျှဝေခြင်း (${freeLimits.maxCollaborators} ယောက်)` : `Share Wallet (${freeLimits.maxCollaborators} members)`}</li>
@@ -2726,8 +2758,9 @@ export default function App() {
         </div>
       </footer>
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-md">
-        <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl px-3 sm:px-4 py-2 shadow-lg shadow-slate-900/5 flex items-center justify-between">
+      {/* [v7.5.68 R5] Bottom bar: safe-area-aware offset; Guest LOCK badge moved clear of the icon; labels get roomier leading. */}
+      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-md">
+        <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl px-3 sm:px-4 py-2.5 shadow-lg shadow-slate-900/5 flex items-center justify-between">
           <button
             onClick={() => handleBottomTabSelect('dashboard')}
             className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
@@ -2738,7 +2771,7 @@ export default function App() {
             title="Dashboard"
           >
             <LayoutDashboard className="w-6 h-6" />
-            <span className="text-[10px]">{lang === 'my' ? 'ပင်မ' : 'Home'}</span>
+            <span className="text-[10px] leading-[1.6]">{lang === 'my' ? 'ပင်မ' : 'Home'}</span>
           </button>
 
           <button
@@ -2751,7 +2784,7 @@ export default function App() {
             title="Transactions"
           >
             <ArrowLeftRight className="w-6 h-6" />
-            <span className="text-[10px]">{lang === 'my' ? 'စာရင်း' : 'Records'}</span>
+            <span className="text-[10px] leading-[1.6]">{lang === 'my' ? 'စာရင်း' : 'Records'}</span>
           </button>
 
           <div className="-mt-6">
@@ -2770,9 +2803,9 @@ export default function App() {
             title="Debts"
           >
             <HandCoins className="w-6 h-6" />
-            <span className="text-[10px]">{lang === 'my' ? 'အကြွေး' : 'Debts'}</span>
+            <span className="text-[10px] leading-[1.6]">{lang === 'my' ? 'အကြွေး' : 'Debts'}</span>
             {plan === 'guest' && (
-              <span className="absolute -top-0.5 right-0.5 px-1 py-px rounded text-[8px] font-bold bg-slate-200 text-slate-700 border border-slate-300">🔒 LOCK</span>
+              <span className="absolute -top-2 right-1 px-1 py-px rounded text-[8px] font-bold bg-slate-200 text-slate-700 border border-slate-300 whitespace-nowrap">🔒 LOCK</span>
             )}
           </button>
 
@@ -2782,7 +2815,7 @@ export default function App() {
             title={lang === 'my' ? 'မီနူး' : 'Menu'}
           >
             <Menu className="w-6 h-6 text-slate-700" />
-            <span className="text-[10px] font-bold text-slate-700">{lang === 'my' ? 'မီနူး' : 'Menu'}</span>
+            <span className="text-[10px] font-bold leading-[1.6] text-slate-700">{lang === 'my' ? 'မီနူး' : 'Menu'}</span>
           </button>
         </div>
       </div>
@@ -2860,7 +2893,8 @@ export default function App() {
           <PremiumModal
             currentPlan={plan}
             isOpen={isPremiumModalOpen}
-            onClose={() => setIsPremiumModalOpen(false)}
+            showTxLimitNotice={showPremiumTxLimitNotice}
+            onClose={() => { setShowPremiumTxLimitNotice(false); setIsPremiumModalOpen(false); }}
             onSelectPlan={(_newPlan) => {
               showToast(
                 lang === 'my'
@@ -2870,6 +2904,7 @@ export default function App() {
             }}
             lang={lang}
             onOpenLogin={() => {
+              setShowPremiumTxLimitNotice(false);
               setIsPremiumModalOpen(false);
               setIsAuthModalOpen(true);
             }}

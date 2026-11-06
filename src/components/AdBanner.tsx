@@ -74,13 +74,14 @@ export const AdBanner: React.FC<AdBannerProps> = ({
           </div>
         </div>
 
+        {/* [v7.5.68 R4] Wider icon/text gap so the crown never crowds "ကြော်ငြာ". */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onOpenUpgradeModal}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-2xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+            className="inline-flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-2xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
           >
-            <Crown className="w-3.5 h-3.5 text-amber-400" />
+            <Crown className="w-3.5 h-3.5 shrink-0 text-amber-400" />
             <span>
               {lang === 'my' ? 'ကြော်ငြာဖယ်ရှားရန် (၂,၀၀၀ Ks/လ)' : 'Remove Ads (2,000 Ks/mo)'}
             </span>

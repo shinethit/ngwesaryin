@@ -542,7 +542,7 @@ export const AddFuelModal: React.FC<AddFuelModalProps> = ({
           {/* Actions */}
           <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
             {editingLog && onDelete ? (
-              <button type="button" onClick={() => { if (confirm(lang === 'my' ? 'ဤဆီထည့်မှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?' : 'Are you sure you want to delete this fuel record?')) { onDelete(editingLog.id); onClose(); } }} className="px-3.5 py-2 text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl font-medium flex items-center gap-1.5 transition-colors cursor-pointer">
+              <button type="button" onClick={() => { if (confirm(lang === 'my' ? 'ဤဆီထည့်မှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?' : 'Are you sure you want to delete this fuel record?')) { onDelete(editingLog.id); onClose(); } }} className="px-3.5 py-2.5 text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl font-medium flex items-center gap-1.5 transition-colors cursor-pointer">
                 <Trash2 className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ဖျက်မည်' : 'Delete'}</span>
               </button>
             ) : <div />}

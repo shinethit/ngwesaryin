@@ -109,6 +109,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setIsPeriodDropdownOpen(false);
   };
 
+  // [v7.5.68 R9] Escape closes the period dropdown (click-outside
+  // and option-select already did; keyboard users had no way out).
   useEffect(() => {
     if (!isPeriodDropdownOpen) return;
     const h = (e: MouseEvent) => {
@@ -116,8 +118,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setIsPeriodDropdownOpen(false);
       }
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsPeriodDropdownOpen(false);
+    };
     document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', h);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [isPeriodDropdownOpen]);
 
   const getTimeFilterLabel = (f: TimeFilterOption, r: { from: string; to: string } | null, l: 'my' | 'en') => {
@@ -512,7 +521,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* HERO */}
+      {/* HERO — [v7.5.68 R1] amount/advice leading loosened so Burmese descenders clear the pill below. */}
       <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white shadow-md">
         <div className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">
           {lang === 'my' ? 'စုစုပေါင်း လက်ကျန်' : 'Total Balance'}
@@ -520,7 +529,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <button
           type="button"
           onClick={() => setShowCurrencyBreakdown(true)}
-          className={`text-3xl sm:text-4xl font-black mt-1.5 tracking-tight flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left ${heroHealthText[heroHealth.tier]}`}
+          className={`text-3xl sm:text-4xl font-black mt-1.5 tracking-tight leading-[1.4] flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left ${heroHealthText[heroHealth.tier]}`}
           title={(lang === 'my' ? 'ငွေကြေး အလိုက် ကြည့်ရန် နှိပ်ပါ • ' : 'Tap for currency breakdown • ') + formatMMK(totalWalletBalance)}
         >
           <span>{formatLakhs(totalWalletBalance, lang)}</span>
@@ -539,7 +548,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               : (<>{heroHealth.emoji} {lang === 'my' ? heroHealth.shortTitle.my : heroHealth.shortTitle.en}
                 {heroHealth.scoreDisplay !== '—' ? ` • ${heroHealth.scoreDisplay}` : ''}</>)}
           </span>
-          <span className="text-[11px] text-slate-300 font-medium leading-snug">
+          <span className="text-[11px] text-slate-300 font-medium leading-relaxed">
             {lang === 'my' ? heroHealth.advice.my : heroHealth.advice.en}
           </span>
         </button>
@@ -552,7 +561,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
         {currencyBreakdownData.length > 1 && (
-          <div className="text-[10px] text-slate-400 mt-1 font-medium">
+          <div className="text-[10px] text-slate-400 mt-1 font-medium leading-relaxed">
             {lang === 'my'
               ? `👆 နှိပ်၍ ငွေကြေး ${currencyBreakdownData.length} မျိုး ခွဲခြမ်းကြည့်ပါ`
               : `Tap to view ${currencyBreakdownData.length} currency breakdown`}
@@ -591,7 +600,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      {/* [v7.3.1] QUICK ACCESS GRID — 6 tab shortcuts */}
+      {/* [v7.3.1] QUICK ACCESS GRID — 6 tab shortcuts [v7.5.68 R2] taller tiles + relaxed label leading so Burmese labels are not cut at the tile edge. */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2.5">
         <div className="flex items-center justify-between mb-1 px-1">
           <h3 className="font-bold text-[12px] text-slate-900 flex items-center gap-1.5">
@@ -610,66 +619,66 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="grid grid-cols-3 gap-1.5">
           {/* 1. Analytics (Shops position) */}
           <button type="button" onClick={() => onSelectTab('analytics')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
               <BarChart3 className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-bold text-emerald-900 leading-tight text-center">
+            <span className="text-[10px] font-bold text-emerald-900 leading-relaxed text-center">
               {lang === 'my' ? 'အစီရင်ခံစာ / ဘတ်ဂျက်' : 'Reports & Budget'}
             </span>
           </button>
 
           {/* 2. Data Management */}
           <button type="button" onClick={() => onSelectTab('data_management')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shadow-xs">
               <Database className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-bold text-slate-800 leading-tight text-center">
+            <span className="text-[10px] font-bold text-slate-800 leading-relaxed text-center">
               {lang === 'my' ? 'ဒေတာ' : 'Data'}
             </span>
           </button>
 
           {/* 3. Plans */}
           <button type="button" onClick={() => onSelectTab('plans')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-xs">
               <Crown className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-bold text-amber-900 leading-tight text-center">
+            <span className="text-[10px] font-bold text-amber-900 leading-relaxed text-center">
               {lang === 'my' ? 'အစီအစဉ်' : 'Plans'}
             </span>
           </button>
 
           {/* 4. Shops (Feedback position) */}
           <button type="button" onClick={() => onSelectTab('shops')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center shadow-xs">
               <Store className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-bold text-orange-900 leading-tight text-center">
+            <span className="text-[10px] font-bold text-orange-900 leading-relaxed text-center">
               {lang === 'my' ? 'ဆိုင်လိပ်စာ' : 'Shops'}
             </span>
           </button>
 
           {/* 5. Education */}
           <button type="button" onClick={() => onSelectTab('education')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-xs">
               <GraduationCap className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-bold text-indigo-900 leading-tight text-center">
+            <span className="text-[10px] font-bold text-indigo-900 leading-relaxed text-center">
               {lang === 'my' ? 'ပညာပေး' : 'Learn'}
             </span>
           </button>
 
           {/* 6. Feedback (Analytics position) */}
           <button type="button" onClick={() => onSelectTab('feedback')}
-            className="flex flex-col items-center gap-1 p-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-xs">
               <MessageCircle className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-bold text-blue-900 leading-tight text-center">
+            <span className="text-[10px] font-bold text-blue-900 leading-relaxed text-center">
               {lang === 'my' ? 'အကြံပြုချက်' : 'Feedback'}
             </span>
           </button>

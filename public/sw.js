@@ -81,6 +81,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // [v7.5.69] Never intercept the version check - /version.json must
+  // always reach the network. The Cache-First branch below turns ANY
+  // fetch failure into a synthetic 404, and iOS can hang the SW
+  // fetch past the app's 5s timeout, so the check reported
+  // "HTTP 404" (Android) / "Network timeout (5s)" (iOS) even with a
+  // good connection. Returning here (no respondWith) lets the
+  // browser fetch it directly from the server.
+  if (url.pathname === '/version.json') {
+    return;
+  }
+
   // Fast Network-First with 1.5s timeout for HTML & Dynamic Chunks
   // If network takes > 1.5s, immediately serve cached build so devices open in 0.1s!
   const isCodeOrHtml =

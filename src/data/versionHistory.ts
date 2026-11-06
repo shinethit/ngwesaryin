@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.68';
-export const CURRENT_BUILD_NUMBER = 283;
+export const CURRENT_APP_VERSION = 'v7.5.69';
+export const CURRENT_BUILD_NUMBER = 284;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.69',
+    buildNumber: 284,
+    releaseDate: '2026-11-06',
+    releaseTime: '8:30 AM (MMT)',
+    titleMy: 'ဗားရှင်း စစ်ဆေးခြင်း ပြင်ဆင်မှု',
+    titleEn: 'Version Check Fix',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Version စစ်ဆေးတာ မရဘူး ("စစ်ဆေး၍ မရပါ") ဆိုတာ ပြင်ပြီ — စစ်ဆေးမှုက ဆာဗာကို တိုက်ရိုက် သွားတော့မယ်၊ ဖုန်းထဲက service worker ကို ဖြတ်မသွားတော့ဘူး။ Android မှာ HTTP 404၊ iOS မှာ Network timeout (5s) လို့ မှားပြတာ ပျောက်သွားမယ်။',
+    descriptionEn: 'Fixed the version check failing ("Cannot check version") — the check now goes straight to the server instead of through the phone service worker. The false HTTP 404 on Android and Network timeout (5s) on iOS are gone.',
+    changesMy: [
+      '📡 "ဗားရှင်း စစ်ဆေး၍ မရပါ" ပြင်ပြီ — Version စစ်ဆေးတာ ဆာဗာကို တိုက်ရိုက် စစ်တော့မယ်၊ ဖုန်းထဲက service worker ကို ဖြတ်မသွားတော့ဘူး',
+      '🤖 Android မှာ HTTP 404 လို့ မှားပြတာ ပျောက်မယ် — အရင်က service worker က လိုင်းပြတ်တိုင်း 404 အတု ပြန်ပေးနေတာ',
+      '🍎 iOS မှာ Network timeout (5s) လို့ မှားပြတာ ပျောက်မယ် — စစ်ဆေးမှု ၅ စက္ကန့်အတွင်း ပြီးမယ်',
+      '🔄 ဒီ update ရပြီးရင် app ကို အပြည့်ပိတ်ပြီး ပြန်ဖွင့်လိုက်ရင် version စစ်ဆေးတာ ပြန်ရမယ်',
+    ],
+    changesEn: [
+      '📡 Fixed "Cannot check version" — the version check now goes straight to the server, no longer through the phone service worker',
+      '🤖 The false HTTP 404 on Android is gone — the service worker used to answer a fake 404 on any network stumble',
+      '🍎 The false Network timeout (5s) on iOS is gone — the check now completes within 5 seconds',
+      '🔄 After this update, fully close and reopen the app once and the version check will work again',
+    ],
+  },
   {
     version: 'v7.5.68',
     buildNumber: 283,

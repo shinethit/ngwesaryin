@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.69';
-export const CURRENT_BUILD_NUMBER = 284;
+export const CURRENT_APP_VERSION = 'v7.5.70';
+export const CURRENT_BUILD_NUMBER = 285;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.70',
+    buildNumber: 285,
+    releaseDate: '2026-11-07',
+    releaseTime: '9:00 AM (MMT)',
+    titleMy: 'လအလိုက် နှိုင်းယှဉ် ရက်စွဲ စိတ်ကြိုက် + စာသား ပြင်ဆင်မှု',
+    titleEn: 'Monthly Comparison - Custom Dates + Language Fixes',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'လအလိုက် နှိုင်းယှဉ်ချက်မှာ ရက်စွဲ စိတ်ကြိုက် ရွေးလို့ရပြီ — "စိတ်ကြိုက်" နှိပ်ပြီး စရက်–ဆုံးရက် ရွေးပါ (ဥပမာ 8–15 ရက်)၊ လ နှစ်ခုလုံးမှာ အဲဒီရက်တွေပဲ နှိုင်းယှဉ်မယ်။ မြန်မာ–အင်္ဂလိပ် ရောနေတဲ့ စာသားတွေလည်း ပြင်ပြီးပြီ။ Trends ဇယားမှာ ကဏ္ဍအမည်ကို နှိပ်ပြီး လိုင်း ဖွက်/ပြ လုပ်နိုင်ပြီ။',
+    descriptionEn: 'Monthly Comparison now lets you pick your own date range, and the mixed Myanmar/English text is fixed. Tap "Custom" and choose a start and end day (for example days 8-15) and both months compare only those days. The Trends chart legend is now tappable, so any line can be hidden or shown.',
+    changesMy: [
+      '📅 လအလိုက် နှိုင်းယှဉ်ချက်မှာ ရက်စွဲ စိတ်ကြိုက် ရွေးလို့ရပြီ — "စိတ်ကြိုက်" နှိပ်ပြီး စရက်–ဆုံးရက် ရွေးပါ (ဥပမာ 8–15 ရက်)၊ လ နှစ်ခုလုံးမှာ အဲဒီရက်တွေပဲ နှိုင်းယှဉ်မယ်',
+      '🔤 မြန်မာ–အင်္ဂလိပ် ရောနေတာ ပြင်ပြီ — "၁-7" အစား "1-7", "ကွာခြားချက် (Change)" အစား "ကွာခြားချက်" လို့ ပြမယ်',
+      '📊 Trends ဇယားမှာ "cat_debt_issued" အစား "ချေးငွေ ထုတ်ပေးခြင်း" လို့ ပြမယ်',
+      '👆 Trends ဇယားမှာ ကဏ္ဍအမည်ကို နှိပ်ပြီး လိုင်း ဖွက်/ပြ လုပ်နိုင်ပြီ — စုစုပေါင်းထွက်ငွေ လိုင်းကြီး ဖွက်ထားရင် ကဏ္ဍလိုင်းလေးတွေ ပိုမြင်ရမယ်',
+    ],
+    changesEn: [
+      '📅 Monthly Comparison now has a custom date range — tap "Custom" and pick a start and end day (for example days 8-15); both months compare only those days',
+      '🔤 Fixed mixed Myanmar/English text — "၁-7" is now "1-7", and "ကွာခြားချက် (Change)" is now "ကွာခြားချက်"',
+      '📊 The Trends chart now shows "ချေးငွေ ထုတ်ပေးခြင်း" instead of "cat_debt_issued"',
+      '👆 Tap a legend item in the Trends chart to hide or show its line — hide the big Total Expense line to see the smaller category lines better',
+    ],
+  },
   {
     version: 'v7.5.69',
     buildNumber: 284,

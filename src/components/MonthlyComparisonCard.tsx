@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { BarChart3, TrendingUp, TrendingDown, Calendar, ArrowRight, Sparkles } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
-import { formatMMK, formatLakhs } from '../utils/formatters';
+import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { isTransferTransaction, buildWalletMap, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
@@ -67,13 +67,18 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
   // [v7.5.60 A-S04] Default to 'toDate' (day 1 through today) —
   // comparing a partial current month against a whole previous month
   // always looked like a saving.
-  const [comparisonPeriod, setComparisonPeriod] = useState<'full' | 'toDate'>('toDate');
+  const [comparisonPeriod, setComparisonPeriod] = useState<'full' | 'toDate' | 'custom'>('toDate');
 
   // Determine current month & previous month
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
   const currentMonthIdx = today.getMonth(); // 0 - 11
   const currentDay = today.getDate();
+
+  // [v7.5.70] Custom day range (user request 2026-11-07): compare the
+  // same days in both months, e.g. days 8-15 of Oct vs days 8-15 of Nov.
+  const [customStartDay, setCustomStartDay] = useState(1);
+  const [customEndDay, setCustomEndDay] = useState(currentDay);
 
   const prevMonthDate = useMemo(() => {
     return new Date(currentYear, currentMonthIdx - 1, 1);
@@ -137,6 +142,11 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
         return;
       }
 
+      // [v7.5.70] Custom range — only the picked days, in both months.
+      if (comparisonPeriod === 'custom' && (txDay < customStartDay || txDay > customEndDay)) {
+        return;
+      }
+
       const amtMMK = convertTxToMMK(tx);
 
       if (txMonth === currentMonthKey) {
@@ -157,7 +167,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
       const diff = cAmount - pAmount;
       return {
         id: catId,
-        name: lang === 'my' ? (cat?.name || catId) : (cat?.nameEn || cat?.name || catId),
+        name: getCategoryDisplayName(catId, categories, lang),
         color: cat?.color || '#6366F1',
         icon: cat?.icon || 'Tag',
         prevAmount: pAmount,
@@ -177,7 +187,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
       categoryComparisonData: topCats,
       prevDayCount: currentDay,
     };
-  }, [transactions, currentMonthKey, prevMonthKey, comparisonPeriod, currentDay, catMap, lang, sharedWalletScopeOverrides]);
+  }, [transactions, currentMonthKey, prevMonthKey, comparisonPeriod, currentDay, customStartDay, customEndDay, catMap, lang, sharedWalletScopeOverrides]);
 
   const diffAmount = thisMonthTotal - prevMonthTotal;
   const isSpendingIncreased = diffAmount > 0;
@@ -187,6 +197,16 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
     : thisMonthTotal > 0
     ? 100
     : 0;
+
+  // [v7.5.70] Day range actually compared, for every label on the card.
+  // 'full' covers the whole month (rangeEnd 0); 'toDate' is days 1-today;
+  // 'custom' is the user-picked days. Digits stay English, like the
+  // amounts ("0.12 သိန်း") and years ("2026") elsewhere on this card —
+  // the old hardcoded Myanmar "၁" mixed with the English day number.
+  const rangeStart = comparisonPeriod === 'custom' ? customStartDay : 1;
+  const rangeEnd = comparisonPeriod === 'custom' ? customEndDay : comparisonPeriod === 'toDate' ? currentDay : 0;
+  const rangePhraseMy = rangeEnd > 0 ? `ရက်စွဲ ${rangeStart} မှ ${rangeEnd} အထိ` : '';
+  const rangePhraseEn = rangeEnd > 0 ? `Day ${rangeStart} to ${rangeEnd}` : '';
 
   // Chart data for Overall view
   const overallBarData = useMemo(() => {
@@ -232,9 +252,9 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
           </div>
           <div className="text-[10px] text-slate-400">{formatMMK(data.spending)}</div>
           <div className="text-[10px] text-slate-400">
-            {comparisonPeriod === 'toDate'
-              ? (lang === 'my' ? `ရက်စွဲ ၁ မှ ${currentDay} အထိ` : `Day 1 to ${currentDay}`)
-              : (lang === 'my' ? 'တစ်လလုံး စုစုပေါင်း' : 'Full Month Total')}
+            {comparisonPeriod === 'full'
+              ? (lang === 'my' ? 'တစ်လလုံး စုစုပေါင်း' : 'Full Month Total')
+              : (lang === 'my' ? rangePhraseMy : rangePhraseEn)}
           </div>
         </div>
       );
@@ -327,11 +347,59 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                   ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
-              title={lang === 'my' ? `ရက်စွဲ ၁ မှ ${currentDay} အထိသာ နှိုင်းယှဉ်ချက်` : `Compare Day 1-${currentDay} like-for-like`}
+              title={lang === 'my' ? `ရက်စွဲ 1 မှ ${currentDay} အထိသာ နှိုင်းယှဉ်ချက်` : `Compare Day 1-${currentDay} like-for-like`}
             >
-              {lang === 'my' ? `၁-${currentDay} ရက်ထိ` : `To Date (D1-${currentDay})`}
+              {lang === 'my' ? `1-${currentDay} ရက်ထိ` : `To Date (D1-${currentDay})`}
+            </button>
+            <button
+              type="button"
+              onClick={() => setComparisonPeriod('custom')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                comparisonPeriod === 'custom'
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title={lang === 'my' ? 'ရက်စွဲ စိတ်ကြိုက် ရွေးချယ်နှိုင်းယှဉ်ချက်' : 'Compare a custom day range'}
+            >
+              {lang === 'my' ? 'စိတ်ကြိုက်' : 'Custom'}
             </button>
           </div>
+
+          {/* [v7.5.70] Custom day-range pickers — shown only for Custom */}
+          {comparisonPeriod === 'custom' && (
+            <div className="bg-slate-100 p-0.5 rounded-xl flex items-center gap-1 text-xs">
+              <select
+                value={customStartDay}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setCustomStartDay(v);
+                  if (v > customEndDay) setCustomEndDay(v);
+                }}
+                className="px-1.5 py-1 rounded-lg bg-white font-semibold text-slate-900 cursor-pointer"
+                aria-label={lang === 'my' ? 'စရက်' : 'Start day'}
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <span className="text-slate-500 font-semibold px-0.5">{lang === 'my' ? 'မှ' : 'to'}</span>
+              <select
+                value={customEndDay}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setCustomEndDay(v);
+                  if (v < customStartDay) setCustomStartDay(v);
+                }}
+                className="px-1.5 py-1 rounded-lg bg-white font-semibold text-slate-900 cursor-pointer"
+                aria-label={lang === 'my' ? 'ဆုံးရက်' : 'End day'}
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <span className="text-slate-500 font-semibold px-0.5">{lang === 'my' ? 'ရက်ထိ' : 'days'}</span>
+            </div>
+          )}
 
           {/* Mode Switch (Overall vs Categories) */}
           <div className="bg-slate-100 p-0.5 rounded-xl flex items-center text-xs">
@@ -375,9 +443,9 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
             {formatLakhs(prevMonthTotal, lang)}
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            {comparisonPeriod === 'toDate'
-              ? (lang === 'my' ? `ရက်စွဲ ၁ မှ ${currentDay} အထိ` : `Day 1 - ${currentDay}`)
-              : (lang === 'my' ? 'တစ်လလုံး စုစုပေါင်း' : 'Full Month')}
+            {comparisonPeriod === 'full'
+              ? (lang === 'my' ? 'တစ်လလုံး စုစုပေါင်း' : 'Full Month')
+              : (lang === 'my' ? rangePhraseMy : rangePhraseEn)}
           </div>
         </div>
 
@@ -393,9 +461,9 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
             {formatLakhs(thisMonthTotal, lang)}
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            {comparisonPeriod === 'toDate'
-              ? (lang === 'my' ? `ရက်စွဲ ၁ မှ ${currentDay} အထိ` : `Day 1 - ${currentDay}`)
-              : (lang === 'my' ? 'လက်ရှိအချိန်အထိ' : 'Month to date')}
+            {comparisonPeriod === 'full'
+              ? (lang === 'my' ? 'လက်ရှိအချိန်အထိ' : 'Month to date')
+              : (lang === 'my' ? rangePhraseMy : rangePhraseEn)}
           </div>
         </div>
 
@@ -409,7 +477,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
         }`}>
           <div className="text-[11px] font-semibold flex items-center justify-between">
             <span className={isSpendingDecreased ? 'text-emerald-800' : isSpendingIncreased ? 'text-rose-800' : 'text-slate-600'}>
-              {lang === 'my' ? 'ကွာခြားချက် (Change)' : 'Variance'}
+              {lang === 'my' ? 'ကွာခြားချက်' : 'Change'}
             </span>
             <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded ${
               isSpendingDecreased
@@ -508,9 +576,9 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                 </div>
 
                 <div className="text-[11px] text-slate-400">
-                  {comparisonPeriod === 'toDate'
-                    ? (lang === 'my' ? `* နှိုင်းယှဉ်ရက်စွဲ: ၁ မှ ${currentDay} ရက်အထိသာ` : `* Comparison up to day ${currentDay}`)
-                    : (lang === 'my' ? '* တစ်လလုံး စုစုပေါင်း အသုံးစရိတ်' : '* Full calendar month totals')}
+                  {comparisonPeriod === 'full'
+                    ? (lang === 'my' ? '* တစ်လလုံး စုစုပေါင်း အသုံးစရိတ်' : '* Full calendar month totals')
+                    : (lang === 'my' ? `* နှိုင်းယှဉ်ရက်စွဲ: ${rangeStart} မှ ${rangeEnd} ရက်အထိသာ` : `* Comparison for days ${rangeStart} to ${rangeEnd}`)}
                 </div>
               </div>
             </div>
@@ -619,7 +687,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
           <div className="leading-relaxed">
             {lang === 'my' ? (
               <span>
-                {comparisonPeriod === 'toDate' ? `ယခုလ ${currentDay} ရက်အထိ ` : 'ယခုလ '}
+                {comparisonPeriod === 'full' ? 'ယခုလ ' : `${rangePhraseMy} `}
                 အသုံးစရိတ်သည် ပြီးခဲ့သည့်လနှင့် နှိုင်းယှဉ်ပါက{' '}
                 <strong className={isSpendingDecreased ? 'text-emerald-700' : isSpendingIncreased ? 'text-rose-700' : 'text-slate-800'}>
                   {formatLakhs(Math.abs(diffAmount), lang)} ({percentChange}%)
@@ -641,7 +709,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                   : isSpendingIncreased
                   ? 'higher than last month'
                   : 'identical to last month'}
-                {comparisonPeriod === 'toDate' ? ` (comparing Day 1 to ${currentDay}).` : '.'}
+                {comparisonPeriod === 'full' ? '.' : ` (comparing days ${rangeStart} to ${rangeEnd}).`}
               </span>
             )}
           </div>

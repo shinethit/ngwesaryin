@@ -6,12 +6,11 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
-import { formatMMK, formatLakhs } from '../utils/formatters';
+import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
@@ -31,6 +30,21 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
 }) => {
   const [selectedTopCount, setSelectedTopCount] = useState<number>(4);
 
+  // [v7.5.70] Tappable legend — tap a legend chip to hide/show its
+  // line (user request 2026-11-07: "cat_debt_issued" and Total Expense
+  // felt stuck because the built-in legend was not clickable).
+  // Keys are category ids ('total' for the Total Expense line) so the
+  // hidden state survives a language switch.
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+  const toggleLine = (key: string) => {
+    setHiddenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   // [v7.5.55 D18] Convert amounts to MMK via each transaction's wallet.
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
   const convertTxToMMK = (t: Transaction) => {
@@ -39,7 +53,6 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
     return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
   };
 
-  const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   // [v7.5.68] Per-viewer shared-wallet scope overrides.
   const { sharedWalletScopeOverrides } = useAuth();
 
@@ -92,8 +105,11 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       const row: any = { month: m.label, monthKey: m.key };
 
       topCategories.forEach((catId) => {
-        const cat = catMap.get(catId);
-        const catName = lang === 'my' ? (cat?.name || catId) : (cat?.nameEn || catId);
+        // [v7.5.70] Resolve via the shared helper — the old
+        // `cat?.name || catId` fallback showed the raw key
+        // ("cat_debt_issued") for built-in debt categories that are
+        // not in the user category list.
+        const catName = getCategoryDisplayName(catId, categories, lang);
 
         const sum = transactions
           .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && isScopedTx(t) && t.date?.startsWith(m.key) && (t.category === catId))
@@ -111,7 +127,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       row[lang === 'my' ? 'စုစုပေါင်းထွက်ငွေ' : 'Total Expense'] = totalMonthExpense;
       return row;
     });
-  }, [lastSixMonths, topCategories, transactions, catMap, lang, walletMap, wallets, sharedWalletScopeOverrides]);
+  }, [lastSixMonths, topCategories, transactions, lang, walletMap, wallets, sharedWalletScopeOverrides]);
 
   const categoryColors = ['#10B981', '#6366F1', '#EC4899', '#F59E0B', '#3B82F6', '#8B5CF6'];
 
@@ -189,7 +205,6 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
                 padding: '10px 14px',
               }}
             />
-            <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
 
             {/* Total Expense Line */}
             <Line
@@ -199,12 +214,13 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
               strokeWidth={3}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}
+              hide={hiddenKeys.has('total')}
             />
 
             {/* Top Category Lines */}
             {topCategories.map((catId, idx) => {
-              const cat = catMap.get(catId);
-              const catName = lang === 'my' ? (cat?.name || catId) : (cat?.nameEn || catId);
+              // [v7.5.70] Same shared helper as above — no raw keys.
+              const catName = getCategoryDisplayName(catId, categories, lang);
               const color = categoryColors[idx % categoryColors.length];
 
               return (
@@ -215,12 +231,52 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
                   stroke={color}
                   strokeWidth={2}
                   dot={{ r: 3 }}
+                  hide={hiddenKeys.has(catId)}
                 />
               );
             })}
           </LineChart>
         </ResponsiveContainer>
       </div>
+      )}
+
+      {/* [v7.5.70] Custom tappable legend — replaces the built-in one */}
+      {totalSixMonthExpense > 0 && (
+        <div className="space-y-1 pt-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
+            <button
+              type="button"
+              onClick={() => toggleLine('total')}
+              className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${hiddenKeys.has('total') ? 'opacity-40' : ''}`}
+              title={lang === 'my' ? 'စုစုပေါင်းထွက်ငွေ လိုင်း ဖွက်/ပြ' : 'Hide/show the Total Expense line'}
+            >
+              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: '#EF4444' }} />
+              <span className="text-slate-700 font-medium">{lang === 'my' ? 'စုစုပေါင်းထွက်ငွေ' : 'Total Expense'}</span>
+            </button>
+            {topCategories.map((catId, idx) => {
+              const catName = getCategoryDisplayName(catId, categories, lang);
+              const color = categoryColors[idx % categoryColors.length];
+              const hidden = hiddenKeys.has(catId);
+              return (
+                <button
+                  key={catId}
+                  type="button"
+                  onClick={() => toggleLine(catId)}
+                  className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${hidden ? 'opacity-40' : ''}`}
+                  title={hidden
+                    ? (lang === 'my' ? `${catName} ကို ပြန်ပြမည်` : `Show ${catName}`)
+                    : (lang === 'my' ? `${catName} ကို ဖွက်မည်` : `Hide ${catName}`)}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-slate-700 font-medium">{catName}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-slate-400">
+            {lang === 'my' ? '💡 ကဏ္ဍအမည်ကို နှိပ်ပြီး လိုင်း ဖွက်/ပြ လုပ်နိုင်သည်' : '💡 Tap a legend item to hide/show its line'}
+          </p>
+        </div>
       )}
     </div>
   );

@@ -497,9 +497,10 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                 {lang === 'my' ? 'အသားတင် ပိုငွေ/လိုငွေ' : 'Net Surplus'}
               </span>
               <span
-                className={`text-xs sm:text-sm font-bold font-mono mt-0.5 block ${
+                className={`text-xs sm:text-sm font-bold font-mono mt-0.5 block truncate ${
                   totalPeriodNet >= 0 ? 'text-emerald-700' : 'text-rose-700'
                 }`}
+                title={formatMMK(totalPeriodNet)}
               >
                 {totalPeriodNet >= 0 ? '+' : ''}
                 {formatLakhs(totalPeriodNet, lang)}

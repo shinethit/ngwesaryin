@@ -537,21 +537,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Header and Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 sm:gap-4 bg-white p-3 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
               {lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ မှတ်တမ်းများ' : 'Income & Expense Records'}
             </h1>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap shrink-0">
               {filtered.length} {lang === 'my' ? 'ခု' : 'records'}
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-normal">
-            {lang === 'my'
-              ? 'နေ့စဉ် ငွေအဝင်အထွက်အားလုံးကို အသေးစိတ် စစ်ဆေးစီမံနိုင်ပါသည်'
-              : 'Review, search, and manage all your daily transactions'}
-          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -562,7 +557,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           <button
             type="button"
             onClick={() => onAddTransaction('expense')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>{lang === 'my' ? 'ထည့်မည်' : 'Add'}</span>
@@ -571,7 +566,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           <button
             type="button"
             onClick={() => setIsPriceHistoryOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-all cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-all cursor-pointer active:scale-95"
           >
             <History className="w-4 h-4" />
             <span>{lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'Price Compare'}</span>
@@ -581,7 +576,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={handleExport}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
             >
               <span>{lang === 'my' ? '⬇️ CSV ထုတ်ယူမည်' : '⬇️ Export CSV'}</span>
             </button>
@@ -614,7 +609,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       )}
 
             {/* Compact Unified Filter & Summary Control Box — [v7.5.68 R6] chips raised toward 36–44px + relaxed leading so Burmese labels are not cut. */}
-      <div className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200 shadow-xs space-y-1.5 sm:space-y-2">
         {/* Row 1: Wallet, Search, Type */}
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
           <div className="flex-1 min-w-[200px]">
@@ -624,7 +619,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
           <div className="relative w-full sm:w-48">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input id="tx-search-input" type="text" placeholder={lang === 'my' ? 'ရှာရန်...' : 'Search...'} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-8 py-2.5 text-base bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <input id="tx-search-input" type="text" placeholder={lang === 'my' ? 'ရှာရန်...' : 'Search...'} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-8 py-2 sm:py-2.5 text-base bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             {/* [v7.5.60 N2] Clear-search ✕, like Global Search / Categories. */}
             {searchTerm && (
               <button type="button" onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer" title={lang === 'my' ? 'ရှာဖွေမှု ရှင်းမည်' : 'Clear search'}>
@@ -633,14 +628,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             )}
           </div>
           <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg shrink-0 justify-center">
-            <button type="button" onClick={() => handleTypeFilterChange('all')} className={`px-3 py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors cursor-pointer ${typeFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>{lang === 'my' ? 'အားလုံး' : 'All'}</button>
-            <button type="button" onClick={() => handleTypeFilterChange('income')} className={`px-3 py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'income' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-50'}`}><ArrowDownLeft className="w-3 h-3" />{lang === 'my' ? 'ဝင်' : 'In'}</button>
-            <button type="button" onClick={() => handleTypeFilterChange('expense')} className={`px-3 py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'expense' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'}`}><ArrowUpRight className="w-3 h-3" />{lang === 'my' ? 'ထွက်' : 'Out'}</button>
+            <button type="button" onClick={() => handleTypeFilterChange('all')} className={`px-3 py-2 sm:py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors cursor-pointer ${typeFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>{lang === 'my' ? 'အားလုံး' : 'All'}</button>
+            <button type="button" onClick={() => handleTypeFilterChange('income')} className={`px-3 py-2 sm:py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'income' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-50'}`}><ArrowDownLeft className="w-3 h-3" />{lang === 'my' ? 'ဝင်' : 'In'}</button>
+            <button type="button" onClick={() => handleTypeFilterChange('expense')} className={`px-3 py-2 sm:py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'expense' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'}`}><ArrowUpRight className="w-3 h-3" />{lang === 'my' ? 'ထွက်' : 'Out'}</button>
           </div>
         </div>
 
         {/* Row 2: Scope + Summary Toggle + Time + Category + Table Toggle */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+        <div className="flex flex-wrap items-center gap-2 pt-1.5 sm:pt-2 border-t border-slate-100">
           {/* [v7.5.56] All / ကိုယ်ပိုင် / မျှဝေထား filter (finding 25) —
               wires the existing dataScope logic to real UI. Only shown
               when shared wallets exist. */}
@@ -652,11 +647,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             </div>
           )}
           <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200/70 shrink-0">
-            <button type="button" onClick={() => setFinancialSystem('opening_closing')} className={'px-2.5 py-2.5 rounded-md text-xs font-bold leading-relaxed transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>{lang === 'my' ? 'အဖွင့် / အပိတ်' : 'Opening / Closing'}</button>
-            <button type="button" onClick={() => setFinancialSystem('inflow_outflow')} className={'px-2.5 py-2.5 rounded-md text-xs font-bold leading-relaxed transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>{lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ' : 'Inflow / Outflow'}</button>
+            <button type="button" onClick={() => setFinancialSystem('opening_closing')} className={'px-2.5 py-2 sm:py-2.5 rounded-md text-xs font-bold leading-relaxed transition-all cursor-pointer ' + (financialSystem === 'opening_closing' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>{lang === 'my' ? 'အဖွင့် / အပိတ်' : 'Opening / Closing'}</button>
+            <button type="button" onClick={() => setFinancialSystem('inflow_outflow')} className={'px-2.5 py-2 sm:py-2.5 rounded-md text-xs font-bold leading-relaxed transition-all cursor-pointer ' + (financialSystem === 'inflow_outflow' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900')}>{lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ' : 'Inflow / Outflow'}</button>
           </div>
           
-          <div className="flex-1 flex gap-1.5 min-w-[200px]">
+          <div className="flex-1 flex gap-1.5 min-w-[200px] basis-full sm:basis-auto">
             <select id="tx-time-filter" value={timeFilter} onChange={(e: any) => setTimeFilter(e.target.value)} className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-2 text-base font-semibold text-slate-700 focus:outline-none cursor-pointer">
               <option value="all">🌟 {lang === 'my' ? 'ရက်စွဲအားလုံး' : 'All Time'}</option>
               <option value="this_month">📅 {lang === 'my' ? 'ယခုလ' : 'This Month'}</option>
@@ -700,7 +695,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || selectedWalletIds.length > 0 || effectiveDataScope !== 'all') && (
               <button type="button" onClick={() => { setSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); setEffectiveDataScope('all'); }} className="text-xs text-rose-600 hover:underline font-bold px-2.5 py-2.5 leading-relaxed cursor-pointer bg-rose-50 rounded-lg">↺</button>
             )}
-            <button type="button" onClick={() => setShowSummaryTable(!showSummaryTable)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2.5 leading-relaxed rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0">
+            <button type="button" onClick={() => setShowSummaryTable(!showSummaryTable)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 sm:py-2.5 leading-relaxed rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0">
               {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းမည်' : '➖ Compact') : (lang === 'my' ? '📊 Table' : '📊 Table')}
             </button>
           </div>
@@ -710,7 +705,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         {showSummaryTable ? (
           <FinancialSummaryTable financialSystem={financialSystem} onChangeFinancialSystem={setFinancialSystem} income={filteredIncome} expense={filteredExpense} incomeCount={filtered.filter((t) => t.type === 'income' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} expenseCount={filtered.filter((t) => t.type === 'expense' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} selectedWallets={selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length ? wallets.filter((w) => selectedWalletIds.includes(w.id)) : selectedWallet !== 'all' ? wallets.filter((w) => isWalletMatch(w, selectedWallet)) : wallets} transactions={filtered} lang={lang} />
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-xs mt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 sm:p-2 bg-slate-50 rounded-xl border border-slate-100 text-xs mt-1">
             <div className="flex items-center gap-3 flex-wrap font-mono font-bold">
               <div className="flex items-center gap-1 text-emerald-700">
                 <ArrowDownLeft className="w-3 h-3 stroke-[2.5]" />
@@ -1055,7 +1050,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                           </div>
 
                           {/* Right Side Actions & Cloud Badge */}
-                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-2">
                             {/* Per-Transaction Sync Status Badge & Error Tracker Trigger */}
                             {(() => {
                               const syncInfo = getTransactionSyncStatus(t, cloudTxIds);
@@ -1063,7 +1058,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setSelectedTxForSyncModal(t); }}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-transform active:scale-95 cursor-pointer shadow-2xs ${syncInfo.badgeClass}`}
+                                  className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-transform active:scale-95 cursor-pointer shadow-2xs ${syncInfo.badgeClass}`}
                                   title={lang === 'my' ? syncInfo.labelMy : syncInfo.labelEn}
                                 >
                                   {syncInfo.state === 'synced' && <Cloud className="w-3 h-3 text-emerald-600 shrink-0" />}
@@ -1099,14 +1094,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   {canEdit ? (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); onEditTransaction(t); }}
-                                      className="p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                      className="p-2 sm:p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
                                       title={lang === 'my' ? 'မှတ်တမ်း ပြင်ဆင်မည်' : 'Edit record'}
                                     >
                                       <Edit2 className="w-4 h-4" />
                                     </button>
                                   ) : (
                                     <span
-                                      className="p-2.5 text-slate-200 cursor-not-allowed"
+                                      className="p-2 sm:p-2.5 text-slate-200 cursor-not-allowed"
                                       title={lang === 'my' ? 'Wallet ပိုင်ရှင်မှ ပြင်ဆင်ခွင့် ပိတ်ထားပါသည်' : 'Edit disabled'}
                                     >
                                       <Lock className="w-3.5 h-3.5" />
@@ -1116,14 +1111,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   {canDelete ? (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setTxToDelete(t); }}
-                                      className="p-2.5 text-rose-500 bg-rose-50 hover:text-rose-700 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                                      className="p-2 sm:p-2.5 text-rose-500 bg-rose-50 hover:text-rose-700 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
                                       title={lang === 'my' ? 'မှတ်တမ်း ဖျက်မည်' : 'Delete record'}
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
                                   ) : (
                                     <span
-                                      className="p-2.5 text-slate-200 cursor-not-allowed"
+                                      className="p-2 sm:p-2.5 text-slate-200 cursor-not-allowed"
                                       title={lang === 'my' ? 'Wallet ပိုင်ရှင်မှ ဖျက်ပိုင်ခွင့် ပိတ်ထားပါသည်' : 'Delete disabled'}
                                     >
                                       <Lock className="w-3.5 h-3.5" />

@@ -234,7 +234,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
             <div className="px-4 pt-4 pb-2 space-y-2">
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 {lang === 'my'
-                  ? 'အောက်ပါတို့သည် device နှစ်လုံးတစ်ချိန်တည်း ပြင်ဆင်မိသည့် အရာများဖြစ်ပြီး Cloud မှာရှိသည့် (အသစ်ဆုံး) version ကို အလိုအလျောက် ရွေးချယ်ပြီးဖြစ်ပါသည်။ ကွာခြားချက်ကို အောက်မှာ ကြည့်နိုင်ပြီး သင့်အပြောင်းအလဲကို ပြန်ယူချင်ရင် "ကျွန်တော့်ဟာကို ပြန်ယူမည်" ကို နှိပ်ပါ။'
+                  ? 'အောက်ပါတို့သည် device နှစ်လုံးတစ်ချိန်တည်း ပြင်ဆင်မိသည့် အရာများဖြစ်ပြီး Cloud မှာရှိသည့် (အသစ်ဆုံး) version ကို အလိုအလျောက် ရွေးချယ်ပြီးဖြစ်ပါသည်။ ကွာခြားချက်ကို အောက်မှာ ကြည့်နိုင်ပြီး သင့်အပြောင်းအလဲကို ပြန်ယူချင်ရင် "ကျွန်တော့်ဟာကို ယူမည်" ကို နှိပ်ပါ။'
                   : 'These records were edited on two devices at the same time. The newer cloud version was auto-applied. See what changed below — or tap "Keep my change" to send your version back to the Cloud.'}
               </p>
               {notice && (
@@ -318,18 +318,18 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
                         type="button"
                         disabled={busyId === c.id}
                         onClick={() => handleKeepMine(c)}
-                        className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-[11px] font-bold"
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-[11px] font-bold whitespace-nowrap"
                       >
                         <Undo2 className="w-3.5 h-3.5" />
                         {busyId === c.id
                           ? (lang === 'my' ? 'ပို့နေသည်…' : 'Sending…')
-                          : (lang === 'my' ? 'ကျွန်တော့်ဟာကို ပြန်ယူမည်' : 'Keep my change')}
+                          : (lang === 'my' ? 'ကျွန်တော့်ဟာကို ယူမည်' : 'Keep my change')}
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => { markResolved(c.id); refresh(); }}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold"
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold whitespace-nowrap"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {lang === 'my' ? 'အတည်ပြုပြီး' : 'Acknowledge'}
@@ -345,7 +345,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
                           setConfirmDeleteId(c.id);
                         }
                       }}
-                      className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-bold ${
+                      className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-bold whitespace-nowrap ${
                         confirmDeleteId === c.id
                           ? 'bg-rose-600 border-rose-600 text-white'
                           : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-600'
@@ -353,7 +353,7 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       {confirmDeleteId === c.id
-                        ? (lang === 'my' ? 'သေချာပါသလား? ဖျက်မည်' : 'Sure? Delete')
+                        ? (lang === 'my' ? 'သေချာလား? ဖျက်မည်' : 'Sure? Delete')
                         : (lang === 'my' ? 'မှတ်တမ်းဖျက်မည်' : 'Delete record')}
                     </button>
                   </div>
@@ -378,13 +378,13 @@ export const ConflictBanner: React.FC<ConflictBannerProps> = ({ lang }) => {
                     setClearAllArmed(true);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-[11px] font-bold ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-[11px] font-bold whitespace-nowrap ${
                   clearAllArmed ? 'bg-rose-800' : 'bg-rose-600 hover:bg-rose-700'
                 }`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 {clearAllArmed
-                  ? (lang === 'my' ? 'သေချာပါသလား? အားလုံး ရှင်းမည်' : 'Sure? Clear all')
+                  ? (lang === 'my' ? 'သေချာလား? ရှင်းမည်' : 'Sure? Clear all')
                   : (lang === 'my' ? 'အားလုံး ရှင်းမည်' : 'Clear All')}
               </button>
               <button

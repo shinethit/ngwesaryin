@@ -193,7 +193,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         {/* Current Version Highlight Card */}
         <div className="px-4 sm:px-6 pt-4 pb-3 bg-emerald-50/50 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-sm tracking-wide shadow-xs flex items-center gap-1.5">
+            <div className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-sm tracking-wide shadow-xs flex items-center gap-1.5 whitespace-nowrap shrink-0">
               <span>{CURRENT_APP_VERSION}</span>
               <span className="text-[10px] font-medium opacity-80">(Build #{CURRENT_BUILD_NUMBER})</span>
             </div>

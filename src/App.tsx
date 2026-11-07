@@ -2279,8 +2279,11 @@ export default function App() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    {lang === 'my' ? 'အကြွေး စာရင်း (Guest Mode တွင် မရရှိနိုင်ပါ)' : 'Debt Tracking Locked in Guest Mode'}
+                    {lang === 'my' ? 'အကြွေး စာရင်း' : 'Debt Tracking'}
                   </h2>
+                  <p className="text-xs font-semibold text-amber-700 mt-1">
+                    {lang === 'my' ? 'Guest Mode တွင် မရရှိနိုင်ပါ' : 'Locked in Guest Mode'}
+                  </p>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">
                     {lang === 'my'
                       ? 'အကြွေးနှင့် အရစ်ကျ မှတ်တမ်းများ ထည့်သွင်းရန် Google Account ဖြင့် အခမဲ့ Sign in ပြုလုပ်ပါ — Free အစီအစဉ်နဲ့ပင် ရပါသည် (Premium မလိုပါ)'
@@ -2660,7 +2663,7 @@ export default function App() {
                     className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span>{lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည် (Clear All Data)' : 'Clear All Data'}</span>
+                    <span>{lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည်' : 'Clear All Data'}</span>
                   </button>
 
                   {plan === 'premium' && (

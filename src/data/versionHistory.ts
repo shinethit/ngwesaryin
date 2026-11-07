@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.71';
-export const CURRENT_BUILD_NUMBER = 286;
+export const CURRENT_APP_VERSION = 'v7.5.72';
+export const CURRENT_BUILD_NUMBER = 287;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.72',
+    buildNumber: 287,
+    releaseDate: '2026-11-07',
+    releaseTime: '10:51 PM (MMT)',
+    titleMy: 'စာသား ပြင်ဆင်မှု + ဆိုင်အမျိုးအစား + Transactions ခေါင်းစဉ် ကျစ်လစ်မှု',
+    titleEn: 'Text-Fit Fixes + Shop Categories + Compact Transactions Header',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဖုန်းမှာ စာလုံးမဆံ့တာ၊ ဖြတ်တောက်ခံရတာ၊ ထပ်နေတာ ၃၆ ခု ပြင်ပြီးပြီ။ sm3 ဆိုင် ၉ မျိုးကို ဆိုင်အမျိုးအစား အမှန်တွေအဖြစ် ထည့်ပေးထားလို့ Import လုပ်ရင် သူ့အမျိုးအစားထဲ တိုက်ရိုက်ရောက်မယ်။ Transactions စာမျက်နှာရဲ့ အပေါ်ပိုင်းကိုလည်း ကျစ်လစ်အောင် ပြင်ထားလို့ မှတ်တမ်းတွေ ပိုမြင်ရမယ်။',
+    descriptionEn: 'Fixed 36 places where text was clipped, cut off or overlapping on phones. The 9 sm3 shop types are now real shop categories, so imported shops land directly in their own type. The top of the Transactions page is more compact, so more records fit on screen.',
+    changesMy: [
+      '📱 စာလုံးမဆံ့တာ ၃၆ ခု ပြင်ခြင်း — ကြော်ငြာတန်း၊ ဆိုင်ရှာဖွေမှု၊ ရက်စွဲပြား၊ ခလုတ်များ၊ Premium ဇယား အပါအဝင်',
+      '🏪 sm3 ဆိုင်အမျိုးအစား ၉ ခု — ကားငှားခြင်း၊ အိမ်ခြံမြေ၊ ကြော်ငြာ၊ အာမခံ၊ အလုပ်အကိုင် စသဖြင့် အမှန်အမျိုးအစားအဖြစ် ထည့်ခြင်း',
+      '📥 ဆိုင် Import လုပ်ရင် အမျိုးအစား အမှန်ထဲ တိုက်ရိုက်ရောက်ခြင်း (အခြား အုပ်စုထဲ အကုန် စုမနေတော့ဘူး)',
+      '📋 Transactions ခေါင်းစဉ် ကျစ်လစ်မှု — ခေါင်းစဉ်ကတ် သေးသွားပြီး ပထမ မှတ်တမ်းကို scroll မလုပ်ဘဲ မြင်ရခြင်း',
+    ],
+    changesEn: [
+      '📱 36 text-fit fixes — ad banner, shop search, date pill, buttons and the Premium table',
+      '🏪 9 sm3 shop types as real categories — Car Rental, Real Estate, Advertising, Insurance, Employment and more',
+      '📥 Shop import now places each shop directly in its real type (no longer all piled under Other)',
+      '📋 Compact Transactions header — smaller title card, so the first record is visible without scrolling',
+    ],
+  },
   {
     version: 'v7.5.71',
     buildNumber: 286,

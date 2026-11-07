@@ -338,8 +338,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={
               lang === 'my'
-                ? 'ရှာဖွေပါ — မှတ်တမ်း၊ အကြွေး၊ လူအမည်၊ ပမာဏ...'
-                : 'Search records, debts, people, amounts...'
+                ? 'ရှာဖွေပါ — မှတ်တမ်း၊ အကြွေး...'
+                : 'Search records, debts...'
             }
             className="w-full min-w-0 bg-transparent text-slate-900 placeholder:text-slate-400 text-sm sm:text-base font-medium leading-relaxed focus:outline-none"
           />

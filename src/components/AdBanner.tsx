@@ -57,13 +57,13 @@ export const AdBanner: React.FC<AdBannerProps> = ({
       className={`relative overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 via-white to-amber-50 shadow-2xs ${className}`}
       id={`ad-unit-${slot}`}
     >
-      <div className="p-3 sm:p-4 flex items-center justify-between gap-3">
+      <div className="p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
             <Crown className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-tight truncate">
+            <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
               {lang === 'my' ? 'ကြော်ငြာကင်းစင်စွာ သုံးမည်' : 'Go ad-free with Premium'}
             </h4>
             <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
@@ -75,11 +75,11 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         </div>
 
         {/* [v7.5.68 R4] Wider icon/text gap so the crown never crowds "ကြော်ငြာ". */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:shrink-0">
           <button
             type="button"
             onClick={onOpenUpgradeModal}
-            className="inline-flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-2xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+            className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2.5 px-3 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-2xs transition-all active:scale-95 cursor-pointer"
           >
             <Crown className="w-3.5 h-3.5 shrink-0 text-amber-400" />
             <span>

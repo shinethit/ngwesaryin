@@ -1023,7 +1023,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
               <select
                 value={walletFilter}
                 onChange={(e) => setWalletFilter(e.target.value)}
-                className="text-xs font-semibold px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="text-xs font-semibold max-w-[200px] truncate px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="all">{lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး (ရောထားသည်များသာ)' : 'All Wallets (included only)'}</option>
                 {wallets.map((w) => (

@@ -231,7 +231,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {lang === 'my' ? 'အကြွေး စာရင်းများ (ပေးရန် / ရရန်)' : 'Debt & Loan Manager'}
             </h1>
@@ -772,7 +772,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                               </div>
 
                               <div className="flex items-center gap-3 shrink-0">
-                                <span className="text-slate-500 truncate">
+                                <span className="text-slate-500 truncate min-w-0 max-w-[120px]">
                                   {repWallet
                                     ? (lang === 'my' ? repWallet.name : repWallet.nameEn)
                                     : (lang === 'my' ? 'ဖျက်လိုက်သော ပိုက်ဆံအိတ်' : 'Deleted wallet')}

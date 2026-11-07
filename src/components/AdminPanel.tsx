@@ -2586,7 +2586,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </span>
           </button>
         </div>
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/70 to-transparent sm:hidden" aria-hidden="true" />
         </div>
 
         {/* Diagnostic/Bootstrap banner if codes or users is empty but we are on the users_codes tab */}
@@ -2816,19 +2815,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <option value="custom">{lang === 'my' ? 'စိတ်ကြိုက်' : 'Custom'}</option>
                   </select>
                   {summaryDatePreset === 'custom' && (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <input
                         type="date"
                         value={summaryFrom}
                         onChange={(e) => setSummaryFrom(e.target.value)}
-                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 min-w-0 flex-1"
                       />
                       <span className="text-slate-400 text-[11px]">→</span>
                       <input
                         type="date"
                         value={summaryTo}
                         onChange={(e) => setSummaryTo(e.target.value)}
-                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 min-w-0 flex-1"
                       />
                     </div>
                   )}
@@ -4454,7 +4453,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               {/* Switches: Marquee & Active */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-200/60">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   {/* Marquee Toggle */}
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -5179,11 +5178,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                   </div>
 
-                  <div className="flex items-center bg-slate-200/70 p-0.5 rounded-xl text-[11px] font-bold">
+                  <div className="flex flex-wrap items-center bg-slate-200/70 p-0.5 rounded-xl text-[11px] font-bold">
                     <button
                       type="button"
                       onClick={() => setVisitorFilter('all')}
-                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                         visitorFilter === 'all'
                           ? 'bg-white text-indigo-700 shadow-2xs'
                           : 'text-slate-600 hover:text-slate-900'
@@ -5194,7 +5193,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => setVisitorFilter('guest')}
-                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                         visitorFilter === 'guest'
                           ? 'bg-amber-500 text-white shadow-2xs'
                           : 'text-slate-600 hover:text-slate-900'
@@ -5205,7 +5204,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => setVisitorFilter('member')}
-                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                         visitorFilter === 'member'
                           ? 'bg-emerald-600 text-white shadow-2xs'
                           : 'text-slate-600 hover:text-slate-900'
@@ -5216,7 +5215,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => setVisitorFilter('active')}
-                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                         visitorFilter === 'active'
                           ? 'bg-indigo-600 text-white shadow-2xs'
                           : 'text-slate-600 hover:text-slate-900'
@@ -5717,19 +5716,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 {/* From / To inputs (only when custom) */}
                 {txDatePreset === 'custom' && (
                   <>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <input
                         type="date"
                         value={txDateFrom}
                         onChange={(e) => setTxDateFrom(e.target.value)}
-                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 min-w-0 flex-1"
                       />
                       <span className="text-slate-400 text-[11px]">→</span>
                       <input
                         type="date"
                         value={txDateTo}
                         onChange={(e) => setTxDateTo(e.target.value)}
-                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="text-base font-mono px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 min-w-0 flex-1"
                       />
                     </div>
                     {txDateRangeError && (

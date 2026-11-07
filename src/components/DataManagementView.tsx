@@ -230,7 +230,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{debts.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်' : '☁️ Syncs on save'}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                   <div className="flex items-center gap-1.5 text-slate-400 mb-1">
@@ -239,7 +239,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{wallets.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်' : '☁️ Syncs on save'}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                   <div className="flex items-center gap-1.5 text-slate-400 mb-1">
@@ -248,7 +248,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{categories.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်' : '☁️ Syncs on save'}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
                   <div className="flex items-center gap-1.5 text-slate-400 mb-1">
@@ -257,7 +257,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     </span>
                   </div>
                   <span className="font-mono font-bold text-base text-slate-800 block">{budgets.length}</span>
-                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်သည်' : '☁️ Syncs on save'}</span>
+                  <span className="text-[9px] text-slate-400">{lang === 'my' ? '☁️ သိမ်းတာနဲ့ Cloud ရောက်' : '☁️ Syncs on save'}</span>
                 </div>
               </div>
 
@@ -316,7 +316,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             className="w-full sm:w-auto px-5 py-3 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
           >
             <Trash2 className="w-4 h-4" />
-            <span>{lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည် (Clear All Data)' : 'Clear All Data Now'}</span>
+            <span>{lang === 'my' ? 'ဒေတာအားလုံး ဖျက်မည်' : 'Clear All Data Now'}</span>
           </button>
         </div>
       </div>

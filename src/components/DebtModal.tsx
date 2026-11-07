@@ -392,12 +392,12 @@ export const DebtModal: React.FC<DebtModalProps> = ({
           )}
 
           {/* Footer Submit */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 text-sm">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium shrink-0 whitespace-nowrap"
             >
               {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
             </button>
@@ -405,7 +405,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
               id="debt-submit-btn"
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2.5 rounded-xl text-white font-bold shadow-xs transition-all flex items-center justify-center gap-2 ${
+              className={`px-6 py-2.5 rounded-xl text-white font-bold shadow-xs transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap ${
                 isSubmitting
                   ? 'bg-indigo-400 cursor-not-allowed'
                   : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95 cursor-pointer'

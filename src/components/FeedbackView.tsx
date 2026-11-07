@@ -165,7 +165,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
             className="w-full md:w-auto px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
           >
             <Plus className="w-5 h-5 stroke-[2.5]" />
-            <span>{lang === 'my' ? '✍️ Review / အကြံပြုချက် ပေးပို့မည်' : 'Write Review / Feedback'}</span>
+            <span>{lang === 'my' ? 'အကြံပြုချက် ပေးပို့မည်' : 'Write Review / Feedback'}</span>
           </button>
         </div>
       </div>
@@ -279,7 +279,7 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
               type="text"
               placeholder={
                 lang === 'my'
-                  ? 'အကြောင်းအရာ သို့မဟုတ် နာမည်ဖြင့် ရှာဖွေရန်...'
+                  ? 'အကြောင်းအရာ၊ နာမည် ရှာရန်...'
                   : 'Search reviews or comments...'
               }
               value={searchQuery}

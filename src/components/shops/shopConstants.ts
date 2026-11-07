@@ -83,6 +83,98 @@ export const PRESET_TAGS: PresetTag[] = [
     textColor: 'text-indigo-800',
     borderColor: 'border-indigo-200/80'
   },
+  // [v7.5.72] sm3 shop types — real presets so imported sm3 shops group
+  // under their own type instead of piling under 'Other'.
+  { 
+    value: 'car-rental', 
+    labelMy: 'ကားငှားခြင်း', 
+    labelEn: 'Car Rental', 
+    iconName: 'other',
+    color: 'rose',
+    bgColor: 'bg-rose-50',
+    textColor: 'text-rose-800',
+    borderColor: 'border-rose-200/80'
+  },
+  { 
+    value: 'real-estate', 
+    labelMy: 'အိမ်ခြံမြေ', 
+    labelEn: 'Real Estate', 
+    iconName: 'other',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    textColor: 'text-teal-800',
+    borderColor: 'border-teal-200/80'
+  },
+  { 
+    value: 'advertising', 
+    labelMy: 'ကြော်ငြာ', 
+    labelEn: 'Advertising', 
+    iconName: 'other',
+    color: 'blue',
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-800',
+    borderColor: 'border-blue-200/80'
+  },
+  { 
+    value: 'oversea-employment', 
+    labelMy: 'နိုင်ငံခြား အလုပ်အကိုင်', 
+    labelEn: 'Oversea Employment', 
+    iconName: 'other',
+    color: 'lime',
+    bgColor: 'bg-lime-50',
+    textColor: 'text-lime-800',
+    borderColor: 'border-lime-200/80'
+  },
+  { 
+    value: 'insurance', 
+    labelMy: 'အာမခံ', 
+    labelEn: 'Insurance', 
+    iconName: 'other',
+    color: 'amber',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-800',
+    borderColor: 'border-amber-200/80'
+  },
+  { 
+    value: 'local-employment', 
+    labelMy: 'ပြည်တွင်း အလုပ်အကိုင်', 
+    labelEn: 'Local Employment', 
+    iconName: 'other',
+    color: 'emerald',
+    bgColor: 'bg-emerald-50',
+    textColor: 'text-emerald-800',
+    borderColor: 'border-emerald-200/80'
+  },
+  { 
+    value: 'seaman-shipping', 
+    labelMy: 'သင်္ဘောသား & သင်္ဘော', 
+    labelEn: 'Seaman & Shipping', 
+    iconName: 'other',
+    color: 'sky',
+    bgColor: 'bg-sky-50',
+    textColor: 'text-sky-800',
+    borderColor: 'border-sky-200/80'
+  },
+  { 
+    value: 'general-services', 
+    labelMy: 'အထွေထွေ ဝန်ဆောင်မှု', 
+    labelEn: 'General Services', 
+    iconName: 'other',
+    color: 'indigo',
+    bgColor: 'bg-indigo-50',
+    textColor: 'text-indigo-800',
+    borderColor: 'border-indigo-200/80'
+  },
+  { 
+    value: 'custom-clearance', 
+    labelMy: 'အကောက်ခွန် ရှင်းလင်းရေး', 
+    labelEn: 'Custom Clearance', 
+    iconName: 'other',
+    color: 'orange',
+    bgColor: 'bg-orange-50',
+    textColor: 'text-orange-800',
+    borderColor: 'border-orange-200/80'
+  },
   { 
     value: 'other', 
     labelMy: 'အခြားဆိုင်များ', 

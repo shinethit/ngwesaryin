@@ -307,14 +307,14 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     {
       titleMy: 'ဝင်ငွေ/ထွက်ငွေ မှတ်တမ်း',
       titleEn: 'Transactions Recording',
-      free: lang === 'my' ? `တစ်လ အတွင်း ${toMyanmarDigits(freeLimits.maxTransactions)} ခု` : `${freeLimits.maxTransactions} per calendar month`,
-      premium: lang === 'my' ? 'အကန့်အသတ်မရှိ (Unlimited)' : 'Unlimited',
+      free: lang === 'my' ? `${toMyanmarDigits(freeLimits.maxTransactions)} ခု/လ` : `${freeLimits.maxTransactions} / month`,
+      premium: lang === 'my' ? 'မကန့်သတ်' : 'Unlimited',
     },
     {
       titleMy: 'အကြွေးစာရင်း (ပေးရန်/ရရန်)',
       titleEn: 'Debt & Loan Tracking',
       free: lang === 'my' ? `အများဆုံး ${toMyanmarDigits(freeLimits.maxDebts)} ခု` : `Up to ${freeLimits.maxDebts} active`,
-      premium: lang === 'my' ? 'အကန့်အသတ်မရှိ + အရစ်ကျမှတ်တမ်း' : 'Unlimited + Installments',
+      premium: lang === 'my' ? 'မကန့်သတ် + အရစ်ကျ' : 'Unlimited + Installments',
     },
     {
       titleMy: 'ပိုက်ဆံအိတ်နှင့် ဘဏ်အကောင့်များ',
@@ -325,7 +325,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
     {
       titleMy: 'ဘတ်ဂျက်နှင့် ကဏ္ဍခွဲများ',
       titleEn: 'Custom Categories & Sub-categories',
-      free: lang === 'my' ? `ဘတ်ဂျက် ကဏ္ဍ ${toMyanmarDigits(freeLimits.maxBudgetCategories)} ခု၊ စိတ်ကြိုက်ကဏ္ဍ မပါ` : `Budgets: ${freeLimits.maxBudgetCategories} categories, no custom categories`,
+      free: lang === 'my' ? `ကဏ္ဍ ${toMyanmarDigits(freeLimits.maxBudgetCategories)} ခု` : `${freeLimits.maxBudgetCategories} categories`,
       premium: lang === 'my' ? 'စိတ်ကြိုက်ကဏ္ဍ/ကဏ္ဍခွဲ ထပ်တိုးနိုင်' : 'Unlimited custom categories',
     },
     {
@@ -420,40 +420,40 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('code')}
-            className={`flex-1 py-3 px-3 flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-b-2 ${
+            className={`flex-1 py-3 px-2 text-sm flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'code'
                 ? 'border-amber-600 text-amber-900 bg-white font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>{lang === 'my' ? 'Activation Code ထည့်မည်' : 'Enter Code'}</span>
+            <span className="whitespace-nowrap">{lang === 'my' ? 'Code ထည့်မည်' : 'Enter Code'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('payment')}
-            className={`flex-1 py-3 px-3 flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-b-2 ${
+            className={`flex-1 py-3 px-2 text-sm flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'payment'
                 ? 'border-amber-600 text-amber-900 bg-white font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{lang === 'my' ? 'ငွေလွှဲ၍ Code တောင်းရန်' : 'Get / Buy Code'}</span>
+            <span className="whitespace-nowrap">{lang === 'my' ? 'Code တောင်းရန်' : 'Buy Code'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('features')}
-            className={`flex-1 py-3 px-3 flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-b-2 ${
+            className={`flex-1 py-3 px-2 text-sm flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'features'
                 ? 'border-amber-600 text-amber-900 bg-white font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <ListCheck className="w-4 h-4 text-slate-600 shrink-0" />
-            <span>{lang === 'my' ? 'အင်္ဂါရပ်များ' : 'Features'}</span>
+            <span className="whitespace-nowrap">{lang === 'my' ? 'အင်္ဂါရပ်များ' : 'Features'}</span>
           </button>
         </div>
 
@@ -860,7 +860,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     {contactInfo.kpayPhone && (
                       <div className="flex items-center justify-between gap-2 text-slate-700">
                         <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600 min-w-0 truncate">
-                          💳 KBZPay{contactInfo.kpayName ? ` (${contactInfo.kpayName})` : ''}:
+                          💳 KBZPay{contactInfo.kpayName ? <span className="hidden sm:inline"> ({contactInfo.kpayName})</span> : ''}:
                         </span>
                         <span className="flex items-center gap-1.5 shrink-0">
                           <a href={`tel:${contactInfo.kpayPhone}`} className="font-bold text-emerald-800 underline underline-offset-2">{contactInfo.kpayPhone}</a>
@@ -873,7 +873,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     {contactInfo.wavePhone && (
                       <div className="flex items-center justify-between gap-2 text-slate-700">
                         <span className="font-semibold flex items-center gap-1 text-[11px] text-slate-600 min-w-0 truncate">
-                          🌊 WaveMoney{contactInfo.waveName ? ` (${contactInfo.waveName})` : ''}:
+                          🌊 WaveMoney{contactInfo.waveName ? <span className="hidden sm:inline"> ({contactInfo.waveName})</span> : ''}:
                         </span>
                         <span className="flex items-center gap-1.5 shrink-0">
                           <a href={`tel:${contactInfo.wavePhone}`} className="font-bold text-amber-800 underline underline-offset-2">{contactInfo.wavePhone}</a>
@@ -905,23 +905,23 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
           {activeTab === 'features' && (
             <div className="space-y-4">
               <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 text-xs sm:text-sm">
-                <div className="grid grid-cols-12 bg-slate-50 p-3 font-bold text-slate-600 uppercase text-[11px] tracking-wider">
-                  <div className="col-span-6">{lang === 'my' ? 'ဝန်ဆောင်မှု အင်္ဂါရပ်' : 'Features'}</div>
+                <div className="grid grid-cols-12 gap-2 bg-slate-50 p-3 font-bold text-slate-600 uppercase text-[11px] tracking-wider">
+                  <div className="col-span-5">{lang === 'my' ? 'ဝန်ဆောင်မှု အင်္ဂါရပ်' : 'Features'}</div>
                   <div className="col-span-3 text-center">{lang === 'my' ? 'Free အခမဲ့' : 'Free'}</div>
-                  <div className="col-span-3 text-center text-amber-700 font-extrabold flex items-center justify-center gap-1">
+                  <div className="col-span-4 text-center text-amber-700 font-extrabold flex items-center justify-center gap-1">
                     <Crown className="w-3.5 h-3.5" />
                     <span>Premium</span>
                   </div>
                 </div>
 
                 {features.map((feat, idx) => (
-                  <div key={idx} className="grid grid-cols-12 p-3 items-center hover:bg-slate-50/60 transition-colors">
-                    <div className="col-span-6 font-medium text-slate-800 min-w-0 break-words">
+                  <div key={idx} className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-slate-50/60 transition-colors">
+                    <div className="col-span-5 font-medium text-slate-800 min-w-0 break-words">
                       {lang === 'my' ? feat.titleMy : feat.titleEn}
                     </div>
 
                     {/* Free Column */}
-                    <div className="col-span-3 text-center text-slate-600 min-w-0">
+                    <div className="col-span-3 px-1 text-center text-slate-600 min-w-0">
                       {typeof feat.free === 'boolean' ? (
                         feat.free ? (
                           <Check className="w-4 h-4 text-emerald-600 mx-auto" />
@@ -934,7 +934,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                     </div>
 
                     {/* Premium Column */}
-                    <div className="col-span-3 text-center font-semibold text-amber-800 bg-amber-50/50 py-1 rounded-lg min-w-0">
+                    <div className="col-span-4 px-1 text-center font-semibold text-amber-800 bg-amber-50/50 py-1 rounded-lg min-w-0">
                       {typeof feat.premium === 'boolean' ? (
                         feat.premium ? (
                           <Check className="w-4 h-4 text-emerald-600 font-extrabold mx-auto stroke-[3]" />

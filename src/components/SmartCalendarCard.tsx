@@ -527,7 +527,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
         <div className="bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 rounded-2xl p-4 border border-indigo-200/90 shadow-2xs space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-2.5">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <span className="font-black text-xs sm:text-sm text-indigo-950 font-mono bg-white px-2.5 py-1 rounded-xl border border-indigo-200 shadow-2xs min-w-0 truncate">
+              <span className="font-black text-xs sm:text-sm text-indigo-950 font-mono bg-white px-2.5 py-1 rounded-xl border border-indigo-200 shadow-2xs min-w-0 leading-snug">
                 📅 {formatSelectedDay(selectedDayStr)}
               </span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 shrink-0">

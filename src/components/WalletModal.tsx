@@ -602,7 +602,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 }`}
               >
                 <Check className={`w-3.5 h-3.5 shrink-0 ${includeInTotals ? 'opacity-100' : 'opacity-0'}`} />
-                <span>{lang === 'my' ? 'စုစုပေါင်းထဲ ရောပြမည်' : 'Include in Totals'}</span>
+                <span>{lang === 'my' ? 'ရောပြမည်' : 'Include in Totals'}</span>
               </button>
               <button
                 type="button"
@@ -614,7 +614,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 }`}
               >
                 <Check className={`w-3.5 h-3.5 shrink-0 ${!includeInTotals ? 'opacity-100' : 'opacity-0'}`} />
-                <span>{lang === 'my' ? 'စုစုပေါင်းထဲ မရောပါ' : 'Exclude / Separate'}</span>
+                <span>{lang === 'my' ? 'မရောပါ' : 'Exclude / Separate'}</span>
               </button>
             </div>
           </div>
@@ -666,24 +666,24 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 text-sm">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium cursor-pointer transition-colors"
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium cursor-pointer transition-colors shrink-0 whitespace-nowrap"
             >
               {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs active:scale-95 transition-all cursor-pointer shrink-0 whitespace-nowrap"
             >
               {walletToEdit
                 ? lang === 'my'
-                  ? 'ပြင်ဆင်ချက် သိမ်းဆည်းမည်'
+                  ? 'ပြင်ဆင်ချက် သိမ်းမည်'
                   : 'Save Changes'
                 : lang === 'my'
-                ? 'အကောင့် အသစ်ထည့်မည်'
+                ? 'အကောင့်ထည့်မည်'
                 : 'Create Wallet'}
             </button>
           </div>

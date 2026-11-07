@@ -312,12 +312,12 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
           )}
 
           {/* Submit */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 text-sm">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium shrink-0 whitespace-nowrap"
             >
               {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
             </button>
@@ -325,7 +325,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
               id="repayment-submit-btn"
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2.5 rounded-xl text-white font-bold shadow-xs transition-all flex items-center justify-center gap-2 ${
+              className={`px-6 py-2.5 rounded-xl text-white font-bold shadow-xs transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap ${
                 isSubmitting
                   ? 'bg-emerald-400 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95 cursor-pointer'
@@ -337,7 +337,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
                   <span>{lang === 'my' ? 'သိမ်းဆည်းနေပါသည်...' : 'Saving...'}</span>
                 </>
               ) : (
-                <span>{isEditing ? (lang === 'my' ? 'ပြင်ဆင်ချက် သိမ်းမည်' : 'Save Changes') : (lang === 'my' ? 'ငွေဆပ်မှတ်တမ်း သိမ်းမည်' : 'Save Repayment')}</span>
+                <span>{isEditing ? (lang === 'my' ? 'ပြင်ဆင်ချက် သိမ်းမည်' : 'Save Changes') : (lang === 'my' ? 'ငွေဆပ်မှတ်မည်' : 'Save Repayment')}</span>
               )}
             </button>
           </div>

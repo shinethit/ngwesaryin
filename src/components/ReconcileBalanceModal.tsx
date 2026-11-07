@@ -416,21 +416,21 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={isNaN(actualBalance) || actualBalance < 0}
-              className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap shrink-0"
             >
               <Check className="w-4 h-4 stroke-[2.5] shrink-0" />
-              <span>{lang === 'my' ? 'စာရင်းညှိချက် အတည်ပြုမည်' : 'Confirm Reconciliation'}</span>
+              <span>{lang === 'my' ? 'အတည်ပြုမည်' : 'Confirm Reconciliation'}</span>
             </button>
           </div>
         </form>

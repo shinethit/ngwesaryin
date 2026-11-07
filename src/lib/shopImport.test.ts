@@ -9,6 +9,7 @@ import {
   shopDedupeKey,
   normalizePhone,
   firstPhoneOf,
+  sm3NoteForSubCategory,
 } from './shopImport';
 
 const META = {
@@ -190,5 +191,57 @@ describe('mapShopRow (v7.5.71)', () => {
       META
     );
     expect(docData.items).toEqual([{ name: 'Rice', price: 5000, updatedAt: 1794000000000 }]);
+  });
+});
+
+// [v7.5.72] Regression: sm3 subCategory must map to a real preset note
+// at import time — the sm3 file ships note='other' for all 874 shops,
+// so without this they would all pile under 'Other' in ShopsView.
+describe('sm3 subCategory → note mapping (v7.5.72)', () => {
+  const CASES: [string, string][] = [
+    ['Car Rental Service', 'car-rental'],
+    ['Real Estate', 'real-estate'],
+    ['Advertising Agency', 'advertising'],
+    ['Oversea Employment Service', 'oversea-employment'],
+    ['Insurance Agent', 'insurance'],
+    ['Local Employment Service', 'local-employment'],
+    ['Seaman & Shipping Employment Service', 'seaman-shipping'],
+    ['General Services', 'general-services'],
+    ['Custom Clearance Agents', 'custom-clearance'],
+  ];
+
+  it.each(CASES)('maps %s to %s and keeps subCategory as-is', (subCategory, note) => {
+    const docData = mapShopRow({ name: 'A', note: 'other', subCategory }, META);
+    expect(docData.note).toBe(note);
+    expect(docData.subCategory).toBe(subCategory);
+  });
+
+  it('matches case-insensitively after trimming', () => {
+    expect(sm3NoteForSubCategory('  REAL ESTATE  ')).toBe('real-estate');
+    expect(sm3NoteForSubCategory('Car rental SERVICE')).toBe('car-rental');
+    const docData = mapShopRow({ name: 'A', note: 'other', subCategory: '  insurance agent ' }, META);
+    expect(docData.note).toBe('insurance');
+  });
+
+  it('maps a combined subCategory on its first segment', () => {
+    expect(sm3NoteForSubCategory('Local Employment Service; Real Estate')).toBe('local-employment');
+    const docData = mapShopRow(
+      { name: 'A', note: 'other', subCategory: 'Car Rental Service; General Services' },
+      META
+    );
+    expect(docData.note).toBe('car-rental');
+  });
+
+  it('keeps note as other for an unknown subCategory', () => {
+    expect(sm3NoteForSubCategory('Bakery')).toBeNull();
+    expect(sm3NoteForSubCategory('')).toBeNull();
+    const docData = mapShopRow({ name: 'A', note: 'other', subCategory: 'Bakery' }, META);
+    expect(docData.note).toBe('other');
+    expect(docData.subCategory).toBe('Bakery');
+  });
+
+  it('keeps a non-sm3 note when there is no subCategory', () => {
+    const docData = mapShopRow({ name: 'A', note: 'grocery' }, META);
+    expect(docData.note).toBe('grocery');
   });
 });

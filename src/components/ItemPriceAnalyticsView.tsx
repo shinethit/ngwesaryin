@@ -1296,7 +1296,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                             {wallet && (
                               <>
                                 <span className="shrink-0">•</span>
-                                <span className="text-slate-600 whitespace-nowrap">
+                                <span className="text-slate-600 truncate min-w-0">
                                   {lang === 'my' ? wallet.name : wallet.nameEn || wallet.name}
                                 </span>
                               </>

@@ -150,6 +150,31 @@ function asShopItems(value: unknown, fallbackUpdatedAt: number): ShopItemEntry[]
   return out;
 }
 
+// [v7.5.72] sm3 subCategory → preset note value. The 874 sm3 shops all
+// arrive with note='other' and their real type only in subCategory, so
+// map it at import time or they would all pile under 'Other' in
+// ShopsView. Matched case-insensitively after trimming; a combined
+// subCategory ('A; B') maps on its first segment. Anything else keeps
+// the file's note ('other').
+export const SM3_SUBCATEGORY_TO_NOTE: Record<string, string> = {
+  'car rental service': 'car-rental',
+  'real estate': 'real-estate',
+  'advertising agency': 'advertising',
+  'oversea employment service': 'oversea-employment',
+  'insurance agent': 'insurance',
+  'local employment service': 'local-employment',
+  'seaman & shipping employment service': 'seaman-shipping',
+  'general services': 'general-services',
+  'custom clearance agents': 'custom-clearance',
+};
+
+// The preset note value for a subCategory, or null when it is not one
+// of the 9 sm3 types.
+export function sm3NoteForSubCategory(subCategory: string): string | null {
+  const first = (subCategory || '').split(';')[0].trim().toLowerCase();
+  return SM3_SUBCATEGORY_TO_NOTE[first] || null;
+}
+
 // Map one validated row to the exact public_shops document data.
 // addedBy / addedByUid / createdAt always come from the signed-in admin
 // at import time — never from the file. Source-only extras (sm3_id,
@@ -176,6 +201,10 @@ export function mapShopRow(
   const email = asStr(row.email);
   if (website) generalNotes = generalNotes ? generalNotes + ' · website: ' + website : 'website: ' + website;
   if (email) generalNotes = generalNotes ? generalNotes + ' · email: ' + email : 'email: ' + email;
+  // [v7.5.72] A matching sm3 subCategory sets the preset note; otherwise
+  // the file's note stands (sm3 files ship note='other').
+  const subCategory = asStr(row.subCategory);
+  const note = sm3NoteForSubCategory(subCategory) || asStr(row.note) || 'other';
   const docData: Record<string, unknown> = {
     id: meta.id,
     name: row.name,
@@ -187,8 +216,8 @@ export function mapShopRow(
     ward: asStr(row.ward),
     address: addresses.length > 0 ? addresses[0] : '',
     addresses,
-    note: asStr(row.note) || 'other',
-    subCategory: asStr(row.subCategory),
+    note,
+    subCategory,
     addedBy: meta.addedBy,
     addedByUid: meta.addedByUid,
     createdAt: meta.createdAt,

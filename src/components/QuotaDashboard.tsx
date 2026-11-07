@@ -167,38 +167,38 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
     switch (status) {
       case 'exhausted':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-rose-600 text-white flex items-center gap-1 shadow-xs">
+          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-rose-600 text-white flex items-center gap-1 shadow-xs shrink-0 whitespace-nowrap">
             <ShieldAlert className="w-3.5 h-3.5" />
-            {lang === 'my' ? 'Quota ပြည့်သွားသည်' : 'Exhausted'}
+            {lang === 'my' ? 'Quota ပြည့်' : 'Exhausted'}
           </span>
         );
       case 'critical':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-orange-600 text-white flex items-center gap-1 shadow-xs animate-pulse">
+          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-orange-600 text-white flex items-center gap-1 shadow-xs animate-pulse shrink-0 whitespace-nowrap">
             <AlertTriangle className="w-3.5 h-3.5" />
-            {lang === 'my' ? '၉၀% ကျော်ပြီ (စိုးရိမ်ရ)' : 'Critical (>90%)'}
+            {lang === 'my' ? '၉၀% ကျော်' : 'Critical (>90%)'}
           </span>
         );
       case 'warning':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-slate-950 flex items-center gap-1 shadow-xs">
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-slate-950 flex items-center gap-1 shadow-xs shrink-0 whitespace-nowrap">
             <AlertTriangle className="w-3.5 h-3.5" />
-            {lang === 'my' ? '၇၅% ကျော်ပြီ (သတိပြုရန်)' : 'Warning (>75%)'}
+            {lang === 'my' ? '၇၅% ကျော်' : 'Warning (>75%)'}
           </span>
         );
       case 'moderate':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-300 flex items-center gap-1">
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-300 flex items-center gap-1 shrink-0 whitespace-nowrap">
             <Activity className="w-3.5 h-3.5" />
-            {lang === 'my' ? 'အလယ်အလတ် သုံးစွဲမှု' : 'Moderate'}
+            {lang === 'my' ? 'အလယ်အလတ်' : 'Moderate'}
           </span>
         );
       case 'normal':
       default:
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shrink-0 whitespace-nowrap">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            {lang === 'my' ? '🟢 ပုံမှန် (လုံလောက်သည်)' : '🟢 Normal & Healthy'}
+            {lang === 'my' ? '🟢 ပုံမှန်' : '🟢 Normal & Healthy'}
           </span>
         );
     }
@@ -317,7 +317,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
 
         {/* Reset Countdown Pill */}
         <div className="mt-4 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-300">
-          <div className="flex items-center gap-1.5 font-medium">
+          <div className="flex flex-wrap items-center gap-1.5 font-medium">
             <Clock className="w-3.5 h-3.5 text-indigo-400" />
             <span>
               {lang === 'my'
@@ -346,7 +346,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
         {/* CARD 1: DOCUMENT READS (50,000 / Day) */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center font-bold">
                 📖
               </div>
@@ -397,7 +397,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
         {/* CARD 2: DOCUMENT WRITES (20,000 / Day) */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold">
                 ✍️
               </div>
@@ -448,7 +448,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
         {/* CARD 3: DOCUMENT DELETES (20,000 / Day) */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center font-bold">
                 🗑️
               </div>
@@ -516,7 +516,7 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="px-3 py-1 bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200">
               {lang === 'my' ? 'စုစုပေါင်း မှတ်တမ်း:' : 'Total Docs:'}{' '}
               <strong className="text-indigo-600">{storageEstimates.documentCount.toLocaleString()}</strong>

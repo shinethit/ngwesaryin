@@ -192,9 +192,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           {/* Official Web App URL info box */}
           <div className="mb-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-1.5 text-slate-700">
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
-              <span className="flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{lang === 'my' ? 'အက်ပ်၏ လိပ်စာအမှန် (Official Link):' : 'Official App URL:'}</span>
+              <span className="flex items-center gap-1.5 min-w-0">
+                <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="min-w-0">{lang === 'my' ? 'အက်ပ်၏ လိပ်စာအမှန်:' : 'Official App URL:'}</span>
               </span>
               <button
                 type="button"
@@ -205,7 +205,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     setTimeout(() => setCopiedLink(false), 2000);
                   } catch {}
                 }}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer whitespace-nowrap shrink-0"
               >
                 {copiedLink ? (
                   <>
@@ -258,8 +258,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
           {/* Prominent Email Registration / Login Card */}
           <div className="mb-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <div>
+            <div className="flex items-start justify-between gap-2 pb-3 border-b border-slate-100 mb-4">
+              <div className="min-w-0">
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
                   <Mail className="w-4 h-4 text-emerald-600" />
                   <span>
@@ -279,7 +279,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   setIsSignUp(!isSignUp);
                   setErrorMsg(null);
                 }}
-                className="px-2.5 py-1 text-xs font-bold rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer border border-emerald-200"
+                className="px-2.5 py-1 text-xs font-bold rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer border border-emerald-200 whitespace-nowrap shrink-0"
               >
                 {isSignUp
                   ? (lang === 'my' ? 'Sign In သို့' : 'Switch to Sign In')

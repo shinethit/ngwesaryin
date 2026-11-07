@@ -292,7 +292,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
               <Layers className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
                 <span>{lang === 'my' ? 'ကဏ္ဍများနှင့် ကဏ္ဍခွဲများ' : 'Categories & Sub-Categories'}</span>
                 {isPremium ? (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
@@ -300,7 +300,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                     Premium Unlocked
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
                     <Lock className="w-3 h-3 text-slate-500" />
                     Free View Only
                   </span>
@@ -722,8 +722,8 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                     type="text"
                     placeholder={
                       !isPremium
-                        ? (lang === 'my' ? '+ ကဏ္ဍခွဲသစ် ထည့်သွင်းရန် (Premium)' : '+ Add sub-category (Premium)')
-                        : (lang === 'my' ? '+ ကဏ္ဍခွဲအသစ် ထည့်မည် (ဥပမာ - ကော်ဖီ)' : '+ Add new sub-category (e.g. Coffee)')
+                        ? (lang === 'my' ? '+ ကဏ္ဍခွဲသစ် ထည့်မည်' : '+ Add sub-category')
+                        : (lang === 'my' ? '+ ကဏ္ဍခွဲအသစ် ထည့်မည်' : '+ Add new sub-category')
                     }
                     value={inlineInputVal}
                     onChange={(e) =>

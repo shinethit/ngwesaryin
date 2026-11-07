@@ -187,7 +187,7 @@ export const EducationView: React.FC<EducationViewProps> = ({ lang }) => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={
               lang === 'my'
-                ? 'ခေါင်းစဉ်၊ အကြွေး၊ ဘေဘီလုံ သို့မဟုတ် Power 48 ရှာရန်...'
+                ? 'ခေါင်းစဉ်၊ အကြွေး၊ ဘေဘီလုံ ရှာရန်...'
                 : 'Search articles, debt, babylon, power 48...'
             }
             className="w-full pl-10 pr-10 py-2.5 bg-white rounded-2xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-xs transition-all"

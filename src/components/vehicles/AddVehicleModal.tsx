@@ -183,7 +183,7 @@ export const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               {lang === 'my' ? 'ယာဉ်အမျိုးအစား' : 'Vehicle Type'}
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { id: 'car', labelMy: 'ကား', labelEn: 'Car', icon: Car },
                 { id: 'motorcycle', labelMy: 'ဆိုင်ကယ်', labelEn: 'Motorbike', icon: Bike },

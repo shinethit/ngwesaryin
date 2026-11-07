@@ -244,7 +244,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                       }`}
                     >
                       <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-amber-300' : 'text-slate-500'}`} />
-                      <span className="text-xs truncate min-w-0">
+                      <span className="text-xs leading-snug min-w-0">
                         {lang === 'my' ? cat.labelMy : cat.labelEn}
                       </span>
                     </button>

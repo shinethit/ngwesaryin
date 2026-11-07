@@ -178,7 +178,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 min-w-0">
                 <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="truncate">{lang === 'my' ? 'App အကြောင်း အတိုချုပ် (Copy ကူးရန်)' : 'App Summary (Copy to share)'}</span>
+                <span className="truncate">{lang === 'my' ? 'App အကြောင်း အတိုချုပ်' : 'App Summary'}</span>
               </label>
               <button
                 type="button"

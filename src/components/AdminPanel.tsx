@@ -10,10 +10,11 @@ import {
   onSnapshot,
   updateDoc,
   deleteField,
+  writeBatch,
 } from 'firebase/firestore';
 import { db, defaultDb, safeSetDoc, safeUpdateDoc, safeDeleteDoc, trackFirestoreReads } from '../lib/firebase';
 import { useAuth, parseExpiryTime } from '../context/AuthContext';
-import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category } from '../types';
+import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category, PublicShop } from '../types';
 import { INITIAL_CATEGORIES } from '../data/initialData';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { formatLakhs, formatMMK } from '../utils/formatters';
@@ -21,8 +22,10 @@ import { fetchContactInfo, saveContactInfo, DEFAULT_CONTACT_INFO } from '../lib/
 import { subscribeVisitors, getVisitorsTotalCount, getCountryFlag, deleteVisitorDoc } from '../lib/analyticsService';
 import { fetchMyRefs, deleteSharedWalletRef } from '../lib/sharedWalletRefs';
 import { logAdminAction, subscribeAdminAuditLog, AdminAuditLogEntry } from '../lib/adminAuditLog';
+import { parseShopImportFile, previewShopImport, mapShopRow, shopDedupeKey, firstPhoneOf } from '../lib/shopImport';
+import type { ShopImportPreview } from '../lib/shopImport';
 import { QuotaDashboard } from './QuotaDashboard';
-import { X, Copy, CheckCircle, Trash2, Eraser, Plus, RefreshCw, Key, Megaphone, AlertTriangle, FileText, Edit2, Check, Users, Search, Clock, Sparkles, ShieldCheck, UserCheck, Crown, Phone, Send, CreditCard, Save, Globe, Smartphone, Tablet, Monitor, Eye, Activity, TrendingUp, PieChart, Wallet as WalletIcon, ArrowUpRight, Sliders, Calendar, Flame, Database, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Copy, CheckCircle, Trash2, Eraser, Plus, RefreshCw, Key, Megaphone, AlertTriangle, FileText, Edit2, Check, Users, Search, Clock, Sparkles, ShieldCheck, UserCheck, Crown, Phone, Send, CreditCard, Save, Globe, Smartphone, Tablet, Monitor, Eye, Activity, TrendingUp, PieChart, Wallet as WalletIcon, ArrowUpRight, Sliders, Calendar, Flame, Database, ArrowUpDown, ArrowUp, ArrowDown, Store, Upload } from 'lucide-react';
 
 interface ActivationCode {
   code: string;
@@ -99,6 +102,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [auditLogError, setAuditLogError] = useState<string | null>(null);
   // [wallet-backfill] Prevents double-clicks during the users↔cloud wallet sync
   const [isBackfillingWallets, setIsBackfillingWallets] = useState(false);
+
+  // [v7.5.71 shop import] JSON file import into public_shops
+  const [shopImportPreview, setShopImportPreview] = useState<ShopImportPreview | null>(null);
+  const [shopImportError, setShopImportError] = useState<string | null>(null);
+  const [isImportingShops, setIsImportingShops] = useState(false);
+  const [shopImportProgress, setShopImportProgress] = useState({ done: 0, total: 0 });
+  const [shopImportSummary, setShopImportSummary] = useState<{ imported: number; skipped: number; failed: number; errors: string[] } | null>(null);
+  const shopImportInputRef = useRef<HTMLInputElement | null>(null);
 
   // Codes & Users combined state
   const [codes, setCodes] = useState<ActivationCode[]>([]);
@@ -1057,6 +1068,101 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         pct: total > 0 ? Math.round((count / total) * 100) : 0,
       }));
   }, [effectiveWallets]);
+
+  // [v7.5.71 shop import] Read a JSON file, validate it and show a preview.
+  // Nothing is written until the admin taps the Import button.
+  const handleShopImportFile = (file: File) => {
+    setShopImportError(null);
+    setShopImportSummary(null);
+    setShopImportProgress({ done: 0, total: 0 });
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseShopImportFile(String(reader.result || ''));
+        setShopImportPreview(previewShopImport(rows));
+      } catch {
+        setShopImportPreview(null);
+        setShopImportError(lang === 'my' ? 'ဖိုင်ဖတ်လို့ မရပါ။ JSON array ဖိုင် ဖြစ်ရပါမယ်။' : 'Could not read the file. It must be a JSON array file.');
+      }
+    };
+    reader.onerror = () => {
+      setShopImportPreview(null);
+      setShopImportError(lang === 'my' ? 'ဖိုင်ဖတ်လို့ မရပါ။' : 'Could not read the file.');
+    };
+    reader.readAsText(file);
+  };
+
+  // [v7.5.71 shop import] Write the previewed rows to public_shops in
+  // batches of 500. Dedupe by doc id and by name + normalized first
+  // phone; one failing row never aborts the whole import.
+  const runShopImport = async () => {
+    if (!shopImportPreview || shopImportPreview.valid.length === 0 || isImportingShops) return;
+    const admin = user;
+    if (!admin) {
+      setShopImportError(lang === 'my' ? 'ပြန်လည် ဝင်ရောက်ပြီးမှ ထည့်သွင်းပါ။' : 'Please sign in again before importing.');
+      return;
+    }
+    setIsImportingShops(true);
+    setShopImportError(null);
+    setShopImportSummary(null);
+    const valid = shopImportPreview.valid;
+    const total = valid.length;
+    setShopImportProgress({ done: 0, total });
+    let imported = 0;
+    let skipped = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+    try {
+      const existingSnap = await getDocs(collection(db, 'public_shops'));
+      const existingIds = new Set<string>();
+      const existingKeys = new Set<string>();
+      existingSnap.docs.forEach((d) => {
+        const data = d.data() as Partial<PublicShop>;
+        existingIds.add(d.id);
+        const key = shopDedupeKey(data.name || '', firstPhoneOf(data as unknown as Record<string, unknown>));
+        if (key) existingKeys.add(key);
+      });
+      const seenIds = new Set<string>();
+      const toWrite: { id: string; row: (typeof valid)[number] }[] = [];
+      for (const row of valid) {
+        const rowId = typeof row.id === 'string' && row.id.trim() ? row.id.trim() : '';
+        if (rowId) {
+          if (existingIds.has(rowId) || seenIds.has(rowId)) { skipped++; continue; }
+          seenIds.add(rowId);
+        }
+        const key = shopDedupeKey(row.name, firstPhoneOf(row));
+        if (key && existingKeys.has(key)) { skipped++; continue; }
+        if (key) existingKeys.add(key);
+        toWrite.push({ id: rowId, row });
+      }
+      const addedBy = admin.email || admin.displayName || 'အသုံးပြုသူ';
+      const addedByUid = admin.uid;
+      const createdAt = Date.now();
+      for (let start = 0; start < toWrite.length; start += 500) {
+        const chunk = toWrite.slice(start, start + 500);
+        const batch = writeBatch(db);
+        for (const entry of chunk) {
+          const ref = entry.id
+            ? doc(db, 'public_shops', entry.id)
+            : doc(collection(db, 'public_shops'));
+          batch.set(ref, mapShopRow(entry.row, { id: ref.id, addedBy, addedByUid, createdAt }));
+        }
+        try {
+          await batch.commit();
+          imported += chunk.length;
+        } catch (e) {
+          failedCount += chunk.length;
+          errors.push((e as Error).message || 'Batch write failed');
+        }
+        setShopImportProgress({ done: Math.min(start + chunk.length, total), total });
+      }
+      setShopImportSummary({ imported, skipped, failed: failedCount, errors: errors.slice(0, 5) });
+    } catch (e) {
+      setShopImportError((e as Error).message || (lang === 'my' ? 'ထည့်သွင်းမှု မအောင်မြင်ပါ။' : 'Import failed.'));
+    } finally {
+      setIsImportingShops(false);
+    }
+  };
 
   const loadContactInfoData = async () => {
     setContactLoading(true);
@@ -3234,6 +3340,118 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                 </button>
               </div>
+            </div>
+
+            {/* [v7.5.71] SHOP IMPORT — bulk import shops from a JSON file */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Store className="w-4 h-4 text-emerald-600" />
+                <h3 className="font-bold text-sm text-slate-800">
+                  {lang === 'my' ? 'ဆိုင်များ Import' : 'Import Shops'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {lang === 'my'
+                  ? 'JSON ဖိုင်တစ်ခု ရွေးပြီး ဆိုင်များကို တစ်ပြိုင်တည်း ထည့်သွင်းနိုင်ပါတယ်။ ထည့်သွင်းမီ အစမ်းပြပေးပါမယ်။'
+                  : 'Pick a JSON file to add many shops at once. A preview is shown before anything is imported.'}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <input
+                  ref={shopImportInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (f) handleShopImportFile(f);
+                    e.currentTarget.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => shopImportInputRef.current?.click()}
+                  disabled={isImportingShops}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {lang === 'my' ? 'JSON ဖိုင် ရွေးပါ' : 'Choose JSON file'}
+                </button>
+                <button
+                  type="button"
+                  onClick={runShopImport}
+                  disabled={isImportingShops || !shopImportPreview || shopImportPreview.valid.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 disabled:opacity-50"
+                >
+                  {isImportingShops
+                    ? (lang === 'my' ? 'ထည့်သွင်းနေသည်...' : 'Importing...')
+                    : (lang === 'my' ? 'ထည့်သွင်းမည်' : 'Import')}
+                </button>
+                {shopImportPreview && (
+                  <span className="text-xs text-slate-600">
+                    {lang === 'my'
+                      ? 'စုစုပေါင်း ' + shopImportPreview.total + ' · ရရှိ ' + shopImportPreview.valid.length + ' · မရရှိ ' + shopImportPreview.invalid.length
+                      : 'Total ' + shopImportPreview.total + ' · valid ' + shopImportPreview.valid.length + ' · invalid ' + shopImportPreview.invalid.length}
+                  </span>
+                )}
+              </div>
+              {isImportingShops && shopImportProgress.total > 0 && (
+                <div className="mt-3">
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 transition-all"
+                      style={{ width: Math.round((shopImportProgress.done / shopImportProgress.total) * 100) + '%' }}
+                    />
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1">
+                    {lang === 'my'
+                      ? 'ထည့်သွင်းနေသည် ' + shopImportProgress.done + '/' + shopImportProgress.total
+                      : 'Importing ' + shopImportProgress.done + '/' + shopImportProgress.total}
+                  </div>
+                </div>
+              )}
+              {shopImportError && (
+                <div className="mt-3 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
+                  {shopImportError}
+                </div>
+              )}
+              {shopImportPreview && shopImportPreview.byRegion.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {shopImportPreview.byRegion.map((r) => (
+                    <span key={r.region} className="px-2 py-1 rounded-full bg-slate-100 text-[11px] text-slate-600">
+                      {r.region} · {r.count}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {shopImportPreview && shopImportPreview.invalid.length > 0 && (
+                <ul className="mt-3 space-y-0.5 text-[11px] text-amber-700">
+                  {shopImportPreview.invalid.slice(0, 5).map((row) => (
+                    <li key={row.index}>
+                      {lang === 'my' ? 'အတန်း ' + (row.index + 1) + ': ' : 'Row ' + (row.index + 1) + ': '}
+                      {row.reason === 'missing-name'
+                        ? (lang === 'my' ? 'ဆိုင်အမည် မရှိပါ' : 'missing shop name')
+                        : (lang === 'my' ? 'ဆိုင်အချက်အလက် မမှန်ပါ' : 'not a shop record')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {shopImportSummary && (
+                <div className="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-900">
+                  <div className="font-semibold">{lang === 'my' ? 'ထည့်သွင်းပြီးပါပြီ' : 'Import finished'}</div>
+                  <div className="mt-1">
+                    {lang === 'my'
+                      ? 'ထည့်သွင်းပြီး ' + shopImportSummary.imported + ' ဆိုင် · ကျော်သွားပြီး ' + shopImportSummary.skipped + ' ဆိုင် · မအောင်မြင်ပါ ' + shopImportSummary.failed + ' ဆိုင်'
+                      : 'Imported ' + shopImportSummary.imported + ' shops · skipped ' + shopImportSummary.skipped + ' · failed ' + shopImportSummary.failed}
+                  </div>
+                  {shopImportSummary.errors.length > 0 && (
+                    <ul className="mt-2 space-y-0.5 text-[11px] text-rose-700">
+                      {shopImportSummary.errors.map((e, i) => (
+                        <li key={i}>• {e}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

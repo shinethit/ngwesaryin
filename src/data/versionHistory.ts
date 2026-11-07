@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.70';
-export const CURRENT_BUILD_NUMBER = 285;
+export const CURRENT_APP_VERSION = 'v7.5.71';
+export const CURRENT_BUILD_NUMBER = 286;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.71',
+    buildNumber: 286,
+    releaseDate: '2026-11-07',
+    releaseTime: '9:30 AM (MMT)',
+    titleMy: 'ဆိုင်လမ်းညွှန် ဆိုင်များ တစ်ပြိုင်တည်း ထည့်သွင်းနိုင်ခြင်း',
+    titleEn: 'Bulk Import for the Shop Directory',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ဆိုင်လမ်းညွှန်အတွက် ဆိုင်များကို JSON ဖိုင်တစ်ခုကနေ တစ်ပြိုင်တည်း ထည့်သွင်းနိုင်ပါပြီ။',
+    descriptionEn: 'Shops for the directory can now be added all at once from a single JSON file.',
+    changesMy: [
+      '📥 ဆိုင်များ Import — JSON ဖိုင် ရွေးပြီး ဆိုင်များကို တစ်ပြိုင်တည်း ထည့်သွင်းနိုင်ခြင်း',
+      '👀 ထည့်သွင်းမီ အစမ်းပြခြင်း — ဆိုင်အရေအတွက်၊ မှားနေသော အတန်းများနှင့် တိုင်းဒေသကြီးအလိုက် အရေအတွက်ကို ပြပေးခြင်း',
+      '🔁 ထပ်နေသော ဆိုင်များကို အလိုအလျောက် ကျော်သွားခြင်း — ဆိုင်အမည် + ဖုန်းနံပါတ် တူလျှင် ထပ်မထည့်ခြင်း',
+      '📶 ထည့်သွင်းနေစဉ် တိုးတက်မှုကို ပြပေးခြင်းနှင့် တစ်တန်းချင်း မှားလည်း ကျန်တာတွေ ဆက်ထည့်ပေးခြင်း',
+    ],
+    changesEn: [
+      '📥 Shop import — pick a JSON file and add many shops at once',
+      '👀 Preview before importing — row counts, invalid rows and a per-region breakdown',
+      '🔁 Automatic dedupe — shops with the same name + phone are skipped, never added twice',
+      '📶 Live progress while importing, and one bad row never stops the rest',
+    ],
+  },
   {
     version: 'v7.5.70',
     buildNumber: 285,

@@ -106,32 +106,6 @@
   - နေ့စဉ် Firestore Spark (Free) plan ၏ Daily Write limit ကုန်ဆုံးပြီး `Quota limit exceeded` ပြသတတ်သော ပြဿနာကို ကာကွယ်ရန် Visitor tracking လုပ်ဆောင်ချက်တွင် **၅ မိနစ်စာ Activity Buffer** ထည့်သွင်းပေးလိုက်ပါသည်။
   - သုံးစွဲသူတစ်ဦးချင်းစီ၏ နောက်ခံလှုပ်ရှားမှုများကို ၅ မိနစ်လျှင် အများဆုံး တစ်ကြိမ်သာ ဒေတာဘေ့စ်သို့ ရေးသွင်းစေသဖြင့် Daily write usage ကို ၉၉% ခန့် သက်သာစေပြီး Quota အား အပြည့်အဝ ကာကွယ်ပေးထားပါသည်။
 
-## [2026-09-30] - v4.9.0 - Admin Self-Healing Active Profile Upgrade & Automatic VIP Synchronization
-
-### Fixed & Enhanced
-- **Admin Self-Healing Active Profile Upgrade (အက်မင်ပရိုဖိုင် Plan အား Premium/VIP သို့ အလိုအလျောက် ရေးသွင်းပြုပြင်ပေးခြင်း)**:
-  - ယခင်လုံခြုံရေးစည်းမျဉ်းများ၏ ပိတ်ဆို့မှုကြောင့် ဒေတာဘေ့စ်တွင် အက်မင်၏ Plan သည် `"FREE"` အဖြစ်သာ ကျန်ရှိနေခဲ့သည့် ကွဲလွဲချက်ကို လုံးဝ အပြီးသတ် ချေမှုန်းရန်အတွက် **Active Self-Healing** စနစ်ကို ထည့်သွင်းပေးလိုက်ပါသည်။
-  - Admin Control Center အား ဖွင့်လိုက်သည်နှင့် ၎င်း၏ ပရိုဖိုင် Plan သည် `"FREE"` ဖြစ်နေပါက နောက်ခံမှ `"premium"` (VIP) သို့ ဒေတာဘေ့စ် (Firestore) ၌ စက္ကန့်ပိုင်းအတွင်း အလိုအလျောက် တိုက်ရိုက် ရေးသွင်းပြုပြင်ပေးမည် ဖြစ်ပါသည်။
-  - ထို့ကြောင့် အက်မင်အကောင့်များသည် အသုံးပြုသူများစာရင်းတွင်ပါ `"FREE"` အစား `"PREMIUM"` ဟု ချက်ချင်း တိုက်ရိုက် မှန်ကန်သွားမည် ဖြစ်ပါသည်။
-
-## [2026-09-30] - v4.8.9 - Direct Token-Level Admin Security Rules & Secure Background Loading Buffers
-
-### Fixed & Enhanced
-- **Direct Token-Level Admin Security Match (Firestore Rules တွင် အက်မင်အား တိုက်ရိုက် ခွင့်ပြုချက် ပေးခြင်း)**:
-  - အက်မင်အကောင့် `khunthanshwe@gmail.com` ဝင်ရောက်သည့်အခါ `admins/{uid}` document စာရင်းသွင်းမှု ကြန့်ကြာနေသော်လည်း Google Signature Auth Token မှတစ်ဆင့် rules ကို ချက်ချင်း အသိအမှတ်ပြုစေသဖြင့် "အပြင်မှာ VIP၊ အထဲမှာ Free" ဖြစ်နေရသည့် rules permission errors များကို ၁၀၀% ဖြေရှင်းပေးလိုက်ပါသည်။
-  - အက်မင်မှ user profile plan ကို "premium" သို့ ပြောင်းလဲခြင်းနှင့် sync လုပ်ခြင်းများကို ဒေတာဘေ့စ်တွင်လည်း အောင်မြင်စွာ တိုက်ရိုက် သိမ်းဆည်းနိုင်သွားပြီ ဖြစ်ပါသည်။
-- **Instant Users & Active Visitors Load**:
-  - Admin Panel တွင် အသုံးပြုသူများစာရင်း (Users) နှင့် လက်ရှိဝင်ရောက်နေသူများစာရင်း (Active Visitors) မပေါ်လာသော ပြဿနာကို security rules block မရှိစေခြင်းဖြင့် ၁၀၀% ပြန်လည် ပေါ်ထွက်လာစေပြီး တိုက်ရိုက် စီမံခန့်ခွဲနိုင်အောင် ရှင်းလင်းပေးလိုက်ပါသည်။
-- **Robust Network Timeout Buffers**:
-  - နောက်ခံ profile data load ခြင်း timeouts များကို slow network သို့မဟုတ် VPN များအတွက် ၃.၅ စက္ကန့်မှ ၁၀ စက္ကန့်အထိ တိုးမြှင့်ပေးထားသဖြင့် မည်သည့်အခြေအနေမျိုးတွင်မဆို load မဖြစ်ဘဲ ကျန်ခဲ့ခြင်းများ မရှိတော့ပါ။
-
-## [2026-09-30] - v4.8.8 - Synchronous Admin Registration & Canonical Database Profile Plan Matching
-
-### Fixed & Enhanced
-- **Consistent Plan State (အက်မင် အသုံးပြုသူ၏ VIP အစီအစဉ်အား ဒေတာဘေ့စ်နှင့် တိုက်ရိုက် တစ်သားတည်းဖြစ်စေခြင်း)**:
-  - အက်မင် အသုံးပြုသူများအတွက် အပြင်ပန်း (Client UI) တွင် VIP ဟု ပြသနေသော်လည်း ဒေတာဘေ့စ် (Inside) တွင် Free ဖြစ်နေသည့် ပြဿနာ ("Outside VIP, Inside Free") အား ဖြေရှင်းရန်အတွက် အက်မင်မှတ်တမ်း (`admins/{uid}`) အား database တွင် ဦးစွာ ရေးသားပြီးမြောက်အောင် စောင့်ဆိုင်းပြီးမှသာ (`await`) user profile plan အား "premium" အဖြစ် database ထဲသို့ တိုက်ရိုက် အောင်မြင်စွာ ရေးသွင်းနိုင်အောင် ပြောင်းလဲပြင်ဆင်ပေးလိုက်ပါသည်။
-  - ဒေတာဘေ့စ်ရှိ user profile document ထဲတွင်လည်း "premium" အဖြစ် အပြည့်အဝ စာရင်းဝင်သွားသဖြင့် အက်မင်အကောင့်များသည် အပြင်ပန်းရော အတွင်းပိုင်း ဒေတာဘေ့စ်ပါ တစ်သားတည်း VIP အဖြစ် တည်ငြိမ်မှန်ကန်သွားပြီ ဖြစ်ပါသည်။
-
 ## [2026-09-30] - v4.8.7 - Sidebar scroll locking and safe defaultDb initialization
 
 ### Fixed & Enhanced

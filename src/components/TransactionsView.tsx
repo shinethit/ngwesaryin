@@ -151,6 +151,33 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   // ConfirmModal component; native window.confirm is no longer used).
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
   const [financialSystem, setFinancialSystem] = useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
+  // [v7.5.73] Filter panel collapsed by default; the choice persists
+  // in localStorage (same lazy-initializer pattern as ngwe_tx_time_filter).
+  const [filtersExpanded, setFiltersExpanded] = useState<boolean>(() => {
+    try {
+      return typeof localStorage !== 'undefined' && localStorage.getItem('ngwe_tx_filters_expanded') === 'true';
+    } catch { /* ignore */ }
+    return false;
+  });
+  const setFiltersExpandedPersist = (expanded: boolean) => {
+    setFiltersExpanded(expanded);
+    safeSetItem('ngwe_tx_filters_expanded', expanded ? 'true' : 'false');
+  };
+  // [v7.5.73] BADGE-COUNT RULE: count 1 for EACH of these non-default
+  // states — typeFilter !== 'all'; effectiveDataScope !== 'all';
+  // financialSystem !== 'opening_closing'; timeFilter !== 'all';
+  // selectedCategory !== 'all'; selectedWallet !== 'all' OR
+  // selectedWalletIds.length > 0 (counts as 1 combined, not 2);
+  // searchTerm.trim() !== ''. Maximum 7.
+  const activeFilterCount = useMemo(() => (
+    (typeFilter !== 'all' ? 1 : 0)
+    + (effectiveDataScope !== 'all' ? 1 : 0)
+    + (financialSystem !== 'opening_closing' ? 1 : 0)
+    + (timeFilter !== 'all' ? 1 : 0)
+    + (selectedCategory !== 'all' ? 1 : 0)
+    + ((selectedWallet !== 'all' || selectedWalletIds.length > 0) ? 1 : 0)
+    + (searchTerm.trim() !== '' ? 1 : 0)
+  ), [typeFilter, effectiveDataScope, financialSystem, timeFilter, selectedCategory, selectedWallet, selectedWalletIds, searchTerm]);
 
   const hasSharedWallets = useMemo(() => {
     return wallets.some((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
@@ -536,20 +563,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Header and Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 sm:gap-4 bg-white p-3 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ မှတ်တမ်းများ' : 'Income & Expense Records'}
-            </h1>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap shrink-0">
-              {filtered.length} {lang === 'my' ? 'ခု' : 'records'}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* [v7.5.73] Title card REMOVED — actions only, one slim row,
+          no card background. The record count moved to the summary line. */}
+      <div className="flex items-center gap-2 flex-wrap py-0.5">
           {/* [v7.5.60 M4] Small add button on this page itself — the
               onAddTransaction prop was accepted but never used, so this
               page had no way to add a record. Opens the modal (expense
@@ -581,7 +597,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <span>{lang === 'my' ? '⬇️ CSV ထုတ်ယူမည်' : '⬇️ Export CSV'}</span>
             </button>
           )}
-        </div>
       </div>
 
       {/* Free tier limit banner warning if reached or close */}
@@ -608,16 +623,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
       )}
 
-            {/* Compact Unified Filter & Summary Control Box — [v7.5.68 R6] chips raised toward 36–44px + relaxed leading so Burmese labels are not cut. */}
+            {/* Compact Unified Filter & Summary Control Box — [v7.5.68 R6] chips raised toward 36–44px + relaxed leading so Burmese labels are not cut. [v7.5.73] Collapsible, collapsed by default: only the slim bar (search + Filter button) + summary line show; the full panel expands on tap. */}
       <div className="bg-white p-2 sm:p-3 rounded-2xl border border-slate-200 shadow-xs space-y-1.5 sm:space-y-2">
-        {/* Row 1: Wallet, Search, Type */}
-        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
-          <div className="flex-1 min-w-[200px]">
-            {/* [v7.5.56] Lists only the wallets of the active scope
-                (visibleWalletsInFilter); a scope change clears the pick. */}
-            <MultiWalletSelector wallets={visibleWalletsInFilter} selectedWalletIds={selectedWalletIds} onChangeSelectedWalletIds={(ids) => { setSelectedWalletIds(ids); setSelectedWallet('all'); }} lang={lang} />
-          </div>
-          <div className="relative w-full sm:w-48">
+        {/* [v7.5.73] Slim bar — always visible: search + Filter button with active-count badge. */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input id="tx-search-input" type="text" placeholder={lang === 'my' ? 'ရှာရန်...' : 'Search...'} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-8 py-2 sm:py-2.5 text-base bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             {/* [v7.5.60 N2] Clear-search ✕, like Global Search / Categories. */}
@@ -627,12 +637,29 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               </button>
             )}
           </div>
+          <button type="button" onClick={() => setFiltersExpandedPersist(!filtersExpanded)} aria-expanded={filtersExpanded} className="relative inline-flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all cursor-pointer shrink-0">
+            <Filter className="w-4 h-4" />
+            <span>{lang === 'my' ? 'စစ်ထုတ်ရန်' : 'Filter'}</span>
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">{activeFilterCount}</span>
+            )}
+          </button>
+        </div>
+
+        {/* [v7.5.73] Full filter panel — same controls in the same order as before. */}
+        {filtersExpanded && (
+        <div className="space-y-1.5 sm:space-y-2 pt-1.5 sm:pt-2 border-t border-slate-100">
+          {/* Row 1: Wallet */}
+          <div className="flex-1 min-w-[200px]">
+            {/* [v7.5.56] Lists only the wallets of the active scope
+                (visibleWalletsInFilter); a scope change clears the pick. */}
+            <MultiWalletSelector wallets={visibleWalletsInFilter} selectedWalletIds={selectedWalletIds} onChangeSelectedWalletIds={(ids) => { setSelectedWalletIds(ids); setSelectedWallet('all'); }} lang={lang} />
+          </div>
           <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg shrink-0 justify-center">
             <button type="button" onClick={() => handleTypeFilterChange('all')} className={`px-3 py-2 sm:py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors cursor-pointer ${typeFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>{lang === 'my' ? 'အားလုံး' : 'All'}</button>
             <button type="button" onClick={() => handleTypeFilterChange('income')} className={`px-3 py-2 sm:py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'income' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-50'}`}><ArrowDownLeft className="w-3 h-3" />{lang === 'my' ? 'ဝင်' : 'In'}</button>
             <button type="button" onClick={() => handleTypeFilterChange('expense')} className={`px-3 py-2 sm:py-2.5 text-xs font-semibold leading-relaxed rounded-md transition-colors flex items-center gap-1 cursor-pointer ${typeFilter === 'expense' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'}`}><ArrowUpRight className="w-3 h-3" />{lang === 'my' ? 'ထွက်' : 'Out'}</button>
           </div>
-        </div>
 
         {/* Row 2: Scope + Summary Toggle + Time + Category + Table Toggle */}
         <div className="flex flex-wrap items-center gap-2 pt-1.5 sm:pt-2 border-t border-slate-100">
@@ -700,10 +727,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             </button>
           </div>
         </div>
+        </div>
+        )}
 
+        {/* [v7.5.73] Summary — always visible under the filter bar: slim line (state A) or compact bar (state B). */}
         {/* Row 2 Sub: Financial Table View or Compact Bar */}
         {showSummaryTable ? (
-          <FinancialSummaryTable financialSystem={financialSystem} onChangeFinancialSystem={setFinancialSystem} income={filteredIncome} expense={filteredExpense} incomeCount={filtered.filter((t) => t.type === 'income' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} expenseCount={filtered.filter((t) => t.type === 'expense' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} selectedWallets={selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length ? wallets.filter((w) => selectedWalletIds.includes(w.id)) : selectedWallet !== 'all' ? wallets.filter((w) => isWalletMatch(w, selectedWallet)) : wallets} transactions={filtered} lang={lang} />
+          <FinancialSummaryTable slim financialSystem={financialSystem} onChangeFinancialSystem={setFinancialSystem} income={filteredIncome} expense={filteredExpense} incomeCount={filtered.filter((t) => t.type === 'income' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} expenseCount={filtered.filter((t) => t.type === 'expense' && (!isTransferTransaction(t) || isSingleWalletFilter)).length} selectedWallets={selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length ? wallets.filter((w) => selectedWalletIds.includes(w.id)) : selectedWallet !== 'all' ? wallets.filter((w) => isWalletMatch(w, selectedWallet)) : wallets} transactions={filtered} lang={lang} />
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 sm:p-2 bg-slate-50 rounded-xl border border-slate-100 text-xs mt-1">
             <div className="flex items-center gap-3 flex-wrap font-mono font-bold">

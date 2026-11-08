@@ -16,10 +16,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.72';
-export const CURRENT_BUILD_NUMBER = 287;
+export const CURRENT_APP_VERSION = 'v7.5.73';
+export const CURRENT_BUILD_NUMBER = 288;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.73',
+    buildNumber: 288,
+    releaseDate: '2026-11-08',
+    releaseTime: '12:12 AM (MMT)',
+    titleMy: 'Transactions ခေါင်းစဉ် ပုံစံသစ် — filter ခေါက်သိမ်းနိုင်ပြီး အကျဉ်းချုပ် တစ်ကြောင်းတည်း',
+    titleEn: 'Transactions Header Redesign — Collapsible Filters + One-Line Summary',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Transactions စာမျက်နှာရဲ့ အပေါ်ပိုင်းကို ပုံစံအသစ် ပြင်လိုက်တယ် — ခေါင်းစဉ်ကတ်ကို ဖြုတ်လိုက်ပြီး၊ filter တွေကို ခေါက်သိမ်းလို့ရအောင် လုပ်ထားတယ် (ပုံမှန်အားဖြင့် ခေါက်ထားတယ်)၊ အစလက်ကျန်/လှုပ်ရှားမှု/အဆုံးလက်ကျန် + မှတ်တမ်းအရေအတွက်ကို တစ်ကြောင်းတည်း ပြထားတယ်။ အပေါ်ပိုင်း 454px ကနေ 142px အထိ ကျဉ်းသွားလို့ မှတ်တမ်း ၃ ခု scroll မလုပ်ဘဲ မြင်ရပြီ။',
+    descriptionEn: 'Redesigned the top of the Transactions page — the title card is gone, filters collapse (collapsed by default), and opening/movement/closing balances plus the record count sit on one slim line. The header shrank from 454px to 142px, so 3 records are visible without scrolling.',
+    changesMy: [
+      '📋 ခေါင်းစဉ်ကတ် ဖြုတ်ခြင်း — ခလုတ် ၃ ခု (ထည့်မည် / ချေးနိုင်းယူင် / CSV ထုတ်ယူမည်) ကို တစ်တန်းတည်း ကျစ်လစ်စွာ ပြခြင်း',
+      '🔍 Filter ခေါက်သိမ်းနိုင်ခြင်း — ပုံမှန်အားဖြင့် ခေါက်ထားပြီး ရှာဖွေမှုနဲ့ Filter ခလုတ်ပဲ မြင်ရခြင်း; ဖွင့်ရင် filter အားလုံး အရင်အတိုင်း ပေါ်ခြင်း; ဖွင့်/ပိတ် မှတ်ထားခြင်း',
+      '🔢 Filter အရေအတွက် ပြခြင်း — ရွေးထားတဲ့ filter ရှိရင် Filter ခလုတ်မှာ အရေအတွက် တံဆိပ် ပေါ်ခြင်း',
+      '📊 အကျဉ်းချုပ် တစ်ကြောင်းတည်း — အစလက်ကျန် / လှုပ်ရှားမှု / အဆုံးလက်ကျန် + မှတ်တမ်းအရေအတွက်၊ ပမာဏ အတိအကျ မပြောင်းလဲခြင်း',
+      '📱 အပေါ်ပိုင်း 454px → 142px — မှတ်တမ်း ၃ ခု scroll မလုပ်ဘဲ မြင်ရခြင်း',
+    ],
+    changesEn: [
+      '📋 Title card removed — the 3 action buttons in one slim row, no card background',
+      '🔍 Collapsible filters — collapsed by default, showing only search + the Filter button; expanding reveals every filter as before, and the open/closed state is remembered',
+      '🔢 Active-filter count badge — the Filter button shows how many filters are set, only when more than 0',
+      '📊 One-line summary — opening / movement / closing balances + record count, amounts exactly as before',
+      '📱 Header 454px → 142px — 3 records visible without scrolling',
+    ],
+  },
   {
     version: 'v7.5.72',
     buildNumber: 287,
@@ -145,7 +172,7 @@ export const VERSION_HISTORY: VersionItem[] = [
       '📶 အင်တာနက် မရှိရင် အပေါ်မှာ သတိပေးစာတန်း ပေါ်တော့မယ် — စက်ထဲက ဒေတာနဲ့ သုံးနေပြီး အင်တာနက် ပြန်ရရင် အလိုအလျောက် Sync လုပ်မယ်လို့ ပြမယ်',
       '🔔 Version အသစ် "နောက်မှ" နှိပ်ရင် ၂၄ နာရီကြာမှ ပြန်မေးတော့မယ် (အရင်က လုံးဝ ပြန်မမေးဘူး)',
       '🛒 ဈေးနှုန်း နှိုင်းယှဉ်မှာ ၅ မျိုး ပြည့်ရင် alert အကြီးအစား စာတန်းလေး ပေါ်တော့မယ် — ပိတ်လို့ရတယ်',
-      '👆 ခလုတ်တွေ နှိပ်ရ ပိုလွယ်သွားပြီ — Transactions, ယာဉ်, Admin ခလုတ်တွေ အရွယ်ကြီးလာတယ်',
+      '👆 ခလုတ်တွေ နှိပ်ရ ပိုလွယ်သွားပြီ — Transactions, ယာဉ် ခလုတ်တွေ အရွယ်ကြီးလာတယ်',
     ],
     changesEn: [
       '🗓️ Limits are now per calendar month — Guest 15, Free 150, count resets to 0 on the 1st (the old rolling-30-day rule freed slots one by one, which was confusing)',
@@ -160,28 +187,7 @@ export const VERSION_HISTORY: VersionItem[] = [
       '📶 An offline banner now appears at the top when there is no internet — it says you are using on-device data and it will sync automatically when back online',
       '🔔 Tapping "Later" on a new-version prompt now asks again after 24 hours (before, it never asked again)',
       '🛒 In Compare Price, reaching 5 items now shows a small dismissible notice instead of a big alert',
-      '👆 Buttons are easier to tap — Transactions, Vehicles and Admin buttons are bigger',
-    ],
-  },
-  {
-    version: 'v7.5.67',
-    buildNumber: 282,
-    releaseDate: '2026-11-05',
-    releaseTime: '8:16 PM (MMT)',
-    titleMy: 'ပျောက်နေသော အသုံးပြုသူများ ပြန်ပေါ်လာခြင်း',
-    titleEn: 'Missing Users Reappear in Admin Panel',
-    tag: 'fix',
-    tagLabelMy: 'Bug Fix',
-    tagLabelEn: 'Bug Fix',
-    descriptionMy: 'Admin Panel က အသုံးပြုသူစာရင်းမှာ ၉ ဦးရှိတဲ့အနက် ၇ ဦးပဲ ပြနေတာ ပြင်လိုက်တယ် — အကောင့်ဖွင့်တဲ့ ရက်စွဲ မရှိတဲ့ profile တွေကို စာရင်းက ချန်ထားခဲ့တာ။ အခု စာရင်းက အသုံးပြုသူ အားလုံးကို ပြပြီး၊ အသစ်ဆုံးက အရင်ဆုံး စီမယ်။ ရက်စွဲ မရှိတဲ့သူက အောက်ဆုံးမှာ ပေါ်မယ်။',
-    descriptionEn: 'Fixed the Admin Panel user list showing only 7 of 9 users — profiles without a join date were silently excluded from the list. The list now shows all users, newest first, with dateless profiles at the bottom.',
-    changesMy: [
-      '👥 အသုံးပြုသူ စုစုပေါင်း အမှန်ပြတော့မည် — ပျောက်နေတဲ့ ၂ ဦး (Admin အကောင့်အပါအဝင်) ပြန်ပေါ်လာမည်',
-      '📅 ရက်စွဲ မရှိတဲ့ profile တွေကို စာရင်းက ချန်မထားတော့ပါ',
-    ],
-    changesEn: [
-      '👥 The total user count is now correct — the 2 missing users (including the Admin account) reappear',
-      '📅 Profiles without a join date are no longer excluded from the list',
+      '👆 Buttons are easier to tap — Transactions and Vehicles buttons are bigger',
     ],
   },
   {
@@ -203,70 +209,6 @@ export const VERSION_HISTORY: VersionItem[] = [
     changesEn: [
       '📅 The date-filter menu now opens fully inside the screen on phones — all options visible and tappable',
       '📆 New "Last Month" option — shows the previous month from its first day to its last',
-    ],
-  },
-  {
-    version: 'v7.5.65',
-    buildNumber: 280,
-    releaseDate: '2026-11-05',
-    releaseTime: '1:50 PM (MMT)',
-    titleMy: 'ဝင်ရောက်သူ စုစုပေါင်း အမှန်အရေအတွက် ပြင်ဆင်ခြင်း',
-    titleEn: 'True Total Visitors Count',
-    tag: 'fix',
-    tagLabelMy: 'Bug Fix',
-    tagLabelEn: 'Bug Fix',
-    descriptionMy: 'Admin Panel မှာ "ဝင်ရောက်သူ စုစုပေါင်း" က ၅၀၀ မှာ ရပ်နေတာ ပြင်လိုက်တယ် — အရင်က နောက်ဆုံး ၅၀၀ မှတ်တမ်းကိုပဲ ဆွဲပြီး အဲဒီထဲကပဲ ရေတွက်ထားလို့ ဖြစ်တာ။ အခု စုစုပေါင်းကို မှတ်တမ်းအားလုံး ရေတွက်ပြီး ပြတော့မယ် (မိနစ်တိုင်း အပ်ဒိတ်ဖြစ်မယ်)။ ဇယားနဲ့ ခွဲခြမ်းစိတ်ဖြာမှုကတော့ နောက်ဆုံး ၅၀၀ ကိုပဲ အခြေခံထားဆဲဆိုတာ စာသား ရှင်းရှင်းရေးထားတယ်။',
-    descriptionEn: 'Fixed the Admin Panel "total visitors" number sticking at 500 — it used to count only the latest 500 records it had downloaded. The total now counts all visitor records (refreshed every minute). The table and breakdowns still cover the latest 500 records, and the note now says so clearly.',
-    changesMy: [
-      '👥 ဝင်ရောက်သူ စုစုပေါင်း အမှန်အရေအတွက် ပြတော့မည် — ၅၀၀ ကျော်လည်း အမှန်အတိုင်း ပေါ်မည်',
-      '📊 ဇယားနဲ့ ခွဲခြမ်းစိတ်ဖြာမှုက နောက်ဆုံး ၅၀၀ ကိုသာ အခြေခံထားကြောင်း စာသား ရှင်းရှင်းရေးထားသည်',
-    ],
-    changesEn: [
-      '👥 The total visitors number now counts all records — it no longer stops at 500',
-      '📊 The note now clearly says the table and breakdowns cover the latest 500 records',
-    ],
-  },
-  {
-    version: 'v7.5.64',
-    buildNumber: 279,
-    releaseDate: '2026-11-04',
-    releaseTime: '11:30 PM (MMT)',
-    titleMy: 'Admin Panel အပြည့်အစုံ ပြင်ဆင်ခြင်း',
-    titleEn: 'Admin Panel Fully Reviewed & Fixed',
-    tag: 'fix',
-    tagLabelMy: 'Bug Fix',
-    tagLabelEn: 'Bug Fix',
-    descriptionMy: 'Admin Panel ကို code ဖတ်ပြီး အပြည့်အစုံ စစ်ခဲ့တယ် — တွေ့ရှိချက် ၅၈ ချက် ရှိပြီး ရှင်းရှင်းလင်းလင်း ပြင်လို့ရတာ ၄၇ ချက်ကို ဒီ version မှာ ပေါင်းထည့်ထားတယ်။ အရေးကြီးဆုံးက Admin က တခြားအသုံးပြုသူရဲ့ ဒေတာ ဖျက်/ရှင်းတာ လုံးဝ အလုပ်မလုပ်ခဲ့တာ (Firestore စည်းမျဉ်းက တားနေတာ) ကို ပြင်လိုက်တယ် — စည်းမျဉ်းကိုတော့ Firebase Console မှာ သီးသန့် publish လုပ်ပေးရမယ်။ Quota "Unlock" ခလုတ်က ဘာမှ မလုပ်ဘဲ အောင်မြင်တယ်လို့ ပြနေတာ၊ ကဏ္ဍရှင်းရင် filter ကို လျစ်လျူရှုပြီး လူတိုင်းရဲ့ မှတ်တမ်း ဖျက်ပစ်တာ၊ အကောင့်ဖျက်ရင် ဒေတာ ကျန်ခဲ့တာ၊ ကုဒ် ပြန်ရုပ်သိမ်းရင် ဖျက်ပြီးသား အကောင့် ပြန်ပေါ်လာတာ စတဲ့ ဒေတာ ဆုံးရှုံးနိုင်တဲ့ ပြဿနာတွေကိုပါ ပြင်လိုက်တယ်။ ဖုန်းမှာလည်း Admin ဇယားတွေ ကတ်ပုံစံ ဖြစ်သွားပြီ။ ဆုံးဖြတ်ချက် လိုတဲ့ နောက်ထပ် ၁၂ ချက်ကိုလည်း ဒီ version မှာပဲ ထည့်ထားတယ် — Quota reset က အမှန်အတိုင်း Pacific (~13:30 MMT) ဖြစ်သွားပြီ၊ Admin လုပ်ရပ် မှတ်တမ်း (Audit Log) အသစ် ပါလာပြီ၊ သုံးပြီးသား ကုဒ်ကို ဖျက်မရအောင် ပိတ်ထားပြီ၊ ကြေညာချက် စာလုံး ကန့်သတ်ချက် ပါလာပြီ။',
-    descriptionEn: 'The Admin Panel was fully reviewed by reading the code — 58 findings, 47 of which were clear fixes folded into this version. Most importantly, admin delete/purge of other user data never worked at all (the Firestore rules blocked it); the rules are fixed in the repo, but they must be published separately in Firebase Console. Also fixed: the Quota "Unlock Network" button that reported success while doing nothing, purge-category ignoring the on-screen filters and deleting records of every user, delete-user orphaning data, and revoke resurrecting deleted accounts. On phones, the admin tables now show as cards with full text. The 12 items that needed a decision are also folded into this version — the quota reset now follows the real Pacific midnight (~13:30 MMT), there is a new admin audit log, used codes cannot be deleted until revoked, and broadcasts have length caps.',
-    changesMy: [
-      '📱 Admin ဇယားတွေ ဖုန်းမှာ ကတ်ပုံစံ ဖြစ်သွားပြီ — email/UID အပြည့်၊ ခလုတ် စာမကျိုး၊ ဘေးတိုက် ဆွဲစရာ မလို',
-      '🗑️ Admin က တခြားသူရဲ့ ဒေတာ ဖျက်/ရှင်းတာ အခု တကယ် အလုပ်လုပ်ပြီ (Firestore စည်းမျဉ်း ပြင် — Console မှာ publish လုပ်ရမယ်)',
-      '🔓 Quota "Unlock Network" ခလုတ် တကယ် အလုပ်လုပ်ပြီ — အရင်က ဘာမှ မလုပ်ဘဲ အောင်မြင်တယ်လို့ ပြနေတာ',
-      '🛡️ အကောင့်ဖျက်တာ၊ ကဏ္ဍရှင်းတာ၊ ကုဒ် ပြန်ရုပ်သိမ်းတာတွေမှာ ဒေတာ ဆုံးရှုံးနိုင်တဲ့ ပြဿနာတွေ ပြင်ပြီ',
-      '📊 Overview/Analytics ဂဏန်းတွေ မှန်ကန်အောင် ပြင်ပြီ — "Total Sessions" က Unique Visitors ဖြစ်သွားပြီ၊ ၅၀၀ cap အကြောင်း ပြထားပြီ',
-      '🔍 မှတ်တမ်း ရှာတာ ပိုကောင်းပြီ — အသုံးပြုသူ၊ ရက်စွဲ၊ ပိုက်ဆံအိတ်၊ မြန်မာ ဂဏန်း နဲ့ပါ ရှာလို့ရ',
-      '🏷️ ကုဒ် သက်တမ်း (Expired) ပြတော့မည်၊ Premium သက်တမ်းကုန်တဲ့ အသုံးပြုသူ မှန်မှန်ပြတော့မည်',
-      '🇲🇲 Admin Panel မှာ မြန်မာ စာသားတွေ ပိုပြည့်စုံပြီ',
-      '📞 ဆက်သွယ်ရန် ဖုန်း/ငွေပေးချေမှု အချက်အလက် မှားပြီး သိမ်းမိတဲ့ အန္တရာယ် ပြင်ပြီ',
-      '⏰ Quota reset အချိန် အမှန်ဖြစ်သွားပြီ — Pacific သန်းခေါင် (~13:30 MMT)',
-      '📜 Admin လုပ်ရပ် မှတ်တမ်း (Audit Log) အသစ် — ဘယ်သူ ဘာလုပ်ခဲ့လဲ ပြန်ကြည့်လို့ရ',
-      '🔒 သုံးပြီးသား ကုဒ်ကို ဖျက်မရတော့ဘူး — အရင် ရုပ်သိမ်းရမယ်',
-      '📣 ကြေညာချက် ခေါင်းစဉ် ၈၀ / အကြောင်းအရာ ၃၀၀ စာလုံး ကန့်သတ်ချက် + ရှာလို့ရ',
-    ],
-    changesEn: [
-      '📱 Admin tables show as cards on phones — full email/UID, buttons never wrap, no sideways scrolling',
-      '🗑️ Admin delete/purge of other user data actually works now (Firestore rules fixed — publish them in Console)',
-      '🔓 The Quota "Unlock Network" button really works now — before it did nothing while reporting success',
-      '🛡️ Data-loss risks in delete-account, purge-category and code-revoke are fixed',
-      '📊 Overview/Analytics numbers are honest now — "Total Sessions" is Unique Visitors, the 500-record cap is disclosed',
-      '🔍 Records search is better — search by user, date, wallet, and Myanmar digits too',
-      '🏷️ Code expiry (Expired) is shown, and expired-Premium users display correctly',
-      '🇲🇲 More Myanmar text across the Admin Panel',
-      '📞 Fixed the risk of overwriting real contact/payment numbers with placeholder defaults',
-      '⏰ The quota reset now follows the real Pacific midnight (~13:30 MMT)',
-      '📜 New admin audit log — see who did what, to whom, and when',
-      '🔒 Used codes can no longer be deleted until revoked first',
-      '📣 Broadcasts have length caps (title 80 / content 300) and list search',
     ],
   },
   {
@@ -520,7 +462,6 @@ export const VERSION_HISTORY: VersionItem[] = [
       '📤 Export ခလုတ်ကို Premium သာမြင်ရတော့မည် (Free/Guest မှာ မပြတော့ပါ); ဖျက်ခါနီး အရန်သိမ်းဆည်းမှုကတော့ လူတိုင်းအတွက် ဆက်လုပ်ပေးမည်',
       '🛡️ Premium ကုဒ်သုံးစွဲမှု: ကုဒ် မသုံးခင် အကောင့်အရင် သိမ်းခြင်း; သက်တမ်းတိုးလျှင် ရက်ထပ်ပေါင်းခြင်း; ကုဒ် သက်တမ်း ၁ နှစ်',
       '🔍 ရှာဖွေမှု: ပစ္စည်း၊ ဆိုင်၊ ပိုက်ဆံအိတ်၊ ပမာဏ (မြန်မာဂဏန်းအပါအဝင်) နဲ့ ရက်စွဲနဲ့ ရှာနိုင်ခြင်း; ရှာတွေ့တဲ့ မှတ်တမ်းကို နှိပ်လိုက်လျှင် ဖွင့်ပြခြင်း',
-      '📱 Admin Panel: ဖုန်းမှာ ဖျက်/ခွင့်ပြုခလုတ်တွေ လက်လှမ်းမီနိုင်အောင် ပြင်ခြင်း; စာလုံးအရွယ်နဲ့ ခလုတ်အရွယ်များ ပြင်ခြင်း',
       '📈 လစဉ် နှိုင်းယှဉ်မှု "ပြီးခဲ့တဲ့လ" က တကယ့် ပြီးခဲ့တဲ့လ ဖြစ်အောင် ပြင်ခြင်း; ဇယားတွေမှာ ငွေကြေး ပြောင်းလဲမှု မှန်အောင် ပြင်ခြင်း',
     ],
     changesEn: [
@@ -536,7 +477,6 @@ export const VERSION_HISTORY: VersionItem[] = [
       '📤 Export buttons now show for Premium only (hidden for Free/Guest); the pre-delete safety backup still works for everyone',
       '🛡️ Premium codes: the profile is saved before the code is marked used; renewals extend the existing expiry; codes expire after 1 year',
       '🔍 Search now matches items, shops, wallets, amounts (including Myanmar digits) and dates; tapping a result opens the record',
-      '📱 Admin Panel: Delete/Plan buttons are reachable on a 390px phone; text and tap-target sizes fixed',
       '📈 Month comparison "last month" is now really last month; charts convert currencies consistently',
     ],
   },
@@ -550,24 +490,22 @@ export const VERSION_HISTORY: VersionItem[] = [
     tag: 'feature',
     tagLabelMy: 'Feature အသစ်',
     tagLabelEn: 'New Feature',
-    descriptionMy: 'ရက်စွဲတွေကို မြန်မာမှာ သုံးနေကျ DD/MM/YYYY ပုံစံ (ဥပမာ 02/11/2026) ဖြစ်အောင် ပြင်လိုက်ပါသည်။ Dashboard မှာ ဒီနေ့ရက်စွဲကို မြန်မာလိုပြပြီး \"Plan\" ကတ်ကိုလည်း \"အစီအစဉ်\" လို့ ပြင်ထားပါသည်။ ဈေးနှိုင်းယှဉ်မှုမှာ ဆိုင်အမည်ကို သိမ်းထားတော့မည်ဖြစ်ပြီး ပစ္စည်းတခုချင်းစီအတွက် အတန်ဆုံးဆိုင်ကို ပြပေးတော့မည်ဖြစ်သည်။ အောက်က မီနူးခလုတ်တွေနဲ့ ပိတ်ခလုတ်တွေကို လက်နဲ့ နှိပ်ရလွယ်အောင် ကြီးထားပြီး၊ မီနူးစာတွေ ဖြတ်မသွားတော့ပါ။ Admin Panel မှာ tab ၆ ခု ဆွဲလို့ရမှန်း သိသာအောင် အရိပ်ပြထားပြီး filter အကွက်တွေ ဖုန်းမှာ ကျဉ်းသွားအောင် ပြင်ထားပါသည်။',
-    descriptionEn: 'Dates now use the DD/MM/YYYY format (e.g. 02/11/2026). The Dashboard shows today in Myanmar, and the "Plan" card is now "အစီအစဉ်". Price comparison now saves the shop name and shows the cheapest shop for each item. Bottom menu buttons and close buttons are bigger for easier tapping, menu labels no longer cut off, and the Admin Panel tab strip now shows a fade cue that more tabs can be swiped to, with filter fields that shrink on phones.',
+    descriptionMy: 'ရက်စွဲတွေကို မြန်မာမှာ သုံးနေကျ DD/MM/YYYY ပုံစံ (ဥပမာ 02/11/2026) ဖြစ်အောင် ပြင်လိုက်ပါသည်။ Dashboard မှာ ဒီနေ့ရက်စွဲကို မြန်မာလိုပြပြီး \"Plan\" ကတ်ကိုလည်း \"အစီအစဉ်\" လို့ ပြင်ထားပါသည်။ ဈေးနှိုင်းယှဉ်မှုမှာ ဆိုင်အမည်ကို သိမ်းထားတော့မည်ဖြစ်ပြီး ပစ္စည်းတခုချင်းစီအတွက် အတန်ဆုံးဆိုင်ကို ပြပေးတော့မည်ဖြစ်သည်။ အောက်က မီနူးခလုတ်တွေနဲ့ ပိတ်ခလုတ်တွေကို လက်နဲ့ နှိပ်ရလွယ်အောင် ကြီးထားပြီး၊ မီနူးစာတွေ ဖြတ်မသွားတော့ပါ။',
+    descriptionEn: 'Dates now use the DD/MM/YYYY format (e.g. 02/11/2026). The Dashboard shows today in Myanmar, and the "Plan" card is now "အစီအစဉ်". Price comparison now saves the shop name and shows the cheapest shop for each item. Bottom menu buttons and close buttons are bigger for easier tapping, menu labels no longer cut off',
     changesMy: [
-      '📅 ရက်စွဲတွေကို DD/MM/YYYY ပုံစံ ဖြစ်အောင် ပြင်ခြင်း (Admin၊ ဆိုင်များ၊ Premium စတဲ့ နေရာများ)',
+      '📅 ရက်စွဲတွေကို DD/MM/YYYY ပုံစံ ဖြစ်အောင် ပြင်ခြင်း (ဆိုင်များ၊ Premium စတဲ့ နေရာများ)',
       '📅 Dashboard မှာ ဒီနေ့ရက်စွဲကို မြန်မာလိုပြခြင်း',
       '🛍️ ဈေးနှိုင်းယှဉ်မှု: ဝယ်တဲ့ဆိုင်အမည်ကို သိမ်းထားပြီး ပစ္စည်းတခုချင်းစီအတွက် အတန်ဆုံးဆိုင်ကို ပြပေးခြင်း',
       '👆 အောက်မီနူးနဲ့ ပိတ်ခလုတ်တွေကို လက်နဲ့ နှိပ်ရလွယ်အောင် ကြီးထားခြင်း (44px)',
       '📋 မီနူးစာတွေ ဖြတ်မသွားတော့ဘဲ အပြည့်ပြခြင်း',
-      '🛠️ Admin Panel: tab ၆ ခု ဆွဲလို့ရမှန်း အရိပ်နဲ့ ပြခြင်း၊ filter အကွက်တွေ ဖုန်းမှာ ကျဉ်းသွားခြင်း',
       '📊 Dashboard \"Plan\" ကတ်ကို \"အစီအစဉ်\" လို့ ပြင်ခြင်း',
     ],
     changesEn: [
-      '📅 Dates now use the DD/MM/YYYY format (Admin, shops, Premium and more)',
+      '📅 Dates now use the DD/MM/YYYY format (shops, Premium and more)',
       '📅 Dashboard shows today\'s date in Myanmar',
       '🛍️ Price comparison: shop names are saved and each item shows its cheapest shop',
       '👆 Bottom menu and close buttons enlarged for easier tapping (44px)',
       '📋 Menu labels no longer cut off',
-      '🛠️ Admin Panel: fade cue shows the 6 tabs can be swiped, filter fields shrink on phones',
       '📊 Dashboard "Plan" card is now "အစီအစဉ်"',
     ],
   },
@@ -606,20 +544,18 @@ export const VERSION_HISTORY: VersionItem[] = [
     tag: 'fix',
     tagLabelMy: 'Bug Fix',
     tagLabelEn: 'Bug Fix',
-    descriptionMy: 'ဖုန်း (390px) မှာ Transactions စာမျက်နှာက 467px ဖြစ်ပြီး ဘေးကို 77px ရွေ့နေသည့် ပြဿနာကို ပြင်ဆင်လိုက်ပါသည်။ အကြောင်းရင်းမှာ ကဏ္ဍရွေးတဲ့ အကွက် (dropdown) က ရွေးချယ်စရာ စာအရှည်ဆုံး အတိုင်း 260px အထိ ကျယ်သွားခြင်းကြောင့် ဖြစ်ပြီး၊ ယခုအခါ အကွက်နှစ်ခုလုံး ဖုန်းအကျယ်အတိုင်း ကျဉ်းသွားအောင် ပြင်ထားပါသည်။ PWA Install အကြောင်းကြားစာကိုလည်း လျှော့ချလိုက်ပါသည် — မျက်နှာပြင်အပြည့် modal ကို ပထမအကြိမ် ဖွင့်ခြင်းတစ်ခါပဲ ပြတော့မည်ဖြစ်ပြီး၊ အောက်က banner ကို ပိတ်လိုက်လျှင် ၇ ရက် မှတ်ထားတော့မည် ဖြစ်သောကြောင့် app အသစ်ဖွင့်တိုင်း ပြန်ပေါ်တော့မည် မဟုတ်ပါ။ Admin Panel ရှိ Transactions ဇယားကိုလည်း ဖုန်းမှာ ဘေးဆွဲပြီး ကြည့်နိုင်အောင် ပြင်ထားပါသည်။',
-    descriptionEn: 'Fixed the Transactions page scrolling 77px sideways on phones (390px screen measured 467px wide) — the category dropdown forced itself to 260px because a select will not shrink below its longest option text; both filter selects can now shrink to fit. The PWA install nagging is reduced too: the full-screen modal now appears only on the very first launch, and dismissing the bottom banner is remembered for 7 days instead of coming back on every launch. The Admin Panel Transactions table can now be scrolled sideways on phones.',
+    descriptionMy: 'ဖုန်း (390px) မှာ Transactions စာမျက်နှာက 467px ဖြစ်ပြီး ဘေးကို 77px ရွေ့နေသည့် ပြဿနာကို ပြင်ဆင်လိုက်ပါသည်။ အကြောင်းရင်းမှာ ကဏ္ဍရွေးတဲ့ အကွက် (dropdown) က ရွေးချယ်စရာ စာအရှည်ဆုံး အတိုင်း 260px အထိ ကျယ်သွားခြင်းကြောင့် ဖြစ်ပြီး၊ ယခုအခါ အကွက်နှစ်ခုလုံး ဖုန်းအကျယ်အတိုင်း ကျဉ်းသွားအောင် ပြင်ထားပါသည်။ PWA Install အကြောင်းကြားစာကိုလည်း လျှော့ချလိုက်ပါသည် — မျက်နှာပြင်အပြည့် modal ကို ပထမအကြိမ် ဖွင့်ခြင်းတစ်ခါပဲ ပြတော့မည်ဖြစ်ပြီး၊ အောက်က banner ကို ပိတ်လိုက်လျှင် ၇ ရက် မှတ်ထားတော့မည် ဖြစ်သောကြောင့် app အသစ်ဖွင့်တိုင်း ပြန်ပေါ်တော့မည် မဟုတ်ပါ။',
+    descriptionEn: 'Fixed the Transactions page scrolling 77px sideways on phones (390px screen measured 467px wide) — the category dropdown forced itself to 260px because a select will not shrink below its longest option text; both filter selects can now shrink to fit. The PWA install nagging is reduced too: the full-screen modal now appears only on the very first launch, and dismissing the bottom banner is remembered for 7 days instead of coming back on every launch.',
     changesMy: [
       '🐛 Transactions စာမျက်နှာ ဖုန်းမှာ ဘေးကို 77px ရွေ့ခြင်း ပြင်ဆင်ခြင်း (ကဏ္ဍရွေးတဲ့ အကွက် ဖုန်းအကျယ်အတိုင်း ကျဉ်းသွားခြင်း)',
       '📲 Install အကြောင်းကြားစာ မျက်နှာပြင်အပြည့် modal ကို ပထမအကြိမ်တစ်ခါပဲ ပြတော့ခြင်း',
       '📲 အောက်က Install banner ပိတ်ထားတာကို ၇ ရက် မှတ်ထားခြင်း (အသစ်ဖွင့်တိုင်း ပြန်မပေါ်တော့ပါ)',
-      '🛠️ Admin Panel Transactions ဇယားကို ဖုန်းမှာ ဘေးဆွဲပြီး ကြည့်နိုင်ခြင်း',
       '🍎 iPhone မှာ banner ခလုတ်စာကို "သွင်းနည်း" လို့ ပြင်ထားခြင်း (ခလုတ်က လမ်းညွှန်ပဲ ပြတာမို့)',
     ],
     changesEn: [
       '🐛 Fixed the Transactions page scrolling 77px sideways on phones (category filter now shrinks to fit)',
       '📲 Full-screen install modal now appears only on the very first launch',
       '📲 Dismissing the bottom install banner is now remembered for 7 days',
-      '🛠️ Admin Panel Transactions table can now be scrolled sideways on phones',
       '🍎 iPhone banner button now says "How to install" (it only opens the guide)',
     ],
   },
@@ -1392,8 +1328,8 @@ export const VERSION_HISTORY: VersionItem[] = [
     tag: 'fix',
     tagLabelMy: 'Trial Claim Fix',
     tagLabelEn: 'Trial Claim Fix',
-    descriptionMy: 'User အသစ်များ ၃ လ Free Trial ယူပြီးနောက် Admin Panel (Firestore) တွင် plan: free ဖြစ်နေရသည့် ပြဿနာ။ ယခုအခါ claimFreeTrial သည် Firestore write အောင်မြင်မှသာ client state ကို Premium အဖြစ် ပြောင်းလဲပြီး၊ Firestore Rules တွင်လည်း premiumMonths (1-12) အထိ ခွင့်ပြုပြီး trial stack ကို ဖြေလျှော့ထားသည်။',
-    descriptionEn: 'Fixed the bug where new users who claimed 3-month trial still appeared as FREE in Admin Panel (Firestore). claimFreeTrial now only commits local Premium state if Firestore write succeeded, and Firestore Rules relaxed to accept 1-12 months (was strictly 3).',
+    descriptionMy: 'User အသစ်များ ၃ လ Free Trial ယူပြီးနောက် plan: free ဖြစ်နေရသည့် ပြဿနာ။ ယခုအခါ claimFreeTrial သည် Firestore write အောင်မြင်မှသာ client state ကို Premium အဖြစ် ပြောင်းလဲပြီး၊ Firestore Rules တွင်လည်း premiumMonths (1-12) အထိ ခွင့်ပြုပြီး trial stack ကို ဖြေလျှော့ထားသည်။',
+    descriptionEn: 'Fixed the bug where new users who claimed 3-month trial still appeared as FREE. claimFreeTrial now only commits local Premium state if Firestore write succeeded, and Firestore Rules relaxed to accept 1-12 months (was strictly 3).',
     changesMy: [
       '🐛 claimFreeTrial: safeSetDoc return value ကို စစ်ဆေး',
       '🐛 Firestore write fail = client Premium မဖြစ်',
@@ -2476,7 +2412,7 @@ export const VERSION_HISTORY: VersionItem[] = [
       'v6.16.0 — Added amount/type/walletId/date validation to transaction update',
       'v6.16.0 — Added field whitelist + immutable critical fields to visitor records',
       'v6.16.0 — Added ownership immutability to public_shops update',
-      'v6.16.0 — Restricted user document creation plan to free/guest (except master admin)',
+      'v6.16.0 — Restricted user document creation plan to free/guest',
       'v6.16.0 — Split shared wallet transaction CRUD + payload validation',
       'Automatic rules backup file created',
     ],
@@ -2959,7 +2895,6 @@ export const VERSION_HISTORY: VersionItem[] = [
       'ဆီဆိုင် Default စာရင်းကို ၃ ခုသာ ထားရှိပါသည် (Denko, BOC, Max Energy)။',
       'Smart Calendar တွင် Wallet filter နှင့် Lakh format ပြုပြင်ပါပြီ။',
       'ယာဉ် Phantom Wallet ပြန်ပေါ်ခြင်းကို ကာကွယ်ပါပြီ။',
-      'Admin Panel quota အသုံးပြုမှုကို ၈၀-၉၅% လျှော့ချပါပြီ။',
     ],
     changesEn: [
       'Deleting a repayment now deletes its linked transaction and reverts wallet balance.',
@@ -2970,7 +2905,6 @@ export const VERSION_HISTORY: VersionItem[] = [
       'Default gas stations reduced to 3 (Denko, BOC, Max Energy).',
       'Smart Calendar Wallet filter + Lakh format improvements.',
       'Vehicle Phantom Wallet reappearing fixed.',
-      'Admin Panel quota usage reduced by 80-95%.',
     ],
   },
     {
@@ -3898,15 +3832,15 @@ export const VERSION_HISTORY: VersionItem[] = [
     tag: 'major',
     tagLabelMy: 'ယခင် ဗားရှင်း',
     tagLabelEn: 'Previous Version',
-    descriptionMy: 'စာရင်းထည့်သွင်းလိုက်သည်နှင့် Manual လိုက်ပို့စရာမလိုဘဲ Cloud Database ပေါ်သို့ တန်းရောက်သွားစေရန် Firestore Security Rules အား Zero-Delay Master Admin & Owner Fast-Path ဖြင့် အဆင့်မြှင့်တင်ပြီး၊ Foreground/Online အချိန်တိုင်း အလိုအလျောက် တိုက်ရိုက် ပို့ဆောင်ပေးသည့် Automatic Push Engine အား အပြီးသတ် ချိတ်ဆက်တည်ဆောက်ခဲ့ပါသည်။',
-    descriptionEn: 'Optimized Firestore Security Rules with Zero-Delay Master Admin Fast-Path and deployed automatic background push engine on app focus/resume/online.',
+    descriptionMy: 'စာရင်းထည့်သွင်းလိုက်သည်နှင့် Manual လိုက်ပို့စရာမလိုဘဲ Cloud Database ပေါ်သို့ တန်းရောက်သွားစေရန် Firestore Security Rules အား Zero-Delay Direct Owner Fast-Path ဖြင့် အဆင့်မြှင့်တင်ပြီး၊ Foreground/Online အချိန်တိုင်း အလိုအလျောက် တိုက်ရိုက် ပို့ဆောင်ပေးသည့် Automatic Push Engine အား အပြီးသတ် ချိတ်ဆက်တည်ဆောက်ခဲ့ပါသည်။',
+    descriptionEn: 'Optimized Firestore Security Rules with Zero-Delay Direct Owner Fast-Path and deployed automatic background push engine on app focus/resume/online.',
     changesMy: [
-      '⚡ **Zero-Delay Firestore Security Rules**: Security Rules တွင် Cross-document lookup နှောင့်နှေးမှု မရှိစေရန် Master Admin & Direct Owner Fast-Path ဖြင့် Database ပေါ်သို့ တိုက်ရိုက် ချက်ချင်း တင်ပို့နိုင်စေခြင်း။',
+      '⚡ **Zero-Delay Firestore Security Rules**: Security Rules တွင် Cross-document lookup နှောင့်နှေးမှု မရှိစေရန် Direct Owner Fast-Path ဖြင့် Database ပေါ်သို့ တိုက်ရိုက် ချက်ချင်း တင်ပို့နိုင်စေခြင်း။',
       '🔄 **Instant Background Auto-Push**: စာရင်းထည့်သွင်းချိန် သို့မဟုတ် အက်ပ်ဖွင့်/အင်တာနက်ချိတ်မိချိန်တိုင်း ကျန်နေသော စာရင်းများကို Cloud သို့ အလိုအလျောက် တန်းပို့ပေးမည့် Auto-Push Engine ထည့်သွင်းခြင်း။',
       '🛡️ **Security Rules Deployed to Cloud**: အဆင့်မြှင့်ထားသော Firestore Security Rules အား Cloud Database ပေါ်သို့ အောင်မြင်စွာ Deploy လုပ်ဆောင်ပြီးစီးခြင်း။'
     ],
     changesEn: [
-      'Optimized Firestore Security Rules with zero-delay fast path for master admin and direct owners, deployed to Cloud.',
+      'Optimized Firestore Security Rules with zero-delay fast path for direct owners, deployed to Cloud.',
       'Implemented automatic background sync engine on app visibility/focus/online events.',
       'Completely eliminated the need for manual pushing.'
     ],
@@ -4403,71 +4337,6 @@ export const VERSION_HISTORY: VersionItem[] = [
     ]
   },
   {
-    version: 'v4.9.0',
-    buildNumber: 85,
-    releaseDate: '2026-09-30',
-    releaseTime: '11:15 PM (MMT)',
-    titleMy: 'အက်မင် အသုံးပြုသူ၏ Database ပရိုဖိုင် Plan အား Premium/VIP အဖြစ် အလိုအလျောက် ပြုပြင်ပေးသော Self-Healing စနစ် ထည့်သွင်းခြင်း',
-    titleEn: 'Admin Self-Healing Active Profile Upgrade & Automatic VIP Synchronization',
-    tag: 'feature',
-    tagLabelMy: 'ဗားရှင်းသစ် လုပ်ဆောင်ချက်',
-    tagLabelEn: 'New Feature Version',
-    descriptionMy: 'လုံခြုံရေးစည်းမျဉ်းဟောင်းများကြောင့် ဒေတာဘေ့စ်အတွင်း၌ အက်မင်၏ Plan သည် "FREE" အဖြစ်သာ ကျန်ရှိနေခဲ့သည့် ကွဲလွဲမှုကို အလိုအလျောက် ရှာဖွေစစ်ဆေးပြီး စက္ကန့်ပိုင်းအတွင်း "PREMIUM" (VIP) အစီအစဉ်အဖြစ် တိုက်ရိုက် စာရင်းသွင်းပြုပြင်ပေးမည့် Self-Healing စနစ်ကို Admin Panel ဘွတ်စထရပ်တွင် ထပ်မံထည့်သွင်းပေးလိုက်ပါသည်။',
-    descriptionEn: 'Integrated an active self-healing system in the Admin Panel bootstrapping to instantly detect and correct any stale "FREE" plans left in the database, automatically updating the admin user profile to "premium" (VIP) in Firestore.',
-    changesMy: [
-      '🩹 **Active Self-Healing System**: Admin Control Center ကို ဖွင့်လှစ်လိုက်သည်နှင့် မိမိအကောင့်၏ ဒေတာဘေ့စ် Plan သည် FREE ဖြစ်နေပါက နောက်ခံမှ PREMIUM (VIP) အစီအစဉ်အဖြစ် အလိုအလျောက် တိုက်ရိုက် ရေးသွင်းပြုပြင်ပေးမည် ဖြစ်ပါသည်။',
-      '💎 **Instant VIP Status**: အက်မင်အကောင့်အား ဒေတာဘေ့စ်အတွင်း၌ပါ တရားဝင် PREMIUM အဖြစ် တန်းစီ သတ်မှတ်ပေးသဖြင့် အသုံးပြုသူစာရင်းတွင်လည်း "FREE" အစား "PREMIUM" ဟု အောင်မြင်စွာ တိုက်ရိုက်  မှန်ကန်သွားမည် ဖြစ်ပါသည်။'
-    ],
-    changesEn: [
-      'Implemented automatic self-healing profile updates in the Admin Panel to overwrite any legacy "FREE" statuses.',
-      'Instantly synchronized the admin database record as "premium" (VIP) with no manual logout or reload required.'
-    ]
-  },
-  {
-    version: 'v4.8.9',
-    buildNumber: 84,
-    releaseDate: '2026-09-30',
-    releaseTime: '11:00 PM (MMT)',
-    titleMy: 'အက်မင် လော့ဂ်အင်ဝင်ခြင်းနှင့် ပရိုဖိုင် Plan ဒေတာဘေ့စ် ရေးသွင်းမှုအား ချက်ချင်း အတည်ပြုနိုင်ရန် လုံခြုံရေးစည်းမျဉ်းများ (Direct Email Security Rules) ကို အဆင့်မြှင့်တင်ခြင်း',
-    titleEn: 'Direct Token-Level Admin Security Rules & Secure Background Loading Buffers',
-    tag: 'fix',
-    tagLabelMy: 'ပြင်ဆင်ပြီး ဗားရှင်း',
-    tagLabelEn: 'Bug Fix Version',
-    descriptionMy: 'အက်မင် အသုံးပြုသူ `khunthanshwe@gmail.com` အကောင့်ဝင်ရောက်သည့်အခါ `admins/{uid}` document ရေးသားမှု ကြန့်ကြာနေသော်လည်း ၎င်း၏ Google Verified Token Email အား Firestore Rules မှ တိုက်ရိုက် တိုက်ဆိုင်စစ်ဆေးပေးသဖြင့် အသုံးပြုသူစာရင်း၊ ဝင်ရောက်သူ (visitors) စာရင်းနှင့် plan updates များကို အစအဆုံး ၁၀၀% တိုက်ရိုက် တည်ငြိမ်စွာ ဝင်ရောက်စီမံနိုင်အောင် လုံခြုံရေးစည်းမျဉ်းများနှင့် နောက်ခံ timeouts များကို အဆင့်မြှင့်တင်ပေးလိုက်ပါသည်။',
-    descriptionEn: 'Hardened the security rules to automatically recognize the verified admin email khunthanshwe@gmail.com directly from the authentication token, ensuring zero-latency admin operations and eliminating permission issues, and buffered background timeout triggers to 10 seconds.',
-    changesMy: [
-      '🛡️ **Direct Email Rule Match**: Firestore Security Rules တွင် `isAdmin()` စစ်ဆေးမှုကို admins/ document သာမက Google Signature Token Email ပါ တိုက်ရိုက် စစ်ဆေးရန် ပြင်ဆင်လိုက်သဖြင့် "အပြင်မှာ VIP၊ အထဲမှာ Free" ဖြစ်နေရသည့် rules permission error များကို လုံးဝ အပြီးသတ် ချေမှုန်းပေးလိုက်ပါသည်။',
-      '👥 **Instant Users & Visitors Load**: Admin Panel အတွင်းရှိ အသုံးပြုသူများစာရင်း (users) နှင့် လက်ရှိဝင်ရောက်နေသူများ (active visitors) စာရင်းများသည် "permission-denied" ဖြစ်မသွားတော့ဘဲ ချက်ချင်း ပုံမှန်အတိုင်း အပြည့်အစုံ ပြန်လည် ပေါ်ထွက်လာမည် ဖြစ်ပါသည်။',
-      '⏳ **Robust Network Timeout Buffers**: နောက်ခံ profile load ခြင်း timeouts များကို slow VPN/mobile data များအတွက် ၃.၅ စက္ကန့်မှ ၁၀ စက္ကန့်အထိ တိုးမြှင့်ပေးထားသဖြင့် ဒေတာများ မပျောက်ဆုံးဘဲ အမြဲ အောင်မြင်စွာ load နိုင်မည် ဖြစ်ပါသည်။'
-    ],
-    changesEn: [
-      'Added direct email verification for khunthanshwe@gmail.com in Firestore rules isAdmin() function, bypassing document lag.',
-      'Instantly restored full users and active visitors list synchronization in the Admin Panel without permission-denied issues.',
-      'Increased background getDoc network timeout limits from 3.5s to 10s for superior VPN and mobile network tolerance.'
-    ]
-  },
-  {
-    version: 'v4.8.8',
-    buildNumber: 83,
-    releaseDate: '2026-09-30',
-    releaseTime: '10:30 PM (MMT)',
-    titleMy: 'အက်မင် အသုံးပြုသူ၏ Premium Plan အား ဒေတာဘေ့စ် (Inside) နှင့် အပြင်ပန်း (Outside) တစ်သားတည်း ဖြစ်စေရေး အပြီးသတ် ပြင်ဆင်ပေးခြင်း',
-    titleEn: 'Synchronous Admin Registration & Canonical Database Profile Plan Matching',
-    tag: 'fix',
-    tagLabelMy: 'ပြင်ဆင်ပြီး ဗားရှင်း',
-    tagLabelEn: 'Bug Fix Version',
-    descriptionMy: 'အက်မင် အသုံးပြုသူများအတွက် အပြင်ပန်းတွင် VIP ဟု ပြသနေသော်လည်း ဒေတာဘေ့စ် (Inside) တွင် Free ဖြစ်နေသည့် ပြဿနာအား ဖြေရှင်းရန်အတွက် အက်မင်မှတ်တမ်း (admins/{uid}) အား database တွင် ဦးစွာ ရေးသားပြီးမြောက်အောင် စောင့်ဆိုင်းပြီးမှသာ (await) user profile plan အား "premium" အဖြစ် database ထဲသို့ တိုက်ရိုက် အောင်မြင်စွာ ရေးသွင်းနိုင်အောင် စနစ်တကျ ပြောင်းလဲပြင်ဆင်ပေးလိုက်ပါသည်။',
-    descriptionEn: 'Resolved an authorization sync lag issue ("Outside VIP, Inside Free") by fully awaiting background admin document creation before attempting to write user profile updates, guaranteeing that Firestore security rules recognize the admin privilege and write plan:"premium" to the database.',
-    changesMy: [
-      '🔑 **Synchronous Admin Registration**: အက်မင်အကောင့် ဝင်ရောက်ချိန်တွင် admins/{uid} document အား database တွင် အောင်မြင်စွာ ရေးသားပြီးစီးကြောင်း သေချာစွာ စောင့်ဆိုင်း (await) စေပြီးမှသာ user profile plan ကို update လုပ်ရန် ခွင့်ပြုသဖြင့် database rules ငြင်းပယ်မှုများကို ၁၀၀% ကျော်လွှားပေးလိုက်ပါသည်။',
-      '💎 **Consistent Plan State (Inside/Outside)**: ဒေတာဘေ့စ်ရှိ user profile document ထဲတွင်လည်း "premium" (VIP) အစီအစဉ်အဖြစ် အပြီးသတ် စာရင်းဝင်သွားသဖြင့် အက်မင်အကောင့်များသည် အပြင်ပန်းရော အတွင်းပိုင်း ဒေတာဘေ့စ်ပါ တစ်သားတည်း VIP အဖြစ် ငြိမ်သက်မှန်ကန်သွားပြီ ဖြစ်ပါသည်။'
-    ],
-    changesEn: [
-      'Awaited async admin document creation on login to guarantee Firestore security rules recognize the privilege during profile updates.',
-      'Ensured database users profile document matches the VIP status, correcting the "Inside Free, Outside VIP" discrepancy.'
-    ]
-  },
-  {
     version: 'v4.8.7',
     buildNumber: 82,
     releaseDate: '2026-09-30',
@@ -4519,17 +4388,15 @@ export const VERSION_HISTORY: VersionItem[] = [
     tag: 'fix',
     tagLabelMy: 'ပြင်ဆင်ပြီး ဗားရှင်း',
     tagLabelEn: 'Bug Fix Version',
-    descriptionMy: 'App အား မူလအသုံးပြုသူဟောင်းများ၏ ဒေတာများ၊ Premium အစီအစဉ်များနှင့် Admin Panel စာရင်းများ တည်ရှိရာ ပင်မ (default) Firestore Database သို့ အပြီးသတ် ပြန်လည်ပြောင်းလဲ ချိတ်ဆက်ပေးလိုက်သဖြင့် သုံးစွဲသူအားလုံး Premium Plan များနှင့် တကွ အောင်မြင်စွာ ပြန်လည် ပေါင်းစည်းသွားပြီ ဖြစ်ပါသည်။',
-    descriptionEn: 'Re-pointed the app to the canonical (default) Firestore database, instantly restoring all previous user accounts, premium plans, and admin records.',
+    descriptionMy: 'App အား မူလအသုံးပြုသူဟောင်းများ၏ ဒေတာများ၊ Premium အစီအစဉ်များ တည်ရှိရာ ပင်မ (default) Firestore Database သို့ အပြီးသတ် ပြန်လည်ပြောင်းလဲ ချိတ်ဆက်ပေးလိုက်သဖြင့် သုံးစွဲသူအားလုံး Premium Plan များနှင့် တကွ အောင်မြင်စွာ ပြန်လည် ပေါင်းစည်းသွားပြီ ဖြစ်ပါသည်။',
+    descriptionEn: 'Re-pointed the app to the canonical (default) Firestore database, instantly restoring all previous user accounts and premium plans.',
     changesMy: [
       '🌐 **Default Database Migration**: `firebase-applet-config.json` ရှိ `firestoreDatabaseId` အား `(default)` သို့ အောင်မြင်စွာ ပြောင်းလဲချိတ်ဆက်လိုက်ပြီး Firestore Security Rules များကိုပါ default database ပေါ်သို့ တင်ပေးပြီးစီးခဲ့ပါသည်။',
       '💎 **Premium Plan Restoration**: ယခင် သုံးစွဲသူဟောင်းများ အကောင့်ပြန်ဝင်သည့်အခါ ၎င်းတို့၏ Premium Plan များ၊ သက်တမ်းကုန်ဆုံးမည့် ရက်စွဲများနှင့် ဒေတာများ ပျောက်ဆုံးခြင်းမရှိဘဲ ၁၀၀% အပြည့်အဝ ပြန်လည်ရရှိသွားပါပြီ။',
-      '👥 **Admin Panel Synchronization**: Admin Panel တွင်လည်း ယခင် ပျောက်ဆုံးနေသော အသုံးပြုသူစာရင်းများနှင့် ၎င်းတို့၏ စာရင်းမှတ်တမ်းများအားလုံးကို အပြည့်အစုံ ပြန်လည်တွေ့မြင်နိုင်ပြီဖြစ်ပါသည်။'
     ],
     changesEn: [
       'Configured firestoreDatabaseId to (default) in firebase-applet-config.json and redeployed rules to the default database.',
       'Instantly restored historical premium plans and user profiles without data loss.',
-      'Synchronized Admin Panel users and transaction listings fully on the default database.'
     ]
   },
   {
@@ -5445,22 +5312,18 @@ export const VERSION_HISTORY: VersionItem[] = [
     buildNumber: 41,
     releaseDate: '2026-09-25',
     releaseTime: '07:15 AM (MMT)',
-    titleMy: 'Admin လုံခြုံရေး အထူးတင်းကျပ်မှုနှင့် Android Auto-Update စနစ်',
-    titleEn: 'Strict Owner-Only Admin Security & Android Instant Auto-Update',
+    titleMy: 'Android Auto-Update စနစ်',
+    titleEn: 'Android Instant Auto-Update',
     tag: 'security',
-    tagLabelMy: 'လုံခြုံရေးနှင့် စနစ်မွမ်းမံမှု',
-    tagLabelEn: 'Security & Auto-Update',
-    descriptionMy: 'Admin Access ကို တရားဝင် စနစ်ပိုင်ရှင်၏ သီးသန့် အတည်ပြုအကောင့် (Master Administrator) မှလွဲ၍ မည်သည့်အကောင့်မှ လုံးဝ ဝင်မရအောင် ပိတ်သိမ်းခြင်းနှင့် စက်အားလုံး Update ချက်ချင်းရရှိစေသော Service Worker စနစ်။',
-    descriptionEn: 'Locked Admin Access strictly to the verified Master Administrator account only, with auto-invalidation Service Worker for instant multi-device syncing.',
+    tagLabelMy: 'စနစ်မွမ်းမံမှု',
+    tagLabelEn: 'Auto-Update',
+    descriptionMy: 'စက်အားလုံး Update ချက်ချင်းရရှိစေသော Service Worker စနစ်။',
+    descriptionEn: 'Auto-invalidation Service Worker for instant multi-device syncing.',
     changesMy: [
-      'Admin Access ကို စနစ်ပိုင်ရှင်၏ သီးသန့် အတည်ပြုအကောင့်ဖြင့် Google Login ဝင်ထားမှသာ ခွင့်ပြုခြင်း (PIN/Passcode Backdoor အားလုံး အပြီးတိုင် ဖျက်သိမ်းခြင်း)',
-      'အခြား User များနှင့် Guest များတွင် Admin ခလုတ်နှင့် ဝင်ရောက်ခွင့် လုံးဝ မမြင်ရစေရန် ၁၀၀% ပိတ်ပင်ခြင်း',
       'Android ဖုန်းများတွင် Update မပြောင်းဘဲ အဟောင်းကျန်နေခြင်းကို ဖြေရှင်းရန် Network-First Service Worker (ngwesaryin-live-v4) တပ်ဆင်ခြင်း',
       'ဆာဗာတွင် ပြင်ဆင်ပြီးသည်နှင့် စက်အားလုံးတွင် အလိုအလျောက် Update အသစ် ရရှိစေသော Auto-Update Lifecycle ချိတ်ဆက်ခြင်း'
     ],
     changesEn: [
-      'Restricted Admin Control strictly to authorized Master Administrator only; eliminated all passcode bypasses',
-      'Completely hid Admin triggers for all regular accounts and guest users across all views',
       'Upgraded Service Worker to Network-First (ngwesaryin-live-v4) to prevent stale cache on Android devices',
       'Added automatic controllerchange and visibility listeners for instant over-the-air updates'
     ]
@@ -5520,21 +5383,19 @@ export const VERSION_HISTORY: VersionItem[] = [
     buildNumber: 35,
     releaseDate: '2026-09-23',
     releaseTime: '09:40 PM (MMT)',
-    titleMy: 'Admin Control Center နှင့် ဘုံပိုက်ဆံအိတ် (Shared Workspace)',
-    titleEn: 'Admin Control Center & Multi-User Shared Wallets',
+    titleMy: 'ဘုံပိုက်ဆံအိတ် (Shared Workspace) နှင့် ကြေညာချက်',
+    titleEn: 'Multi-User Shared Wallets & Broadcast Announcements',
     tag: 'feature',
-    tagLabelMy: 'စီမံခန့်ခွဲမှုနှင့် အဖွဲ့စနစ်',
-    tagLabelEn: 'Admin & Collaboration',
-    descriptionMy: 'စနစ်တစ်ခုလုံးကို စီမံနိုင်သော Admin Panel နှင့် မိသားစု/လုပ်ဖော်ကိုင်ဖက်များနှင့် အတူတူ သုံးနိုင်သော Shared Wallet စနစ်။',
-    descriptionEn: 'Admin management control center with broadcast announcements and collaborative shared workspaces.',
+    tagLabelMy: 'အဖွဲ့စနစ်',
+    tagLabelEn: 'Collaboration',
+    descriptionMy: 'မိသားစု/လုပ်ဖော်ကိုင်ဖက်များနှင့် အတူတူ သုံးနိုင်သော Shared Wallet စနစ်နှင့် အသုံးပြုသူအားလုံးထံ သတင်းစကားများ ပို့နိုင်သော ကြေညာချက်။',
+    descriptionEn: 'Collaborative shared workspaces with broadcast announcements for all users.',
     changesMy: [
-      'Admin Control Center ထည့်သွင်းပြီး စနစ်အခြေအနေနှင့် အသုံးပြုသူစာရင်း စစ်ဆေးနိုင်ခြင်း',
       'အသုံးပြုသူအားလုံးထံ အရေးကြီး သတင်းစကားများ ပို့နိုင်သော Broadcast Announcement Banner',
       'မိသားစု သို့မဟုတ် ဆိုင်ဝန်ထမ်းများနှင့် တွဲဖက်သုံးနိုင်သော Shared Workspace & Wallets',
       'ငွေစာရင်း မကိုက်ညီမှုများကို ပြန်လည်ညှိနှိုင်းပေးသော Reconcile Balance စနစ်'
     ],
     changesEn: [
-      'Built Admin Control Center for platform telemetry, stats, and database management',
       'Implemented system-wide broadcast announcement banners for instant user notifications',
       'Added multi-user workspaces and shared wallets for families and teams',
       'Introduced wallet balance reconciliation tool for balance adjustments'

@@ -2457,7 +2457,16 @@ export default function App() {
           </div>
         </div>
 
-        <div className={(activeTab === 'analytics' || activeTab === 'budgets') ? '' : 'hidden'}>
+        {/* [v7.5.75] Split: the old Analytics tab is now three
+            top-level tabs — 'reports' (အစီရင်ခံစာ), 'budget'
+            (ဘတ်ဂျက်), 'compare' (ဈေးနှုန်း နှိုင်းယှဉ်). One mounted
+            AnalyticsView serves all three; App picks the section via
+            initialSubTab. 'analytics' stays as an alias for Reports
+            (legacy navigation only — the Dashboard health modal now
+            goes to 'budget', matching the AnalyticsView instance)
+            and legacy 'budgets' too, so no existing navigation
+            breaks. */}
+        <div className={(activeTab === 'analytics' || activeTab === 'budgets' || activeTab === 'reports' || activeTab === 'budget' || activeTab === 'compare') ? '' : 'hidden'}>
           <div className="space-y-6">
             {plan === 'guest' || !limits.hasBudgets ? (
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs max-w-lg mx-auto my-6">
@@ -2468,7 +2477,11 @@ export default function App() {
                   {/* [v7.5.60 S-69] The lock screen covers the WHOLE
                       analytics tab — Analysis + Compare Price + Budget —
                       so the title must say so and list what is locked,
-                      not just "ဘတ်ဂျက်". */}
+                      not just "ဘတ်ဂျက်". [v7.5.75] The same single gate
+                      now guards all three split top-level tabs
+                      ('reports' / 'budget' / 'compare') plus the legacy
+                      'analytics' alias — a guest sees this identical
+                      lock on every one of them. */}
                   <h2 className="text-lg font-bold text-slate-900">
                     {lang === 'my' ? 'Analysis၊ ဈေးနှုန်း နှိုင်းယှဉ် နှင့် ဘတ်ဂျက် (Guest Mode တွင် မရရှိနိုင်ပါ)' : 'Analysis, Compare Price & Budgets Locked in Guest Mode'}
                   </h2>
@@ -2506,6 +2519,12 @@ export default function App() {
                 onDeleteBudget={handleDeleteBudget}
                 onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
                         onSelectTab={setActiveTab}
+                        // [v7.5.75] Deep-link: which of the three split
+                        // sections to show. 'budget' → Budget,
+                        // 'compare' → Compare Price, everything else
+                        // ('reports', legacy 'analytics' / 'budgets')
+                        // → Reports (the default).
+                        initialSubTab={activeTab === 'budget' ? 'budget' : activeTab === 'compare' ? 'compare' : 'reports'}
               />
             )}
             <AdBanner

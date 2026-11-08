@@ -242,7 +242,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           )} (${Math.round(percentage)}%)`,
           exactAmount: `${formatMMK(spent)} / ${formatMMK(limit)}`,
           severity: 'danger',
-          actionTab: 'analytics',
+          // [v7.5.75] Budget alerts land on the Budget top-level tab
+          // now (was 'analytics' → Reports via the alias).
+          actionTab: 'budget',
           actionText: lang === 'my' ? 'ဘတ်ဂျက် စစ်ဆေးမည်' : 'Check Budget',
           createdAt: Date.now(),
         });
@@ -260,7 +262,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           )} (${Math.round(percentage)}%)`,
           exactAmount: `${formatMMK(spent)} / ${formatMMK(limit)}`,
           severity: 'warning',
-          actionTab: 'analytics',
+          // [v7.5.75] Budget alerts land on the Budget top-level tab
+          // now (was 'analytics' → Reports via the alias).
+          actionTab: 'budget',
           actionText: lang === 'my' ? 'ဘတ်ဂျက် စစ်ဆေးမည်' : 'Check Budget',
           createdAt: Date.now(),
         });

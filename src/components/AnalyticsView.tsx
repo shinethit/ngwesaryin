@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart3, Wallet, ShoppingBag } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
@@ -35,6 +35,10 @@ interface AnalyticsViewProps {
   onDeleteBudget: (id: string) => void;
   onOpenUpgradeModal: () => void;
   onSelectTab?: (tab: string) => void;
+  // [v7.5.75] Split: Reports / Budget / Compare Price are top-level
+  // tabs now. App passes which section to show; the old 'analytics'
+  // id maps to 'reports' (the default).
+  initialSubTab?: SubTab;
 }
 
 type SubTab = 'reports' | 'budget' | 'compare';
@@ -43,9 +47,21 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   transactions, categories, wallets, debts, budgets,
   plan, lang, maxBudgetCategories,
   onAddBudget, onUpdateBudget, onDeleteBudget,
-  onOpenUpgradeModal, onSelectTab,
+  onOpenUpgradeModal, onSelectTab, initialSubTab,
 }) => {
-  const [subTab, setSubTab] = useState<SubTab>('reports');
+  const [subTab, setSubTab] = useState<SubTab>(initialSubTab ?? 'reports');
+  // [v7.5.75] The single mounted instance follows the top-level tab:
+  // App changes initialSubTab when the user picks Reports / Budget /
+  // Compare Price (or the legacy 'analytics' alias), and this syncs
+  // the shown section. Internal navigation below goes through
+  // goToSubTab so the sidebar highlight stays in sync with content.
+  useEffect(() => {
+    if (initialSubTab) setSubTab(initialSubTab);
+  }, [initialSubTab]);
+  const goToSubTab = (t: SubTab) => {
+    if (onSelectTab) onSelectTab(t);
+    else setSubTab(t);
+  };
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
   // [v7.5.60 A-S12] Financial-system toggle for the summary table
   // (Opening/Closing <-> Inflow/Outflow) — the table already supports
@@ -141,9 +157,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Sub-tab toggle */}
+      {/* [v7.5.75] Section switcher — each button now switches the
+          top-level tab (Reports / Budget / Compare Price) via
+          goToSubTab, so the sidebar highlight stays in sync. */}
       <div className="bg-white rounded-2xl border border-slate-200 p-1.5 flex gap-1">
-        <button type="button" onClick={() => setSubTab('reports')}
+        <button type="button" onClick={() => goToSubTab('reports')}
           className={'flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
             (subTab === 'reports'
               ? 'bg-indigo-600 text-white shadow-sm'
@@ -151,7 +169,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <BarChart3 className="w-4 h-4" />
           {lang === 'my' ? '📊 အစီရင်ခံစာ' : '📊 Reports'}
         </button>
-        <button type="button" onClick={() => setSubTab('budget')}
+        <button type="button" onClick={() => goToSubTab('budget')}
           className={'flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
             (subTab === 'budget'
               ? 'bg-emerald-600 text-white shadow-sm'
@@ -161,7 +179,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         </button>
         {/* [v7.5.60 M-04] Compare Price is its own tab now — it is not a
             budget, so it no longer hides under the Budget tab. */}
-        <button type="button" onClick={() => setSubTab('compare')}
+        <button type="button" onClick={() => goToSubTab('compare')}
           className={'flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
             (subTab === 'compare'
               ? 'bg-amber-600 text-white shadow-sm'
@@ -204,8 +222,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
               badge="Net"
               // [v7.5.55 D27] Was onSelectTab('analytics') while already on
               // Analytics (a no-op). Now opens the Budget tab, where the
-              // Monthly Savings Goal card lives.
-              onClick={() => setSubTab('budget')}
+              // Monthly Savings Goal card lives. [v7.5.75] Budget is a
+              // top-level tab now, so this goes through goToSubTab.
+              onClick={() => goToSubTab('budget')}
             />
             <ClayCategoryCard
               type="avatar"
@@ -376,13 +395,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
       {/* [v7.5.55 D17] Was setSubTab('reports') while the modal only opens
           from the reports tab (a no-op). Now switches to the Budget tab,
-          where the detailed budget analytics live. */}
+          where the detailed budget analytics live. [v7.5.75] Budget is a
+          top-level tab now, so this goes through goToSubTab. */}
       <FinancialHealthModal
         isOpen={isHealthModalOpen}
         onClose={() => setIsHealthModalOpen(false)}
         health={financialHealth}
         lang={lang}
-        onNavigateToAnalytics={() => setSubTab('budget')}
+        onNavigateToAnalytics={() => goToSubTab('budget')}
       />
     </div>
   );

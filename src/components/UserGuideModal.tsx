@@ -25,12 +25,13 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
   // [v7.5.60 G-N5] Which guide category jumps to which app tab.
   // Categories without a real destination (getting started, cloud /
   // PIN, data management, troubleshooting) get no button.
+  // [v7.5.75] Budgets now has its own top-level tab ('budget').
   const CATEGORY_TAB: Record<string, string> = {
     cashflow: 'transactions',
     debts: 'debts',
     wallets: 'wallets',
     shared_wallets: 'wallets',
-    budgets: 'analytics',
+    budgets: 'budget',
   };
 
   if (!isOpen) return null;

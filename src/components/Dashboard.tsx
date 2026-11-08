@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   ArrowDownLeft, ArrowUpRight, HandCoins, AlertCircle,
   Calendar, ChevronRight, ChevronDown, Search, RefreshCw,
-  Store, Database, Crown, MessageCircle, GraduationCap, BarChart3,
+  Wallet, Scale, Crown, MessageCircle, GraduationCap, BarChart3,
 } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK, formatLakhs, formatShortDate, isOverdue } from '../utils/formatters';
@@ -413,9 +413,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="space-y-3.5">
+    // [v7.5.75] Tighter vertical rhythm (space-y-2.5, was 3.5) so more
+    // of Home is visible without scrolling; no content removed.
+    <div className="space-y-2.5">
       {/* HEADER */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
         <div className="min-w-0">
           <div className="text-sm font-bold text-slate-900 truncate">{todayStr}</div>
           <div className="text-[11px] text-slate-500 truncate">
@@ -500,7 +502,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* [v7.5.60 S11] Empty-state guide (text only — no demo data):
           a brand-new account sees 0s everywhere with no idea what to do. */}
       {transactions.length === 0 && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 space-y-2">
           <div className="font-bold text-sm text-emerald-900">
             {lang === 'my' ? '👋 စတင်ရန် လွယ်ကူပါတယ်' : '👋 Easy to get started'}
           </div>
@@ -521,15 +523,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* HERO — [v7.5.68 R1] amount/advice leading loosened so Burmese descenders clear the pill below. */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white shadow-md">
+      {/* HERO — [v7.5.68 R1] amount/advice leading loosened so Burmese descenders clear the pill below. [v7.5.75] p-5→p-4 and tighter mt gaps; amount size, leading and all info unchanged. */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-4 text-white shadow-md">
         <div className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">
           {lang === 'my' ? 'စုစုပေါင်း လက်ကျန်' : 'Total Balance'}
         </div>
         <button
           type="button"
           onClick={() => setShowCurrencyBreakdown(true)}
-          className={`text-3xl sm:text-4xl font-black mt-1.5 tracking-tight leading-[1.4] flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left ${heroHealthText[heroHealth.tier]}`}
+          className={`text-3xl sm:text-4xl font-black mt-1 tracking-tight leading-[1.4] flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left ${heroHealthText[heroHealth.tier]}`}
           title={(lang === 'my' ? 'ငွေကြေး အလိုက် ကြည့်ရန် နှိပ်ပါ • ' : 'Tap for currency breakdown • ') + formatMMK(totalWalletBalance)}
         >
           <span>{formatLakhs(totalWalletBalance, lang)}</span>
@@ -539,7 +541,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <button
           type="button"
           onClick={() => setIsHealthModalOpen(true)}
-          className="mt-2 flex flex-col items-start gap-1 text-left cursor-pointer group"
+          className="mt-1.5 flex flex-col items-start gap-1 text-left cursor-pointer group"
           title={lang === 'my' ? 'ငွေကြေးကျန်းမာမှု အသေးစိတ်ကြည့်ရန် နှိပ်ပါ' : 'Tap to view financial health details'}
         >
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${heroHasNoData ? 'bg-slate-500 text-white border border-slate-400' : heroHealth.theme.badgeBg}`}>
@@ -568,10 +570,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
         {/* [v7.5.60 S1] Period label for the income/expense/net row. */}
-        <div className="text-[11px] font-semibold text-slate-400 mt-3">
+        <div className="text-[11px] font-semibold text-slate-400 mt-2">
           {periodLabel} · {lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ' : 'Income / Expense'}
         </div>
-        <div className="flex items-center gap-4 mt-1.5 text-xs flex-wrap">
+        <div className="flex items-center gap-4 mt-1 text-xs flex-wrap">
           <span className="flex items-center gap-1 text-emerald-400 font-bold">
             <ArrowDownLeft className="w-3.5 h-3.5" /><span title={formatMMK(totalIncome)}>+{formatLakhs(totalIncome, lang)}</span>
           </span>
@@ -587,99 +589,98 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* QUICK ACTIONS */}
       <div className="grid grid-cols-3 gap-2">
         <button type="button" onClick={() => onAddTransaction('income')}
-          className="min-h-11 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
+          className="min-h-10 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
           <ArrowDownLeft className="w-4 h-4" />{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}
         </button>
         <button type="button" onClick={() => onAddTransaction('expense')}
-          className="min-h-11 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
+          className="min-h-10 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
           <ArrowUpRight className="w-4 h-4" />{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}
         </button>
         <button type="button" onClick={onAddDebt}
-          className="min-h-11 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
+          className="min-h-10 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
           <HandCoins className="w-4 h-4" />{lang === 'my' ? 'အကြွေး' : 'Debt'}
         </button>
       </div>
 
-      {/* [v7.3.1] QUICK ACCESS GRID — 6 tab shortcuts [v7.5.68 R2] taller tiles + relaxed label leading so Burmese labels are not cut at the tile edge. */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-2.5">
+      {/* [v7.3.1] QUICK ACCESS GRID — 6 tab shortcuts [v7.5.68 R2] taller tiles + relaxed label leading so Burmese labels are not cut at the tile edge. [v7.5.75] Rebuilt: Budget / Report / Price Compare split out of the old combined Reports & Budget tile; Data + Shops moved to the sidebar; Plans tile relabelled ဈေးနှုန်း. Tiles compacted (py-2, w-7 icon) to save Home space — still ≥40px tall, easy to tap. */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-2">
         <div className="flex items-center justify-between mb-1 px-1">
           <h3 className="font-bold text-[12px] text-slate-900 flex items-center gap-1.5">
             <span className="text-[14px]">⚡</span>
             {lang === 'my' ? 'အမြန် ဝင်ရောက်ရန်' : 'Quick Access'}
           </h3>
         </div>
-        {/* [v7.5.60 M4] Sidebar stays 6 items (v7.5.57 decision) — say here
-            that Budget, reports, shops and more live in this grid. */}
-        <p className="text-[11px] text-slate-500 font-medium px-1 mb-2">
+        {/* [v7.5.75] Was the v7.5.60 M4 note saying Data/Shops live here — they now live in the sidebar. */}
+        <p className="text-[11px] text-slate-500 font-medium px-1 mb-1.5">
           {lang === 'my'
-            ? 'ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ ဈေးနှုန်း နှိုင်းယှဉ်၊ ဆိုင်လိပ်စာ စတာတွေ ဒီမှာရှိပါတယ်'
-            : 'Budgets, reports, price comparison, shops and more live here'}
+            ? 'ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ ဈေးနှုန်း နှိုင်းယှဉ် စတာတွေ ဒီမှာရှိပါတယ်'
+            : 'Budgets, reports, price comparison and more live here'}
         </p>
 
         <div className="grid grid-cols-3 gap-1.5">
-          {/* 1. Analytics (Shops position) */}
-          <button type="button" onClick={() => onSelectTab('analytics')}
-            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/70 transition-all active:scale-95 cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-              <BarChart3 className="w-4 h-4" />
+          {/* 1. Budget */}
+          <button type="button" onClick={() => onSelectTab('budget')}
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <Wallet className="w-3.5 h-3.5" />
             </div>
             <span className="text-[10px] font-bold text-emerald-900 leading-relaxed text-center">
-              {lang === 'my' ? 'အစီရင်ခံစာ / ဘတ်ဂျက်' : 'Reports & Budget'}
+              {lang === 'my' ? 'ဘတ်ဂျက်' : 'Budget'}
             </span>
           </button>
 
-          {/* 2. Data Management */}
-          <button type="button" onClick={() => onSelectTab('data_management')}
-            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 transition-all active:scale-95 cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shadow-xs">
-              <Database className="w-4 h-4" />
+          {/* 2. Reports */}
+          <button type="button" onClick={() => onSelectTab('reports')}
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 border border-cyan-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-7 h-7 rounded-lg bg-cyan-600 text-white flex items-center justify-center shadow-xs">
+              <BarChart3 className="w-3.5 h-3.5" />
             </div>
-            <span className="text-[10px] font-bold text-slate-800 leading-relaxed text-center">
-              {lang === 'my' ? 'ဒေတာ' : 'Data'}
+            <span className="text-[10px] font-bold text-cyan-900 leading-relaxed text-center">
+              {lang === 'my' ? 'အစီရင်ခံစာ' : 'Reports'}
             </span>
           </button>
 
-          {/* 3. Plans */}
-          <button type="button" onClick={() => onSelectTab('plans')}
-            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-xs">
-              <Crown className="w-4 h-4" />
-            </div>
-            <span className="text-[10px] font-bold text-amber-900 leading-relaxed text-center">
-              {lang === 'my' ? 'အစီအစဉ်' : 'Plans'}
-            </span>
-          </button>
-
-          {/* 4. Shops (Feedback position) */}
-          <button type="button" onClick={() => onSelectTab('shops')}
-            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200/70 transition-all active:scale-95 cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center shadow-xs">
-              <Store className="w-4 h-4" />
+          {/* 3. Price Compare */}
+          <button type="button" onClick={() => onSelectTab('compare')}
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-7 h-7 rounded-lg bg-orange-500 text-white flex items-center justify-center shadow-xs">
+              <Scale className="w-3.5 h-3.5" />
             </div>
             <span className="text-[10px] font-bold text-orange-900 leading-relaxed text-center">
-              {lang === 'my' ? 'ဆိုင်လိပ်စာ' : 'Shops'}
+              {lang === 'my' ? 'ဈေးနှုန်း နှိုင်းယှဉ်' : 'Price Compare'}
             </span>
           </button>
 
-          {/* 5. Education */}
+          {/* 4. Education */}
           <button type="button" onClick={() => onSelectTab('education')}
-            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition-all active:scale-95 cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-xs">
-              <GraduationCap className="w-4 h-4" />
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-xs">
+              <GraduationCap className="w-3.5 h-3.5" />
             </div>
             <span className="text-[10px] font-bold text-indigo-900 leading-relaxed text-center">
               {lang === 'my' ? 'ပညာပေး' : 'Learn'}
             </span>
           </button>
 
-          {/* 6. Feedback (Analytics position) */}
+          {/* 5. Feedback */}
           <button type="button" onClick={() => onSelectTab('feedback')}
-            className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/70 transition-all active:scale-95 cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-xs">
-              <MessageCircle className="w-4 h-4" />
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-7 h-7 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-xs">
+              <MessageCircle className="w-3.5 h-3.5" />
             </div>
             <span className="text-[10px] font-bold text-blue-900 leading-relaxed text-center">
               {lang === 'my' ? 'အကြံပြုချက်' : 'Feedback'}
+            </span>
+          </button>
+
+          {/* 6. Plans — [v7.5.75] relabelled အစီအစဉ် → ဈေးနှုန်း (ဈ); still opens the Plans/pricing page, NOT Price Comparison. */}
+          <button type="button" onClick={() => onSelectTab('plans')}
+            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-xs">
+              <Crown className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[10px] font-bold text-amber-900 leading-relaxed text-center">
+              {lang === 'my' ? 'ဈေးနှုန်း' : 'Plans'}
             </span>
           </button>
 
@@ -695,10 +696,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         lang={lang}
       />
 
-      {/* DEBT REMINDERS */}
+      {/* DEBT REMINDERS — [v7.5.75] p-4→p-3, tighter header/row gaps; content unchanged. */}
       {urgentDebts.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <div className="flex items-center justify-between mb-2.5">
+        <div className="bg-white rounded-2xl border border-slate-200 p-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
               <AlertCircle className="w-4 h-4 text-amber-600" />
               {lang === 'my' ? 'အကြွေး သတိပေးချက်' : 'Debt Reminders'}
@@ -708,7 +709,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {lang === 'my' ? 'အားလုံး' : 'All'}
             </button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {urgentDebts.map((debt) => {
               const rem = debt.totalAmount - debt.paidAmount;
               const overdue = isOverdue(debt.dueDate);
@@ -716,7 +717,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               // [v7.5.55] Tappable row: opens the Debts tab. Due date is
               // DD/MM/YYYY via formatShortDate (was raw YYYY-MM-DD).
               return (
-                <button key={debt.id} type="button" onClick={() => onSelectTab('debts')} className={'w-full flex items-center justify-between p-2.5 rounded-xl text-left cursor-pointer transition-colors ' + (overdue ? 'bg-rose-50 hover:bg-rose-100' : 'bg-slate-50 hover:bg-slate-100')}>
+                <button key={debt.id} type="button" onClick={() => onSelectTab('debts')} className={'w-full flex items-center justify-between p-2 rounded-xl text-left cursor-pointer transition-colors ' + (overdue ? 'bg-rose-50 hover:bg-rose-100' : 'bg-slate-50 hover:bg-slate-100')}>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 truncate">{debt.personName}</div>
                     <div className="text-[10px] text-slate-500 truncate">
@@ -843,7 +844,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         onClose={() => setIsHealthModalOpen(false)}
         health={heroHealth}
         lang={lang}
-        onNavigateToAnalytics={() => onSelectTab('analytics')}
+        onNavigateToAnalytics={() => onSelectTab('budget')}
       />
 
       {/* [v7.5.60 S14] Inline toast (replaces native alert()). */}

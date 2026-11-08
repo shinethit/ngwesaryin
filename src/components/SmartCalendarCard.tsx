@@ -275,9 +275,11 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-4">
+    // [v7.5.75] Tighter outer padding/gaps so Home is shorter; calendar
+    // cells, month switcher (min-h-11 tap targets) and all content unchanged.
+    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-3 sm:p-4 space-y-3">
       {/* Header & Month Navigator */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
             <CalendarIcon className="w-4 h-4 stroke-[2.5]" />
@@ -326,7 +328,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
 
       {/* [v6.1.8] Multi-Select Wallet Filter */}
       {wallets.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-2xl bg-slate-50 border border-slate-200/80">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
             <WalletIcon className="w-3.5 h-3.5 text-indigo-600" />
             <span>{lang === 'my' ? 'ပိုက်ဆံအိတ် ရွေးရန်:' : 'Wallet Filter:'}</span>
@@ -443,7 +445,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
       {/* Calendar Grid */}
       <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/50">
         {/* Weekdays Header */}
-        <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200 text-center text-[10px] sm:text-xs font-bold text-slate-600 py-2">
+        <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200 text-center text-[10px] sm:text-xs font-bold text-slate-600 py-1.5">
           {weekDays.map((w, idx) => (
             <div key={idx} className={idx === 0 || idx === 6 ? 'text-rose-600' : ''}>
               <span className="sm:hidden">{weekDaysShort[idx]}</span>
@@ -456,7 +458,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
         <div className="grid grid-cols-7 gap-px bg-slate-200">
           {calendarGrid.map((slot, idx) => {
             if (!slot.dayNum || !slot.dateStr) {
-              return <div key={idx} className="bg-white/60 min-h-[70px] sm:min-h-[85px] p-1 opacity-40" />;
+              return <div key={idx} className="bg-white/60 min-h-[64px] sm:min-h-[85px] p-1 opacity-40" />;
             }
 
             const metrics = dailyMap.get(slot.dateStr);
@@ -470,7 +472,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                 onClick={() => setSelectedDayStr(slot.dateStr)}
                 aria-pressed={isSelected}
                 aria-label={`${formatSelectedDay(slot.dateStr)}${metrics ? ` — ${lang === 'my' ? 'ဝင်ငွေ' : 'income'} ${formatMMK(metrics.income)}, ${lang === 'my' ? 'ထွက်ငွေ' : 'expense'} ${formatMMK(metrics.expense)}` : ''}`}
-                className={`bg-white min-h-[72px] sm:min-h-[88px] p-1.5 sm:p-2 flex flex-col justify-between transition-all cursor-pointer hover:bg-indigo-50/40 relative text-left w-full ${
+                className={`bg-white min-h-[66px] sm:min-h-[88px] p-1.5 sm:p-2 flex flex-col justify-between transition-all cursor-pointer hover:bg-indigo-50/40 relative text-left w-full ${
                   isSelected ? 'ring-2 ring-indigo-600 bg-indigo-50/30 z-10' : ''
                 } ${isToday ? 'bg-amber-50/30' : ''}`}
               >

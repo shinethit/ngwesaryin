@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.74';
-export const CURRENT_BUILD_NUMBER = 289;
+export const CURRENT_APP_VERSION = 'v7.5.75';
+export const CURRENT_BUILD_NUMBER = 290;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.75',
+    buildNumber: 290,
+    releaseDate: '2026-11-08',
+    releaseTime: '7:30 PM (MMT)',
+    titleMy: 'Analytics ခွဲခြင်း — အစီရင်ခံစာ၊ ဘတ်ဂျက်၊ ဈေးနှုန်း နှိုင်းယှဉ် သီးခြားစီ + Home စာမျက်နှာ သန့်ရှင်းရေး',
+    titleEn: 'Analytics Split — Reports, Budget & Price Compare as Separate Tabs + Cleaner Home',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Analytics တစ်ခုတည်းမှာ ရောနေတဲ့ အစီရင်ခံစာ၊ ဘတ်ဂျက်၊ ဈေးနှုန်း နှိုင်းယှဉ်တို့ကို သီးခြား Tab သုံးခုအဖြစ် ခွဲလိုက်ပါတယ် — Home က Quick Access ကနေ တိုက်ရိုက် ရောက်လို့ ရပါတယ်။ ဒေတာနဲ့ ဆိုင်လိပ်စာကို Sidebar ထဲ ရွှေ့လိုက်ပြီး၊ Home စာမျက်နှာကို ပိုပြီး ကျစ်လစ် သန့်ရှင်းအောင် လုပ်လိုက်ပါတယ်။',
+    descriptionEn: 'Split the old single Analytics tab into three separate tabs — Reports, Budget, and Price Compare — each reachable directly from the Home Quick Access tiles. Data and Shops moved into the sidebar, and the Home screen is now more compact and tidy.',
+    changesMy: [
+      'Analytics ကို အစီရင်ခံစာ၊ ဘတ်ဂျက်၊ ဈေးနှုန်း နှိုင်းယှဉ် ဆိုပြီး သီးခြား Tab သုံးခုအဖြစ် ခွဲလိုက်ပါတယ် — Home က Quick Access ကနေ တစ်ခုချင်းစီ တိုက်ရိုက် ဖွင့်လို့ ရပါတယ်။',
+      'ဒေတာနဲ့ ဆိုင်လိပ်စာကို Sidebar ထဲ ရွှေ့လိုက်ပါတယ် (Sidebar မှာ ၈ ခု ရှိလာပါပြီ)။',
+      'Home က Quick Access ကို ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ ဈေးနှုန်း နှိုင်းယှဉ်၊ ပညာပေး၊ အကြံပြုချက်၊ ဈေးနှုန်း ဆိုပြီး ၆ ကွက် ပြန်စီလိုက်ပါတယ် — "အစီအစဉ်" ကို "ဈေးနှုန်း" လို့ အမည်ပြောင်းလိုက်ပါတယ်။',
+      'Home စာမျက်နှာ ပိုကျစ်လစ်သွားပါပြီ — ခေါင်းစဉ်၊ Quick Access၊ ပြက္ခဒိန်၊ အကြွေးသတိပေးချက်တွေ နေရာပိုနည်းပြီး ဖုန်းမှာ အောက်ခြေအထိ လှိမ့်စရာ နည်းသွားပါတယ်။',
+    ],
+    changesEn: [
+      'Split Analytics into three separate tabs — Reports, Budget, and Price Compare — each opening directly from the Home Quick Access tiles.',
+      'Moved Data and Shops into the sidebar (8 items now).',
+      'Rebuilt the Home Quick Access into 6 tiles — Budget, Reports, Price Compare, Education, Feedback, and Price — and renamed "အစီအစဉ်" to "ဈေးနှုန်း" (Price).',
+      'Made the Home screen more compact — header, Quick Access, calendar, and debt reminders take less space, so there is less scrolling on phones.',
+    ],
+  },
   {
     version: 'v7.5.74',
     buildNumber: 289,

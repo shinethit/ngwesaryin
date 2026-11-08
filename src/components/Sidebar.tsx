@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History } from 'lucide-react';
+import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History, Database, Store } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
@@ -141,9 +141,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  // [v7.5.57] Sidebar keeps 6 items only. Analytics / Data / Plans /
-  // Shops / Feedback / Education live on the Dashboard Quick Access grid
-  // (the user wanted that grid kept) — they are not duplicated here.
+  // [v7.5.75] Sidebar now has 8 items. The v7.5.57 "6 items only"
+  // rule is reversed at the user's request: Data and Shop live here
+  // now (they were removed from the Dashboard Quick Access grid).
+  // Analytics / Plans / Feedback / Education stay on the Dashboard
+  // Quick Access grid only — they are not duplicated here.
   const navItems = [
     {
       id: 'dashboard',
@@ -185,6 +187,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       labelEn: '6 - Vehicle Management',
       icon: Car,
       count: vehiclesCount,
+    },
+    {
+      // [v7.5.75] Appended after the established 1–6 core flow so the
+      // existing numbering and order are untouched.
+      id: 'data_management',
+      labelMy: '၇ - ဒေတာ',
+      labelEn: '7 - Data Management',
+      icon: Database,
+    },
+    {
+      id: 'shops',
+      labelMy: '၈ - ဆိုင်လိပ်စာ',
+      labelEn: '8 - Shops & Addresses',
+      icon: Store,
     },
   ];
 

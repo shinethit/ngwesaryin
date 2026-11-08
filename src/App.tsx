@@ -679,9 +679,12 @@ export default function App() {
   }, [wallets, transactions, debts]);
 
   // Auto-migrate & consolidate redundant legacy categories on app startup
+  // [v7.5.74] Fires only for cat_phone or a missing cat_vehicle: the
+  // cat_groceries merge was removed, so a stray cat_groceries alone no
+  // longer triggers a cleanup run.
   useEffect(() => {
     const hasRedundant = categories.some(
-      (c) => c.id === 'cat_groceries' || c.id === 'cat_phone'
+      (c) => c.id === 'cat_phone'
     );
     const hasMissingVehicle = !categories.some(
       (c) => c.id === 'cat_vehicle' || c.name.includes('ယာဉ်စီမံ')
@@ -702,6 +705,86 @@ export default function App() {
         safeSetItem('ngwe_budgets', JSON.stringify(result.updatedBudgets));
       }
     }
+  }, []);
+
+  // [v7.5.74] Seed the v7.5.74 Vehicle default budget for EXISTING users
+  // (new installs get it from INITIAL_* via usePersistedState, and
+  // signed-in users also get it from the cloud sync merge — but guests
+  // never sync, and a user with no budgets in Firestore gets
+  // cloudData.budgets === undefined, so the merge never runs for them).
+  // Also renames the grocery category by NAME (see below): the user's
+  // live list already split Food ("အစားအသောက်") from groceries, so the
+  // grocery record is found by its name, never by id — the repo default
+  // cat_food is left untouched and NO new category is created.
+  // Condition-based, not a one-time flag, so if a cloud pull restores
+  // the old grocery name it is corrected again on the next start.
+  // Local-only writes, same as the legacy-category migration above;
+  // the next sync-up upserts the renamed category and the new budget
+  // to Firestore. Deliberately seeds ONLY the new cat_vehicle budget —
+  // never re-adds other defaults the user may have deleted on purpose.
+  // Functional setState (not the mount closure) so this composes with
+  // the legacy migration effect above instead of clobbering it.
+  useEffect(() => {
+    setCategories((prev) => {
+      // [v7.5.74] Rename the GROCERY category to "အိမ်စျေးသုံးစာရင်း" by
+      // name. The live list already has a separate "အစားအသောက်" (Food)
+      // category for meals and a separate grocery record named
+      // "ကုန်စုံနှင့် စားသောက်ကုန်" (or the old combined
+      // "အစားအသောက်နှင့် ကုန်စုံ"); the sync merge overlays the stored
+      // name over INITIAL, so only a name-based rename reaches it.
+      // Guards — ALL must hold:
+      // (i) a separate category named "အစားအသောက်" must exist (this
+      //     proves the split already happened and the grocery-named
+      //     record really is the grocery side; a new user with only
+      //     the combined repo cat_food must NOT be renamed);
+      // (ii) no category may already be named "အိမ်စျေးသုံးစာရင်း"
+      //      (never create two);
+      // (iii) a category named "အစားအသောက်" is NEVER renamed.
+      // If BOTH grocery-ish names exist, rename only the one whose
+      // subs are grocery subs (market/supermarket/kitchen/store) and
+      // leave the other for manual review — never auto-merge.
+      const hasFood = prev.some((c) => c.name.trim() === 'အစားအသောက်');
+      const alreadyRenamed = prev.some((c) => c.name.trim() === 'အိမ်စျေးသုံးစာရင်း');
+      if (!hasFood || alreadyRenamed) return prev;
+      const groceryNames = ['ကုန်စုံနှင့် စားသောက်ကုန်', 'အစားအသောက်နှင့် ကုန်စုံ'];
+      const candidates = prev.filter((c) => groceryNames.includes(c.name.trim()));
+      if (candidates.length === 0) return prev;
+      let target = candidates[0];
+      if (candidates.length > 1) {
+        const groceryScore = (c: { subCategories?: { id: string; name: string }[] }) =>
+          (c.subCategories || []).filter(
+            (s) =>
+              s.id.startsWith('sub_groc_') ||
+              s.name.includes('ကုန်စုံ') ||
+              s.name.includes('စူပါမားကတ်') ||
+              s.name.includes('မီးဖိုချောင်') ||
+              s.name.includes('စည်ပင်') ||
+              s.name.includes('ဈေး')
+          ).length;
+        const scored = candidates
+          .map((c) => ({ c, score: groceryScore(c) }))
+          .sort((a, b) => b.score - a.score);
+        // Only rename when one candidate clearly is the grocery side.
+        if (scored.length < 2 || scored[0].score === 0 || scored[0].score === scored[1].score) return prev;
+        target = scored[0].c;
+      }
+      const next = prev.map((c) =>
+        c.id === target.id
+          ? { ...c, name: 'အိမ်စျေးသုံးစာရင်း', nameEn: 'Household Shopping', icon: 'ShoppingBag' }
+          : c
+      );
+      safeSetItem('ngwe_categories', JSON.stringify(next));
+      return next;
+    });
+    setBudgets((prev) => {
+      // Add the new Vehicle (fuel) default budget.
+      if (prev.some((b) => b.categoryId === 'cat_vehicle')) return prev;
+      const vehicleBudget = INITIAL_BUDGETS.find((b) => b.categoryId === 'cat_vehicle');
+      if (!vehicleBudget) return prev;
+      const next = [...prev, vehicleBudget];
+      safeSetItem('ngwe_budgets', JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   const showToast = (msg: string, type: ToastType = 'success') => {

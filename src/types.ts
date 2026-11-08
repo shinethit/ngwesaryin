@@ -161,6 +161,13 @@ export const UNBUDGETED_CATEGORY_ID = 'cat_general_unbudgeted';
 export interface BudgetConfig {
   id: string; // FIX: Add id for consistent mergeById usage
   categoryId: string; // specific category id, or UNBUDGETED_CATEGORY_ID ('cat_general_unbudgeted')
+  // [v7.5.74] Multi-category budget: every category this ONE budget covers.
+  // When present and non-empty, use it; otherwise fall back to [categoryId]
+  // (all stored single-category budgets keep working unchanged).
+  // categoryId stays the PRIMARY category (first of categoryIds) — it is
+  // the storage/Firestore doc key (useDataHandlers/AuthContext key budgets
+  // by categoryId), so it must never change while editing a budget.
+  categoryIds?: string[];
   calcType: BudgetCalcType; // 'fixed' | 'percentage'
   value: number; // if 'fixed': MMK amount; if 'percentage': percentage of monthly income (0-100)
   walletId: string; // 'all' or specific wallet id (e.g. 'cash', 'kpay')
@@ -168,6 +175,13 @@ export interface BudgetConfig {
   version?: number;
   lastEditedBy?: string;
 }
+
+// [v7.5.74] Resolve the categories a budget covers: the multi-category
+// list when set, otherwise the single legacy categoryId. The General
+// budget (UNBUDGETED_CATEGORY_ID) resolves to itself — it aggregates
+// unbudgeted spending, it never groups explicit categories.
+export const getBudgetCategoryIds = (b: BudgetConfig): string[] =>
+  b.categoryIds && b.categoryIds.length > 0 ? b.categoryIds : [b.categoryId];
 
 export type Budget = BudgetConfig;
 

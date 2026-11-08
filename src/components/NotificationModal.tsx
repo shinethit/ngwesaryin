@@ -10,6 +10,7 @@ import {
   VehicleMaintenance,
   RecurringTransaction,
   AdminSystemMessage,
+  getBudgetCategoryIds,
 } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
@@ -186,8 +187,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   const monthlyIncomeForBudgets = transactions
     .filter((t) => t.type === 'income' && !isTransferTransaction(t) && t.date && t.date.startsWith(currentMonthStr))
     .reduce((sum, t) => sum + notifConvertTx(t), 0);
+  // [v7.5.74] Multi-category budgets: every category a budget covers
+  // counts as explicitly budgeted, so the General pool excludes them.
   const explicitBudgetedCatIds = new Set(
-    budgets.map((b) => b.categoryId).filter((id) => id !== 'cat_general_unbudgeted')
+    budgets.flatMap((b) => getBudgetCategoryIds(b)).filter((id) => id !== 'cat_general_unbudgeted')
   );
   const spendingByCategory: Record<string, number> = {};
   currentMonthTx.forEach((t) => {
@@ -211,7 +214,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         : 'Budget';
 
     const isGeneralBudget = budget.categoryId === 'cat_general_unbudgeted';
-    const spent = isGeneralBudget ? generalPoolSpent : (spendingByCategory[budget.categoryId] || 0);
+    // [v7.5.74] Multi-category budgets: sum spending across ALL included
+    // categories, not just the primary categoryId. Single-category
+    // budgets resolve to [categoryId], so behaviour is unchanged for them.
+    const spent = isGeneralBudget
+      ? generalPoolSpent
+      : getBudgetCategoryIds(budget).reduce((sum, id) => sum + (spendingByCategory[id] || 0), 0);
     const limit =
       budget.calcType === 'percentage'
         ? Math.round((monthlyIncomeForBudgets * budget.value) / 100)

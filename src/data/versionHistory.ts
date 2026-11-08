@@ -16,10 +16,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.73';
-export const CURRENT_BUILD_NUMBER = 288;
+export const CURRENT_APP_VERSION = 'v7.5.74';
+export const CURRENT_BUILD_NUMBER = 289;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.74',
+    buildNumber: 289,
+    releaseDate: '2026-11-08',
+    releaseTime: '9:48 AM (MMT)',
+    titleMy: 'Budget တွက်ချက်မှု ပြင်ဆင်ခြင်း — 150% အမှား၊ ဆီဖိုး၊ Category စုတဲ့ Budget',
+    titleEn: 'Budget Calculation Fixes — 150% Bug, Fuel Visibility, Multi-Category Budgets',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Budget တွက်ချက်မှုမှာ လွဲနေတဲ့ နေရာတွေ ပြင်လိုက်ပါတယ်။ ဘတ်ဂျက် 0 ဖြစ်နေရင် 150% လို့ အမှား ပြနေတာကို ဖျက်ပြီး၊ ဆီဖိုး သုံးထားတာ Budget မှာ မပေါ်တာကို ပေါ်အောင် လုပ်ပြီး၊ Category အမျိုးမျိုး စုပြီး ဘတ်ဂျက် တစ်ခု လုပ်လို့ ရအောင် ထည့်ပေးလိုက်ပါတယ်။ ကုန်စုံ Category ကို "အိမ်စျေးသုံးစာရင်း" လို့ အမည်ပြောင်းပေးပြီး၊ "အစားအသောက်" Category ကို အတိုင်းပဲ ထားပါတယ်။',
+    descriptionEn: 'Fixed the Budget calculation errors: removed the fake 150% shown when a budget limit is 0, made fuel spending visible in the Budget, and added multi-category budgets so several categories can be grouped into one budget. The grocery category is renamed to "အိမ်စျေးသုံးစာရင်း" (Household shopping) and "အစားအသောက်" (Food) is left exactly as it is.',
+    changesMy: [
+      'ဘတ်ဂျက် 0 ဖြစ်ပြီး သုံးစွဲငွေ ရှိရင် 150% လို့ အမှား ပြနေတာကို ဖျက်ပြီး "—" လို့ ပြပါတယ်။ အမှန်တကယ် ကျော်လွန်တဲ့ % (ဥပမာ 200%) ကို အမှန်အတိုင်း ပြပါတယ်။',
+      'ဆီဖိုး (ယာဉ်) အတွက် ဘတ်ဂျက် အသစ် ထည့်ပေးလိုက်ပါတယ် (ဝင်ငွေ၏ 10%) — ဆီဖိုး သုံးထားတာ Budget မှာ ပေါ်လာမယ်။',
+      'Category အမျိုးမျိုး စုပြီး ဘတ်ဂျက် တစ်ခု လုပ်လို့ ရပါပြီ (ဥပမာ အိမ်စရိတ် ဘတ်ဂျက်မှာ ကုန်စုံ၊ ရေဖိုး၊ မီးဖိုး၊ အိမ်လစာ စုပြီး ထည့်လို့ ရပါတယ်)။ Category တစ်ခုကို ဘတ်ဂျက် တစ်ခုမှာပဲ ထည့်လို့ ရပါတယ်။',
+      '"ကုန်စုံနှင့် စားသောက်ကုန်" Category ကို "အိမ်စျေးသုံးစာရင်း" လို့ အမည်ပြောင်းပေးလိုက်ပါတယ် (အမည်နဲ့ ရှာပြီး ပြောင်းတာမို့ လက်ရှိ သုံးနေတဲ့ စာရင်းထဲမှာပါ ပြောင်းသွားမယ်)။ "အစားအသောက်" Category ကို အတိုင်းပဲ ထားပြီး၊ အသစ် ထပ်မခွဲပါဘူး။ ကုန်စုံကို အစားအသောက်ထဲ အလိုအလျောက် ပေါင်းတဲ့ ဟောင်း လုပ်ဆောင်ချက်ကိုလည်း ဖြုတ်လိုက်ပါတယ်။',
+      'Budget အကျဉ်းချုပ် (Summary) နဲ့ အသေးစိတ် (Detail) တွက်ချက်မှု တူညီသွားပါပြီ။',
+      'General (အထွေထွေ) ထဲမှာ ပါတဲ့ Category တွေ အလိုအလျောက် ပေါ်လာပါပြီ။',
+    ],
+    changesEn: [
+      'Removed the fake 150% shown when a budget limit is 0 and spending exists — it now shows "—". Real over-100% values (e.g. 200%) display uncapped.',
+      'Added a Vehicle (fuel) budget (10% of income) so fuel spending now shows in the Budget.',
+      'Multi-category budgets: group several categories into one budget (e.g. a Household budget with groceries, water, electricity, and rent). A category can belong to only one budget.',
+      'Renamed the grocery category ("ကုန်စုံနှင့် စားသောက်ကုန်") to "အိမ်စျေးသုံးစာရင်း" (Household shopping) by name, so it reaches the live category list. "အစားအသောက်" (Food) is left exactly as it is — no new Food category, no duplicate — and the old unsafe grocery→food auto-merge was removed.',
+      'Budget summary and detail views now use the same per-budget calculation, so they always agree.',
+      'The General pool now shows its included categories expanded by default.',
+    ],
+  },
   {
     version: 'v7.5.73',
     buildNumber: 288,

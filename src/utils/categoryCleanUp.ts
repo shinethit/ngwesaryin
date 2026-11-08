@@ -11,11 +11,15 @@ export interface MergeResult {
 
 /**
  * Standard known category merges to simplify and clean up redundant categories:
- * - cat_groceries (ကုန်စုံနှင့် စားသောက်ကုန်) -> cat_food (အစားအသောက်နှင့် ကုန်စုံ / Food & Groceries)
  * - cat_phone (ဖုန်းဘေလ် / အင်တာနက်) -> cat_utilities (အိမ်စရိတ်နှင့် ဘေလ်များ / Bills & Utilities)
+ *
+ * NOTE [v7.5.74]: cat_groceries -> cat_food is DELIBERATELY no longer
+ * auto-merged here. That merge assumed cat_food is the grocery side, but
+ * the user's live list already split Food ("အစားအသောက်") from groceries,
+ * so the merge could swallow the meals category. The grocery category is
+ * renamed by name instead, by the startup seeding effect in App.tsx.
  */
 export const KNOWN_CATEGORY_MERGES: Record<string, string> = {
-  cat_groceries: 'cat_food',
   cat_phone: 'cat_utilities',
 };
 
@@ -37,11 +41,9 @@ export const DEFAULT_VEHICLE_CATEGORY: Category = {
 };
 
 // Target category enhanced metadata after merge
+// [v7.5.74] No cat_food entry: the grocery->food merge was removed, so
+// cat_food must never be renamed by this cleanup (see note above).
 const TARGET_CATEGORY_ENHANCEMENTS: Record<string, Partial<Category>> = {
-  cat_food: {
-    name: 'အစားအသောက်နှင့် ကုန်စုံ',
-    nameEn: 'Food & Groceries',
-  },
   cat_utilities: {
     name: 'အိမ်စရိတ်နှင့် ဘေလ်များ',
     nameEn: 'Bills & Utilities',
@@ -59,7 +61,7 @@ function normalizeName(str: string): string {
 
 /**
  * Clean up duplicate categories and merge redundant categories:
- * 1. Merges known redundant categories (Groceries -> Food, Phone -> Utilities)
+ * 1. Merges known redundant categories (Phone -> Utilities)
  * 2. Merges duplicate categories with identical or near-identical names within the same type
  * 3. Preserves all subcategories from merged categories without duplicates
  * 4. Migrates all transaction and budget references so no data is lost
@@ -82,7 +84,7 @@ export function mergeAndCleanCategories(
     subCategories: [...(c.subCategories || [])],
   }));
 
-  // 1. Process known merges (cat_groceries -> cat_food, cat_phone -> cat_utilities)
+  // 1. Process known merges (cat_phone -> cat_utilities)
   for (const [sourceId, targetId] of Object.entries(KNOWN_CATEGORY_MERGES)) {
     const sourceCat = workingCategories.find((c) => c.id === sourceId);
     const targetCat = workingCategories.find((c) => c.id === targetId);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Lock, PieChart, TrendingDown, AlertTriangle, CheckCircle, Plus, ArrowRight, ShieldAlert, Edit2, Trash2, Percent, Banknote, Wallet as WalletIcon, Layers, ChevronDown, ChevronUp, Calendar, ArrowUpDown } from 'lucide-react';
-import { BudgetConfig, Category, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet } from '../types';
+import { BudgetConfig, Category, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet, getBudgetCategoryIds } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
@@ -47,7 +47,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetConfig | null>(null);
-  const [expandedGeneral, setExpandedGeneral] = useState(false);
+  const [expandedGeneral, setExpandedGeneral] = useState(true);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
   // [v7.5.60 S-47] App-styled delete confirm (replaces window.confirm).
   const [confirmDeleteCategoryId, setConfirmDeleteCategoryId] = useState<string | null>(null);
@@ -113,7 +113,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   // the saved % limit is computed from the budget's own wallet(s),
   // so the preview uses the same unscoped all-wallets month income.
   // (Approximation: the modal shows one income number, not the
-  // per-wallet base - the saved limit math itself is wallet-based.)
+  // per-wallet base - the saved limit math itself is wallet-based. [v7.5.74] The three income figures are labelled distinctly in the UI so they are not confused: the header card shows Included-wallets income, each budget card's footer shows that budget's own wallet income base, and the modal preview shows all-wallets income.)
   const monthlyIncomeAllWallets = monthTransactionsAll
     .filter((t) => t.type === 'income' && !isTransferTransaction(t))
     .reduce((sum, t) => sum + convertTxToMMK(t), 0);
@@ -122,10 +122,12 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
     return calculateFinancialHealth(monthlyIncome, monthlyExpense);
   }, [monthlyIncome, monthlyExpense]);
 
-  // Budgeted explicit category IDs (excluding UNBUDGETED_CATEGORY_ID)
+  // [v7.5.74] Budgeted explicit category IDs (excluding UNBUDGETED_CATEGORY_ID)
+  // — a multi-category budget covers every category in its resolved list,
+  // so ALL of them are excluded from the General pool.
   const explicitBudgetedCatIds = new Set(
     budgets
-      .map((b) => b.categoryId)
+      .flatMap((b) => getBudgetCategoryIds(b))
       .filter((id) => id !== UNBUDGETED_CATEGORY_ID)
   );
 
@@ -137,6 +139,10 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   // Calculate spent and limit for each configured budget
   const budgetCalculations = budgets.map((b) => {
     const isGeneral = b.categoryId === UNBUDGETED_CATEGORY_ID;
+    // [v7.5.74] Multi-category budget: spend sums across ALL included
+    // categories (primary categoryId alone for legacy single budgets).
+    const budgetCatIds = getBudgetCategoryIds(b);
+    const isMulti = !isGeneral && budgetCatIds.length > 1;
     let spent = 0;
     const breakdown: Record<string, number> = {};
 
@@ -156,9 +162,12 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
             spent += amtMMK;
             breakdown[t.category] = (breakdown[t.category] || 0) + amtMMK;
           }
-        } else {
-          if (t.category === b.categoryId) {
-            spent += amtMMK;
+        } else if (budgetCatIds.includes(t.category)) {
+          spent += amtMMK;
+          // [v7.5.74] Per-category breakdown for multi-category budgets,
+          // shown in the card's expandable list (like the General pool).
+          if (isMulti) {
+            breakdown[t.category] = (breakdown[t.category] || 0) + amtMMK;
           }
         }
       });
@@ -181,15 +190,17 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
 
     // [v7.5.55 D10] A % budget with zero income has limit 0: any spending is
     // OVER budget (there is no income to base it on) — never green
-    // "Within Budget". Percent capped at 150 like the summary card (D19).
+    // "Within Budget". [v7.5.74] percent is null when limit is 0 and spending > 0 — no % exists, so none is shown (never a fabricated 150%); no cap when limit > 0, so real 200% displays as 200%.
     const noIncomeBase = limitMMK === 0 && spent > 0;
-    const percent = limitMMK > 0 ? Math.min(150, Math.round((spent / limitMMK) * 100)) : (spent > 0 ? 150 : 0);
+    const percent: number | null = limitMMK > 0 ? Math.round((spent / limitMMK) * 100) : (spent > 0 ? null : 0);
     const isOver = spent > limitMMK;
-    const isNear = limitMMK > 0 && percent >= 80 && !isOver;
+    const isNear = limitMMK > 0 && percent !== null && percent >= 80 && !isOver;
 
     return {
       budget: b,
       isGeneral,
+      budgetCatIds,
+      isMulti,
       spent,
       limitMMK,
       budgetBaseIncome,
@@ -494,7 +505,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         {/* Income Reference */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
-            <span>{lang === 'my' ? 'ယခုလ ဝင်ငွေ (အခြေခံ)' : 'Monthly Income'}</span>
+            <span>{lang === 'my' ? 'ယခုလ ဝင်ငွေ (ရောထားသော ပိုက်ဆံအိတ်များ)' : 'Monthly Income (Included Wallets)'}</span>
             <Percent className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-bold text-emerald-700 mt-1" title={formatMMK(monthlyIncome)}>
@@ -502,8 +513,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
           </div>
           <p className="text-[11px] text-slate-400 mt-1">
             {lang === 'my'
-              ? 'ရာခိုင်နှုန်း (%) ဘတ်ဂျက်များ၏ အခြေခံဝင်ငွေ'
-              : 'Baseline for % of income budgets'}
+              ? 'ရောထားသော ပိုက်ဆံအိတ်များ၏ ဝင်ငွေသာ — သီးသန့်ပိုက်ဆံအိတ်နှင့် ချိတ်ထားသော % ဘတ်ဂျက်များသည် ထိုပိုက်ဆံအိတ်၏ ဝင်ငွေကို အခြေခံသည် (ဘတ်ဂျက်ကတ်တစ်ခုချင်းစီတွင် ဖော်ပြထားသည်)'
+              : 'Included-wallets income only — a % budget on a Separate wallet uses that wallet’s own income as its base (shown on each budget card)'}
           </p>
         </div>
 
@@ -533,7 +544,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
           <p className="text-[11px] text-slate-400 mt-1">
             {totalBudgetLimit > 0
               ? `${Math.round((totalBudgetSpent / totalBudgetLimit) * 100)}% ${lang === 'my' ? 'သုံးစွဲပြီး' : 'used'}`
-              : '0%'}
+              : totalBudgetSpent > 0 ? `— ${lang === 'my' ? 'ဘတ်ဂျက်ကျော်လွန်' : 'Over budget'}` : '0%'}
           </p>
         </div>
 
@@ -662,6 +673,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
               ({
                 budget,
                 isGeneral,
+                budgetCatIds,
+                isMulti,
                 spent,
                 limitMMK,
                 budgetBaseIncome,
@@ -725,7 +738,33 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                                   {lang === 'my' ? 'ဘတ်ဂျက်သီးသန့်မရှိသော ကဏ္ဍပေါင်းစုံ' : 'Catch-all Pool'}
                                 </span>
                               )}
+                              {isMulti && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                  {lang === 'my' ? `ကဏ္ဍ ${budgetCatIds.length} ခု ပေါင်းစပ်` : `Grouped (${budgetCatIds.length} categories)`}
+                                </span>
+                              )}
                             </div>
+
+                            {/* [v7.5.74] Multi-category budget: show every included category as a chip. */}
+                            {isMulti && (
+                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                {budgetCatIds.map((id) => {
+                                  const c = catMap.get(id);
+                                  return (
+                                    <span
+                                      key={id}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]"
+                                    >
+                                      <span
+                                        className="w-2 h-2 rounded-full shrink-0"
+                                        style={{ backgroundColor: c?.color || '#94A3B8' }}
+                                      />
+                                      {lang === 'my' ? c?.name || id : c?.nameEn || id}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
 
                             {/* Mode & Wallet badges */}
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap text-[11px]">
@@ -809,7 +848,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                       {/* Progress Bar */}
                       <div className="mt-3 space-y-1">
                         <div className="flex items-center justify-between text-xs text-slate-500">
-                          <span className="font-semibold">{percent}% {lang === 'my' ? 'သုံးစွဲပြီး' : 'used'}</span>
+                          <span className="font-semibold">{percent === null ? '—' : `${percent}% ${lang === 'my' ? 'သုံးစွဲပြီး' : 'used'}`}</span>
                           <span>
                             {isOver ? (
                               <span className="text-rose-600 font-bold" title={formatMMK(overAmount)}>
@@ -831,13 +870,13 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                                 ? 'bg-amber-500'
                                 : 'bg-emerald-500'
                             }`}
-                            style={{ width: `${Math.min(100, percent)}%` }}
+                            style={{ width: `${percent === null ? 100 : Math.min(100, percent)}%` }}
                           />
                         </div>
                       </div>
 
-                      {/* Expandable breakdown for "General & Others" */}
-                      {isGeneral && Object.keys(breakdown).length > 0 && (
+                      {/* Expandable breakdown for "General & Others" and multi-category budgets */}
+                      {(isGeneral || isMulti) && Object.keys(breakdown).length > 0 && (
                         <div className="mt-3 pt-2.5 border-t border-slate-100">
                           <button
                             type="button"

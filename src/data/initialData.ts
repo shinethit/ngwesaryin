@@ -378,8 +378,11 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     id: 'tx_6',
     type: 'expense',
     amount: 35000,
-    category: 'cat_transport',
-    subCategoryId: 'sub_trans_fuel',
+    // [v7.5.74] Was cat_transport / sub_trans_fuel — sub_trans_fuel is
+    // defined in NO category (orphan); fuel is sub_veh_fuel under
+    // cat_vehicle, matching the note (ဆိုင်ကယ် ဓာတ်ဆီဖြည့်ခြင်း).
+    category: 'cat_vehicle',
+    subCategoryId: 'sub_veh_fuel',
     walletId: 'cash',
     date: formatDate(2),
     note: 'ဆိုင်ကယ် ဓာတ်ဆီဖြည့်ခြင်း',
@@ -624,6 +627,16 @@ export const INITIAL_BUDGETS: BudgetConfig[] = [
   {
     id: 'cat_transport',
     categoryId: 'cat_transport',
+    calcType: 'percentage', // ဝင်ငွေ၏ ၁၀%
+    value: 10,
+    walletId: 'all',
+  },
+  {
+    // [v7.5.74] Vehicle (fuel) budget — fuel spending goes to cat_vehicle
+    // (sub_veh_fuel, set in useVehicleHandlers) and previously had no
+    // budget, so it never showed on a Budget card. 10% of income, all wallets.
+    id: 'cat_vehicle',
+    categoryId: 'cat_vehicle',
     calcType: 'percentage', // ဝင်ငွေ၏ ၁၀%
     value: 10,
     walletId: 'all',

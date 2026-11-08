@@ -102,7 +102,8 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
   }, [transactions, wallets, todayStr]);
 
   const isOverBudget = todaySpent > dailyLimit;
-  const percentage = dailyLimit > 0 ? Math.min(150, Math.round((todaySpent / dailyLimit) * 100)) : 0;
+  // [v7.5.74] percentage is null when the daily limit is 0 and spending > 0 — no % exists, so none is shown (never a fabricated 150% or a contradictory "0% used" next to the Over Budget badge). No 150 cap when the limit > 0.
+  const percentage: number | null = dailyLimit > 0 ? Math.round((todaySpent / dailyLimit) * 100) : (todaySpent > 0 ? null : 0);
 
   const handleSaveLimit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,7 +207,7 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
       <div className="space-y-1">
         <div className="flex items-center justify-between text-[11px] font-mono font-bold">
           <span className={isOverBudget ? 'text-rose-700' : 'text-emerald-700'}>
-            {percentage}% {lang === 'my' ? 'သုံးစွဲပြီး' : 'used'}
+            {percentage === null ? '—' : `${percentage}% ${lang === 'my' ? 'သုံးစွဲပြီး' : 'used'}`}
           </span>
           <span className="text-slate-500" title={isOverBudget ? formatMMK(todaySpent - dailyLimit) : formatMMK(dailyLimit - todaySpent)}>
             {isOverBudget
@@ -219,7 +220,7 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
             className={`h-full rounded-full transition-all duration-500 ${
               isOverBudget ? 'bg-rose-600 animate-pulse' : 'bg-emerald-600'
             }`}
-            style={{ width: `${Math.min(100, percentage)}%` }}
+            style={{ width: `${percentage === null ? 100 : Math.min(100, percentage)}%` }}
           />
         </div>
       </div>

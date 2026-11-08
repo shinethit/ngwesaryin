@@ -6,6 +6,7 @@ import {
   Category,
   UNBUDGETED_CATEGORY_ID,
   Wallet,
+  getBudgetCategoryIds,
 } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
@@ -36,11 +37,15 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 }) => {
   const expenseCategories = categories.filter((c) => c.type === 'expense');
 
-  // Categories already configured in budgets
+  // [v7.5.74] Categories already configured in budgets — a category counts
+  // as used when it appears in ANY other budget's resolved list (single
+  // or multi-category), so one category can belong to at most one budget
+  // and the summary totals can never double-count it. The budget being
+  // edited is excluded, so its own categories stay selectable.
   const usedCategoryIds = new Set(
     budgets
-      .map((b) => b.categoryId)
-      .filter((id) => !editingBudget || id !== editingBudget.categoryId)
+      .filter((b) => !editingBudget || b.categoryId !== editingBudget.categoryId)
+      .flatMap((b) => getBudgetCategoryIds(b))
   );
 
   // Available categories to add
@@ -55,9 +60,20 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   // the existing General budget — show it and block the save instead.
   const noCategoryLeft = !editingBudget && isGeneralUsed && availableCategories.length === 0;
 
-  const [categoryId, setCategoryId] = useState<string>(
-    editingBudget?.categoryId ||
-      (availableCategories[0]?.id || UNBUDGETED_CATEGORY_ID)
+  // [v7.5.74] Multi-category selection: the checked expense categories.
+  // isGeneral is separate — General can never combine with categories.
+  // The PRIMARY category is selectedCategoryIds[0] (the editing budget's
+  // categoryId when editing); it is locked in edit mode because the
+  // storage/Firestore doc key is the primary categoryId.
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(() =>
+    editingBudget && editingBudget.categoryId !== UNBUDGETED_CATEGORY_ID
+      ? getBudgetCategoryIds(editingBudget)
+      : availableCategories[0]?.id
+      ? [availableCategories[0].id]
+      : []
+  );
+  const [isGeneral, setIsGeneral] = useState<boolean>(
+    editingBudget?.categoryId === UNBUDGETED_CATEGORY_ID
   );
   const [calcType, setCalcType] = useState<BudgetCalcType>(
     editingBudget?.calcType || 'percentage'
@@ -98,17 +114,20 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 
   useEffect(() => {
     if (editingBudget) {
-      setCategoryId(editingBudget.categoryId);
+      const general = editingBudget.categoryId === UNBUDGETED_CATEGORY_ID;
+      setIsGeneral(general);
+      setSelectedCategoryIds(general ? [] : getBudgetCategoryIds(editingBudget));
       setCalcType(editingBudget.calcType);
       setValue(editingBudget.value.toString());
       if (editingBudget.calcType === 'percentage') setLastPercentValue(editingBudget.value.toString());
       else setLastFixedValue(editingBudget.value.toString());
       setWalletId(editingBudget.walletId || 'all');
     } else {
-      const defaultCat = !isGeneralUsed && availableCategories.length === 0
-        ? UNBUDGETED_CATEGORY_ID
-        : availableCategories[0]?.id || UNBUDGETED_CATEGORY_ID;
-      setCategoryId(defaultCat);
+      const defaultGeneral = !isGeneralUsed && availableCategories.length === 0;
+      setIsGeneral(defaultGeneral);
+      setSelectedCategoryIds(
+        defaultGeneral ? [] : availableCategories[0]?.id ? [availableCategories[0].id] : []
+      );
       setCalcType('percentage');
       setValue('15');
       setWalletId('all');
@@ -132,7 +151,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // [v7.5.55] Validation failures show a message — never silently return.
-    if (!categoryId) {
+    if (!isGeneral && selectedCategoryIds.length === 0) {
       setError(lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်မည့် ကဏ္ဍကို ရွေးချယ်ပါ' : 'Please choose a category');
       return;
     }
@@ -150,9 +169,23 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
     }
     setError('');
 
+    // [v7.5.74] Primary category first: for a new budget it is the first
+    // checked category; when editing it is locked to the original primary
+    // (the storage/doc key must not change). categoryIds is stored only
+    // for multi-category budgets — single-category budgets keep the exact
+    // stored shape they have today.
+    const primaryId = isGeneral
+      ? UNBUDGETED_CATEGORY_ID
+      : editingBudget
+      ? editingBudget.categoryId
+      : selectedCategoryIds[0];
+    const finalIds = isGeneral
+      ? []
+      : [primaryId, ...selectedCategoryIds.filter((id) => id !== primaryId)];
     onSubmit({
-      id: categoryId,
-      categoryId,
+      id: primaryId,
+      categoryId: primaryId,
+      ...(finalIds.length > 1 ? { categoryIds: finalIds } : {}),
       calcType,
       value: numValue,
       walletId,
@@ -161,7 +194,26 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   };
 
   const isEditing = !!editingBudget;
-  const isSelectedGeneral = categoryId === UNBUDGETED_CATEGORY_ID;
+  // [v7.5.74] Primary category of the budget being edited — locked: it
+  // can never be unchecked (it is the doc key), only grouped with more.
+  const lockedPrimaryId = isEditing ? editingBudget.categoryId : undefined;
+
+  const toggleCategory = (id: string) => {
+    if (editingBudget && id === editingBudget.categoryId) return;
+    setIsGeneral(false);
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+  const toggleGeneral = () => {
+    if (isGeneral) {
+      setIsGeneral(false);
+      setSelectedCategoryIds(availableCategories[0]?.id ? [availableCategories[0].id] : []);
+    } else {
+      setIsGeneral(true);
+      setSelectedCategoryIds([]);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
@@ -198,63 +250,88 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
           {/* Category Selector */}
           <div>
             <label className="block text-slate-700 font-semibold mb-1.5">
-              {lang === 'my' ? 'ဘတ်ဂျက် သတ်မှတ်မည့် ကဏ္ဍ:' : 'Target Expense Category:'}
+              {lang === 'my' ? 'ဘတ်ဂျက် သတ်မှတ်မည့် ကဏ္ဍ(များ):' : 'Target Expense Category/Categories:'}
             </label>
-            {isEditing ? (
+            {/* [v7.5.74] Multi-category picker: checkboxes instead of a
+                single dropdown. In edit mode the General budget keeps its
+                static card; a category budget's primary category is locked
+                (doc key) and the rest can be grouped/ungrouped. */}
+            {isEditing && isGeneral ? (
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
-                {isSelectedGeneral ? (
-                  <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                ) : (
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
-                    style={{
-                      backgroundColor:
-                        categories.find((c) => c.id === categoryId)?.color || '#6366F1',
-                    }}
-                  >
-                    <CategoryIcon
-                      name={categories.find((c) => c.id === categoryId)?.icon || 'Tag'}
-                      className="w-4 h-4"
-                    />
-                  </div>
-                )}
+                <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
+                  <Layers className="w-4 h-4" />
+                </div>
                 <div className="min-w-0">
                   <div className="font-bold text-slate-900 break-words">
-                    {isSelectedGeneral
-                      ? (lang === 'my' ? 'အထွေထွေ (အခြား သီးသန့်မရှိသော ကဏ္ဍများ)' : 'General & Others (Unbudgeted)')
-                      : lang === 'my'
-                      ? categories.find((c) => c.id === categoryId)?.name
-                      : categories.find((c) => c.id === categoryId)?.nameEn}
+                    {lang === 'my' ? 'အထွေထွေ (အခြား သီးသန့်မရှိသော ကဏ္ဍများ)' : 'General & Others (Unbudgeted)'}
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    {isSelectedGeneral
-                      ? (lang === 'my' ? 'သီးသန့်ဘတ်ဂျက် မထားရှိသော ကဏ္ဍအားလုံး ပါဝင်သည်' : 'Aggregates all unbudgeted expenses')
-                      : (lang === 'my' ? 'အသုံးစရိတ် ကဏ္ဍ' : 'Expense Category')}
+                    {lang === 'my' ? 'သီးသန့်ဘတ်ဂျက် မထားရှိသော ကဏ္ဍအားလုံး ပါဝင်သည်' : 'Aggregates all unbudgeted expenses'}
                   </div>
                 </div>
               </div>
             ) : (
-              <select
-                value={categoryId}
-                disabled={noCategoryLeft}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 text-base sm:text-sm focus:ring-2 focus:ring-indigo-500"
-              >
-                {!isGeneralUsed && (
-                  <option value={UNBUDGETED_CATEGORY_ID}>
-                    ★ {lang === 'my' ? 'အထွေထွေ (ဘတ်ဂျက်သီးသန့်မရှိသော အခြားကဏ္ဍများ အားလုံး)' : '★ General & Others (All Unbudgeted Categories)'}
-                  </option>
+              <div className="space-y-2">
+                {!isEditing && !isGeneralUsed && (
+                  <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isGeneral}
+                      onChange={toggleGeneral}
+                      className="w-4 h-4 accent-indigo-600 shrink-0"
+                    />
+                    <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <span className="font-bold text-slate-900 text-sm">
+                      ★ {lang === 'my' ? 'အထွေထွေ (ဘတ်ဂျက်သီးသန့်မရှိသော အခြားကဏ္ဍများ အားလုံး)' : 'General & Others (All Unbudgeted Categories)'}
+                    </span>
+                  </label>
                 )}
-                {availableCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {lang === 'my' ? c.name : c.nameEn}
-                  </option>
-                ))}
-              </select>
+                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                  {availableCategories.map((c) => {
+                    const checked = selectedCategoryIds.includes(c.id);
+                    const isPrimary = c.id === lockedPrimaryId;
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer ${
+                          checked ? 'bg-indigo-50/70 border-indigo-200' : 'bg-slate-50 border-slate-200'
+                        } ${isGeneral ? 'opacity-50' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={isGeneral || isPrimary}
+                          onChange={() => toggleCategory(c.id)}
+                          className="w-4 h-4 accent-indigo-600 shrink-0"
+                        />
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
+                          style={{ backgroundColor: c.color || '#6366F1' }}
+                        >
+                          <CategoryIcon name={c.icon || 'Tag'} className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium text-slate-800 text-sm min-w-0">
+                          {lang === 'my' ? c.name : c.nameEn}
+                        </span>
+                        {isPrimary && (
+                          <span className="ml-auto shrink-0 text-[10px] font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">
+                            {lang === 'my' ? 'အဓိက' : 'Primary'}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  {lang === 'my'
+                    ? '💡 ကဏ္ဍ အမျိုးမျိုး ရွေးချယ်နိုင်သည် — ရွေးထားသော ကဏ္ဍအားလုံး၏ သုံးစွဲမှုကို ပေါင်းပြီး ဘတ်ဂျက်တစ်ခုတည်းဖြင့် ထိန်းချုပ်ပါမည်။ ကဏ္ဍတစ်ခုသည် ဘတ်ဂျက်တစ်ခုတွင်သာ ပါဝင်နိုင်သည်။'
+                    : '💡 You can select multiple categories — spending across all selected categories is controlled by this one budget. Each category can belong to only one budget.'}
+                </p>
+              </div>
             )}
-            {isSelectedGeneral && (
+            {isGeneral && (
               <p className="text-[11px] text-indigo-700 bg-indigo-50/80 p-2 rounded-lg mt-2 border border-indigo-100">
                 💡 {lang === 'my'
                   ? 'မှတ်ချက် - ဤ "အထွေထွေ" ဘတ်ဂျက်သည် သီးသန့် ဘတ်ဂျက်သတ်မှတ်မထားသော အခြား အသုံးစရိတ်များအားလုံး၏ စုစုပေါင်းကို အလိုအလျောက် ထိန်းချုပ်ပေးပါမည်။'
@@ -349,7 +426,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               {/* Dynamic Calculation Helper */}
               <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
                 <div className="flex items-center justify-between font-semibold">
-                  <span className="min-w-0">{lang === 'my' ? 'ယခုလ ဝင်ငွေ:' : 'Current Month Income:'}</span>
+                  <span className="min-w-0">{lang === 'my' ? 'ယခုလ ဝင်ငွေ (ပိုက်ဆံအိတ်အားလုံး):' : 'Current Month Income (All Wallets):'}</span>
                   <span className="font-bold min-w-0 text-right break-words">{formatMMK(monthlyIncome)}</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-emerald-200/60 pt-1">

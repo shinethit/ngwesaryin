@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.75';
-export const CURRENT_BUILD_NUMBER = 290;
+export const CURRENT_APP_VERSION = 'v7.5.76';
+export const CURRENT_BUILD_NUMBER = 291;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.76',
+    buildNumber: 291,
+    releaseDate: '2026-11-09',
+    releaseTime: '6:00 AM (MMT)',
+    titleMy: 'Version Update Modal မှာ ပြောင်းလဲမှုမှတ်တမ်း အပြည့်အစုံ ပြခြင်း + Root folder သန့်ရှင်းရေး',
+    titleEn: 'Full Change Log in Version Update Modal + Root Folder Cleanup',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Version အသစ် ထွက်လာတဲ့အခါ ပြတဲ့ Modal မှာ ဒီ Version မှာ ပြောင်းလဲထားတာတွေ အကုန်လုံး တစ်ခါတည်း ပြတော့မယ်။ Update လုပ်ပြီးတဲ့အခါမှာလည်း ဒီ Version မှာ ဘာတွေ အသစ်ပါလဲ ဆိုတာ တစ်ခါတည်း ပေါ်လာမယ်။ Root folder ထဲက အဟောင်း backup folder တွေကိုလည်း သန့်ရှင်းလိုက်ပါတယ်။',
+    descriptionEn: "The Version Update modal now shows the full change log for the new version all at once, and a What's New popup appears right after updating. Old backup folders in the project root are cleaned up too.",
+    changesMy: [
+      'Version အသစ်ထွက်လာတဲ့အခါ ပြတဲ့ Modal မှာ ဒီ Version မှာ ပြောင်းလဲထားတာတွေ အကုန်လုံး တစ်ခါတည်း ပြတော့မယ် — စာတစ်ကြောင်းတည်း မဟုတ်တော့ဘူး။',
+      'Update လုပ်ပြီးတဲ့အခါ ဒီ Version မှာ ဘာတွေ အသစ်ပါလဲ ဆိုတာ တစ်ခါတည်း ပေါ်လာမယ်။',
+      'Root folder ထဲက အဟောင်း backup folder တွေ (.backup-v763, .backup-v764, .backup-v774) ကို ဖျက်လိုက်ပါတယ် — နောက်ဆို backup folder အဟောင်းတွေ သူ့အလိုလို ပျက်သွားမယ်။',
+    ],
+    changesEn: [
+      'The Version Update modal now shows the full change log for the new version all at once — not just a single line.',
+      "After updating, a What's New popup shows everything new in this version right away.",
+      'Cleaned up old backup folders (.backup-v763, .backup-v764, .backup-v774) from the project root — old backup folders will now be removed automatically.',
+    ],
+  },
   {
     version: 'v7.5.75',
     buildNumber: 290,

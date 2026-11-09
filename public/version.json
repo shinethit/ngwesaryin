@@ -1,5 +1,8 @@
 {
-  "version": "v7.5.75",
-  "buildNumber": 290,
-  "releasedAt": "2026-10-21T02:20:44.162Z"
+  "version": "v7.5.76",
+  "buildNumber": 291,
+  "releasedAt": "2026-10-21T02:20:44.162Z",
+  "changesMy": ["Version အသစ်ထွက်လာတဲ့အခါ ပြတဲ့ Modal မှာ ဒီ Version မှာ ပြောင်းလဲထားတာတွေ အကုန်လုံး တစ်ခါတည်း ပြတော့မယ် — စာတစ်ကြောင်းတည်း မဟုတ်တော့ဘူး။", "Update လုပ်ပြီးတဲ့အခါ ဒီ Version မှာ ဘာတွေ အသစ်ပါလဲ ဆိုတာ တစ်ခါတည်း ပေါ်လာမယ်။", "Root folder ထဲက အဟောင်း backup folder တွေ (.backup-v763, .backup-v764, .backup-v774) ကို ဖျက်လိုက်ပါတယ် — နောက်ဆို backup folder အဟောင်းတွေ သူ့အလိုလို ပျက်သွားမယ်။"],
+  "changesEn": ["The Version Update modal now shows the full change log for the new version all at once — not just a single line.", "After updating, a What's New popup shows everything new in this version right away.", "Cleaned up old backup folders (.backup-v763, .backup-v764, .backup-v774) from the project root — old backup folders will now be removed automatically."]
 }
+

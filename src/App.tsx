@@ -65,7 +65,7 @@ import { DatabaseSyncTrackerModal } from './components/DatabaseSyncTrackerModal'
 import { SyncHealthModal } from './components/SyncHealthModal';
 import { SyncStatusDrawer } from './components/SyncStatusDrawer';
 import { EducationView } from './components/EducationView';
-import { CURRENT_APP_VERSION, CURRENT_BUILD_NUMBER } from './data/versionHistory';
+import { CURRENT_APP_VERSION, CURRENT_BUILD_NUMBER, VERSION_HISTORY } from './data/versionHistory';
 import { trackVisitorSession } from './lib/analyticsService';
 import { syncWalletsWithTransactions, isWalletMatch, repairOrphanedTransactions, isTransferTransaction, buildWalletMap } from './utils/walletBalance';
 import { convertToMMK } from './utils/currency';
@@ -326,7 +326,12 @@ export default function App() {
   const [isDatabaseTrackerOpen, setIsDatabaseTrackerOpen] = useState(false);
   const [isSyncHealthModalOpen, setIsSyncHealthModalOpen] = useState(false);
   // [v7.2.6] Cloud version update popup state
-  const [updateAvailable, setUpdateAvailable] = useState<{ version: string; buildNumber: number } | null>(null);
+  // [v7.5.76] Carries the new version's change log from version.json so the
+  // modal can show the FULL list (the old app has no such entry itself).
+  const [updateAvailable, setUpdateAvailable] = useState<{ version: string; buildNumber: number; changesMy?: string[]; changesEn?: string[] } | null>(null);
+  // [v7.5.76] Post-update "What's New" modal — shown once after tapping
+  // Update Now (triggered by the ?_updated= param, see boot effect below).
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [cloudTxIds, setCloudTxIds] = useState<Set<string>>(() => {
     try {
       const saved = safeGetItem('ngwe_cloud_tx_ids');
@@ -429,10 +434,50 @@ export default function App() {
       'background:#10B981;color:#fff;padding:2px 6px;border-radius:3px;font-weight:bold'
     );
 
+    // [v7.5.76] Post-update trigger: handleUpdateNow reloads with
+    // ?_updated=<timestamp>. Strip it right away so a refresh does NOT
+    // re-show the What's New modal — it shows only once per update.
+    // The URL param alone is NOT enough: the page can legitimately
+    // reload right after this first boot (service-worker takeover
+    // reload in main.tsx after handleUpdateNow unregistered the old
+    // worker, StrictMode double-effect in dev) — and by then the param
+    // is already stripped and the in-memory decision is gone. So the
+    // signal also lives in sessionStorage ('ngwe_just_updated'), which
+    // survives same-tab reloads and is NOT touched by the scoped
+    // localStorage wrapper in utils/storage.ts. It is cleared when the
+    // user closes the What's New modal.
+    const bootParams = new URLSearchParams(window.location.search);
+    const hasUpdatedParam = bootParams.has('_updated');
+    let justUpdated = hasUpdatedParam;
+    try {
+      if (window.sessionStorage && window.sessionStorage.getItem('ngwe_just_updated') === '1') justUpdated = true;
+    } catch { /* ignore */ }
+    if (hasUpdatedParam) {
+      bootParams.delete('_updated');
+      const nextSearch = bootParams.toString();
+      window.history.replaceState(null, '', window.location.pathname + (nextSearch ? '?' + nextSearch : '') + window.location.hash);
+      // Persist the signal past any reload that follows this boot.
+      try { window.sessionStorage.setItem('ngwe_just_updated', '1'); } catch { /* ignore */ }
+    }
+
     const savedVersion = safeGetItem('ngwe_app_version');
     if (savedVersion !== CURRENT_APP_VERSION) {
       console.log('[NgweSarYin] Version changed: ' + (savedVersion || 'none') + ' → ' + CURRENT_APP_VERSION);
-      setIsVersionHistoryModalOpen(true);
+      // [v7.5.76] After an Update-Now reload, show the one-time "What's New"
+      // modal instead of the full Version History auto-open, so the user
+      // never sees two stacked modals. A plain version change (no update
+      // tap) still auto-opens Version History exactly as before.
+      if (justUpdated) {
+        // If this bundle has no matching entry the modal can never
+        // render — drop the stale flag instead of re-triggering forever.
+        const wnEntry = VERSION_HISTORY[0];
+        if (!wnEntry || wnEntry.version !== CURRENT_APP_VERSION) {
+          try { window.sessionStorage.removeItem('ngwe_just_updated'); } catch { /* ignore */ }
+        }
+        setShowWhatsNew(true);
+      } else {
+        setIsVersionHistoryModalOpen(true);
+      }
       safeSetItem('ngwe_app_version', CURRENT_APP_VERSION);
     }
   }, []);
@@ -465,20 +510,28 @@ export default function App() {
           clearTimeout(timer);
         }
         if (!res.ok) return;
-        const data = (await res.json()) as { version?: string; buildNumber?: number };
+        const data = (await res.json()) as { version?: string; buildNumber?: number; changesMy?: unknown; changesEn?: unknown };
         if (cancelled) return;
         const cloudVersion = (data.version || '').trim();
         const cloudBuild = Number(data.buildNumber) || 0;
         if (!cloudVersion) return;
         if (cloudVersion === CURRENT_APP_VERSION) return;
         if (cloudBuild && cloudBuild <= CURRENT_BUILD_NUMBER) return;
+        // [v7.5.76] Read the new version's change log from version.json.
+        // Validate strictly: only a real array of strings counts — a
+        // missing, malformed or older version.json yields undefined and the
+        // modal falls back to the generic one-liner, never an empty list.
+        const asStringArray = (v: unknown): string[] | undefined =>
+          Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : undefined;
+        const changesMy = asStringArray(data.changesMy);
+        const changesEn = asStringArray(data.changesEn);
         const laterFor = safeGetItem('ngwe_version_later') || '';
         const [laterVersion, laterAt] = laterFor.split('|');
         // "Later" snoozes this version for 24h instead of hiding it
         // forever — a user who taps Later by accident still gets asked.
         if (laterVersion === cloudVersion && laterAt && Date.now() - Number(laterAt) < 24 * 60 * 60 * 1000) return;
         console.log('[NgweSarYin] Update available: ' + cloudVersion + ' (local: ' + CURRENT_APP_VERSION + ')');
-        setUpdateAvailable({ version: cloudVersion, buildNumber: cloudBuild });
+        setUpdateAvailable({ version: cloudVersion, buildNumber: cloudBuild, changesMy, changesEn });
       } catch (e) {
         // Network or missing file — silent skip
       }
@@ -499,6 +552,13 @@ export default function App() {
     } catch (e) {
       console.warn('[update] cache clear notice:', e);
     }
+    // [v7.5.76] One-shot flag so the What's New modal survives the
+    // reload that follows this one (service-worker takeover reload in
+    // main.tsx after the worker was unregistered above, StrictMode
+    // double-effect in dev). sessionStorage is per-tab and is NOT
+    // touched by the scoped localStorage wrapper in utils/storage.ts.
+    // Cleared when the user closes the What's New modal.
+    try { window.sessionStorage.setItem('ngwe_just_updated', '1'); } catch { /* ignore */ }
     const url = new URL(window.location.href);
     url.searchParams.set('_updated', String(Date.now()));
     window.location.replace(url.toString());
@@ -2157,6 +2217,23 @@ export default function App() {
     );
   }
 
+  // [v7.5.76] Post-update "What's New" change list: the current version's
+  // own entry is VERSION_HISTORY[0]. Guard the version match so a stale or
+  // missing entry never shows another version's changes — and an empty list
+  // never renders (the modal is only shown when this is non-empty).
+  const whatsNewEntry = VERSION_HISTORY[0];
+  const whatsNewChanges: string[] =
+    whatsNewEntry && whatsNewEntry.version === CURRENT_APP_VERSION
+      ? (lang === 'my' ? whatsNewEntry.changesMy : whatsNewEntry.changesEn)
+      : [];
+
+  // [v7.5.76] Update-modal change list in the user's language. Empty when
+  // version.json carried no usable changes — the modal then falls back to
+  // the generic one-liner instead of showing an empty list.
+  const updateChanges: string[] = updateAvailable
+    ? (lang === 'my' ? (updateAvailable.changesMy ?? []) : (updateAvailable.changesEn ?? []))
+    : [];
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-emerald-500 selection:text-white pb-24 relative">
       <QuotaExceededNotificationBanner lang={lang} onOpenSyncStatus={() => setIsSyncStatusDrawerOpen(true)} />
@@ -3217,7 +3294,7 @@ export default function App() {
 
       {updateAvailable && (
         <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl shrink-0">✨</div>
               <div className="min-w-0">
@@ -3231,11 +3308,30 @@ export default function App() {
                 </p>
               </div>
             </div>
-            <p className="text-sm text-slate-700 leading-relaxed">
-              {lang === 'my'
-                ? 'ပိုမိုကောင်းမွန်သော ဗားရှင်းအသစ် ထွက်ရှိပါပြီ။ Update လုပ်ရန် နှိပ်ပါ။'
-                : 'A newer version has been released. Tap Update to load the latest.'}
-            </p>
+            {/* [v7.5.76] Full change log from version.json, all at once.
+                Falls back to the generic one-liner when version.json has no
+                changes — never an empty list. */}
+            {updateChanges.length > 0 ? (
+              <div>
+                <p className="text-sm font-bold text-slate-900 mb-2">
+                  {lang === 'my' ? 'ဤ Version မှာ ပြောင်းလဲထားသည်များကတော့' : "What's new in this version"}
+                </p>
+                <div className="max-h-56 overflow-y-auto space-y-1.5 bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                  {updateChanges.map((change, cIdx) => (
+                    <div key={cIdx} className="flex items-start gap-2 text-xs text-slate-700">
+                      <span className="text-emerald-600 mt-0.5 shrink-0">•</span>
+                      <span className="leading-snug min-w-0 break-words">{change}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-700 leading-relaxed">
+                {lang === 'my'
+                  ? 'ပိုမိုကောင်းမွန်သော ဗားရှင်းအသစ် ထွက်ရှိပါပြီ။ Update လုပ်ရန် နှိပ်ပါ။'
+                  : 'A newer version has been released. Tap Update to load the latest.'}
+              </p>
+            )}
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
@@ -3250,6 +3346,45 @@ export default function App() {
                 className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-xs active:scale-95 transition-all cursor-pointer"
               >
                 {lang === 'my' ? '✨ Update လုပ်မည်' : '✨ Update Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [v7.5.76] Post-update "What's New" modal — shown once after tapping
+          Update Now (triggered by ?_updated=, stripped on mount so a refresh
+          never re-shows it). Full change log of the CURRENT version from
+          VERSION_HISTORY[0]; renders only when the list is non-empty. */}
+      {showWhatsNew && whatsNewChanges.length > 0 && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl shrink-0">✨</div>
+              <div className="min-w-0">
+                <h2 className="font-bold text-lg text-slate-900 leading-tight">
+                  {lang === 'my' ? `${CURRENT_APP_VERSION} မှာ ဘာတွေ အသစ်ပါလဲ` : `What's new in ${CURRENT_APP_VERSION}`}
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {lang === 'my' ? 'အသစ်' : 'New'}: <span className="font-mono font-bold text-emerald-700">{CURRENT_APP_VERSION}</span>
+                </p>
+              </div>
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1.5 bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+              {whatsNewChanges.map((change, cIdx) => (
+                <div key={cIdx} className="flex items-start gap-2 text-xs text-slate-700">
+                  <span className="text-emerald-600 mt-0.5 shrink-0">•</span>
+                  <span className="leading-snug min-w-0 break-words">{change}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => { try { window.sessionStorage.removeItem('ngwe_just_updated'); } catch { /* ignore */ } setShowWhatsNew(false); }}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-xs active:scale-95 transition-all cursor-pointer"
+              >
+                {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
               </button>
             </div>
           </div>

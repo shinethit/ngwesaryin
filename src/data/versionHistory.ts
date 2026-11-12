@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.79';
-export const CURRENT_BUILD_NUMBER = 294;
+export const CURRENT_APP_VERSION = 'v7.5.80';
+export const CURRENT_BUILD_NUMBER = 295;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.80',
+    buildNumber: 295,
+    releaseDate: '2026-11-12',
+    releaseTime: '8:45 AM (MMT)',
+    titleMy: 'ဆိုင်လိပ်စာ Tab ပြင်ဆင်ခြင်း — ပိုလှပြီး ပိုမြန်လာခြင်း',
+    titleEn: 'Shops Tab Improvements — Cleaner Layout, Faster Loading',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆိုင်လိပ်စာ Tab ကို ပိုလှပြီး ပိုမြန်အောင် ပြင်လိုက်ပါတယ် — အမျိုးအစား စစ်ထုတ်တာ နေရာသိပ်မယူတော့ဘူး၊ ဆိုင်တွေ တစ်ခါတည်း အကုန်လုံး မပြတော့ဘဲ အနည်းငယ်စီ ပြပြီး လိုအပ်မှ ထပ်ပြတယ်။ ဆိုင်ကတ်တွေလည်း ပိုလှသွားပါတယ်။',
+    descriptionEn: 'Made the Shops tab cleaner and faster — the category filter takes far less space, shops load in small batches instead of all at once, and the shop cards look cleaner and prettier.',
+    changesMy: [
+      'ဆိုင်လိပ်စာ Tab ကို ပိုလှအောင် ပြင်လိုက်ပါတယ် — အမျိုးအစား စစ်ထုတ်တာ နေရာသိပ်မယူတော့ဘူး၊ ဆိုင်တွေ ချက်ချင်း မြင်ရတယ်။',
+      'ဆိုင်လိပ်စာ Tab ဝင်တာ ပိုမြန်လာတယ် — ဆိုင်တွေ အကုန်လုံး တစ်ခါတည်း မပြတော့ဘူး၊ အနည်းငယ်စီ ပြပြီး လိုအပ်မှ ထပ်ပြတယ်။',
+      'ဆိုင်ကတ်တွေကို ပိုလှအောင် ပြင်လိုက်ပါတယ်။',
+      'ဆိုင်ထည့်တဲ့ Form ထဲက မျဉ်းကြောင်းတွေ အမှောင်ကြီး မဖြစ်တော့ဘူး — နူးညံ့တဲ့ မျဉ်းလေး ဖြစ်သွားပါတယ်။',
+    ],
+    changesEn: [
+      'Made the Shops tab look cleaner — the category filter takes far less space, so shops are visible right away.',
+      'The Shops tab now opens faster — shops load in small batches instead of all at once.',
+      'Shop cards look cleaner and prettier.',
+      'The dividers in the shop form are now soft light lines instead of dark heavy ones.',
+    ],
+  },
   {
     version: 'v7.5.79',
     buildNumber: 294,

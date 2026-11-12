@@ -89,6 +89,14 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   // Sort mode: 'newest' | 'name-asc' | 'name-desc' | 'helpful' | 'group-category'
   const [sortMode, setSortMode] = useState<'newest' | 'name-asc' | 'name-desc' | 'helpful' | 'group-category'>('group-category');
 
+  // [v7.5.80] Render batching — entry renders ALL ~970 ShopCards at once,
+  // which made the Shops tab slow/heavy on phones. Render the first batch
+  // only; the "ပိုပြမည်" button below the list appends the next batch.
+  // 20 = a phone-friendly first paint at 390px (a few cards visible at
+  // once without scrolling, without a long first render).
+  const SHOPS_BATCH_SIZE = 20;
+  const [visibleCount, setVisibleCount] = useState(SHOPS_BATCH_SIZE);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<ShopContact | PublicShop | null>(null);
@@ -768,6 +776,40 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     return { flat: null, groups: orderedGroups };
   }, [filteredShops, sortMode, lang, showUnknown]);
 
+  // [v7.5.80] Batched display — the first `visibleCount` shops in display
+  // order. Grouped: walk the groups in order, keep only groups that contain
+  // a visible shop, with only the visible shops inside; a group header's
+  // count is the count VISIBLE in that group (the full filtered total stays
+  // in the "တွေ့ရှိ N ဆိုင်" header, from visibleShops.length). Flat: a
+  // plain slice. Sort/filter results, group order and ShopCard are
+  // unchanged — only how many render at once.
+  const batchedGroups = useMemo(() => {
+    if (!sortedAndGrouped.groups) return null;
+    let remaining = visibleCount;
+    const out: Array<{ key: string; label: string; shops: (ShopContact | PublicShop)[] }> = [];
+    for (const group of sortedAndGrouped.groups) {
+      if (remaining <= 0) break;
+      const shops = group.shops.slice(0, remaining);
+      remaining -= shops.length;
+      out.push({ key: group.key, label: group.label, shops });
+    }
+    return out;
+  }, [sortedAndGrouped, visibleCount]);
+
+  const batchedFlat = useMemo(
+    () => (sortedAndGrouped.flat ? sortedAndGrouped.flat.slice(0, visibleCount) : null),
+    [sortedAndGrouped, visibleCount]
+  );
+
+  // [v7.5.80] Any filter change restarts the list at batch 1. One effect
+  // covers every path: search (incl. the global-search seed), category,
+  // sort, all four location filters, the Unknown toggle, the Public/Private
+  // tab switch (directoryType), and the reset button (it clears the filter
+  // states listed here).
+  useEffect(() => {
+    setVisibleCount(SHOPS_BATCH_SIZE);
+  }, [searchQuery, selectedTagFilter, sortMode, selectedStateRegionFilter, selectedTownshipFilter, selectedCityFilter, selectedWardFilter, showUnknown, directoryType]);
+
     const hasActiveFilters =
     searchQuery.trim() !== '' ||
     selectedTagFilter !== 'all' ||
@@ -939,10 +981,13 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 <select
                   value={sortMode}
                   onChange={(e) => setSortMode(e.target.value as any)}
-                  className="appearance-none pl-2.5 pr-7 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer max-w-[150px] truncate"
+                  className="appearance-none pl-2.5 pr-7 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer max-w-[150px]"
                   title={lang === 'my' ? 'စီစဥ်ရန်' : 'Sort'}
                 >
-                  <option value="group-category">{lang === 'my' ? '📁 အုပ်စုခွဲ (အမျိုးအစား)' : '📁 Group by Category'}</option>
+                  {/* [v7.5.80] Shortened: "📁 အုပ်စုခွဲ (အမျိုးအစား)" is 172px
+                      wide but the select is 150px, so it truncated to
+                      "အုပ်စု (...)". The short label fits with room to spare. */}
+                  <option value="group-category">{lang === 'my' ? '📁 အုပ်စုခွဲ' : '📁 Grouped'}</option>
                   <option value="newest">{lang === 'my' ? '🆕 အသစ်ဆုံး' : '🆕 Newest'}</option>
                   <option value="name-asc">{lang === 'my' ? '🔤 အမည် A→Z' : '🔤 Name A→Z'}</option>
                   <option value="name-desc">{lang === 'my' ? '🔤 အမည် Z→A' : '🔤 Name Z→A'}</option>
@@ -990,21 +1035,40 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               )}
             </div>
 
-            {/* Row 2: Category Pills (flex-wrap, NO horizontal scroll) */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {PRESET_TAGS.map((tag) => {
-                const isSelected = selectedTagFilter === tag.value;
-                return (
-                  <button
-                    key={tag.value}
-                    type="button"
-                    onClick={() => setSelectedTagFilter(tag.value)}
-                    className={`px-3 py-2 min-h-[44px] rounded-lg text-[11px] font-bold transition-all shrink-0 border cursor-pointer flex items-center ${isSelected ? 'bg-slate-900 border-slate-900 text-white shadow-2xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    {lang === 'my' ? tag.labelMy : tag.labelEn}
-                  </button>
-                );
-              })}
+            {/* Row 2: Category filter (dropdown) — [v7.5.80] the 17 pill
+                buttons wrapped to ~7 rows at 390px and filled ~40% of the
+                screen before the first shop card. A native <select> shows
+                the selected category name, reaches every category in 2 taps
+                (open + pick), and costs one 44px row. Same state
+                (selectedTagFilter) and same filter logic — only the control
+                changed; no category removed or renamed, no horizontal scroll.
+                "အားလုံး" is the first option, and the ✕ chip in the count
+                row below clears the category in 1 tap. */}
+            <div className="flex items-center gap-2">
+              {/* [v7.5.80] Icon-only prefix: the longest category label
+                  ("အမည်မသိ / Import လုပ်ထားသော", 245px) must fit inside
+                  the select with its padding — a text label ("အမျိုးအစား")
+                  left only 259px for the select and the longest label
+                  truncated. The select always shows the selected category
+                  name, so it stays self-explanatory. */}
+              <span aria-hidden="true" className="shrink-0 text-sm leading-none">🏷️</span>
+              <div className="relative flex-1 min-w-0">
+                <select
+                  id="shop-category-filter"
+                  data-testid="category-filter"
+                  value={selectedTagFilter}
+                  onChange={(e) => setSelectedTagFilter(e.target.value)}
+                  className="w-full appearance-none pl-3 pr-8 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                  title={lang === 'my' ? 'ဆိုင်အမျိုးအစား ရွေးရန်' : 'Choose a shop category'}
+                >
+                  {PRESET_TAGS.map((tag) => (
+                    <option key={tag.value} value={tag.value}>
+                      {lang === 'my' ? tag.labelMy : tag.labelEn}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
 
             {/* Row 3: Expandable Location Panel */}
@@ -1198,7 +1262,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           ) : sortMode === 'group-category' && sortedAndGrouped.groups ? (
             // GROUPED VIEW
             <div className="space-y-5">
-              {sortedAndGrouped.groups.map((group) => (
+              {(batchedGroups ?? []).map((group) => (
                 <div key={group.key} className="space-y-2.5">
                   {/* Group Header */}
                   <div className="flex items-center gap-2 px-1">
@@ -1259,7 +1323,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             // FLAT VIEW (sorted)
             viewMode === 'compact' ? (
               <div className="space-y-2.5">
-                {sortedAndGrouped.flat.map((shop) => (
+                {(batchedFlat ?? []).map((shop) => (
                   <ShopCard
                     key={shop.id}
                     shop={shop}
@@ -1277,7 +1341,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sortedAndGrouped.flat.map((shop) => (
+                {(batchedFlat ?? []).map((shop) => (
                   <ShopCard
                     key={shop.id}
                     shop={shop}
@@ -1295,6 +1359,34 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </div>
             )
           ) : null}
+
+          {/* [v7.5.80] "ပိုပြမည်" — appends the next batch of 20 below the
+              list without moving the scroll position (nothing above the
+              button changes). Hidden once every filtered shop is shown, and
+              nothing renders when the list fits in one batch or is empty
+              (the empty state above handles that). The "တွေ့ရှိ N ဆိုင်"
+              header above always shows the FULL filtered total. */}
+          {visibleShops.length > SHOPS_BATCH_SIZE && (
+            <div className="pt-1">
+              {visibleCount < visibleShops.length ? (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((c) => c + SHOPS_BATCH_SIZE)}
+                  className="w-full min-h-[48px] py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-xs active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  {lang === 'my'
+                    ? `ပိုပြမည် (နောက် ${SHOPS_BATCH_SIZE} ဆိုင်)`
+                    : `Load more (next ${SHOPS_BATCH_SIZE})`}
+                </button>
+              ) : (
+                <p className="text-center text-[11px] font-bold text-slate-500 py-2">
+                  {lang === 'my'
+                    ? `✓ အားလုံး ပြပြီးပါပြီ — ${visibleShops.length} ဆိုင်`
+                    : `✓ All shown — ${visibleShops.length} shops`}
+                </p>
+              )}
+            </div>
+          )}
         </>
       )}
 

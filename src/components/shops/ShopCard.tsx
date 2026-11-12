@@ -160,16 +160,18 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   // ---------------------------------------------------------------------------
   if (viewMode === 'compact') {
     return (
-      <div className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-4 transition-all hover:shadow-sm">
+      // [v7.5.80] Card polish — soft shadow for lift, crisper icon tile,
+      // bolder name, one tidy icon-button row (see actions below).
+      <div className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-4 shadow-sm transition-all hover:shadow-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Shop identity */}
           <div className="flex items-start gap-3 min-w-0">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ring-1 ring-black/5 shadow-2xs ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
               {renderCategoryIcon()}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-bold text-slate-900 text-sm truncate min-w-0">{shop.name}</h4>
+                <h4 className="font-extrabold text-slate-900 text-[15px] tracking-tight leading-snug truncate min-w-0">{shop.name}</h4>
                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
                   {tagLabel}
                   {shop.subCategory && <span className="opacity-70 ml-1">({shop.subCategory})</span>}
@@ -196,12 +198,15 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             </div>
           </div>
 
-          {/* Quick Actions & Phones */}
-          <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap justify-end">
+          {/* Quick Actions & Phones — [v7.5.80] tidied: on phones the call
+              bar takes its own full-width row and the icon buttons sit in
+              one neat row below it, instead of wrapping mid-row into a
+              second ragged line. Same buttons, same order, same content. */}
+          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center shrink-0">
             {primaryPhone && (
               <a
                 href={`tel:${primaryPhone}`}
-                className="flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition-all border border-emerald-200/60"
+                className="flex items-center justify-center sm:justify-start gap-1.5 px-3 py-2.5 min-h-[44px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition-all border border-emerald-200/60"
                 title={lang === 'my' ? 'ဖုန်းခေါ်မည်' : 'Call'}
               >
                 <Phone className="w-3.5 h-3.5" />
@@ -209,6 +214,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </a>
             )}
 
+            {/* Icon actions — one tidy row under the call bar on phones. */}
+            <div className="flex items-center gap-1.5 justify-end sm:justify-start">
             {isPublic && pub && (
               <button
                 type="button"
@@ -228,7 +235,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             <button
               type="button"
               onClick={() => setIsItemsExpanded(!isItemsExpanded)}
-              className="px-2.5 py-2.5 min-h-[44px] bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-2.5 min-h-[44px] bg-white hover:bg-slate-50 text-slate-600 rounded-xl border border-slate-200 text-xs font-semibold flex items-center gap-1 cursor-pointer"
               title={lang === 'my' ? 'ပစ္စည်းစာရင်း ကြည့်မည်' : 'View Items'}
             >
               <Sparkles className="w-3 h-3 text-amber-500" />
@@ -239,7 +246,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             <button
               type="button"
               onClick={() => onOpenEdit(shop)}
-              className="min-h-[44px] min-w-[44px] p-2.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+              className="min-h-[44px] min-w-[44px] p-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-xl transition-all cursor-pointer flex items-center justify-center"
               title={lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -249,7 +256,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               <button
                 type="button"
                 onClick={() => onDelete(shop.id, shop.name)}
-                className="min-h-[44px] min-w-[44px] p-2.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                className="min-h-[44px] min-w-[44px] p-2.5 bg-white border border-slate-200 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all cursor-pointer flex items-center justify-center"
                 title={lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -298,6 +305,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 </>
               )}
             </button>
+            </div>
           </div>
         </div>
 
@@ -306,7 +314,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         {(primaryAddress || secondaryPhones.length > 0 || shop.kpayNumber) && (
           <div className="mt-3 space-y-1.5">
             {primaryAddress && (
-              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-150">
+              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                 <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
               </div>
@@ -370,7 +378,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* Compact View Items expansion */}
         {isItemsExpanded && (
-          <div className="mt-3 pt-3 border-t border-slate-150 space-y-3">
+          <div className="mt-3 pt-3 border-t border-slate-200 space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-600">
               <span className="font-bold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -388,7 +396,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {(shop.items || []).map((item, idx) => (
-                  <div key={idx} className="p-2 bg-slate-50 rounded-xl border border-slate-150 flex items-center justify-between">
+                  <div key={idx} className="p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div className="min-w-0">
                       <span className="font-bold text-slate-800 text-xs block truncate">{item.name}</span>
                       <span className="text-[10px] text-slate-400 break-all">{item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
@@ -459,9 +467,15 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
   // ---------------------------------------------------------------------------
   // GRID CARD VIEW (Modern, balanced, high-craft editorial card)
+  // [v7.5.80] Card polish — category-tint accent strip, soft shadow, tidy
+  // bordered icon buttons (was: floating ghost icons), fixed dark borders
+  // (border-slate-150 is not a Tailwind colour — it rendered as a dark
+  // currentColor border, e.g. around the address box).
   // ---------------------------------------------------------------------------
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300 shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden">
+      {/* Category-tint accent strip */}
+      <div className={`h-1.5 ${tagMeta?.bgColor || 'bg-slate-100'}`} aria-hidden="true" />
       {/* CARD TOP HEADER */}
       <div className="p-5 pb-3">
         <div className="flex items-start justify-between gap-2 mb-3">
@@ -514,7 +528,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             <button
               type="button"
               onClick={() => onOpenEdit(shop)}
-              className="min-h-[44px] min-w-[44px] p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+              className="min-h-[44px] min-w-[44px] p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
               title={lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -524,7 +538,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               <button
                 type="button"
                 onClick={() => onDelete(shop.id, shop.name)}
-                className="min-h-[44px] min-w-[44px] p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                className="min-h-[44px] min-w-[44px] p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                 title={lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -548,7 +562,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* PRIMARY PHONE CALL BAR */}
         {primaryPhone && (
-          <div className="mt-3.5 p-2 bg-emerald-50/60 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
+          <div className="mt-3.5 p-2.5 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
             <a
               href={`tel:${primaryPhone}`}
               className="flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-bold text-xs transition-colors min-w-0 min-h-[44px] py-1"
@@ -643,7 +657,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* ADDRESS */}
         {primaryAddress && (
-          <div className="mt-2.5 text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-150">
+          <div className="mt-2.5 text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
             <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
           </div>
@@ -667,7 +681,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           <span className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>{lang === 'my' ? '🛒 ဈေးနှုန်း နှိုင်းယှဉ်' : '🛒 Compare Price'}</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 text-[10px] font-black">
+            <span className="px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-black">
               {(shop.items || []).length}
             </span>
           </span>
@@ -780,7 +794,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       </div>
 
       {/* CARD FOOTER ACTIONS */}
-      <div className="p-3 bg-white border-t border-slate-150 flex items-center justify-between gap-2 text-xs">
+      <div className="p-3 bg-slate-50/50 border-t border-slate-200 flex items-center justify-between gap-2 text-xs">
         {/* Contributor Attribution */}
         {isPublic && pub && (
           <div className="flex items-center gap-1 text-[11px] text-slate-400 truncate max-w-[130px]" title={pub.addedBy}>

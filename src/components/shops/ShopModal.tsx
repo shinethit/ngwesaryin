@@ -358,7 +358,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto overflow-x-hidden animate-fade-in">
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xl w-full max-w-xl my-8 overflow-hidden">
         {/* MODAL HEADER */}
-        <div className="p-4 sm:p-5 border-b border-slate-150 flex items-center justify-between gap-2 bg-slate-50/70">
+        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-2 bg-slate-50/70">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <Store className="w-5 h-5" />
@@ -827,7 +827,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           {/* MODAL ACTIONS FOOTER — sticky so Save stays reachable while
               scrolling the long form (v7.5.78: it used to sit at the very
               bottom of the scroll area). */}
-          <div className="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 pb-1 bg-white border-t border-slate-150">
+          <div className="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 pb-1 bg-white border-t border-slate-200">
             {/* [v7.5.79] SAME formError state as the top banner, rendered
                 here too — right above Cancel/Save — so the reason Save was
                 blocked is visible without scrolling up. This also shows the

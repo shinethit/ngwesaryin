@@ -28,6 +28,9 @@ import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { getAllItemSuggestions, findMatchingItemInfo, normalizeItemName } from '../utils/itemIntelligence';
 import type { UnifiedItemInfo } from '../utils/itemIntelligence';
+// [v7.5.78 C] Shop-details prompt trigger — the matching rule lives
+// in the reminder store.
+import { isShopNameNeedingDetails } from '../utils/shopDetailsReminders';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
@@ -59,6 +62,13 @@ interface TransactionModalProps {
   onManageCategories?: () => void;
   onOpenAddVehicle?: () => void;
   onOpenVehicleManagement?: () => void;
+  // [v7.5.78 C] Called AFTER a successful save when the typed shop name
+  // has no shop record with details yet. App shows the
+  // ShopDetailsPromptModal for the name. The prompt CANNOT live in this
+  // modal: the save handler closes this modal itself
+  // (setIsTxModalOpen(false) in useTransactionHandlers), so a prompt
+  // rendered here would unmount unseen.
+  onShopNeedsDetails?: (shopName: string) => void;
   fuelLogs?: FuelLog[];
   vehicleMaintenance?: VehicleMaintenance[];
   tirePressureLogs?: TirePressureLog[];
@@ -85,6 +95,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onManageCategories,
   onOpenAddVehicle,
   onOpenVehicleManagement,
+  onShopNeedsDetails,
   fuelLogs = [],
   vehicleMaintenance = [],
   tirePressureLogs = [],
@@ -1519,6 +1530,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         }
       }
 
+      // [v7.5.78 C] Prompt decision — captured BEFORE onSubmit, because
+      // the publish opt-in above can create a name-only public stub with
+      // this name, which would otherwise hide that it still needs
+      // details. Only the shop name TYPED in the shop field counts: a
+      // fuel gas-station / workshop fallback is not a shop the user named.
+      const typedShopName = shopName.trim();
+      const needsShopDetailsPrompt =
+        typedShopName.length > 0 && isShopNameNeedingDetails(typedShopName, shops, publicShops);
+
             const saveOk = onSubmit({
         type: entryModel === 'fuel' || entryModel === 'vehicle_service' ? 'expense' : type,
         amount: finalAmount,
@@ -1539,7 +1559,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       // above (backfill cancel / double-entry / missing fields) keep the
       // modal open so the entry is not discarded, and a false return from
       // the save handler (blocked save) also keeps it open.
-      if (saveOk !== false) onClose();
+      // [v7.5.78 C] The transaction is already saved here. When its shop
+      // name still needs details, hand the name to App (which shows the
+      // prompt) and close as usual — the prompt never blocks saving.
+      if (saveOk !== false) {
+        if (needsShopDetailsPrompt) onShopNeedsDetails?.(typedShopName);
+        onClose();
+      }
     } catch (err) {
       console.error('[TransactionModal] save failed:', err);
       setFormError(lang === 'my' ? 'သိမ်းဆည်းခြင်း မအောင်မြင်ပါ — ထပ်ကြိုးစားပေးပါ' : 'Save failed — please try again');

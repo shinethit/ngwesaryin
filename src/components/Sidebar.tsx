@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { CURRENT_APP_VERSION } from '../data/versionHistory';
+// [v7.5.78 C] Live "fill in shop details later" reminders — the Shops
+// menu item shows how many shops still need their details filled.
+import { useShopDetailReminders } from '../utils/shopDetailsReminders';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -59,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, isGuest, isSyncing, isAdmin, logout, activeWorkspaceId } = useAuth();
   const { isInstalled, isStandalone } = usePWAInstall();
+  const shopDetailReminders = useShopDetailReminders();
   const [showLogoPicker, setShowLogoPicker] = useState(false);
   const logoPickerRef = useRef<HTMLDivElement>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -531,7 +535,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Navigation Items (Strictly Ordered 1 to 6) */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-2">
           <div className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             {lang === 'my' ? 'စာရင်း စီမံခန့်ခွဲမှု ကဏ္ဍများ' : 'Navigation Menu'}
           </div>
@@ -545,10 +549,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.id}
                 id={`sidebar-tab-${item.id}`}
                 onClick={() => handleSelectNav(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer group ${
+                // [v7.5.78 E] Button-like menu items: every row is a
+                // real button (min 48px tall) with a visible
+                // background + border + shadow, so it reads and taps
+                // like a button, not a text label. Labels, icons,
+                // order and navigation are unchanged.
+                className={`w-full flex items-center justify-between px-3.5 py-3 min-h-12 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer group border active:scale-[0.98] ${
                   isActive
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                    : 'bg-white text-slate-700 border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -580,6 +589,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }`}
                     >
                       {item.count}
+                    </span>
+                  )}
+                  {/* [v7.5.78 C] Shops needing details: amber count of
+                      "fill later" reminders — tapping the row still
+                      opens the Shops tab as before. */}
+                  {item.id === 'shops' && shopDetailReminders.length > 0 && (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
+                      title={
+                        lang === 'my'
+                          ? `အသေးစိတ် မဖြည့်ရသေးသော ဆိုင် ${shopDetailReminders.length} ဆိုင်`
+                          : `${shopDetailReminders.length} shop(s) still need details`
+                      }
+                    >
+                      {shopDetailReminders.length}
                     </span>
                   )}
                   <ChevronRight

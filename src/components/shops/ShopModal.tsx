@@ -84,7 +84,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     if (!isOpen) return;
 
     if (editingShop) {
-      setFormDirectoryType(isEditingPublic ? 'public' : 'private');
+      // [v7.5.78 C] A `__prefill_` sentinel is a NEW shop, not an edit —
+      // its directory comes from the list the deep-link sent the user to
+      // (plan-aware: Free/guest -> public, Premium -> private), not from
+      // isEditingPublic (which is always false for a prefill).
+      setFormDirectoryType(editingShop.id.startsWith('__prefill_') ? directoryType : (isEditingPublic ? 'public' : 'private'));
       setFormName(editingShop.name || '');
 
       const isPreset = PRESET_TAGS.some((t) => t.value === editingShop.note && t.value !== 'all');
@@ -247,7 +251,13 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    if (!formName.trim()) return;
+    // [v7.5.78] Empty name used to do nothing at all (silent return) —
+    // show the reason in-app instead of leaving the user wondering why
+    // the Save tap did nothing.
+    if (!formName.trim()) {
+      setFormError(lang === 'my' ? 'ဆိုင်အမည် ထည့်သွင်းပေးပါ' : 'Please enter a shop name');
+      return;
+    }
 
     // [v7.5.55 C16] Normalize phones (Myanmar digits → Latin, +95/09
     // unified) before storing, and validate — a bad number must not save.
@@ -288,6 +298,15 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       return;
     }
 
+    // [v7.5.78] With noValidate on the form, the custom-township
+    // fallback ('အခြား') must not silently swallow an empty custom
+    // township — the old native `required` blocked it; keep that block
+    // as an in-app message instead.
+    if (formTownship === 'custom' && !formCustomTownship.trim()) {
+      setFormError(lang === 'my' ? 'စိတ်ကြိုက် မြို့နယ်အမည် ထည့်သွင်းပေးပါ' : 'Please enter a custom township name');
+      return;
+    }
+
     const finalCategory = formCategory === 'custom' ? formCustomCategory.trim() || 'အခြား' : formCategory;
     const finalTownship = formTownship === 'custom' ? formCustomTownship.trim() || 'အခြား' : formTownship;
     const cleanedAddresses = formAddresses.map((a) => a.trim()).filter(Boolean);
@@ -320,14 +339,14 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto overflow-x-hidden animate-fade-in">
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xl w-full max-w-xl my-8 overflow-hidden">
         {/* MODAL HEADER */}
-        <div className="p-5 border-b border-slate-150 flex items-center justify-between bg-slate-50/70">
+        <div className="p-4 sm:p-5 border-b border-slate-150 flex items-center justify-between gap-2 bg-slate-50/70">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <Store className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-extrabold text-slate-900 text-base">
-                {editingShop
+              <h3 className="font-extrabold text-slate-900 text-base leading-normal break-words">
+                {editingShop && !editingShop.id.startsWith('__prefill_')
                   ? isEditingPublic
                     ? lang === 'my'
                       ? 'ပြည်သူ့လမ်းညွှန် ပြင်ဆင်ရန်'
@@ -339,7 +358,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   ? 'ဆိုင်အချက်အလက် အသစ်ထည့်သွင်းရန်'
                   : 'Add New Shop Contact'}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed break-words">
                 {formDirectoryType === 'public'
                   ? lang === 'my'
                     ? 'ပြည်သူလူထု အတူတကွ ရှာဖွေနိုင်ရန် ဝိုင်းဝန်းဖြည့်သွင်းပေးပါ'
@@ -353,14 +372,14 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-xl transition-colors cursor-pointer shrink-0"
+            className="min-h-[44px] min-w-[44px] p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* MODAL BODY FORM */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden">
+        <form onSubmit={handleSubmit} noValidate className="p-4 sm:p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden">
           {/* DIRECTORY TARGET SELECTOR — shown for create AND edit so a shop
               can move between Public / Private (v7.5.55 C27). */}
           {(
@@ -386,7 +405,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     </span>
                     {formDirectoryType === 'public' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-tight">
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
                     {lang === 'my' ? 'လူတိုင်း ကြည့်ရှုအသုံးပြုနိုင်မည့် အများပိုင်စာရင်း' : 'Visible to all community users'}
                   </p>
                 </button>
@@ -419,7 +438,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     </span>
                     {formDirectoryType === 'private' && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-tight">
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
                     {lang === 'my' ? 'မိမိတစ်ဦးတည်းသာ လုံခြုံစွာ သီးသန့်သိမ်းဆည်းမည့်စာရင်း' : 'Visible only to your account'}
                   </p>
                 </button>
@@ -480,7 +499,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       key={tag.value}
                       type="button"
                       onClick={() => setFormCategory(tag.value)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center ${
                         isSelected
                           ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
                           : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -493,7 +512,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setFormCategory('custom')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center ${
                     formCategory === 'custom'
                       ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -511,7 +530,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     value={formCustomCategory}
                     onChange={(e) => setFormCustomCategory(e.target.value)}
                     placeholder={lang === 'my' ? 'ဥပမာ - စာအုပ်နှင့် စာရေးကိရိယာ' : 'e.g. Stationery & Books'}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                   />
                 </div>
               )}
@@ -519,14 +538,14 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             {/* Sub Category (Optional) */}
             <div className="mt-3">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {lang === 'my' ? 'အောက်ထပ် အမျိုးအစား (ဥပမာ - bank, atm, clinic)' : 'Sub Category (e.g. bank, atm, clinic)'}
+                {lang === 'my' ? 'အမျိုးအစားခွဲ (ဥပမာ - bank, atm, clinic)' : 'Sub Category (e.g. bank, atm, clinic)'}
               </label>
               <input
                 type="text"
                 value={formSubCategory}
                 onChange={(e) => setFormSubCategory(e.target.value)}
-                placeholder={lang === 'my' ? 'ရွေးချယ်ရန် သို့မဟုတ် ရိုက်ထည့်ရန်' : 'Select or type'}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
+                placeholder={lang === 'my' ? 'ဥပမာ - bank, atm, clinic' : 'e.g. bank, atm, clinic'}
+                className="w-full px-3.5 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
               />
             </div>
             </div>
@@ -559,7 +578,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       setFormTownship('');
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium text-slate-900 outline-none focus:bg-white cursor-pointer"
+                  className="w-full px-3 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base font-medium text-slate-900 outline-none focus:bg-white cursor-pointer"
                 >
                   <option value="">{lang === 'my' ? '-- ပြည်နယ်/တိုင်း ရွေးပါ --' : '-- Pick a state / region --'}</option>
                   {MYANMAR_REGIONS.map((r) => (
@@ -585,7 +604,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       checkDuplicates(formPhones[0] || '', formName, e.target.value);
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium text-slate-900 outline-none focus:bg-white cursor-pointer disabled:opacity-50"
+                  className="w-full px-3 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base font-medium text-slate-900 outline-none focus:bg-white cursor-pointer disabled:opacity-50"
                 >
                   <option value="">{lang === 'my' ? '-- မြို့နယ် ရွေးပါ --' : '-- Pick a township --'}</option>
                   {(currentRegionObj?.townships || []).map((t) => (
@@ -613,7 +632,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     checkDuplicates(formPhones[0] || '', formName, e.target.value);
                   }}
                   placeholder={lang === 'my' ? 'ဥပမာ - နောင်ချို' : 'e.g. Naungcho'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
+                  className="w-full px-3 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
                 />
               </div>
             )}
@@ -628,7 +647,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formWard}
                   onChange={(e) => setFormWard(e.target.value)}
                   placeholder={lang === 'my' ? 'ဥပမာ - ၁၂ ရပ်ကွက်' : 'e.g. Ward 12'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
+                  className="w-full px-3 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
                 />
               </div>
               <div>
@@ -640,7 +659,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formCity}
                   onChange={(e) => setFormCity(e.target.value)}
                   placeholder={lang === 'my' ? 'ဥပမာ - ရန်ကုန်' : 'e.g. Yangon'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
+                  className="w-full px-3 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-900 outline-none focus:bg-white"
                 />
               </div>
             </div>
@@ -664,7 +683,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddPhone}
-                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                  className="min-h-[44px] px-2.5 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{lang === 'my' ? 'ဖုန်းထပ်ထည့်မည်' : 'Add Phone'}</span>
@@ -679,13 +698,13 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     value={ph}
                     onChange={(e) => handlePhoneChange(idx, e.target.value)}
                     placeholder={lang === 'my' ? `ဖုန်းနံပါတ် ${idx + 1} (ဥပမာ - ၀၉၁၂၃၄၅၆၇၈)` : `Phone number ${idx + 1}`}
-                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
+                    className="flex-1 px-3.5 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                   />
                   {formPhones.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemovePhone(idx)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center"
                       title={lang === 'my' ? 'ဖယ်ရှားမည်' : 'Remove'}
                     >
                       <X className="w-4 h-4" />
@@ -706,7 +725,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formKpayNumber}
                   onChange={(e) => setFormKpayNumber(e.target.value)}
                   placeholder={lang === 'my' ? 'ဥပမာ - ၀၉၁၂၃၄၅၆၇၈၉' : 'e.g. 09123456789'}
-                  className="w-full pl-14 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
+                  className="w-full pl-14 pr-3 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[9px] font-black pointer-events-none">
                   KPay
@@ -723,7 +742,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddAddress}
-                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                  className="min-h-[44px] px-2.5 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{lang === 'my' ? 'လိပ်စာထပ်ထည့်မည်' : 'Add Address'}</span>
@@ -737,13 +756,13 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     value={addr}
                     onChange={(e) => handleAddressChange(idx, e.target.value)}
                     placeholder={lang === 'my' ? `လိပ်စာ ${idx + 1} (ဥပမာ - ဗိုလ်ချုပ်လမ်း၊ အမှတ် ၄၅)` : `Address line ${idx + 1}`}
-                    className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
+                    className="flex-1 px-3.5 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                   />
                   {formAddresses.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveAddress(idx)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -767,19 +786,21 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             />
           </div>
 
-          {/* MODAL ACTIONS FOOTER */}
-          <div className="pt-4 border-t border-slate-150 flex items-center justify-end gap-3">
+          {/* MODAL ACTIONS FOOTER — sticky so Save stays reachable while
+              scrolling the long form (v7.5.78: it used to sit at the very
+              bottom of the scroll area). */}
+          <div className="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 pb-1 bg-white border-t border-slate-150 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
+              className="min-h-[44px] px-4 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
             >
               {lang === 'my' ? 'မလုပ်တော့ပါ' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              className="min-h-[44px] px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
               <span>

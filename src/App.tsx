@@ -42,6 +42,8 @@ import { AdBanner } from './components/AdBanner';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { AccountModal } from './components/AccountModal';
 import { NotificationModal } from './components/NotificationModal';
+import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopDetailReminders, addShopDetailReminder } from './utils/shopDetailsReminders';
+import { ShopDetailsPromptModal } from './components/ShopDetailsPromptModal';
 import { LoginScreen } from './components/LoginScreen';
 import { FortuneLogo, LogoStyle } from './components/FortuneLogo';
 import { ClayFloatingCoinButton } from './components/ClayIllustrations';
@@ -399,6 +401,9 @@ export default function App() {
   }, [handleUpdateConfirmedCloudTxIds]);
 
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  // [v7.5.78 C] Shop-details reminders (TransactionModal "Later" choice).
+  const shopDetailReminders = useShopDetailReminders();
+  const [shopDetailsPromptName, setShopDetailsPromptName] = useState<string | null>(null);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
     try {
       const saved = safeGetItem('ngwe_read_notifications');
@@ -596,6 +601,10 @@ export default function App() {
       if (l.nextCheckDate) ids.push(`notif_tire_${l.id}_${l.nextCheckDate}`);
     });
 
+    // [v7.5.78 C] Shop-details reminders count as unread notifications
+    // too, or the bell badge never reaches zero after "mark all read".
+    loadShopDetailReminders().forEach((r) => ids.push(r.id));
+
     // [v7.5.60 G-S5] Maintenance / license alerts too — the modal
     // counts them as unread, so "mark all read" must clear them or
     // the badge never reaches zero.
@@ -695,8 +704,14 @@ export default function App() {
       });
     });
 
+    // [v7.5.78 C] Shop-details reminders — one unread count per shop
+    // that still needs its details filled.
+    shopDetailReminders.forEach((r) => {
+      if (!readNotificationIds.includes(shopReminderId(r.key))) count++;
+    });
+
     return count;
-  }, [debts, budgets, transactions, tirePressureLogs, readNotificationIds, wallets, vehicles, vehicleMaintenance]);
+  }, [debts, budgets, transactions, tirePressureLogs, readNotificationIds, wallets, vehicles, vehicleMaintenance, shopDetailReminders]);
 
     const [pinSettings, setPinSettings] = useState<PinLockSettings>(() => {
     try {
@@ -3013,6 +3028,8 @@ export default function App() {
         vehicles={vehicles}
         allTransactions={transactions}
         publicShops={publicShops}
+        shops={shops}
+        onShopNeedsDetails={setShopDetailsPromptName}
         plan={plan}
         lang={lang}
         fuelLogs={fuelLogs}
@@ -3037,6 +3054,21 @@ export default function App() {
         onOpenAddVehicle={() => {
           setIsTxModalOpen(false);
           setActiveTab('vehicles');
+        }}
+      />
+
+      <ShopDetailsPromptModal
+        isOpen={!!shopDetailsPromptName}
+        shopName={shopDetailsPromptName || ''}
+        lang={lang}
+        onFillNow={(name) => {
+          setShopDetailsPromptName(null);
+          setActiveTab('shops');
+          dispatchOpenShopForm(name);
+        }}
+        onLater={(name) => {
+          addShopDetailReminder(name);
+          setShopDetailsPromptName(null);
         }}
       />
 
@@ -3147,6 +3179,11 @@ export default function App() {
             readNotificationIds={readNotificationIds}
             onMarkAsRead={handleMarkNotificationAsRead}
             onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+            onOpenShopReminder={(shopName) => {
+              setIsNotificationModalOpen(false);
+              setActiveTab('shops');
+              dispatchOpenShopForm(shopName);
+            }}
             wallets={computedWallets}
           />
         )}

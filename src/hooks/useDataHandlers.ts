@@ -4,6 +4,7 @@ import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { mergeAndCleanCategories } from '../utils/categoryCleanUp';
 import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
+import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
 import { UNBUDGETED_CATEGORY_ID } from '../types';
 import type {
   BudgetConfig,
@@ -85,6 +86,8 @@ export function useDataHandlers({
       lastEditedBy: user?.uid || 'guest',
     };
     setShops((prev) => [newShop, ...prev]);
+    // [v7.5.78 C] Shop details filled — clear any pending reminder.
+    resolveShopDetailReminder(shopData.name);
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -107,6 +110,8 @@ export function useDataHandlers({
     setShops((prev) =>
       prev.map((s) => (s.id === updatedShop.id ? updatedShop : s))
     );
+    // [v7.5.78 C] Shop details filled — clear any pending reminder.
+    resolveShopDetailReminder(updatedShop.name);
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;

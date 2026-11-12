@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, X, CheckCheck, AlertTriangle, HandCoins, Car, Clock, Volume2, CheckCircle2, Megaphone, ChevronRight, Sparkles } from 'lucide-react';
+import { Bell, X, CheckCheck, AlertTriangle, HandCoins, Car, Clock, Volume2, CheckCircle2, Megaphone, ChevronRight, Sparkles, Store } from 'lucide-react';
 import {
   Debt,
   BudgetConfig,
@@ -16,12 +16,17 @@ import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 import { getMaintenanceAlerts } from '../utils/vehicleAnalytics';
+// [v7.5.78 C] Shop-details "fill later" reminders (one per shop name).
+import { dispatchOpenShopForm, useShopDetailReminders } from '../utils/shopDetailsReminders';
 
 export interface NotificationItem {
   id: string;
-  type: 'debt' | 'budget' | 'vehicle' | 'recurring' | 'system';
+  type: 'debt' | 'budget' | 'vehicle' | 'recurring' | 'system' | 'shop';
   title: string;
   message: string;
+  // [v7.5.78 C] Shop name for 'shop' reminders — the action opens the
+  // ShopModal pre-filled with this name.
+  shopName?: string;
   // [v7.5.60 G-M5] Exact kyat value, shown as a tooltip on the
   // message — DISPLAY is lakh, exact kyat is one tap/hover away.
   exactAmount?: string;
@@ -52,6 +57,11 @@ interface NotificationModalProps {
   readNotificationIds: string[];
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
+  // [v7.5.78 C] Tapping a shop reminder opens the ShopModal pre-filled
+  // with the shop name (App switches to the Shops tab and ShopsView
+  // opens the form). Optional: without it the action navigates to the
+  // Shops tab and fires the `ngwe:open-shop-form` event.
+  onOpenShopReminder?: (shopName: string) => void;
 }
 
 export const NotificationModal: React.FC<NotificationModalProps> = ({
@@ -72,10 +82,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   readNotificationIds = [],
   onMarkAsRead,
   onMarkAllAsRead,
+  onOpenShopReminder,
 }) => {
-  const [filterTab, setFilterTab] = useState<'all' | 'debt' | 'budget' | 'vehicle' | 'system'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'debt' | 'budget' | 'vehicle' | 'system' | 'shop'>('all');
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission>('default');
   const [isTestSending, setIsTestSending] = useState(false);
+  // [v7.5.78 C] Live "fill in shop details later" reminders (one per
+  // shop name, from localStorage) — derived like every other entry in
+  // this modal; there is no stored notification table to write to.
+  const shopReminders = useShopDetailReminders();
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -350,6 +365,33 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     }
   });
 
+  // 6. [v7.5.78 C] Shop-details "fill later" reminders — one per shop
+  // name, created when the user saves a transaction with a new shop
+  // name and chooses "Later". They stay here (and on the Sidebar Shops
+  // badge) until the shop's details are filled, which resolves the
+  // reminder; marking one read only dims it, it does not delete it.
+  // Never shown for a shop that already has details — such names never
+  // get a reminder in the first place.
+  shopReminders.forEach((r) => {
+    generatedNotifications.push({
+      id: r.id,
+      type: 'shop',
+      shopName: r.shopName,
+      title:
+        lang === 'my'
+          ? `🏬 “${r.shopName}” ဆိုင်ရဲ့ အသေးစိတ် မဖြည့်ရသေးပါ`
+          : `🏬 “${r.shopName}” — shop details not filled yet`,
+      message:
+        lang === 'my'
+          ? 'ဖုန်း၊ လိပ်စာ အစရှိတဲ့ အသေးစိတ် ဖြည့်ရန် နှိပ်ပါ — ဖြည့်ပြီးမှ ဤသတိပေးချက် ပျောက်ပါမယ်။'
+          : 'Tap to fill in the phone, address and other details — this reminder clears once they are filled.',
+      severity: 'info',
+      actionTab: 'shops',
+      actionText: lang === 'my' ? 'အသေးစိတ် ဖြည့်မည်' : 'Fill in details',
+      createdAt: r.createdAt,
+    });
+  });
+
   // Filter based on selected tab
   const filteredNotifications = generatedNotifications.filter((n) => {
     if (filterTab === 'all') return true;
@@ -363,6 +405,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   const hasSystemNotifications = generatedNotifications.some(
     (n) => n.type === 'system' || n.type === 'recurring'
   );
+
+  // [v7.5.78 C] Same dead-UI rule for the Shops tab: show it only when
+  // at least one shop-details reminder exists.
+  const hasShopNotifications = generatedNotifications.some((n) => n.type === 'shop');
 
   // Count unread
   const unreadCount = generatedNotifications.filter((n) => !readNotificationIds.includes(n.id)).length;
@@ -564,6 +610,20 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 📢 {lang === 'my' ? 'စနစ်အသိပေးချက်' : 'System'}
               </button>
             )}
+
+            {hasShopNotifications && (
+              <button
+                type="button"
+                onClick={() => setFilterTab('shop')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  filterTab === 'shop'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                🏬 {lang === 'my' ? 'ဆိုင်များ' : 'Shops'}
+              </button>
+            )}
           </div>
 
           {unreadCount > 0 && (
@@ -647,6 +707,11 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                           <Megaphone className="w-5 h-5" />
                         </div>
                       )}
+                      {notif.type === 'shop' && (
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                          <Store className="w-5 h-5" />
+                        </div>
+                      )}
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -676,6 +741,21 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
+                          // [v7.5.78 C] A shop reminder opens the shop
+                          // form pre-filled with that shop's name — not
+                          // just the Shops list. Marking it read only
+                          // dims it; the reminder itself clears when the
+                          // details are filled.
+                          if (notif.type === 'shop' && notif.shopName) {
+                            onMarkAsRead(notif.id);
+                            if (onOpenShopReminder) onOpenShopReminder(notif.shopName);
+                            else {
+                              onNavigateTab('shops');
+                              dispatchOpenShopForm(notif.shopName);
+                            }
+                            onClose();
+                            return;
+                          }
                           onMarkAsRead(notif.id);
                           onNavigateTab(notif.actionTab!);
                           onClose();

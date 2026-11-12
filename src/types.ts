@@ -355,7 +355,7 @@ export interface ShopContact {
   city?: string;        // မြို့ (optional for private)
   ward?: string;        // ရပ်ကွက်/ကျေးရွာ
   note?: string;       // ဆိုင်အမျိုးအစား သို့မဟုတ် မှတ်စု
-  subCategory?: string; // အောက်ထပ် အမျိုးအစား (e.g. bank, atm)
+  subCategory?: string; // အမျိုးအစားခွဲ (e.g. bank, atm)
   userId: string;      // ပိုင်ရှင် UID
   createdAt: number;
   kpayNumber?: string; // KPay Number / Details
@@ -378,7 +378,7 @@ export interface PublicShop {
   address?: string;    // လိပ်စာ (legacy)
   addresses?: string[]; // လိပ်စာများ (တိုးလို့ရသည်)
   note?: string;       // ဆိုင်အမျိုးအစား (preset သို့မဟုတ် custom)
-  subCategory?: string; // အောက်ထပ် အမျိုးအစား (e.g. bank, atm, clinic)
+  subCategory?: string; // အမျိုးအစားခွဲ (e.g. bank, atm, clinic)
   addedBy: string;     // တင်ပေးသူ (Email သို့မဟုတ် DisplayName)
   addedByUid: string;  // တင်ပေးသူ UID
   createdAt: number;

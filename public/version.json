@@ -1,19 +1,19 @@
 {
-  "version": "v7.5.77",
-  "buildNumber": 292,
+  "version": "v7.5.78",
+  "buildNumber": 293,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဘတ်ဂျက် အပိုင်းကို အသစ်ပြန်ရေးလိုက်ပါတယ် — \"ဘတ်ဂျက်\" Tab သီးခြားဖြစ်ကြောင်း၊ ဘတ်ဂျက်တစ်ခုက ကဏ္ဍ အများကြီး စုနိုင်ကြောင်း၊ ၈၀% ရောက်လျှင် သတိပေးကြောင်း မှန်ကန်စွာ ဖော်ပြထားပါတယ်။",
-    "Plan ကန့်သတ်ချက် အပိုင်း အသစ် ထည့်လိုက်ပါတယ် — Guest တစ်လ ၁၅ ခု၊ Free တစ်လ ၁၅၀၊ Guest သုံးလို့ မရတဲ့ အကြွေး/ဘတ်ဂျက်/Export တို့ကို ရှင်းရှင်းလင်းလင်း ရေးထားပါတယ်။",
-    "Export လမ်းညွှန်ကို ပြင်လိုက်ပါတယ် — Excel/CSV က \"အစီရင်ခံစာ\" Tab မှာ၊ JSON Backup က \"ဒေတာ စီမံခန့်ခွဲမှု\" မှာ ရှိပြီး နှစ်ခုလုံး Premium အတွက်သာ ဖြစ်ပါတယ်။",
-    "App မှာ မရှိတဲ့ ပြေစာပုံ ပူးတွဲတာနဲ့ အကြွေး အတိုးနှုန်း အကြောင်းကို လမ်းညွှန်ထဲက ဖြုတ်လိုက်ပါတယ်။ ခလုတ်နာမည်နဲ့ နေရာတွေ (PWA သွင်းနည်း၊ PIN၊ Cloud Sync၊ \"+ ငွေဆပ်မည်\") ကိုလည်း မှန်အောင် ပြင်လိုက်ပါတယ်။",
-    "ကဏ္ဍ၊ ယာဉ်၊ ဆိုင်၊ ဈေးနှုန်း နှိုင်းယှဉ်၊ Plans/Premium၊ ပညာပေး၊ အကြံပြုချက် — လမ်းညွှန်မှာ ပျောက်နေတဲ့ အကြောင်းအရာ ၇ ခု ထည့်လိုက်ပါတယ်။"
+    "ဆိုင်အမျိုးအစား အောက်က \"အောက်ထပ် အမျိုးအစား\" ဆိုတဲ့ စာသားမှားနေတာကို \"အမျိုးအစားခွဲ\" လို့ ပြင်လိုက်ပါတယ်။",
+    "ဆိုင်ထည့်တဲ့ Form ထဲက ခလုတ်တွေ (ဆိုင်အမျိုးအစား၊ အများသုံး/ကိုယ်ပိုင်၊ ဖုန်း/လိပ်စာ ထပ်ထည့်ရန်) ကို နှိပ်ရလွယ်အောင် ကြီးပေးလိုက်ပါတယ်။",
+    "ငွေစာရင်းသွင်းတုန်း ဆိုင်နာမည် အသစ်ထည့်ရင် အသေးစိတ် တခါတည်း ဖြည့်မလား မေးတော့မယ် — နောက်မှ ဖြည့်မယ်ဆိုရင် သတိပေးချက် (Noti) ပေါ်လာမယ်။",
+    "Sidebar ထဲက Menu တွေကိုလည်း ခလုတ်လို နှိပ်ရလွယ်အောင် လုပ်ပေးလိုက်ပါတယ် — စာတန်းကိုပဲ နှိပ်ရတာ မဟုတ်တော့ဘူး။",
+    "ဆိုင်များ စာမျက်နှာတစ်ခုလုံးကိုလည်း ပြန်စစ်ပြီး ခလုတ်တွေ နှိပ်ရလွယ်အောင်၊ သိမ်းဆည်းခလုတ် အမြဲမြင်ရအောင် ပြင်လိုက်ပါတယ်။"
   ],
   "changesEn": [
-    "Rewrote the Budgets section — Budget is its own tab, one budget can group multiple categories, and the warning appears at 80%.",
-    "Added a new Plan limits section — Guest 15 and Free 150 transactions per month, and what Guest cannot use (debts, budgets, export).",
-    "Fixed the Export guide — Excel/CSV lives in the \"Reports\" tab and JSON Backup in \"Data Management\", both Premium-only.",
-    "Removed the receipt-image attachment and debt interest rate claims (those features do not exist) and corrected button names and locations (PWA install, PIN, Cloud Sync, \"+ Make Payment\").",
-    "Added the 7 missing topics — Categories, Vehicles, Shops, Price Compare, Plans/Premium, Education, and Feedback."
+    "Fixed the wrong \"အောက်ထပ် အမျိုးအစား\" label under shop type to \"အမျိုးအစားခွဲ\" (subcategory).",
+    "Made the buttons in the shop form (shop type, Public/Private, add phone/address) easier to tap.",
+    "When you enter a new shop name in a transaction, the app now asks whether to fill in the shop details right away — if you choose later, a reminder notification appears.",
+    "Sidebar menu items are now button-like and easier to tap — not just text labels.",
+    "Re-checked the whole Shops screen and made its buttons easier to tap, with the Save button always visible."
   ]
 }

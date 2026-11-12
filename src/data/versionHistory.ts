@@ -16,10 +16,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.77';
-export const CURRENT_BUILD_NUMBER = 292;
+export const CURRENT_APP_VERSION = 'v7.5.78';
+export const CURRENT_BUILD_NUMBER = 293;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.78',
+    buildNumber: 293,
+    releaseDate: '2026-11-11',
+    releaseTime: '9:30 PM (MMT)',
+    titleMy: 'ဆိုင်ထည့်သွင်းမှု ပြင်ဆင်ခြင်း — အမျိုးအစားခွဲ အမှားပြင်ခြင်း၊ ခလုတ်များ နှိပ်ရလွယ်ကူစေခြင်းနှင့် ဆိုင်အသေးစိတ် ဖြည့်ရန် သတိပေးချက်',
+    titleEn: 'Shop Entry Fixes — Subcategory Label, Easier Buttons, and Shop-Details Reminder',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆိုင်ထည့်တဲ့ Form ထဲက "အောက်ထပ်" လို့ မှားနေတဲ့ စာသားကို "အမျိုးအစားခွဲ" လို့ ပြင်လိုက်ပြီး ခလုတ်တွေ နှိပ်ရလွယ်အောင် ကြီးပေးလိုက်ပါတယ်။ ငွေစာရင်းသွင်းတုန်း ဆိုင်နာမည် အသစ်ထည့်ရင် အသေးစိတ် တခါတည်း ဖြည့်မလား မေးတော့မယ် — နောက်မှ ဖြည့်မယ်ဆိုရင် သတိပေးချက် ပေါ်လာပြီး Sidebar မှာလည်း Menu တွေ ခလုတ်လို နှိပ်ရလွယ်သွားပါတယ်။',
+    descriptionEn: 'Fixed the wrong "အောက်ထပ်" label in the shop form to "အမျိုးအစားခွဲ" (subcategory) and made the buttons easier to tap. When you enter a new shop name in a transaction, the app now asks whether to fill in the shop details right away — if you choose later, a reminder appears — and the Sidebar menus are now button-like and easier to tap.',
+    changesMy: [
+      'ဆိုင်အမျိုးအစား အောက်က "အောက်ထပ် အမျိုးအစား" ဆိုတဲ့ စာသားမှားနေတာကို "အမျိုးအစားခွဲ" လို့ ပြင်လိုက်ပါတယ်။',
+      'ဆိုင်ထည့်တဲ့ Form ထဲက ခလုတ်တွေ (ဆိုင်အမျိုးအစား၊ အများသုံး/ကိုယ်ပိုင်၊ ဖုန်း/လိပ်စာ ထပ်ထည့်ရန်) ကို နှိပ်ရလွယ်အောင် ကြီးပေးလိုက်ပါတယ်။',
+      'ငွေစာရင်းသွင်းတုန်း ဆိုင်နာမည် အသစ်ထည့်ရင် အသေးစိတ် တခါတည်း ဖြည့်မလား မေးတော့မယ် — နောက်မှ ဖြည့်မယ်ဆိုရင် သတိပေးချက် (Noti) ပေါ်လာမယ်။',
+      'Sidebar ထဲက Menu တွေကိုလည်း ခလုတ်လို နှိပ်ရလွယ်အောင် လုပ်ပေးလိုက်ပါတယ် — စာတန်းကိုပဲ နှိပ်ရတာ မဟုတ်တော့ဘူး။',
+      'ဆိုင်များ စာမျက်နှာတစ်ခုလုံးကိုလည်း ပြန်စစ်ပြီး ခလုတ်တွေ နှိပ်ရလွယ်အောင်၊ သိမ်းဆည်းခလုတ် အမြဲမြင်ရအောင် ပြင်လိုက်ပါတယ်။',
+    ],
+    changesEn: [
+      'Fixed the wrong "အောက်ထပ် အမျိုးအစား" label under shop type to "အမျိုးအစားခွဲ" (subcategory).',
+      'Made the buttons in the shop form (shop type, Public/Private, add phone/address) easier to tap.',
+      'When you enter a new shop name in a transaction, the app now asks whether to fill in the shop details right away — if you choose later, a reminder notification appears.',
+      'Sidebar menu items are now button-like and easier to tap — not just text labels.',
+      'Re-checked the whole Shops screen and made its buttons easier to tap, with the Save button always visible.',
+    ],
+  },
   {
     version: 'v7.5.77',
     buildNumber: 292,

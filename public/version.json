@@ -1,19 +1,15 @@
 {
-  "version": "v7.5.78",
-  "buildNumber": 293,
+  "version": "v7.5.79",
+  "buildNumber": 294,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဆိုင်အမျိုးအစား အောက်က \"အောက်ထပ် အမျိုးအစား\" ဆိုတဲ့ စာသားမှားနေတာကို \"အမျိုးအစားခွဲ\" လို့ ပြင်လိုက်ပါတယ်။",
-    "ဆိုင်ထည့်တဲ့ Form ထဲက ခလုတ်တွေ (ဆိုင်အမျိုးအစား၊ အများသုံး/ကိုယ်ပိုင်၊ ဖုန်း/လိပ်စာ ထပ်ထည့်ရန်) ကို နှိပ်ရလွယ်အောင် ကြီးပေးလိုက်ပါတယ်။",
-    "ငွေစာရင်းသွင်းတုန်း ဆိုင်နာမည် အသစ်ထည့်ရင် အသေးစိတ် တခါတည်း ဖြည့်မလား မေးတော့မယ် — နောက်မှ ဖြည့်မယ်ဆိုရင် သတိပေးချက် (Noti) ပေါ်လာမယ်။",
-    "Sidebar ထဲက Menu တွေကိုလည်း ခလုတ်လို နှိပ်ရလွယ်အောင် လုပ်ပေးလိုက်ပါတယ် — စာတန်းကိုပဲ နှိပ်ရတာ မဟုတ်တော့ဘူး။",
-    "ဆိုင်များ စာမျက်နှာတစ်ခုလုံးကိုလည်း ပြန်စစ်ပြီး ခလုတ်တွေ နှိပ်ရလွယ်အောင်၊ သိမ်းဆည်းခလုတ် အမြဲမြင်ရအောင် ပြင်လိုက်ပါတယ်။"
+    "ဖုန်းနံပါတ် မထည့်လည်း ဆိုင်ထည့်လို့ရပြီ — ဖုန်းမသိတဲ့ ဆိုင်တွေလည်း ထည့်နိုင်ပါပြီ။",
+    "တင်မရရင် ဘာလိုအပ်နေလဲဆိုတာ သိမ်းဆည်းခလုတ်နားမှာပဲ ပြတော့မယ် — အပေါ်ထိ scroll လုပ်ပြီး ရှာစရာ မလိုတော့ဘူး။",
+    "တင်မရတဲ့အခါ လိုအပ်တဲ့ အကွက်ဆီကို အလိုအလျောက် scroll လုပ်ပေးမယ်။"
   ],
   "changesEn": [
-    "Fixed the wrong \"အောက်ထပ် အမျိုးအစား\" label under shop type to \"အမျိုးအစားခွဲ\" (subcategory).",
-    "Made the buttons in the shop form (shop type, Public/Private, add phone/address) easier to tap.",
-    "When you enter a new shop name in a transaction, the app now asks whether to fill in the shop details right away — if you choose later, a reminder notification appears.",
-    "Sidebar menu items are now button-like and easier to tap — not just text labels.",
-    "Re-checked the whole Shops screen and made its buttons easier to tap, with the Save button always visible."
+    "Phone number is now optional — you can add a shop even when you do not know its phone number.",
+    "When a shop cannot be saved, the reason now shows right next to the Save button — no more scrolling up to find it.",
+    "The form now scrolls automatically to the first missing field when saving fails."
   ]
 }

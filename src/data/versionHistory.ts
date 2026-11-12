@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.78';
-export const CURRENT_BUILD_NUMBER = 293;
+export const CURRENT_APP_VERSION = 'v7.5.79';
+export const CURRENT_BUILD_NUMBER = 294;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.79',
+    buildNumber: 294,
+    releaseDate: '2026-11-12',
+    releaseTime: '7:00 AM (MMT)',
+    titleMy: 'ဆိုင်ထည့်သွင်းမှု ပြင်ဆင်ခြင်း — ဖုန်းနံပါတ် မဖြစ်မနေ မလိုတော့ပါ၊ တင်မရတဲ့ အကြောင်းရင်း ခလုတ်နားမှာ ပြခြင်း',
+    titleEn: 'Shop Entry Fixes — Phone Number Optional, Submit Error Shown Next to the Button',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဖုန်းနံပါတ် မသိတဲ့ ဆိုင်တွေလည်း ထည့်လို့ရပြီ — ဖုန်းမထည့်လည်း ဆိုင်ထည့်လို့ရပါပြီ။ တင်မရရင် ဘာလိုအပ်နေလဲဆိုတာ သိမ်းဆည်းခလုတ်နားမှာပဲ ပြပြီး လိုအပ်တဲ့ အကွက်ဆီကို အလိုအလျောက် scroll လုပ်ပေးမယ်။',
+    descriptionEn: 'Phone number is now optional when adding a shop — you can add shops whose phone number you do not know. When saving fails, the reason now shows right next to the Save button and the form scrolls automatically to the first missing field.',
+    changesMy: [
+      'ဖုန်းနံပါတ် မထည့်လည်း ဆိုင်ထည့်လို့ရပြီ — ဖုန်းမသိတဲ့ ဆိုင်တွေလည်း ထည့်နိုင်ပါပြီ။',
+      'တင်မရရင် ဘာလိုအပ်နေလဲဆိုတာ သိမ်းဆည်းခလုတ်နားမှာပဲ ပြတော့မယ် — အပေါ်ထိ scroll လုပ်ပြီး ရှာစရာ မလိုတော့ဘူး။',
+      'တင်မရတဲ့အခါ လိုအပ်တဲ့ အကွက်ဆီကို အလိုအလျောက် scroll လုပ်ပေးမယ်။',
+    ],
+    changesEn: [
+      'Phone number is now optional — you can add a shop even when you do not know its phone number.',
+      'When a shop cannot be saved, the reason now shows right next to the Save button — no more scrolling up to find it.',
+      'The form now scrolls automatically to the first missing field when saving fails.',
+    ],
+  },
   {
     version: 'v7.5.78',
     buildNumber: 293,

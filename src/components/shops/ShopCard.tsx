@@ -276,7 +276,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               onClick={() =>
                 handleCopyText(
                   `full-${shop.id}`,
-                  `${shop.name}\n${lang === 'my' ? 'ဖုန်း' : 'Phone'}: ${phonesList.join(', ')}\n${
+                  `${shop.name}\n${phonesList.length > 0 ? `${lang === 'my' ? 'ဖုန်း' : 'Phone'}: ${phonesList.join(', ')}\n` : ''}${
                     locationString ? `${lang === 'my' ? 'တည်နေရာ' : 'Location'}: ${locationString}\n` : ''
                   }${primaryAddress ? `${lang === 'my' ? 'လိပ်စာ' : 'Address'}: ${addressesList.join(' | ')}\n` : ''}${
                     shop.kpayNumber ? `KPay: ${normalizedKpay || shop.kpayNumber}\n` : ''
@@ -817,7 +817,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             onClick={() =>
               handleCopyText(
                 `full-${shop.id}`,
-                `${shop.name}\n${lang === 'my' ? 'ဖုန်း' : 'Phone'}: ${phonesList.join(', ')}\n${
+                `${shop.name}\n${phonesList.length > 0 ? `${lang === 'my' ? 'ဖုန်း' : 'Phone'}: ${phonesList.join(', ')}\n` : ''}${
                   locationString ? `${lang === 'my' ? 'တည်နေရာ' : 'Location'}: ${locationString}\n` : ''
                 }${primaryAddress ? `${lang === 'my' ? 'လိပ်စာ' : 'Address'}: ${addressesList.join(' | ')}\n` : ''}${
                   shop.kpayNumber ? `KPay: ${normalizedKpay || shop.kpayNumber}\n` : ''

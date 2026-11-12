@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Store, Phone, MapPin, Plus, Globe, Lock, AlertTriangle, Check } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
 import { MYANMAR_REGIONS, PRESET_TAGS } from './shopConstants';
@@ -79,6 +79,16 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   // [v7.5.60 E24] Validation errors show inline in the modal, not via
   // the browser's native alert().
   const [formError, setFormError] = useState<string | null>(null);
+  // [v7.5.79] Ref to the scrollable form body + helper that scrolls it to
+  // the first invalid field, so the user sees WHY Save was blocked without
+  // scrolling up manually. scrollIntoView scrolls the nearest scrollable
+  // ancestor (this form).
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const scrollToField = (field: string) => {
+    formRef.current
+      ?.querySelector(`[data-field="${field}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -162,6 +172,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       setFormKpayNumber('');
       setFormGeneralNotes('');
     }
+    // [v7.5.79] A fresh open never shows a stale error from the last open.
+    setFormError(null);
     setDuplicateWarning(null);
   }, [isOpen, editingShop, isEditingPublic, directoryType]);
 
@@ -171,6 +183,9 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     const updated = [...formPhones];
     updated[idx] = val;
     setFormPhones(updated);
+    // [v7.5.79] Clear the footer/top error as soon as the user starts
+    // fixing the field; it re-appears on the next Save if still invalid.
+    setFormError(null);
     checkDuplicates(val, formName, formTownship);
   };
 
@@ -256,24 +271,25 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     // the Save tap did nothing.
     if (!formName.trim()) {
       setFormError(lang === 'my' ? 'ဆိုင်အမည် ထည့်သွင်းပေးပါ' : 'Please enter a shop name');
+      scrollToField('name');
       return;
     }
 
     // [v7.5.55 C16] Normalize phones (Myanmar digits → Latin, +95/09
     // unified) before storing, and validate — a bad number must not save.
+    // [v7.5.79] Phone is OPTIONAL — some shops have no known phone
+    // number, so an empty phone list is no longer an error. Only the
+    // FORMAT is validated, and only when a phone was actually entered.
     const cleanedPhones = formPhones
       .map((p) => normalizeMyanmarPhone(p.trim()))
       .filter(Boolean);
-    if (cleanedPhones.length === 0) {
-      setFormError(lang === 'my' ? 'ဖုန်းနံပါတ် အနည်းဆုံး တစ်ခု ထည့်သွင်းပေးပါ' : 'Please provide at least one phone number');
-      return;
-    }
-    if (!cleanedPhones.every((p) => isValidMyanmarPhone(p))) {
+    if (cleanedPhones.length > 0 && !cleanedPhones.every((p) => isValidMyanmarPhone(p))) {
       setFormError(
         lang === 'my'
           ? 'ဖုန်းနံပါတ် မမှန်ကန်ပါ — 09 ဖြင့် စပြီး ဂဏန်း ၉–၁၁ လုံး ဖြစ်ရပါမည် (ဥပမာ 09123456789)'
           : 'Invalid phone number — it must start with 09 and have 9–11 digits (e.g. 09123456789)'
       );
+      scrollToField('phone');
       return;
     }
     // [v7.5.60 E27/N-39] KPay is a payment number — validate it like the
@@ -285,6 +301,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           ? 'KPay နံပါတ် မမှန်ကန်ပါ — 09 ဖြင့် စပြီး ဂဏန်း ၉–၁၁ လုံး ဖြစ်ရပါမည်'
           : 'Invalid KPay number — it must start with 09 and have 9–11 digits'
       );
+      scrollToField('kpay');
       return;
     }
 
@@ -295,6 +312,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           ? 'ပြည်နယ်/တိုင်း နှင့် မြို့နယ် ရွေးချယ်ပေးပါ'
           : 'Please pick a state/region and a township'
       );
+      scrollToField('region');
       return;
     }
 
@@ -304,6 +322,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     // as an in-app message instead.
     if (formTownship === 'custom' && !formCustomTownship.trim()) {
       setFormError(lang === 'my' ? 'စိတ်ကြိုက် မြို့နယ်အမည် ထည့်သွင်းပေးပါ' : 'Please enter a custom township name');
+      scrollToField('custom-township');
       return;
     }
 
@@ -379,7 +398,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         </div>
 
         {/* MODAL BODY FORM */}
-        <form onSubmit={handleSubmit} noValidate className="p-4 sm:p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden">
+        <form ref={formRef} onSubmit={handleSubmit} noValidate className="p-4 sm:p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden">
           {/* DIRECTORY TARGET SELECTOR — shown for create AND edit so a shop
               can move between Public / Private (v7.5.55 C27). */}
           {(
@@ -391,7 +410,12 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 {/* Public Card */}
                 <button
                   type="button"
-                  onClick={() => setFormDirectoryType('public')}
+                  onClick={() => {
+                    // [v7.5.79] Picking Public clears a Premium error left
+                    // by tapping the Private card.
+                    setFormError(null);
+                    setFormDirectoryType('public');
+                  }}
                   className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                     formDirectoryType === 'public'
                       ? 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
@@ -447,6 +471,9 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           )}
 
           {/* DUPLICATE WARNING BANNER */}
+          {/* [v7.5.79] This top banner is KEPT. The SAME formError state is
+              also rendered in the sticky footer, so the reason Save was
+              blocked is visible at the bottom without scrolling up. */}
           {formError && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2 leading-relaxed">
               <span>⚠️ {formError}</span>
@@ -469,7 +496,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
 
             {/* Shop Name */}
-            <div>
+            <div data-field="name">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 {lang === 'my' ? 'ဆိုင်အမည် *' : 'Shop Name *'}
               </label>
@@ -478,6 +505,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 required
                 value={formName}
                 onChange={(e) => {
+                  // [v7.5.79] Clear the error as soon as the user starts fixing the field.
+                  setFormError(null);
                   setFormName(e.target.value);
                   checkDuplicates(formPhones[0] || '', e.target.value, formTownship);
                 }}
@@ -562,13 +591,15 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* State/Region */}
-              <div>
+              <div data-field="region">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   {lang === 'my' ? 'ပြည်နယ် / တိုင်း *' : 'State / Region *'}
                 </label>
                 <select
                   value={formStateRegion}
                   onChange={(e) => {
+                    // [v7.5.79] Clear the error as soon as the user starts fixing the field.
+                    setFormError(null);
                     setFormStateRegion(e.target.value);
                     const regionObj = MYANMAR_REGIONS.find((r) => r.nameMy === e.target.value);
                     if (regionObj && regionObj.townships.length > 0) {
@@ -590,7 +621,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
               </div>
 
               {/* Township */}
-              <div>
+              <div data-field="township">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   {lang === 'my' ? 'မြို့နယ် *' : 'Township *'}
                 </label>
@@ -598,6 +629,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   value={formTownship}
                   disabled={!formStateRegion}
                   onChange={(e) => {
+                    // [v7.5.79] Clear the error as soon as the user starts fixing the field.
+                    setFormError(null);
                     setFormTownship(e.target.value);
                     if (e.target.value !== 'custom') {
                       // [v7.5.55 C27] Never overwrite an already-typed city.
@@ -618,7 +651,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
 
             {formTownship === 'custom' && (
-              <div className="animate-fade-in">
+              <div data-field="custom-township" className="animate-fade-in">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   {lang === 'my' ? 'စိတ်ကြိုက် မြို့နယ်အမည် *' : 'Custom Township *'}
                 </label>
@@ -627,6 +660,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   required
                   value={formCustomTownship}
                   onChange={(e) => {
+                    // [v7.5.79] Clear the error as soon as the user starts fixing the field.
+                    setFormError(null);
                     setFormCustomTownship(e.target.value);
                     // [v7.5.55 C27] Never overwrite an already-typed city.
                     checkDuplicates(formPhones[0] || '', formName, e.target.value);
@@ -675,10 +710,10 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
 
             {/* Phone Numbers */}
-            <div className="space-y-2">
+            <div data-field="phone" className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-700">
-                  {lang === 'my' ? 'ဖုန်းနံပါတ်များ *' : 'Phone Numbers *'}
+                  {lang === 'my' ? 'ဖုန်းနံပါတ်များ (ရွေးချယ်)' : 'Phone Numbers (Optional)'}
                 </label>
                 <button
                   type="button"
@@ -694,7 +729,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 <div key={idx} className="flex items-center gap-2">
                   <input
                     type="tel"
-                    required={idx === 0}
                     value={ph}
                     onChange={(e) => handlePhoneChange(idx, e.target.value)}
                     placeholder={lang === 'my' ? `ဖုန်းနံပါတ် ${idx + 1} (ဥပမာ - ၀၉၁၂၃၄၅၆၇၈)` : `Phone number ${idx + 1}`}
@@ -715,7 +749,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
 
             {/* KPay Number */}
-            <div>
+            <div data-field="kpay">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 {lang === 'my' ? 'KPay ဖုန်း / အကောင့်နံပါတ် (ရှိလျှင်)' : 'KPay Account / Phone (Optional)'}
               </label>
@@ -723,7 +757,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 <input
                   type="text"
                   value={formKpayNumber}
-                  onChange={(e) => setFormKpayNumber(e.target.value)}
+                  onChange={(e) => {
+                    // [v7.5.79] Clear the error as soon as the user starts fixing the field.
+                    setFormError(null);
+                    setFormKpayNumber(e.target.value);
+                  }}
                   placeholder={lang === 'my' ? 'ဥပမာ - ၀၉၁၂၃၄၅၆၇၈၉' : 'e.g. 09123456789'}
                   className="w-full pl-14 pr-3 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
                 />
@@ -789,7 +827,17 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           {/* MODAL ACTIONS FOOTER — sticky so Save stays reachable while
               scrolling the long form (v7.5.78: it used to sit at the very
               bottom of the scroll area). */}
-          <div className="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 pb-1 bg-white border-t border-slate-150 flex items-center justify-end gap-3">
+          <div className="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 pb-1 bg-white border-t border-slate-150">
+            {/* [v7.5.79] SAME formError state as the top banner, rendered
+                here too — right above Cancel/Save — so the reason Save was
+                blocked is visible without scrolling up. This also shows the
+                Private-card Premium error set outside handleSubmit. */}
+            {formError && (
+              <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2 leading-relaxed">
+                <span>⚠️ {formError}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -817,6 +865,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   : 'Save Shop'}
               </span>
             </button>
+            </div>
           </div>
         </form>
       </div>

@@ -67,6 +67,37 @@ describe('shopHasDetails', () => {
     expect(shopHasDetails({ items: [{ name: 'rice', price: 1 }] })).toBe(true);
     expect(shopHasDetails({ phones: ['  '] })).toBe(false);
   });
+
+  // [v7.5.79] Phone is optional — a phone-less shop with region +
+  // township still HAS details, so a form save of it clears the
+  // reminder.
+  it('phone-less shop with region + township HAS details', () => {
+    expect(
+      shopHasDetails({ phone: '', phones: [], stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' })
+    ).toBe(true);
+    expect(shopHasDetails({ stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' })).toBe(true);
+  });
+
+  // [v7.5.79] Phone is optional — a phone-less record with nothing else
+  // filled still has NO details, so the transaction prompt still shows.
+  it('phone-less record with nothing else filled has NO details', () => {
+    expect(
+      shopHasDetails({
+        phone: '',
+        phones: [],
+        address: '',
+        addresses: [],
+        subCategory: '',
+        stateRegion: '',
+        township: '',
+        city: '',
+        ward: '',
+        kpayNumber: '',
+        generalNotes: '',
+        items: [],
+      })
+    ).toBe(false);
+  });
 });
 
 describe('isShopNameNeedingDetails', () => {
@@ -90,6 +121,33 @@ describe('isShopNameNeedingDetails', () => {
 
   it('a name-only public stub does NOT suppress the prompt', () => {
     expect(isShopNameNeedingDetails('Denko', [], [{ name: 'Denko', phone: '', phones: [] }])).toBe(true);
+  });
+
+  // [v7.5.79] Phone is optional — a phone-less public shop WITH
+  // region/township suppresses the prompt (it has details); a
+  // phone-less stub with no region/township does NOT.
+  it('a phone-less public shop WITH region/township suppresses the prompt', () => {
+    expect(
+      isShopNameNeedingDetails('Denko', [], [
+        { name: 'Denko', phone: '', phones: [], stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' },
+      ])
+    ).toBe(false);
+  });
+
+  it('a phone-less stub with no region/township does NOT suppress the prompt', () => {
+    expect(
+      isShopNameNeedingDetails('Denko', [], [
+        {
+          name: 'Denko',
+          phone: '',
+          phones: [],
+          stateRegion: '',
+          township: '',
+          city: '',
+          addresses: [],
+        },
+      ])
+    ).toBe(true);
   });
 });
 

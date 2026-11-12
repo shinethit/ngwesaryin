@@ -16,10 +16,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.76';
-export const CURRENT_BUILD_NUMBER = 291;
+export const CURRENT_APP_VERSION = 'v7.5.77';
+export const CURRENT_BUILD_NUMBER = 292;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.77',
+    buildNumber: 292,
+    releaseDate: '2026-11-11',
+    releaseTime: '6:00 AM (MMT)',
+    titleMy: 'အသုံးပြုပုံ လမ်းညွှန် အသစ်ပြန်ရေးခြင်း — လက်ရှိ App နှင့် ကိုက်ညီအောင် ပြင်ဆင်ခြင်း',
+    titleEn: 'User Guide Rewritten to Match the Current App',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'App ထဲက အသုံးပြုပုံ လမ်းညွှန်ကို လက်ရှိ App နဲ့ ကိုက်ညီအောင် အသစ်ပြန်ရေးလိုက်ပါတယ် — ဘတ်ဂျက်ပုံစံ အသစ်၊ Plan ကန့်သတ်ချက်များ၊ Premium Export နေရာများ အပါအဝင်၊ လမ်းညွှန်မှာ ပျောက်နေတဲ့ ကဏ္ဍ၊ ယာဉ်၊ ဆိုင်၊ ဈေးနှုန်း နှိုင်းယှဉ်၊ Plans၊ ပညာပေး၊ အကြံပြုချက် အကြောင်းအရာတွေကိုလည်း ဖြည့်လိုက်ပါတယ်။',
+    descriptionEn: 'Rewrote the in-app User Guide to match the current app — the new multi-category budget model, plan limits, and Premium export locations, plus new topics for Categories, Vehicles, Shops, Price Compare, Plans, Education, and Feedback.',
+    changesMy: [
+      'ဘတ်ဂျက် အပိုင်းကို အသစ်ပြန်ရေးလိုက်ပါတယ် — "ဘတ်ဂျက်" Tab သီးခြားဖြစ်ကြောင်း၊ ဘတ်ဂျက်တစ်ခုက ကဏ္ဍ အများကြီး စုနိုင်ကြောင်း၊ ၈၀% ရောက်လျှင် သတိပေးကြောင်း မှန်ကန်စွာ ဖော်ပြထားပါတယ်။',
+      'Plan ကန့်သတ်ချက် အပိုင်း အသစ် ထည့်လိုက်ပါတယ် — Guest တစ်လ ၁၅ ခု၊ Free တစ်လ ၁၅၀၊ Guest သုံးလို့ မရတဲ့ အကြွေး/ဘတ်ဂျက်/Export တို့ကို ရှင်းရှင်းလင်းလင်း ရေးထားပါတယ်။',
+      'Export လမ်းညွှန်ကို ပြင်လိုက်ပါတယ် — Excel/CSV က "အစီရင်ခံစာ" Tab မှာ၊ JSON Backup က "ဒေတာ စီမံခန့်ခွဲမှု" မှာ ရှိပြီး နှစ်ခုလုံး Premium အတွက်သာ ဖြစ်ပါတယ်။',
+      'App မှာ မရှိတဲ့ ပြေစာပုံ ပူးတွဲတာနဲ့ အကြွေး အတိုးနှုန်း အကြောင်းကို လမ်းညွှန်ထဲက ဖြုတ်လိုက်ပါတယ်။ ခလုတ်နာမည်နဲ့ နေရာတွေ (PWA သွင်းနည်း၊ PIN၊ Cloud Sync၊ "+ ငွေဆပ်မည်") ကိုလည်း မှန်အောင် ပြင်လိုက်ပါတယ်။',
+      'ကဏ္ဍ၊ ယာဉ်၊ ဆိုင်၊ ဈေးနှုန်း နှိုင်းယှဉ်၊ Plans/Premium၊ ပညာပေး၊ အကြံပြုချက် — လမ်းညွှန်မှာ ပျောက်နေတဲ့ အကြောင်းအရာ ၇ ခု ထည့်လိုက်ပါတယ်။',
+    ],
+    changesEn: [
+      'Rewrote the Budgets section — Budget is its own tab, one budget can group multiple categories, and the warning appears at 80%.',
+      'Added a new Plan limits section — Guest 15 and Free 150 transactions per month, and what Guest cannot use (debts, budgets, export).',
+      'Fixed the Export guide — Excel/CSV lives in the "Reports" tab and JSON Backup in "Data Management", both Premium-only.',
+      'Removed the receipt-image attachment and debt interest rate claims (those features do not exist) and corrected button names and locations (PWA install, PIN, Cloud Sync, "+ Make Payment").',
+      'Added the 7 missing topics — Categories, Vehicles, Shops, Price Compare, Plans/Premium, Education, and Feedback.',
+    ],
+  },
   {
     version: 'v7.5.76',
     buildNumber: 291,

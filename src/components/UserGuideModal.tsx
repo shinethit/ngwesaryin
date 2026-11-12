@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, BookOpen, Search, Sparkles, CheckCircle2, Wallet, ArrowLeftRight, HandCoins, PieChart, Cloud, ShieldCheck, Lock, Smartphone, HelpCircle, Plus, RefreshCw, TrendingUp, FileSpreadsheet, Zap, Users, KeyRound, ShieldAlert, LogOut, UserPlus, Layers, Activity, Database } from 'lucide-react';
+import { X, BookOpen, Search, Sparkles, CheckCircle2, Wallet, ArrowLeftRight, HandCoins, PieChart, Cloud, ShieldCheck, Lock, Smartphone, HelpCircle, Plus, RefreshCw, TrendingUp, FileSpreadsheet, Zap, Users, KeyRound, ShieldAlert, LogOut, UserPlus, Layers, Activity, Database, Crown, Tags, Car, Store, GraduationCap, MessageCircle } from 'lucide-react';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
 
 interface UserGuideModalProps {
@@ -26,12 +26,19 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
   // Categories without a real destination (getting started, cloud /
   // PIN, data management, troubleshooting) get no button.
   // [v7.5.75] Budgets now has its own top-level tab ('budget').
+  // [v7.5.77 GUIDE-REWRITE-7577] New guide categories jump to their tabs.
   const CATEGORY_TAB: Record<string, string> = {
     cashflow: 'transactions',
     debts: 'debts',
     wallets: 'wallets',
     shared_wallets: 'wallets',
     budgets: 'budget',
+    plans: 'plans',
+    categories: 'categories',
+    vehicles: 'vehicles',
+    shops: 'shops',
+    education: 'education',
+    feedback: 'feedback',
   };
 
   if (!isOpen) return null;
@@ -70,8 +77,44 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
     {
       id: 'budgets',
       icon: PieChart,
-      title: lang === 'my' ? 'ဘတ်ဂျက်နှင့် စာရင်းဇယား' : 'Budgets & Analytics',
-      desc: lang === 'my' ? 'သုံးစွဲမှု ကန့်သတ်ချက်နှင့် စုဆောင်းငွေ' : 'Budget limits & monthly charts',
+      title: lang === 'my' ? 'ဘတ်ဂျက်၊ အစီရင်ခံစာ နှင့် ဈေးနှုန်း' : 'Budget, Reports & Price Compare',
+      desc: lang === 'my' ? 'ဘတ်ဂျက် သတ်မှတ်ခြင်း၊ စာရင်းဇယားနှင့် ဈေးနှုန်း နှိုင်းယှဉ်ခြင်း' : 'Budgets, monthly charts & price comparison',
+    },
+    {
+      id: 'plans',
+      icon: Crown,
+      title: lang === 'my' ? 'အစီအစဉ် & Premium' : 'Plans & Premium',
+      desc: lang === 'my' ? 'Guest/Free ကန့်သတ်ချက်နှင့် Premium' : 'Plan limits & Premium',
+    },
+    {
+      id: 'categories',
+      icon: Tags,
+      title: lang === 'my' ? 'ကဏ္ဍနှင့် ကဏ္ဍခွဲများ' : 'Categories',
+      desc: lang === 'my' ? 'ကဏ္ဍ ထည့်ခြင်း၊ ပြင်ခြင်း၊ ဖျက်ခြင်း' : 'Managing categories',
+    },
+    {
+      id: 'vehicles',
+      icon: Car,
+      title: lang === 'my' ? 'ယာဉ်စီမံခန့်ခွဲမှု' : 'Vehicles',
+      desc: lang === 'my' ? 'ဆီစာရင်း၊ ထိန်းသိမ်းမှုနှင့် တာယာ' : 'Fuel logs, maintenance & tyres',
+    },
+    {
+      id: 'shops',
+      icon: Store,
+      title: lang === 'my' ? 'ဆိုင်လိပ်စာ' : 'Shops',
+      desc: lang === 'my' ? 'ဆိုင်များ ရှာဖွေခြင်းနှင့် သိမ်းခြင်း' : 'Finding & saving shops',
+    },
+    {
+      id: 'education',
+      icon: GraduationCap,
+      title: lang === 'my' ? 'ပညာပေး' : 'Learn',
+      desc: lang === 'my' ? 'ငွေကြေး ပညာပေး ဆောင်းပါးများ' : 'Financial literacy articles',
+    },
+    {
+      id: 'feedback',
+      icon: MessageCircle,
+      title: lang === 'my' ? 'အကြံပြုချက်' : 'Feedback',
+      desc: lang === 'my' ? 'အကြံပြုချက် ပေးပို့ခြင်းနှင့် အဆင့်သတ်မှတ်ခြင်း' : 'Sending feedback & ratings',
     },
     {
       id: 'cloud_security',
@@ -101,11 +144,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       steps: lang === 'my' ? [
         'အက်ပလီကေးရှင်း စတင်ဖွင့်ချိန်တွင် Google Sign-In သို့မဟုတ် Guest Mode ကို ရွေးချယ်နိုင်ပါသည်။',
         'Google Sign-In: စာရင်းဒေတာများကို Google Cloud ပေါ်တွင် အလိုအလျောက် အမြဲ သိမ်းဆည်းပေးမည်ဖြစ်ပြီး ဖုန်းပြောင်းသုံးသော်လည်း ဒေတာမပျောက်ပါ။',
-        'Guest Mode: အကောင့်ဖွင့်ရန် မလိုဘဲ စက်ထဲ၌သာ အလွယ်တကူ စမ်းသုံးနိုင်ပြီး နောက်ပိုင်းတွင် Google အကောင့်သို့ အချိန်မရွေး ချိတ်ဆက်နိုင်ပါသည်။',
+        'Guest Mode: အကောင့်ဖွင့်ရန် မလိုဘဲ စက်ထဲ၌သာ အလွယ်တကူ စမ်းသုံးနိုင်ပါသည်။ Guest အဖြစ် သုံးထားသော စာရင်းများသည် စက်ထဲမှာသာ ရှိပြီး၊ နောက်မှ Google/Email အကောင့်ဖြင့် ဝင်လိုက်လျှင် အကောင့်အသစ်သို့ ပြောင်းသွားကာ Guest စာရင်းများ ထိုအကောင့်မှာ မပေါ်ပါ (Guest အဖြစ် ပြန်ဝင်လျှင် ပြန်မြင်ရပါမည်)။',
       ] : [
         'Choose between Google Sign-In or Guest Mode on launch.',
         'Google Sign-In: Automatically syncs data securely to Google Cloud across devices.',
-        'Guest Mode: Uses local offline storage with full functionality. Connect to Google anytime later.',
+        'Guest Mode: Try the app without an account — data stays on this device only, with limits (see the Plans & Premium section). Signing in later with Google/Email moves you to a new account; your guest records will not show there (sign out and continue as guest to see them again).',
       ],
     },
     {
@@ -114,11 +157,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       icon: Smartphone,
       steps: lang === 'my' ? [
         'Browser မလိုအပ်ဘဲ ဖုန်း HomeScreen သို့မဟုတ် Desktop တွင် သီးသန့် အက်ပလီကေးရှင်းအဖြစ် ထည့်သွင်း သုံးစွဲနိုင်ပါသည်။',
-        'အပေါ် Navigation Bar ရှိ "+ App သွင်းမည်" ခလုတ် သို့မဟုတ် Sidebar ရှိ "App Install ပြုလုပ်ရန်" ကို နှိပ်၍ ၁-စက္ကန့်အတွင်း ထည့်သွင်းနိုင်ပါသည်။',
+        'Sidebar အောက်ခြေရှိ အကောင့်ကတ်ဘေးက "App သွင်းမည်" ခလုတ် (သို့မဟုတ် အကောင့် (Account) စာမျက်နှာထဲက "App သွင်းမည်" ခလုတ်) ကို နှိပ်ပါ။',
         'အင်တာနက် မရှိသည့် အချိန်များတွင်လည်း အော့ဖ်လိုင်း (Offline) အပြည့်အဝ သုံးစွဲနိုင်ပါသည်။',
       ] : [
         'Install NgweSarYin directly to your Phone or Computer home screen as a standalone PWA app.',
-        'Click "+ App Install" in the top bar or sidebar menu to install instantly.',
+        'Tap "App သွင်းမည်" (Install) next to your account card at the bottom of the Sidebar — or the same "App သွင်းမည်" button inside the Account page.',
         'Works 100% offline without active internet connection.',
       ],
     },
@@ -127,15 +170,15 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       title: lang === 'my' ? '၁။ ဝင်ငွေ / ထွက်ငွေ စာရင်းသစ် ရေးသွင်းပုံ' : '1. Recording Incomes & Expenses',
       icon: Plus,
       steps: lang === 'my' ? [
-        'အောက်ခြေ ပေါင်းစပ်ခလုတ် သို့မဟုတ် အပေါ်ရှိ "+ စာရင်းသစ်" ခလုတ်ကို နှိပ်ပါ။',
+        'အောက်ခြေ အလယ်က ရွှေဒင်္ဂါး (Coin) ခလုတ်၊ Dashboard ပေါ်က "ဝင်ငွေ" / "ထွက်ငွေ" ခလုတ်၊ သို့မဟုတ် ဝင်ငွေ/ထွက်ငွေ စာမျက်နှာက "ထည့်မည်" ခလုတ်ကို နှိပ်ပါ။',
         'ဝင်ငွေ (Income) သို့မဟုတ် ထွက်ငွေ (Expense) အမျိုးအစားကို ရွေးပါ။',
         'ပမာဏ၊ အကြောင်းအရာ၊ ကဏ္ဍ (Category) နှင့် အသုံးပြုသည့် ပိုက်ဆံအိတ် (Wallet) တို့ကို ရွေးချယ်ပါ။',
-        'လိုအပ်ပါက ရက်စွဲပြောင်းခြင်း၊ မှတ်စုရေးခြင်း၊ ကဏ္ဍခွဲများ (Subcategories) နှင့် စလစ်/ပြေစာ ပုံများ ပူးတွဲထည့်သွင်းနိုင်ပါသည်။',
+        'လိုအပ်ပါက ရက်စွဲပြောင်းခြင်း၊ မှတ်စုရေးခြင်းနှင့် ကဏ္ဍခွဲများ (Subcategories) ကို ထည့်သွင်းနိုင်ပါသည်။',
       ] : [
-        'Tap "+ New Record" or the floating action button at the bottom right.',
+        'Tap the gold coin button in the centre of the bottom bar, the "Income" / "Expense" buttons on the Dashboard, or the "Add" button on the Transactions page.',
         'Select Income or Expense transaction type.',
         'Enter amount, title, category, and target wallet.',
-        'Optionally customize transaction date, subcategory, detailed notes, or receipt images.',
+        'Optionally customize transaction date, subcategory, and detailed notes.',
       ],
     },
     {
@@ -172,11 +215,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       icon: HandCoins,
       steps: lang === 'my' ? [
         '"အကြွေးစာရင်း" Menu သို့ သွား၍ "ရရန်ရှိအကြွေး" (ငွေထုတ်ချေးထားခြင်း) သို့မဟုတ် "ပေးရန်ရှိအကြွေး" (ငွေချေးယူထားခြင်း) ထည့်သွင်းပါ။',
-        'အကြွေးရှင်/အကြွေးယူသူ အမည်၊ ပမာဏ၊ တောင်းဆိုရမည့်/ဆပ်ရမည့် ရက်စွဲ (Due Date) နှင့် အတိုးနှုန်းများကို သတ်မှတ်နိုင်သည်။',
+        'အကြွေးရှင်/အကြွေးယူသူ အမည်၊ ပမာဏ၊ တောင်းဆိုရမည့်/ဆပ်ရမည့် ရက်စွဲ (Due Date) နှင့် မှတ်စုတို့ကို သတ်မှတ်နိုင်သည်။',
         'ရက်လွန်နေသည့် အကြွေးများကို စနစ်မှ Red Alert သတိပေးချက်များဖြင့် ပေါ်လွင်စွာ ပြသပေးပါသည်။',
       ] : [
         'Navigate to the Debts tab and add "Receivable" (money owed to you) or "Payable" (money you owe).',
-        'Set debtor/creditor name, principal amount, optional interest, and target due date.',
+        'Set debtor/creditor name, amount, target due date, and an optional note.',
         'Overdue debts are highlighted with clear urgency badges.',
       ],
     },
@@ -185,11 +228,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       title: lang === 'my' ? '၂။ အကြွေး အပိုင်းလိုက် ဆပ်ခြင်း (Partial Repayment)' : '2. Partial & Full Debt Repayments',
       icon: CheckCircle2,
       steps: lang === 'my' ? [
-        'အကြွေးကဒ်ပေါ်ရှိ "+ ပြန်ဆပ်မည်" ခလုတ်ကို နှိပ်ပါ။',
+        'အကြွေးကဒ်ပေါ်ရှိ "+ ငွေဆပ်မည်" (ရရန်ရှိအကြွေးဆိုလျှင် "+ ငွေပြန်လက်ခံမည်") ခလုတ်ကို နှိပ်ပါ။',
         'ပြန်ဆပ်သည့် ပမာဏနှင့် လက်ခံရရှိသည့်/ပေးချေသည့် ပိုက်ဆံအိတ် (Wallet) ကို ရွေးပါ။',
         'အကြွေးကျန် ပမာဏ အလိုအလျောက် လျော့နည်းသွားမည်ဖြစ်ပြီး ပိုက်ဆံအိတ်ထဲသို့ ငွေစာရင်း အလိုအလျောက် ဝင်/ထွက် သွားမည် ဖြစ်ပါသည်။',
       ] : [
-        'Click "+ Repay" on any debt record.',
+        'Click "+ Make Payment" (or "+ Receive Payment" for a receivable) on any debt record.',
         'Enter partial or full repayment amount and select the destination wallet.',
         'Remaining balance updates automatically and generates a corresponding wallet transaction.',
       ],
@@ -240,12 +283,12 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
         'Wallet တစ်ခုချင်းစီတွင် "စုစုပေါင်းထဲ ရောပြမည် (In Totals)" သို့မဟုတ် "စုစုပေါင်းထဲ မရောပါ (သီးသန့် - Separate)" ကို လွတ်လပ်စွာ သတ်မှတ်နိုင်ပါသည်။',
         'Wallet ကတ်ပေါ်ရှိ "📊 စုစုပေါင်းထဲ ရောမည်" သို့မဟုတ် "🚫 စုစုပေါင်းထဲ မရောပါ" Badge လေးကို တစ်ချက်နှိပ်ရုံဖြင့် အလွယ်တကူ ပြောင်းလဲနိုင်ပါသည်။',
         'သီးသန့်ခွဲထားသော Wallet များ၏ ငွေပမာဏကို ပင်မ Dashboard ရှိ စုစုပေါင်းထဲတွင် မရောနှောဘဲ သီးခြားခွဲထုတ် တွက်ချက်ပြသပေးပါသည်။',
-        'Dashboard ထိပ်တွင် "📊 ရောထားသည်"၊ "🚫 သီးသန့် (မရောပါ)"၊ "🌟 အားလုံး" ခလုတ်များဖြင့် မည်သည့် အကောင့်များ၏ စာရင်းကို ကြည့်မည်ကို အချိန်မရွေး ပြောင်းလဲစစ်ဆေးနိုင်ပါသည်။',
+        'ပိုက်ဆံအိတ်များ စာမျက်နှာထိပ်ရှိ "📊 စုစုပေါင်းထဲ ရောမည်" / "🚫 သီးသန့် မရောပါ" ခလုတ်များဖြင့် ရောထားသော အိတ်များ သို့မဟုတ် သီးသန့်အိတ်များကိုသာ ရွေးကြည့်နိုင်ပါသည်။',
       ] : [
         'Configure each wallet individually as "Include in Net Totals" or "Separate (Isolated from Net Balance)".',
         'Click directly on the "📊 In Totals" / "🚫 Separate" badge on any wallet card to quickly toggle its status.',
         'Balances of separate wallets are excluded from the main Dashboard Net Funds to avoid mixing private or specific budgets.',
-        'Use the top scope filters on Dashboard ("[📊 In Totals] [🚫 Separate] [🌟 All]") to examine merged or isolated account figures anytime.',
+        'Use the "📊 In Totals" / "🚫 Separate" filters at the top of the Wallets page to view only included or only separate wallets.',
       ],
     },
     {
@@ -272,7 +315,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
         'Wallet ပိုင်ရှင် (Owner) သည် ဖိတ်ခေါ်ထားသော အီးမေးလ်တစ်ခုချင်းစီအတွက် လုပ်ပိုင်ခွင့် (၆) မျိုးကို စိတ်ကြိုက် On/Off သတ်မှတ်နိုင်ပါသည်:',
         '• ဝင်ငွေ (Income) ဆိုင်ရာ: အသစ်ထည့်ခွင့် (Add) ၊ ပြင်ဆင်ခွင့် (Edit) ၊ ဖျက်ခွင့် (Delete)',
         '• ထွက်ငွေ (Expense) ဆိုင်ရာ: အသစ်ထည့်ခွင့် (Add) ၊ ပြင်ဆင်ခွင့် (Edit) ၊ ဖျက်ခွင့် (Delete)',
-        'လျင်မြန်စွာ ရွေးချယ်နိုင်ရန် "အပြည့်အစုံ (Full Access)", "အသစ်သာ ထည့်ခွင့် (Add Only)", "ကြည့်ရှုခွင့်သာ (Read Only)" အသင့်သုံးခလုတ်များကိုလည်း အသုံးပြုနိုင်ပါသည်။',
+        'လျင်မြန်စွာ ရွေးချယ်နိုင်ရန် "အပြည့်အဝခွင့်ပြု (Full Access)", "ထည့်ခွင့်သာ (Add Only)", "ဖတ်ရှုသာ (Read Only)" အသင့်သုံးခလုတ်များကိုလည်း အသုံးပြုနိုင်ပါသည်။',
         'ပိုင်ရှင်မှ ပိတ်ထားသော အခွင့်အရေးများအတွက် အဖွဲ့ဝင်၏ မျက်နှာပြင်တွင် သော့ခတ် (Lock 🔒) ပြထားပြီး ခွင့်ပြုချက်မရှိဘဲ စာရင်းသွင်းခြင်း/ပြင်ခြင်း/ဖျက်ခြင်းများကို စနစ်မှ တားမြစ်ထားပါသည်။',
       ] : [
         'The Wallet Owner can customize 6 distinct permissions independently for each collaborator:',
@@ -303,11 +346,13 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       title: lang === 'my' ? '၁။ လစဉ် ဘတ်ဂျက် ကန့်သတ်ချက်များ သတ်မှတ်ခြင်း' : '1. Setting Monthly Category Budgets',
       icon: PieChart,
       steps: lang === 'my' ? [
-        '"ဘတ်ဂျက်နှင့် စာရင်းဇယား" Menu တွင် ကဏ္ဍတစ်ခုချင်းစီအတွက် လစဉ် သုံးစွဲနိုင်သော ဘတ်ဂျက်ပမာဏ သတ်မှတ်နိုင်သည်။',
-        'သုံးစွဲမှု ၇၅% သို့မဟုတ် ၁၀၀% ကျော်လွန်ပါက သတိပေးချက်များ (Warning & Overbudget) အလိုအလျောက် ပြသပေးပါသည်။',
+        '"ဘတ်ဂျက်" Tab တွင် ဘတ်ဂျက်အသစ် ဖန်တီး၍ ကဏ္ဍ တစ်ခုထက်ပို၍ ရွေးနိုင်သည် — ရွေးထားသော ကဏ္ဍအားလုံး၏ သုံးစွဲမှုကို ပေါင်း၍ ဘတ်ဂျက်တစ်ခုတည်းဖြင့် ထိန်းချုပ်ပါမည်။ ကဏ္ဍတစ်ခုသည် ဘတ်ဂျက်တစ်ခုတွင်သာ ပါဝင်နိုင်သည်။',
+        'ဘတ်ဂျက်ကို ငွေပမာဏ အတိအကျ (သို့မဟုတ်) လဝင်ငွေ၏ ရာခိုင်နှုန်း အဖြစ် သတ်မှတ်နိုင်သည်။',
+        'သုံးစွဲမှု ၈၀% ရောက်လျှင် "၈၀% ရောက်ရှိ" (Near Limit) သတိပေးချက် ပေါ်ပြီး၊ ၁၀၀% ကျော်လျှင် "ဘတ်ဂျက်ကျော်လွန်" (Over Budget) ဖြစ်သွားပါမည်။',
       ] : [
-        'Set monthly spending budgets for individual categories (e.g., Food, Transportation, Shopping).',
-        'Receive automated visual warnings when approaching or exceeding category budget limits.',
+        'Open the "Budget" tab and create a budget — you can pick MORE than one category for a single budget; spending across all selected categories is controlled by that one budget. Each category can belong to only one budget.',
+        'Set a budget as a fixed amount or as a percentage of monthly income.',
+        'At 80% spent you will see a "Near Limit" warning; above 100% it becomes "Over Budget".',
       ],
     },
     {
@@ -316,10 +361,10 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       icon: TrendingUp,
       steps: lang === 'my' ? [
         'လစဉ် စုဆောင်းလိုသော ငွေပမာဏ (Monthly Savings Target) ကို သတ်မှတ်၍ ပြည့်မီမှု ရာခိုင်နှုန်းကို စောင့်ကြည့်နိုင်ပါသည်။',
-        'လအလိုက် သုံးစွဲမှု နှိုင်းယှဉ်ချက် Bar Charts များနှင့် ကဏ္ဍအလိုက် ရာခိုင်နှုန်းခွဲခြားချက် ရောင်စုံ Pie Charts များကို ကြည့်ရှုနိုင်ပါသည်။',
+        'လအလိုက် သုံးစွဲမှု နှိုင်းယှဉ်ချက် Bar Charts များနှင့် ကဏ္ဍအလိုက် ရာခိုင်နှုန်းခွဲခြားချက် ရောင်စုံ Pie Charts များကို "အစီရင်ခံစာ" (Reports) Tab တွင် ကြည့်ရှုနိုင်ပါသည်။',
       ] : [
         'Configure a monthly savings target amount and track progress percentages live on Dashboard.',
-        'Explore monthly comparison charts and visual category breakdown pie charts.',
+        'Explore monthly comparison charts and visual category breakdown pie charts in the "Reports" tab.',
       ],
     },
     {
@@ -335,7 +380,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
         '🟠 လိမ္မော်ရောင် (Orange): ၄၀% – ၅၉% သုံးစွဲမှု များပြားနေ၍ ချွေတာရန် လိုအပ်ချိန် (Warning Alert)',
         '🔴 အနီရောင် (Red): ၄၀% အောက် အသုံးစရိတ် အန္တရာယ်ရှိနေချိန် (Critical Alert)',
         '⬛🔴 အနက်နှင့် အနီရောင် (Dark Crimson/Black): အသုံးစရိတ်က ဝင်ငွေထက် ကျော်လွန်၍ အနှုတ်ပြနေချိန် (Severe Deficit Alert)',
-        '"အသေးစိတ် သုံးသပ်ချက်" ခလုတ်ကို နှိပ်၍ အဆင့် ၇ ဆင့် ဇယားနှင့် ကျန်းမာရေးမြှင့်တင်ရန် အကြံပြုချက်များကို အပြည့်အစုံ ကြည့်ရှုနိုင်ပါသည်။',
+        'ငွေကြေးကျန်းမာမှု ကတ် (Banner) ကို နှိပ်၍ အဆင့် ၇ ဆင့် ဇယားနှင့် ကျန်းမာရေးမြှင့်တင်ရန် အကြံပြုချက်များကို အပြည့်အစုံ ကြည့်ရှုနိုင်ပါသည်။ စာရင်း မရှိသေးလျှင် အဆင့်အစား မီးခိုးရောင် "ဒေတာ မရှိသေးပါ" အဖြစ် ပြသပါမည်။',
       ] : [
         'Budget & Analytics features an automated 7-tier financial health scoring algorithm based on your income, expense, and savings ratios.',
         '🌟 Purple Glow: Exceptional performance well beyond monthly savings target (Super Surplus).',
@@ -345,7 +390,121 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
         '🟠 Orange: 40% – 59% warning zone indicating elevated discretionary spending (Warning Alert).',
         '🔴 Red: Below 40% critical threshold requiring immediate budget cutbacks (Critical Alert).',
         '⬛🔴 Dark Crimson / Black: Spending exceeds income resulting in a cash deficit (Severe Deficit Alert).',
-        'Click "Detailed Health Breakdown" to view the interactive tier comparison chart and personalized financial tips.',
+        'Tap the Financial Health banner/card to view the tier comparison chart and personalized financial tips. With no records yet it shows a grey "no data" state instead of a score.',
+      ],
+    },
+    {
+      categoryId: 'budgets',
+      title: lang === 'my' ? '၄။ ဈေးနှုန်း နှိုင်းယှဉ်ခြင်း (Compare Price)' : '4. Compare Price',
+      icon: TrendingUp,
+      steps: lang === 'my' ? [
+        '"ဈေးနှုန်း နှိုင်းယှဉ်" (Compare Price) Tab တွင် ပစ္စည်းတစ်ခုချင်းစီ၏ ဈေးအနိမ့်ဆုံး ဆိုင်နှင့် ဈေးနှုန်း သမိုင်းကို ကြည့်နိုင်သည်။',
+        'ပစ္စည်းအမည်ကို အမြဲ တစ်ပုံစံတည်း ရေးပါ — စာလုံးကွဲရင် ပစ္စည်းကွဲအဖြစ် မှတ်ပါတယ် (အရေအတွက်နဲ့ ယူနစ် ကွာတာတော့ စနစ်က သူ့အလိုလို ညှိပေးပါတယ်)။',
+        'ဈေးနှုန်း နှိုင်းယှဉ်ခြင်းသည် Guest Mode တွင် သုံးလို့ မရပါ — Google/Email အကောင့်ဖြင့် ဝင်ရန် လိုအပ်ပါသည်။',
+      ] : [
+        'In the "Compare Price" tab, see the cheapest shop for each item and its price history.',
+        'Always write an item name the same way — a different spelling is treated as a different item (quantities and units are normalized automatically).',
+        'Compare Price is locked in Guest Mode — sign in with Google/Email to use it.',
+      ],
+    },
+    {
+      categoryId: 'plans',
+      title: lang === 'my' ? '၁။ အစီအစဉ် ကန့်သတ်ချက်များ (Guest / Free / Premium)' : '1. Plan Limits (Guest / Free / Premium)',
+      icon: ShieldCheck,
+      steps: lang === 'my' ? [
+        'Guest: တစ်လ စာရင်း ၁၅ ခု အထိသာ ရေးသွင်းနိုင်သည်။ အကြွေးစာရင်း၊ ဘတ်ဂျက်၊ စုဆောင်းငွေ၊ Export တို့ကို သုံးလို့ မရပါ။ ပိုက်ဆံအိတ် ၁ ခုသာ ထားနိုင်သည်။',
+        'Free (Google/Email အကောင့်ဖြင့် ဝင်ထားသူ): တစ်လ စာရင်း ၁၅၀ အထိ ရေးသွင်းနိုင်သည်။ အကြွေး ၅ ခု၊ ပိုက်ဆံအိတ် ၂ ခု၊ ဘတ်ဂျက် ကဏ္ဍ ၅ ခု အထိ ရသည်။ Export (Excel/JSON) မရပါ။',
+        'စာရင်း ကန့်သတ်ချက်သည် ပြက္ခဒိန် တစ်လချင်း ဖြစ်ပြီး လ၏ ၁ ရက်နေ့တွင် ပြန်စပါသည်။',
+        'Premium: ကန့်သတ်ချက် မရှိပါ — စာရင်းအကန့်အသတ်မရှိ၊ Export ရသည်၊ ကိုယ်ပိုင် ကဏ္ဍ ထည့်နိုင်သည်။',
+      ] : [
+        'Guest: up to 15 transactions per month. No debts, budgets, savings, or export. 1 wallet only.',
+        'Free (signed in with Google/Email): up to 150 transactions per month, 5 debts, 2 wallets, 5 budget categories. No export (Excel/JSON).',
+        'The transaction limit counts per calendar month and resets on the 1st.',
+        'Premium: no limits — unlimited transactions, export, and custom categories.',
+      ],
+    },
+    {
+      categoryId: 'plans',
+      title: lang === 'my' ? '၂။ Premium ဝယ်ယူနည်း (ဈေးနှုန်းနှင့် Activation Code)' : '2. Getting Premium (Prices & Activation Code)',
+      icon: Crown,
+      steps: lang === 'my' ? [
+        '"ဈေးနှုန်း" (Plans) စာမျက်နှာတွင် Premium ဈေးနှုန်းများကို ကြည့်နိုင်သည် — ၁ လ ၂,၀၀၀ ကျပ်၊ ၁၂ လ ၂၀,၀၀၀ ကျပ်။',
+        'အကောင့်ဖွင့်ပြီး ရက် ၃၀ အတွင်းဆိုလျှင် ၃ လ အခမဲ့ Premium Trial ကို ရယူနိုင်ပါသည်။',
+        'KBZPay/WavePay ဖြင့် ငွေပေးချေပြီး Admin ထံမှ ရသော Activation Code ကို ထည့်သွင်းကာ Premium ဖွင့်နိုင်ပါသည်။',
+      ] : [
+        'See Premium prices on the "Plans" page — 2,000 MMK for 1 month, 20,000 MMK for 12 months.',
+        'Within 30 days of creating your account you can claim a 3-month free Premium trial.',
+        'Or pay with KBZPay/WavePay and enter the Activation Code you receive from Admin to unlock Premium.',
+      ],
+    },
+    {
+      categoryId: 'categories',
+      title: lang === 'my' ? '၁။ ကဏ္ဍနှင့် ကဏ္ဍခွဲများ စီမံခန့်ခွဲခြင်း' : '1. Managing Categories & Subcategories',
+      icon: Tags,
+      steps: lang === 'my' ? [
+        'Sidebar ရှိ "ကဏ္ဍနှင့် ကဏ္ဍခွဲများ" တွင် ဝင်ငွေ/ထွက်ငွေ ကဏ္ဍများနှင့် ကဏ္ဍခွဲများကို ကြည့်ရှုနိုင်သည်။',
+        'ကဏ္ဍအသစ် ထည့်ခြင်း၊ အမည်ပြောင်းခြင်း၊ ဖျက်ခြင်း တို့ကို ပြုလုပ်နိုင်သည် — ကိုယ်ပိုင် ကဏ္ဍ (Custom Category) အသစ် ထပ်တိုးခြင်းသည် Premium အတွက်သာ ဖြစ်ပါသည်။',
+        'စာရင်း ရေးသွင်းချိန်တွင် ကဏ္ဍနှင့် ကဏ္ဍခွဲကို ရွေးချယ်ပေးရမည် — အစီရင်ခံစာနှင့် ဘတ်ဂျက်တို့သည် ကဏ္ဍအပေါ် အခြေခံ၍ တွက်ချက်ပါသည်။',
+      ] : [
+        'Open "Categories & Subcategories" in the Sidebar to see all income/expense categories and subcategories.',
+        'Add, rename, or delete categories — adding your own custom categories is Premium-only.',
+        'Pick a category and subcategory when recording a transaction — reports and budgets are calculated by category.',
+      ],
+    },
+    {
+      categoryId: 'vehicles',
+      title: lang === 'my' ? '၁။ ယာဉ်၊ ဆီစာရင်းနှင့် ထိန်းသိမ်းမှု' : '1. Vehicles, Fuel Logs & Maintenance',
+      icon: Car,
+      steps: lang === 'my' ? [
+        'Sidebar ရှိ "ယာဉ်စီမံခန့်ခွဲမှု" တွင် မိမိ၏ ယာဉ် (ကား/ဆိုင်ကယ်) များကို ထည့်သွင်းနိုင်သည် — Guest/Free အကောင့်တွင် ၁ စီးသာ ရသည်။',
+        '"ဆီဖြည့်မည်" ဖြင့် ဆီဖြည့်တိုင်း ရက်စွဲ၊ ဆီပမာဏ၊ ဈေးနှုန်းနှင့် ကီလိုမီတာ မှတ်နိုင်ပြီး ဆီစားနှုန်းနှင့် ဆီဈေး ပြောင်းလဲမှုကို ဂရပ်ဖြင့် ကြည့်နိုင်သည်။',
+        'ထိန်းသိမ်းမှု မှတ်တမ်းများ (ဥပမာ အင်ဂျင်ဝိုင် လဲခြင်း) နှင့် တာယာ လေပေါင်ကိုလည်း မှတ်နိုင်သည်။',
+      ] : [
+        'Add your vehicles (car/motorbike) under "Vehicle Management" in the Sidebar — Guest/Free accounts get 1 vehicle.',
+        'Log every fuel fill-up with date, amount, price, and odometer to track fuel consumption and price trends on a chart.',
+        'Record maintenance (e.g. engine oil changes) and tyre pressure too.',
+      ],
+    },
+    {
+      categoryId: 'shops',
+      title: lang === 'my' ? '၁။ ဆိုင်လိပ်စာ ရှာဖွေခြင်းနှင့် သိမ်းဆည်းခြင်း' : '1. Finding & Saving Shops',
+      icon: Store,
+      steps: lang === 'my' ? [
+        'Sidebar ရှိ "ဆိုင်လိပ်စာ" တွင် ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် တို့ဖြင့် ဆိုင်များကို ရှာဖွေနိုင်သည်။',
+        'မိမိ အသုံးပြုသော ဆိုင်ကို "+ ဆိုင်အသစ် ထည့်သွင်းမည်" ဖြင့် ကိုယ်ပိုင် ဆိုင်လိပ်စာအဖြစ် သိမ်းထားနိုင်သည် — ကိုယ်ပိုင်ဆိုင် သိမ်းဆည်းခြင်းသည် Premium အတွက်သာ ဖြစ်ပါသည်။',
+        'ဆိုင်အချက်အလက် အသစ် ထည့်သွင်းပေးခြင်းဖြင့် အခြားသူများလည်း ထိုဆိုင်ကို ရှာတွေ့နိုင်ပါသည်။',
+      ] : [
+        'Find shops by name, phone, KPay, or township in "Shops & Addresses" in the Sidebar.',
+        'Save a shop you use with "+ Add Shop" as your own shop contact — saving personal shops is Premium-only.',
+        'You can also submit a new shop so other users can find it.',
+      ],
+    },
+    {
+      categoryId: 'education',
+      title: lang === 'my' ? '၁။ ပညာပေး ဆောင်းပါးများ ဖတ်ရှုခြင်း' : '1. Reading Financial Literacy Articles',
+      icon: GraduationCap,
+      steps: lang === 'my' ? [
+        'Home က Quick Access က "ပညာပေး" ကို ဖွင့်လျှင် ငွေကြေး ပညာပေး ဆောင်းပါးများကို ဖတ်နိုင်သည်။',
+        'ဆောင်းပါးများကို အမျိုးအစားအလိုက် ရွေးဖတ်နိုင်ပြီး၊ ရှာဖွေနိုင်ကာ၊ ကြိုက်သော ဆောင်းပါးကို Bookmark သိမ်းထားနိုင်သည်။',
+        'ဆောင်းပါးတိုင်းတွင် အဓိက မှတ်သားဖွယ်ရာများ (Key Takeaways) ပါဝင်သည်။',
+      ] : [
+        'Open "Learn" from the Home Quick Access tiles to read financial literacy articles.',
+        'Browse by category, search articles, and bookmark the ones you like.',
+        'Every article ends with key takeaways.',
+      ],
+    },
+    {
+      categoryId: 'feedback',
+      title: lang === 'my' ? '၁။ အကြံပြုချက် ပေးပို့ခြင်း' : '1. Sending Feedback',
+      icon: MessageCircle,
+      steps: lang === 'my' ? [
+        'Home က Quick Access က "အကြံပြုချက်" ကို ဖွင့်လျှင် အက်ပ်အပေါ် အကြံပြုချက် ပေးနိုင်သည်။',
+        'ကြယ် (Star) ၁–၅ လုံးဖြင့် အဆင့်သတ်မှတ်ပြီး၊ အမျိုးအစားရွေးကာ၊ စာဖြင့် အကြံပြုချက် ရေးပို့နိုင်သည်။',
+        'ပေးပို့ပြီးသော အကြံပြုချက်များနှင့် Admin ၏ အကြောင်းပြန်ချက်များကို ထိုစာမျက်နှာတွင် ပြန်ကြည့်နိုင်သည်။',
+      ] : [
+        'Open "Feedback" from the Home Quick Access tiles to share feedback about the app.',
+        'Rate with 1–5 stars, pick a category, and write your feedback.',
+        'You can review your submitted feedback and the Admin replies on the same page.',
       ],
     },
     {
@@ -354,10 +513,12 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       icon: FileSpreadsheet,
       steps: lang === 'my' ? [
         'Google Sign-In ဝင်ထားသူများ၏ စာရင်းများအားလုံးသည် Cloud မမ်မိုရီ ပေါ်သို့ အလိုအလျောက် အမြဲ သိမ်းဆည်းပေးပါသည်။',
-        '"ဒေတာ စီမံခန့်ခွဲမှု" Menu တွင် မိမိ၏ စာရင်းများအားလုံးကို Excel (.xlsx) သို့မဟုတ် JSON ဖိုင်အဖြစ် ဖုန်းထဲသို့ ထုတ်ယူနိုင်ပါသည်။',
+        '"အစီရင်ခံစာ" (Reports) Tab ထဲက "Excel / CSV ထုတ်ယူမည်" ခလုတ်ဖြင့် စာရင်းများကို Excel/CSV ဖိုင်အဖြစ် ထုတ်ယူနိုင်သည် — Premium အသုံးပြုသူများသာ ရပါသည်။',
+        '"ဒေတာ စီမံခန့်ခွဲမှု" (Data Management) ထဲက "JSON Backup သိမ်းမည်" ဖြင့်လည်း ဒေတာအပြည့်အစုံကို JSON ဖိုင်အဖြစ် သိမ်းနိုင်သည် — ဒါလည်း Premium အတွက်သာ ဖြစ်ပါသည်။',
       ] : [
         'Data auto-syncs securely in background for Google signed-in users.',
-        'Export full financial histories to Excel (.xlsx) or JSON files anytime in Data Management.',
+        'Export spending data to Excel/CSV with the "Export CSV" button in the "Reports" tab — Premium only.',
+        'Or save a full JSON backup from "Data Management" ("Export Backup") — also Premium only.',
       ],
     },
     {
@@ -366,10 +527,10 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       icon: Lock,
       steps: lang === 'my' ? [
         'အက်ပလီကေးရှင်း ဖွင့်ချိန်တိုင်း သူတစ်ပါး မမြင်ရစေရန် ၄-လုံးပါ PIN Code သော့ ခတ်ထားနိုင်ပါသည်။',
-        'Sidebar ရှိ "PIN သော့" Menu သို့မဟုတ် Account Settings တွင် အချိန်မရွေး ဖွင့်/ပိတ်/ပြောင်းလဲနိုင်ပါသည်။',
+        'အကောင့် (Account) စာမျက်နှာထဲက "လျှို့ဝှက်နံပါတ် ဖွင့်မည်" (App PIN Lock) တွင် အချိန်မရွေး ဖွင့်/ပိတ်/ပြောင်းလဲနိုင်ပါသည်။ Sidebar အောက်ခြေက သော့ပုံခလုတ် ("အက်ပ်ကို လော့ခ်ချမည်") ကို နှိပ်လျှင်လည်း အက်ပ်ကို ချက်ချင်း လော့ခ်ချနိုင်ပါသည်။',
       ] : [
         'Protect app privacy with a custom 4-digit PIN lock screen on app startup.',
-        'Enable, update, or disable PIN lock via Sidebar or Account Modal.',
+        'Enable, update, or disable the PIN in the Account page under "App PIN Lock". The lock icon at the bottom of the Sidebar ("Lock App") locks the app immediately.',
       ],
     },
     {
@@ -379,11 +540,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       steps: lang === 'my' ? [
         'ငွေစာရင်း အက်ပ်သည် Local-First Offline-First စနစ်ဖြင့် တည်ဆောက်ထားသဖြင့် VPN ဖွင့်ထားချိန် သို့မဟုတ် အင်တာနက် လိုင်းကျနေချိန်တွင်လည်း ဒေတာများ လုံးဝ မပျောက်ပျက်ပါ။',
         'VPN လိုင်းမငြိမ်ပါက စက်ထဲ၌ Instant Auto-Save စနစ်ဖြင့် ချက်ချင်း သိမ်းထားမည်ဖြစ်ပြီး VPN လိုင်းပြန်ကောင်းချိန်မှ Cloud သို့ နောက်ကွယ်မှ အလိုအလျောက် Sync ပြုလုပ်ပေးပါသည်။',
-        'VPN ပိတ်/ဖွင့် ပြုလုပ်ပါက သို့မဟုတ် လိုင်းမငြိမ်ပါက Account Menu မှ "ခလုတ်တစ်ချက်ဖြင့် Cloud Sync ပြုလုပ်မည်" ကို နှိပ်၍ အချိန်မရွေး ပြန်လည် ချိတ်ဆက်နိုင်ပါသည်။',
+        'VPN ပိတ်/ဖွင့် ပြုလုပ်ပါက သို့မဟုတ် လိုင်းမငြိမ်ပါက Sidebar ထဲက "🔄 ကိုယ်တိုင် Cloud Sync ပြုလုပ်မည်" ကို နှိပ်၍ အချိန်မရွေး ပြန်လည် ချိတ်ဆက်နိုင်ပါသည်။',
       ] : [
         'NgweSarYin uses Local-First Offline architecture, ensuring zero data loss even if your VPN drops or fluctuates.',
         'When your VPN is slow, entries save instantly to local storage first, then sync to Cloud automatically when connected.',
-        'If switching VPN servers, click "1-Click Cloud Sync" in Account Modal anytime to refresh sync status.',
+        'If switching VPN servers, tap "🔄 Force Manual Cloud Sync" in the Sidebar anytime to refresh sync status.',
       ],
     },
     {
@@ -421,9 +582,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       steps: lang === 'my' ? [
         '"ဒေတာ စီမံခန့်ခွဲမှု" ကဏ္ဍတွင် "JSON Backup သိမ်းမည်" (Export Backup) ကို နှိပ်၍ မိမိ၏ စာရင်းဒေတာအားလုံးကို ဖိုင်အဖြစ် ကွန်ပျူတာ သို့မဟုတ် ဖုန်းထဲသို့ ဒေါင်းလုဒ်ဆွဲထားနိုင်ပါသည်။',
         'နောင်တစ်ချိန်တွင် ထိုဒေတာများကို ပြန်လည်အသုံးပြုလိုပါက "JSON Backup ထည့်မည်" (Import Backup) ကို နှိပ်ပြီး ယခင်သိမ်းထားသော .json ဖိုင်ကို ရွေးချယ်ပေးရုံဖြင့် စာရင်းအားလုံး ချက်ချင်း ပြန်လည်ရောက်ရှိလာမည် ဖြစ်ပါသည်။',
+        'JSON Backup ထုတ်ယူခြင်းသည် Premium အသုံးပြုသူများအတွက်သာ ဖြစ်ပါသည် — Free/Guest အကောင့်ဖြင့် နှိပ်လျှင် "Export သည် Premium အဆင့်အတွက်သာ" ဟု ပြပါမည်။ (ဒေတာအားလုံး ဖျက်ခင် အလိုအလျောက် Backup ဆွဲပေးတာကတော့ အကောင့်တိုင်း ရပါသည်။)',
       ] : [
         'Click "Export Backup" in Data Management to download your complete financial records into a local JSON file.',
         'To restore on any device, click "Import Backup" and select your previously saved .json file to recover all records seamlessly.',
+        'JSON Backup export is Premium-only — Free/Guest accounts will see an "Export is available on Premium only" message. (The automatic backup made right before a full data reset is not gated — every account gets it.)',
       ],
     },
     {

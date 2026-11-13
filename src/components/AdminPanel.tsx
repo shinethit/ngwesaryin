@@ -3,6 +3,7 @@ import {
   collection,
   collectionGroup,
   query,
+  where,
   getDocs,
   getDoc,
   doc,
@@ -13,6 +14,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db, defaultDb, safeSetDoc, safeUpdateDoc, safeDeleteDoc, trackFirestoreReads } from '../lib/firebase';
+import { ShopReport, ShopReportStatus, shopReportReasonLabel } from '../utils/shopReports';
+import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
 import { useAuth, parseExpiryTime } from '../context/AuthContext';
 import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category, PublicShop } from '../types';
 import { INITIAL_CATEGORIES } from '../data/initialData';
@@ -72,6 +75,36 @@ const MASTER_ADMIN_EMAIL = 'khunthanshwe@gmail.com';
 const sortUsersNewestFirst = (users: UserDoc[]): UserDoc[] =>
   [...users].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
+// [v7.5.81] Shop reports, newest first, sorted CLIENT-SIDE. reportedAt
+// is a Date.now() epoch-ms NUMBER (safeSetDoc's cleanForFirestore
+// corrupts serverTimestamp sentinels, so the client writes a number).
+// The Timestamp/string/seconds fallbacks below are only defensive —
+// a number is what is actually stored. (Same lesson as the users list
+// above — a Firestore orderBy would silently exclude docs lacking the
+// field, so the query has no orderBy and sorting is client-side.)
+const shopReportTime = (r: ShopReport): number => {
+  const v = r.reportedAt as unknown;
+  if (!v) return 0;
+  if (typeof (v as { toDate?: unknown }).toDate === 'function') {
+    try { return (v as { toDate: () => Date }).toDate().getTime(); } catch { return 0; }
+  }
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') {
+    const t = Date.parse(v);
+    return Number.isNaN(t) ? 0 : t;
+  }
+  if (typeof (v as { seconds?: unknown }).seconds === 'number') return (v as { seconds: number }).seconds * 1000;
+  return 0;
+};
+const sortShopReportsNewestFirst = (reports: ShopReport[]): ShopReport[] =>
+  [...reports].sort((a, b) => shopReportTime(b) - shopReportTime(a));
+// [v7.5.81] Report date for the admin list ('—' when the report has
+// no usable timestamp, so a fresh report never shows a bogus date).
+const formatShopReportDate = (r: ShopReport): string => {
+  const t = shopReportTime(r);
+  return t ? new Date(t).toLocaleDateString('en-GB') : '—';
+};
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   isOpen,
   onClose,
@@ -100,6 +133,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // [v7.5.64 B-12] Admin audit trail — latest 50 actions (read-only view).
   const [auditLog, setAuditLog] = useState<AdminAuditLogEntry[]>([]);
   const [auditLogError, setAuditLogError] = useState<string | null>(null);
+  // [v7.5.81] Shop reports — pending reports about public shops.
+  const [shopReports, setShopReports] = useState<ShopReport[]>([]);
+  const [shopReportsLoading, setShopReportsLoading] = useState(true);
+  const [shopReportsError, setShopReportsError] = useState<string | null>(null);
+  // [v7.5.81] Id of the report an action is running on (disables both
+  // buttons on every row while one action is in flight — no double taps).
+  const [actingReportId, setActingReportId] = useState<string | null>(null);
   // [wallet-backfill] Prevents double-clicks during the users↔cloud wallet sync
   const [isBackfillingWallets, setIsBackfillingWallets] = useState(false);
 
@@ -610,6 +650,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setAuditLogError(lang === 'my' ? 'Admin လုပ်ဆောင်ချက် မှတ်တမ်းကို ဆွဲယူ၍ မရပါ' : 'Could not load the admin activity log.');
     });
 
+    // 5b. [v7.5.81] Live Shop Reports Listener — pending reports only.
+    // onSnapshot, like the codes/users/messages listeners above, so a
+    // new report appears (and a resolved/dismissed one leaves the list)
+    // without a refresh. No orderBy on purpose: orderBy('reportedAt')
+    // would silently drop docs whose serverTimestamp has not resolved
+    // yet — same lesson as the users list (v7.5.67). Newest-first sort
+    // happens client-side in sortShopReportsNewestFirst.
+    const reportsQuery = query(collection(db, 'shop_reports'), where('status', '==', 'pending'));
+    const unsubShopReports = onSnapshot(reportsQuery, (snapshot) => {
+      const data: ShopReport[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ShopReport));
+      setShopReports(sortShopReportsNewestFirst(data));
+      setShopReportsError(null);
+      setShopReportsLoading(false);
+    }, (err) => {
+      console.warn('Realtime shop reports sync notice:', err);
+      setShopReportsError(lang === 'my' ? 'ဆိုင်အကြောင်း Report များ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပြီး Refresh နှိပ်ပါ' : 'Could not load shop reports — check connection / permissions and tap Refresh.');
+      setShopReportsLoading(false);
+    });
+
 
 
 
@@ -668,6 +727,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       unsubVisitors();
       clearInterval(visitorsTotalCountTimer);
       unsubAuditLog();
+      unsubShopReports();
       unsubSystemTxs();
       unsubSystemWallets();
       unsubSystemCats();
@@ -711,6 +771,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     };
     const pair = labels[action];
     return pair ? (lang === 'my' ? pair[0] : pair[1]) : action;
+  };
+
+  // [v7.5.81] Shop Reports actions. Both only flip the report status —
+  // report docs are NEVER deleted; the live listener drops a resolved /
+  // dismissed report from the pending list on its own. Status writes use
+  // safeUpdateDoc (status field only — no deleteField() sentinel, so the
+  // safeUpdateDoc lesson does not bite here).
+  const handleDismissShopReport = async (report: ShopReport) => {
+    if (!report.id || actingReportId) return;
+    setActingReportId(report.id);
+    try {
+      const ok = await safeUpdateDoc(doc(db, 'shop_reports', report.id), { status: 'dismissed' as ShopReportStatus });
+      if (!ok) {
+        alert(lang === 'my' ? 'Report ကို ပယ်ဖျက်၍ မရပါ — ထပ်ကြိုးစားပါ' : 'Could not dismiss this report — please try again.');
+      }
+    } finally {
+      setActingReportId(null);
+    }
+  };
+
+  const handleDeleteShopFromReport = async (report: ShopReport) => {
+    if (!report.id || actingReportId) return;
+    const confirmMsg = lang === 'my'
+      ? `"${report.shopName}" ဆိုင်ကို ပြည်သူ့လမ်းညွှန်ထဲမှ ဖျက်ပြီး Report ကို ဖြေရှင်းပြီးအဖြစ် မှတ်မည်လား။`
+      : `Delete "${report.shopName}" from the Community Directory and mark this report resolved?`;
+    if (!window.confirm(confirmMsg)) return;
+    setActingReportId(report.id);
+    try {
+      // Same public-shop delete path as ShopsView handleDelete:
+      // safeDeleteDoc(doc(db, 'public_shops', id)). Who can delete is
+      // unchanged — Firestore rules still allow only the shop adder
+      // and admins, and a rejected delete must not look like success.
+      const deleted = await safeDeleteDoc(doc(db, 'public_shops', report.shopId));
+      if (!deleted) {
+        alert(lang === 'my' ? 'ဆိုင်ကို ဖျက်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ဖျက်နိုင်ပါသည်' : 'Could not delete this shop — only the shop adder and admins can delete it');
+        return;
+      }
+      // [v7.5.78 C] Deleted shop — drop any pending details reminder.
+      resolveShopDetailReminder(report.shopName);
+      const ok = await safeUpdateDoc(doc(db, 'shop_reports', report.id), { status: 'resolved' as ShopReportStatus });
+      if (!ok) {
+        alert(lang === 'my' ? 'ဆိုင်ဖျက်ပြီးပါပြီ၊ သို့သော် Report ကို ဖြေရှင်းပြီးအဖြစ် မှတ်၍ မရပါ' : 'Shop deleted, but the report could not be marked resolved.');
+      }
+    } finally {
+      setActingReportId(null);
+    }
   };
 
   // Active dataset of transactions across the entire system (Default sorted newest first by date)
@@ -3450,6 +3556,86 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </ul>
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* [v7.5.81] SHOP REPORTS — pending reports about public shops.
+                Buttons stack vertically on phones (flex-col) and are
+                min 44px tall, so there is no horizontal overflow at 390px. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Store className="w-4 h-4 text-rose-600 shrink-0" />
+                  <h3 className="font-bold text-sm text-slate-800 truncate">
+                    {lang === 'my' ? 'ဆိုင်အကြောင်း Report များ' : 'Shop Reports'}
+                  </h3>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold shrink-0 border ${shopReports.length > 0 ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                  {shopReportsLoading
+                    ? '…'
+                    : lang === 'my'
+                      ? `စောင့်ဆိုင်းဆဲ ${shopReports.length} ခု`
+                      : `Pending ${shopReports.length}`}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {lang === 'my'
+                  ? 'အသုံးပြုသူများ တင်ပြထားသော ဆိုင်အချက်အလက် မှားယွင်းမှု Report များ — ဆိုင်ဖျက်မလား၊ ပယ်ဖျက်မလား ဆုံးဖြတ်ပါ။'
+                  : 'Reports from users about wrong shop details — delete the shop or dismiss the report.'}
+              </p>
+              {shopReportsLoading ? (
+                <p className="text-xs text-slate-500 mt-3">
+                  {lang === 'my' ? 'Report များ ဆွဲယူနေသည်...' : 'Loading reports...'}
+                </p>
+              ) : shopReportsError ? (
+                <div className="mt-3 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{shopReportsError}</span>
+                </div>
+              ) : shopReports.length === 0 ? (
+                <p className="text-xs text-slate-400 mt-3">
+                  {lang === 'my' ? 'Report မရှိသေးပါ' : 'No reports.'}
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {shopReports.map((report) => (
+                    <li key={report.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-slate-800 break-words">{report.shopName}</div>
+                        <div className="text-xs text-slate-600 mt-0.5 break-words">
+                          {shopReportReasonLabel(report.reason, lang)}
+                          {' · '}
+                          {(report.reportedBy || '').split('@')[0] || '—'}
+                          {' · '}
+                          {formatShopReportDate(report)}
+                        </div>
+                        {report.note ? (
+                          <div className="text-xs text-slate-500 mt-1 break-words">“{report.note}”</div>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteShopFromReport(report)}
+                          disabled={actingReportId !== null}
+                          className="flex-1 min-h-[44px] px-3 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-50 cursor-pointer"
+                        >
+                          {actingReportId === report.id
+                            ? (lang === 'my' ? 'လုပ်ဆောင်နေသည်...' : 'Working...')
+                            : (lang === 'my' ? 'ဆိုင်ဖျက်မယ်' : 'Delete shop')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissShopReport(report)}
+                          disabled={actingReportId !== null}
+                          className="flex-1 min-h-[44px] px-3 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 disabled:opacity-50 cursor-pointer"
+                        >
+                          {lang === 'my' ? 'ပယ်ဖျက်မယ်' : 'Dismiss'}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>

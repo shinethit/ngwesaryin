@@ -1,17 +1,13 @@
 {
-  "version": "v7.5.80",
-  "buildNumber": 295,
+  "version": "v7.5.81",
+  "buildNumber": 296,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဆိုင်လိပ်စာ Tab ကို ပိုလှအောင် ပြင်လိုက်ပါတယ် — အမျိုးအစား စစ်ထုတ်တာ နေရာသိပ်မယူတော့ဘူး၊ ဆိုင်တွေ ချက်ချင်း မြင်ရတယ်။",
-    "ဆိုင်လိပ်စာ Tab ဝင်တာ ပိုမြန်လာတယ် — ဆိုင်တွေ အကုန်လုံး တစ်ခါတည်း မပြတော့ဘူး၊ အနည်းငယ်စီ ပြပြီး လိုအပ်မှ ထပ်ပြတယ်။",
-    "ဆိုင်ကတ်တွေကို ပိုလှအောင် ပြင်လိုက်ပါတယ်။",
-    "ဆိုင်ထည့်တဲ့ Form ထဲက မျဉ်းကြောင်းတွေ အမှောင်ကြီး မဖြစ်တော့ဘူး — နူးညံ့တဲ့ မျဉ်းလေး ဖြစ်သွားပါတယ်။"
+    "ဆိုင်ကတ်မှာ Report ခလုတ် ပါလာပြီ — ဆိုင်ပိတ်သွားတာ၊ လိပ်စာမှားတာ စတာတွေကို အကြောင်းကြားလို့ရပြီ။",
+    "တင်ထားတဲ့ Report တွေကို စစ်ဆေးပြီး ဆိုင်ဖျက်တာ / Report ပယ်တာ လုပ်နိုင်ပြီ။"
   ],
   "changesEn": [
-    "Made the Shops tab look cleaner — the category filter takes far less space, so shops are visible right away.",
-    "The Shops tab now opens faster — shops load in small batches instead of all at once.",
-    "Shop cards look cleaner and prettier.",
-    "The dividers in the shop form are now soft light lines instead of dark heavy ones."
+    "Shop cards now have a Report button — flag a closed shop, a wrong address, and more.",
+    "Reports can now be reviewed — delete the shop or dismiss the report."
   ]
 }

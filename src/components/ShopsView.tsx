@@ -13,6 +13,8 @@ import {
 import { MYANMAR_REGIONS, PRESET_TAGS } from './shops/shopConstants';
 import { ShopCard } from './shops/ShopCard';
 import { ShopModal } from './shops/ShopModal';
+import { ShopReportModal } from './shops/ShopReportModal';
+import type { SubmitShopReportResult } from '../utils/shopReports';
 import { useSearchSeed } from '../hooks/useSearchSeed';
 import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
 
@@ -101,6 +103,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<ShopContact | PublicShop | null>(null);
   const [isEditingPublic, setIsEditingPublic] = useState(false);
+
+  // [v7.5.81] Report modal state — lives HERE, not in ShopCard, so the
+  // modal survives list re-renders (same reason the details prompt is
+  // hosted by App, not by TransactionModal).
+  const [reportShop, setReportShop] = useState<ShopContact | PublicShop | null>(null);
 
   // Upvotes
   const [votedIds, setVotedIds] = useState<string[]>(() => {
@@ -279,6 +286,47 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         // [v7.5.78 C] Deleted shop — drop any pending details reminder.
         if (deleted) resolveShopDetailReminder(name);
       }
+    }
+  };
+
+  // [v7.5.81] Report a public shop. The button stays visible to guests
+  // (ShopCard gating) and tapping it shows the sign-in notice here —
+  // the modal never opens for a guest. Signed-in users get the modal.
+  const handleReportShop = (shop: ShopContact | PublicShop) => {
+    if (!auth.currentUser) {
+      showNotice(
+        lang === 'my'
+          ? 'အကောင့်ဝင်ပြီးမှ Report တင်နိုင်ပါမည်'
+          : 'Please sign in to report'
+      );
+      return;
+    }
+    setReportShop(shop);
+  };
+
+  // [v7.5.81] Report result — the modal closes in every case and the
+  // notice tells the truth: success only on a confirmed write, a
+  // distinct message for an already-pending report, an error otherwise.
+  const handleReportDone = (result: SubmitShopReportResult) => {
+    setReportShop(null);
+    if (result === 'submitted') {
+      showNotice(
+        lang === 'my'
+          ? 'Report တင်ပြီးပါပြီ — စစ်ဆေးပေးပါမယ်'
+          : 'Report submitted — it will be checked'
+      );
+    } else if (result === 'already_reported') {
+      showNotice(
+        lang === 'my'
+          ? 'ဒီဆိုင်ကို Report တင်ပြီးသားပါ — စစ်ဆေးနေပါတယ်'
+          : 'You already reported this shop — it is being checked'
+      );
+    } else {
+      showNotice(
+        lang === 'my'
+          ? 'Report တင်၍ မရပါ — နောက်မှ ထပ်ကြိုးစားပေးပါ'
+          : 'Could not submit the report — please try again later'
+      );
     }
   };
 
@@ -959,9 +1007,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={
+                    // [v7.5.81] Shortened twice: the full placeholder
+                    // ('ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် ရှာရန်...', 267px
+                    // at 16px) and the first short form ('ဆိုင်အမည်၊ ဖုန်း
+                    // ရှာရန်...', 164px) were both clipped mid-word — the
+                    // input's usable text area at 390px is only ~106px
+                    // (174px box − 36px icon padding − 32px right padding).
+                    // Measured at 390px: 'ဆိုင်ရှာရန်...' 79px fits;
+                    // 'Search shops...' is 114px and still clips, so EN
+                    // is the shorter 'Search...' (64px).
                     lang === 'my'
-                      ? 'ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် ရှာရန်...'
-                      : 'Search shops, phone, KPay, township...'
+                      ? 'ဆိုင်ရှာရန်...'
+                      : 'Search...'
                   }
                   className="w-full pl-9 pr-8 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
                 />
@@ -1294,6 +1351,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           onDelete={handleDelete}
                           onAddPricingItem={handleAddPricingItem}
                           onDeletePricingItem={handleDeletePricingItem}
+                          onReport={handleReportShop}
                         />
                       ))}
                     </div>
@@ -1312,6 +1370,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           onDelete={handleDelete}
                           onAddPricingItem={handleAddPricingItem}
                           onDeletePricingItem={handleDeletePricingItem}
+                          onReport={handleReportShop}
                         />
                       ))}
                     </div>
@@ -1336,6 +1395,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     onDelete={handleDelete}
                     onAddPricingItem={handleAddPricingItem}
                     onDeletePricingItem={handleDeletePricingItem}
+                    onReport={handleReportShop}
                   />
                 ))}
               </div>
@@ -1354,6 +1414,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     onDelete={handleDelete}
                     onAddPricingItem={handleAddPricingItem}
                     onDeletePricingItem={handleDeletePricingItem}
+                    onReport={handleReportShop}
                   />
                 ))}
               </div>
@@ -1516,6 +1577,15 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         onOpenUpgradeModal={onOpenUpgradeModal}
         onSave={handleSaveModal}
         existingShops={directoryType === 'public' ? publicShops : privateShops}
+      />
+
+      {/* [v7.5.81] Report modal — hosted here in ShopsView, not in ShopCard. */}
+      <ShopReportModal
+        isOpen={reportShop !== null}
+        shop={reportShop}
+        lang={lang}
+        onClose={() => setReportShop(null)}
+        onDone={handleReportDone}
       />
 
       {/* [v7.5.60 E24/N-36] In-app notice dialog (replaces alert()) */}

@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.80';
-export const CURRENT_BUILD_NUMBER = 295;
+export const CURRENT_APP_VERSION = 'v7.5.81';
+export const CURRENT_BUILD_NUMBER = 296;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.81',
+    buildNumber: 296,
+    releaseDate: '2026-11-13',
+    releaseTime: '7:05 AM (MMT)',
+    titleMy: 'ဆိုင်လိပ်စာ Report — ဆိုင်မှားနေတာ အကြောင်းကြားလို့ရပြီ',
+    titleEn: 'Shop Reports — Flag a Wrong or Closed Shop',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ဆိုင်ကတ်မှာ Report ခလုတ် ပါလာပြီ — ဆိုင်ပိတ်သွားတာ၊ လိပ်စာမှားတာ၊ ဖုန်းနံပါတ်မှားတာတွေကို အကြောင်းကြားလို့ရပြီ။ တင်ထားတဲ့ Report တွေကို စစ်ဆေးပြီး ဆိုင်ဖျက်တာ ဒါမှမဟုတ် Report ပယ်တာ လုပ်နိုင်ပါတယ်။',
+    descriptionEn: 'Shop cards now have a Report button — flag a closed shop, a wrong address, or a wrong phone number. Reports can now be reviewed, and the shop can be deleted or the report dismissed.',
+    changesMy: [
+      'ဆိုင်ကတ်မှာ Report ခလုတ် ပါလာပြီ — ဆိုင်ပိတ်သွားတာ၊ လိပ်စာမှားတာ စတာတွေကို အကြောင်းကြားလို့ရပြီ။',
+      'တင်ထားတဲ့ Report တွေကို စစ်ဆေးပြီး ဆိုင်ဖျက်တာ / Report ပယ်တာ လုပ်နိုင်ပြီ။',
+    ],
+    changesEn: [
+      'Shop cards now have a Report button — flag a closed shop, a wrong address, and more.',
+      'Reports can now be reviewed — delete the shop or dismiss the report.',
+    ],
+  },
   {
     version: 'v7.5.80',
     buildNumber: 295,

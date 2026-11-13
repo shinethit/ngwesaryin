@@ -290,6 +290,23 @@ service cloud.firestore {
     }
 
     // =========================================================
+    // 8a. /shop_reports/{reportId} — [v7.5.81] Shop reports.
+    // A signed-in user may report a shop (create) and read ONLY
+    // their own reports; the Admin Panel (admin) reads all pending
+    // reports and resolves/dismisses them. The dedupe query filters
+    // reportedByUid == auth.uid only (single-field index, no
+    // composite index) — that query is permitted by the read rule
+    // below because it constrains reportedByUid to the caller.
+    // =========================================================
+    match /shop_reports/{reportId} {
+      allow create: if isSignedIn()
+        && request.resource.data.reportedByUid == request.auth.uid;
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.reportedByUid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================
     // 8b. /sharedWalletRefs/{email}/wallets/{docId} — [v6.20.0] sharedWallets list disabled
     //     [v6.18.0] Per-recipient pointers so members can discover
     //     shared wallets without a collection-wide list() query.

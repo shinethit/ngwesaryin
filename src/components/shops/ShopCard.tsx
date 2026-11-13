@@ -17,6 +17,9 @@ interface ShopCardProps {
   onDelete: (id: string, name: string) => void;
   onAddPricingItem: (shop: ShopContact | PublicShop, name: string, price: number) => Promise<boolean>;
   onDeletePricingItem: (shop: ShopContact | PublicShop, itemIndex: number) => Promise<boolean>;
+  // [v7.5.81] Report a public shop — handled by ShopsView (guest check +
+  // modal live there); ShopCard only renders the button.
+  onReport?: (shop: ShopContact | PublicShop) => void;
 }
 
 export const ShopCard: React.FC<ShopCardProps> = ({
@@ -30,6 +33,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   onDelete,
   onAddPricingItem,
   onDeletePricingItem,
+  onReport,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isItemsExpanded, setIsItemsExpanded] = useState(false);
@@ -149,6 +153,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   const isShopOwner = isPublic && auth.currentUser?.uid === pub?.addedByUid;
   const isShopAdmin = auth.currentUser?.email === 'khunthanshwe@gmail.com';
   const canManage = !isPublic || isShopOwner || isShopAdmin;
+
+  // [v7.5.81] Report — PUBLIC shops only, and never for the adder or the
+  // admin (they already have edit/delete). Guests DO see the button;
+  // tapping it shows the sign-in notice instead of opening the modal
+  // (ShopsView's onReport handler). Private shops are the owner's own
+  // list, so there is nothing to report.
+  const canReport = isPublic && !isShopOwner && !isShopAdmin;
 
   const canDelete =
     !isPublic ||
@@ -306,6 +317,23 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               )}
             </button>
             </div>
+
+            {/* [v7.5.81] Report — own full-width row under the icon row on
+                phones. Measured "⚠️ အကြောင်းကြား" ≈ 106px wide at 11px
+                bold (Noto Sans Myanmar); the icon row (vote + items +
+                edit + map + copy) already fills the 326px card content
+                at 390px, so putting it in-row would overflow. At sm+ it
+                sits beside the icon row (w-auto). */}
+            {canReport && (
+              <button
+                type="button"
+                onClick={() => onReport?.(shop)}
+                className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1 px-3 py-2.5 min-h-[44px] rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-amber-50 text-xs font-bold whitespace-nowrap cursor-pointer"
+                title={lang === 'my' ? 'ဆိုင်အချက်အလက် မှားနေကြောင်း အကြောင်းကြားမည်' : 'Report incorrect shop info'}
+              >
+                <span>⚠️ {lang === 'my' ? 'အကြောင်းကြား' : 'Report'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -853,6 +881,20 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </>
             )}
           </button>
+
+          {/* [v7.5.81] Report — public shops only, never for the adder or
+              the admin (they already have edit/delete). The contributor
+              name truncates, so this row fits at 390px in both languages. */}
+          {canReport && (
+            <button
+              type="button"
+              onClick={() => onReport?.(shop)}
+              className="min-h-[44px] px-2.5 py-2.5 text-slate-500 hover:text-slate-800 hover:bg-amber-50 rounded-lg transition-colors border border-slate-200 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+              title={lang === 'my' ? 'ဆိုင်အချက်အလက် မှားနေကြောင်း အကြောင်းကြားမည်' : 'Report incorrect shop info'}
+            >
+              <span className="text-[11px] font-bold">⚠️ {lang === 'my' ? 'အကြောင်းကြား' : 'Report'}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

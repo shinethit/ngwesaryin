@@ -535,4 +535,100 @@ describe('Firestore Rules — shared wallet security', () => {
     // Member-creator can delete their own mirror.
     await assertSucceeds(deleteDoc(doc(asMember(), DEBT_PATH)));
   });
+
+  // ── v7.5.82 — Shop price alerts + items-only public-shop update ──
+  // NOTE: `npm run test:rules` needs Java (Firestore emulator) — there
+  // is NO Java on this VM, so these tests are written but UNRUN here;
+  // run them on a machine with Java, or rely on the hand-verification
+  // in firestore.rules (i)–(vi).
+
+  const ADMIN_UID = 'admin_uid_A';
+  const ADMIN_EMAIL = 'khunthanshwe@gmail.com';
+  const asAdmin = () => testEnv.authenticatedContext(ADMIN_UID, { email: ADMIN_EMAIL }).firestore();
+
+  const seedPublicShop = async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'public_shops', 'shop_1'), {
+        id: 'shop_1',
+        name: 'Denko Shop',
+        addedByUid: OWNER_UID,
+        addedBy: OWNER_EMAIL,
+        createdAt: 1790000000000,
+        items: [{ name: 'Rice', unit: 'kg', price: 5000 }],
+      });
+    });
+  };
+
+  const seedPriceAlert = async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'shop_price_alerts', 'shop_1_rice_kg'), {
+        shopId: 'shop_1',
+        shopName: 'Denko Shop',
+        itemName: 'Rice',
+        unit: 'kg',
+        oldPrice: 5000,
+        newPrice: 6500,
+        reportedByUid: MEMBER_UID,
+        reportedBy: MEMBER_EMAIL,
+        reportedAt: 1790000000000,
+        status: 'pending',
+      });
+    });
+  };
+
+  it('30. [v7.5.82] Signed-in non-adder CAN update ONLY the items field of a public shop', async () => {
+    await seedPublicShop();
+    await assertSucceeds(updateDoc(doc(asMember(), 'public_shops', 'shop_1'), {
+      items: [{ name: 'Rice', unit: 'kg', price: 6500 }],
+    }));
+  });
+
+  it('31. [v7.5.82] Signed-in non-adder CANNOT update the name, or name + items together', async () => {
+    await seedPublicShop();
+    await assertFails(updateDoc(doc(asMember(), 'public_shops', 'shop_1'), { name: 'Hacked Shop' }));
+    await assertFails(updateDoc(doc(asMember(), 'public_shops', 'shop_1'), {
+      name: 'Hacked Shop',
+      items: [{ name: 'Rice', unit: 'kg', price: 6500 }],
+    }));
+    // Sanity: the adder can still update the name (old rule untouched).
+    await assertSucceeds(updateDoc(doc(asOwner(), 'public_shops', 'shop_1'), { name: 'Denko Shop 2' }));
+  });
+
+  it('32. [v7.5.82] Signed-in non-adder CANNOT delete a public shop', async () => {
+    await seedPublicShop();
+    await assertFails(deleteDoc(doc(asMember(), 'public_shops', 'shop_1')));
+    // Sanity: the adder can still delete it.
+    await assertSucceeds(deleteDoc(doc(asOwner(), 'public_shops', 'shop_1')));
+  });
+
+  it('33. [v7.5.82] Reporter CAN create a price alert with their own uid', async () => {
+    await assertSucceeds(setDoc(doc(asMember(), 'shop_price_alerts', 'shop_1_rice_kg'), {
+      shopId: 'shop_1', shopName: 'Denko Shop', itemName: 'Rice', unit: 'kg',
+      oldPrice: 5000, newPrice: 6500,
+      reportedByUid: MEMBER_UID, reportedBy: MEMBER_EMAIL,
+      reportedAt: 1790000000000, status: 'pending',
+    }));
+    // …but NOT with someone else's uid.
+    await assertFails(setDoc(doc(asMember(), 'shop_price_alerts', 'shop_1_rice_kg'), {
+      shopId: 'shop_1', shopName: 'Denko Shop', itemName: 'Rice', unit: 'kg',
+      oldPrice: 5000, newPrice: 6500,
+      reportedByUid: OWNER_UID, reportedBy: OWNER_EMAIL,
+      reportedAt: 1790000000000, status: 'pending',
+    }));
+  });
+
+  it('34. [v7.5.82] Non-admin CANNOT read price alerts (not even the reporter)', async () => {
+    await seedPriceAlert();
+    await assertFails(getDoc(doc(asMember(), 'shop_price_alerts', 'shop_1_rice_kg')));
+    await assertFails(getDoc(doc(asOutsider(), 'shop_price_alerts', 'shop_1_rice_kg')));
+    await assertFails(getDocs(collection(asMember(), 'shop_price_alerts')));
+  });
+
+  it('35. [v7.5.82] Admin CAN read and update (dismiss/resolve) price alerts', async () => {
+    await seedPriceAlert();
+    await assertSucceeds(getDoc(doc(asAdmin(), 'shop_price_alerts', 'shop_1_rice_kg')));
+    await assertSucceeds(getDocs(collection(asAdmin(), 'shop_price_alerts')));
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'shop_price_alerts', 'shop_1_rice_kg'), { status: 'dismissed' }));
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'shop_price_alerts', 'shop_1_rice_kg'), { status: 'resolved' }));
+  });
 });

@@ -285,6 +285,18 @@ service cloud.firestore {
         && request.resource.data.addedByUid == resource.data.addedByUid
         && request.resource.data.addedBy == resource.data.addedBy
         && request.resource.data.createdAt == resource.data.createdAt;
+      // [v7.5.82] Any signed-in user may update ONLY the `items` field
+      // (the shopping-list menu auto-update writes the menu price
+      // list). Rules are OR'd: the adder/admin rule above still
+      // governs every other field, and delete below stays adder/admin
+      // only. Hand-verification (v7.5.82): (i) a signed-in non-adder
+      // CAN update only `items` (this rule permits exactly that key);
+      // (ii) any other-field update by a non-adder is still DENIED
+      // (this rule allows ONLY `items`; the rule above still requires
+      // adder or admin); (iii) delete stays adder/admin only (the
+      // delete rule is untouched).
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items']);
       allow delete: if isSignedIn()
         && (resource.data.addedByUid == request.auth.uid || isAdmin());
     }
@@ -303,6 +315,26 @@ service cloud.firestore {
         && request.resource.data.reportedByUid == request.auth.uid;
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.reportedByUid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 8a2. /shop_price_alerts/{alertId} — [v7.5.82] Shop price alerts.
+    // A signed-in user whose shopping-list price differs from the
+    // shop menu price creates ONE alert per shop + item + unit
+    // (deterministic doc id = the dedupe; the writer cannot read
+    // admin-only alerts, so there is no dedupe query). Only the
+    // admin reads them (Admin Panel) and resolves/dismisses them.
+    // Hand-verification (v7.5.82): (iv) alert create is permitted
+    // for the reporter (reportedByUid == auth.uid); (v) alert read
+    // is DENIED for non-admins (read is isAdmin() only — even the
+    // reporter cannot read); (vi) admin update (dismiss/resolve)
+    // is permitted (update/delete are isAdmin() only).
+    // =========================================================
+    match /shop_price_alerts/{alertId} {
+      allow create: if isSignedIn()
+        && request.resource.data.reportedByUid == request.auth.uid;
+      allow read: if isAdmin();
       allow update, delete: if isAdmin();
     }
 

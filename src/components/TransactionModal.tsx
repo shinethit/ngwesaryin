@@ -31,6 +31,8 @@ import type { UnifiedItemInfo } from '../utils/itemIntelligence';
 // [v7.5.78 C] Shop-details prompt trigger — the matching rule lives
 // in the reminder store.
 import { isShopNameNeedingDetails } from '../utils/shopDetailsReminders';
+// [v7.5.82] Menu units for the shopping-list rows + unit carry-through.
+import { DEFAULT_MENU_UNIT, normalizeMenuUnit, SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
@@ -69,6 +71,12 @@ interface TransactionModalProps {
   // (setIsTxModalOpen(false) in useTransactionHandlers), so a prompt
   // rendered here would unmount unseen.
   onShopNeedsDetails?: (shopName: string) => void;
+  // [v7.5.82] Called AFTER a successful save, BEFORE onShopNeedsDetails,
+  // when the saved entry carries items (shopping_list or unit_qty) and a
+  // typed shop name. App resolves the shop, diffs its menu and shows
+  // the ShopMenuUpdatePromptModal when something would actually change.
+  // A plain/direct entry (no items) never produces a candidate.
+  onShopMenuUpdateCandidate?: (candidate: { shopName: string; items: TransactionItem[] }) => void;
   fuelLogs?: FuelLog[];
   vehicleMaintenance?: VehicleMaintenance[];
   tirePressureLogs?: TirePressureLog[];
@@ -96,6 +104,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onOpenAddVehicle,
   onOpenVehicleManagement,
   onShopNeedsDetails,
+  onShopMenuUpdateCandidate,
   fuelLogs = [],
   vehicleMaintenance = [],
   tirePressureLogs = [],
@@ -1232,10 +1241,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setFormError('');
 
     // [v7.5.55] Price-0 items are kept (free items); only quantity must be > 0.
+    // [v7.5.82] Carry the per-item unit through (unknown / missing →
+    // default 'တစ်ခု') so the menu diff can match by name AND unit.
     const validItems = shoppingItems.filter((i) => i.name.trim() && parseMyanmarNumber(i.quantity as any) > 0).map((i) => {
       const p = parseMyanmarNumber(i.price as any) || 0;
       const q = parseMyanmarNumber(i.quantity as any) || 0;
-      return { name: i.name.trim(), price: p, quantity: q, amount: p * q };
+      return { name: i.name.trim(), price: p, quantity: q, amount: p * q, unit: normalizeMenuUnit(i.unit) };
     });
     let finalAmount = numAmount;
     if (isFreeTireCheck && (!finalAmount || finalAmount <= 0)) finalAmount = 0;
@@ -1451,7 +1462,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       } else if (entryMode === 'unit_qty') {
         finalNote = extraNote.trim() || undefined;
         if (itemName.trim()) {
-          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseMyanmarNumber(unitPrice) || 0, quantity: parseMyanmarNumber(quantity) || 1, amount: finalAmount }];
+          // [v7.5.82] A unit_qty entry has one item at one unit — the
+          // default per-piece unit, so it can join the menu diff.
+          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseMyanmarNumber(unitPrice) || 0, quantity: parseMyanmarNumber(quantity) || 1, amount: finalAmount, unit: DEFAULT_MENU_UNIT }];
         }
       } else {
         const cleanItem = itemName.trim();
@@ -1539,6 +1552,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const needsShopDetailsPrompt =
         typedShopName.length > 0 && isShopNameNeedingDetails(typedShopName, shops, publicShops);
 
+      // [v7.5.82] Menu-update candidate — captured BEFORE onSubmit,
+      // next to the details-prompt decision. Only a general-model
+      // entry that actually carries items (shopping_list or unit_qty)
+      // with a typed shop name can update a menu. A plain/direct
+      // entry has txItems undefined, and fuel / vehicle entries never
+      // build txItems, so they produce NO candidate and no prompt —
+      // as designed.
+      const menuUpdateCandidate =
+        entryModel === 'general' && txItems && txItems.length > 0 && typedShopName.length > 0
+          ? { shopName: typedShopName, items: txItems }
+          : null;
+
             const saveOk = onSubmit({
         type: entryModel === 'fuel' || entryModel === 'vehicle_service' ? 'expense' : type,
         amount: finalAmount,
@@ -1563,6 +1588,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       // name still needs details, hand the name to App (which shows the
       // prompt) and close as usual — the prompt never blocks saving.
       if (saveOk !== false) {
+        // [v7.5.82] Menu prompt goes FIRST: App may open the menu
+        // prompt and stash the details name until it closes, so the
+        // two prompts never stack.
+        if (menuUpdateCandidate) onShopMenuUpdateCandidate?.(menuUpdateCandidate);
         if (needsShopDetailsPrompt) onShopNeedsDetails?.(typedShopName);
         onClose();
       }
@@ -2076,6 +2105,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                           <input type="text" inputMode="decimal" value={item.price || ""} onChange={(e) => updateShoppingItem(item.id || "", "price", e.target.value)} placeholder="ဈေး" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
                           <input type="text" inputMode="decimal" value={item.quantity || ""} onChange={(e) => updateShoppingItem(item.id || "", "quantity", e.target.value)} placeholder="Qty" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
                           <input type="text" inputMode="decimal" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="min-w-0 w-full text-base font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
+                        </div>
+                        {/* [v7.5.82] Per-item unit — the basis of `price`
+                            (တစ်ခု / တစ်ပါကင် / တစ်ကီလို …). The menu diff
+                            matches by name AND unit, so the same item at
+                            a different unit becomes a separate menu line. */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
+                          <select
+                            value={item.unit || DEFAULT_MENU_UNIT}
+                            onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
+                            className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
+                          >
+                            {SHOP_MENU_UNITS.map((u) => (
+                              <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
+                            ))}
+                          </select>
                         </div>
                         {pastPurchase && item.price > 0 && (<div className="text-[10px] text-slate-500">{lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})</div>)}
                       </div>

@@ -12,6 +12,11 @@ export interface TransactionItem {
   price: number;
   quantity: number;
   amount: number;
+  // [v7.5.82] Per-unit basis of `price` (e.g. 'တစ်ခု' / 'တစ်ပါကင်' /
+  // 'တစ်ကီလို') — the shopping-list entry form stamps it; a plain /
+  // direct entry has no unit. Used to match the shop menu line when a
+  // shopping-list entry auto-updates the menu.
+  unit?: string;
 }
 
 export interface Transaction {
@@ -360,7 +365,7 @@ export interface ShopContact {
   createdAt: number;
   kpayNumber?: string; // KPay Number / Details
   generalNotes?: string; // အထွေထွေမှတ်စုများ
-  items?: { name: string; price: number; updatedAt: number; addedBy?: string }[]; // ပစ္စည်းစာရင်းနှင့် ဈေးနှုန်း
+  items?: { name: string; price: number; updatedAt: number; addedBy?: string; unit?: string }[]; // ပစ္စည်းစာရင်းနှင့် ဈေးနှုန်း
   updatedAt?: number;
   version?: number;
   lastEditedBy?: string;
@@ -384,7 +389,7 @@ export interface PublicShop {
   createdAt: number;
   kpayNumber?: string; // KPay Number / Details
   generalNotes?: string; // အထွေထွေမှတ်စုများ
-  items?: { name: string; price: number; updatedAt: number; addedBy?: string }[]; // ပစ္စည်းစာရင်းနှင့် ဈေးနှုန်း
+  items?: { name: string; price: number; updatedAt: number; addedBy?: string; unit?: string }[]; // ပစ္စည်းစာရင်းနှင့် ဈေးနှုန်း
 }
 
 export interface Vehicle {

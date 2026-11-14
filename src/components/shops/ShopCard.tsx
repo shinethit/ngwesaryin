@@ -4,6 +4,7 @@ import { ShopContact, PublicShop } from '../../types';
 import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
 import { parseMyanmarNumber } from '../../utils/myanmarDigits';
+import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS } from '../../utils/shopMenuUpdate';
 import { normalizeMyanmarPhone } from './ShopModal';
 
 interface ShopCardProps {
@@ -15,7 +16,7 @@ interface ShopCardProps {
   onToggleVote: (shop: PublicShop) => void;
   onOpenEdit: (shop: ShopContact | PublicShop) => void;
   onDelete: (id: string, name: string) => void;
-  onAddPricingItem: (shop: ShopContact | PublicShop, name: string, price: number) => Promise<boolean>;
+  onAddPricingItem: (shop: ShopContact | PublicShop, name: string, price: number, unit?: string) => Promise<boolean>;
   onDeletePricingItem: (shop: ShopContact | PublicShop, itemIndex: number) => Promise<boolean>;
   // [v7.5.81] Report a public shop — handled by ShopsView (guest check +
   // modal live there); ShopCard only renders the button.
@@ -40,7 +41,18 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   const [showAllPhones, setShowAllPhones] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
+  // [v7.5.82] Per-unit basis of the price being added (default တစ်ခု).
+  const [newItemUnit, setNewItemUnit] = useState<string>(DEFAULT_MENU_UNIT);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
+
+  // [v7.5.82] Display label for a stored menu unit (stored value is the
+  // Myanmar string). Unit-less items have no label at all.
+  const menuUnitLabel = (unit?: string): string | null => {
+    if (!unit) return null;
+    const found = SHOP_MENU_UNITS.find((u) => u.value === unit);
+    if (!found) return unit;
+    return lang === 'my' ? found.labelMy : found.labelEn;
+  };
 
   const pub = isPublic ? (shop as PublicShop) : null;
   const votesCount = pub ? (pub as any).helpfulCount || 0 : 0;
@@ -118,11 +130,12 @@ export const ShopCard: React.FC<ShopCardProps> = ({
     if (isNaN(priceNum) || priceNum <= 0) return;
 
     setIsSubmittingItem(true);
-    const success = await onAddPricingItem(shop, newItemName.trim(), priceNum);
+    const success = await onAddPricingItem(shop, newItemName.trim(), priceNum, newItemUnit);
     setIsSubmittingItem(false);
     if (success) {
       setNewItemName('');
       setNewItemPrice('');
+      setNewItemUnit(DEFAULT_MENU_UNIT);
     }
   };
 
@@ -433,6 +446,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                       <span className="text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
                         {item.price.toLocaleString()} Ks
                       </span>
+                      {/* [v7.5.82] Unit label only when the item has one —
+                          unit-less items render exactly as before. */}
+                      {item.unit ? (
+                        <span className="text-[10px] font-semibold text-slate-500 whitespace-nowrap">
+                          {menuUnitLabel(item.unit)}
+                        </span>
+                      ) : null}
                       {/* [v7.5.55 C32] Compact view: per-item delete, like grid. */}
                       {canManage && (
                         <button
@@ -473,6 +493,19 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
                 </div>
+                {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
+                <select
+                  value={newItemUnit}
+                  onChange={(e) => setNewItemUnit(e.target.value)}
+                  aria-label={lang === 'my' ? 'ယူနစ်' : 'Unit'}
+                  className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                >
+                  {SHOP_MENU_UNITS.map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {lang === 'my' ? u.labelMy : u.labelEn}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
                   disabled={isSubmittingItem || !newItemName.trim() || !newItemPrice.trim()}
@@ -764,6 +797,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                       <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 text-xs">
                         {item.price.toLocaleString()} Ks
                       </span>
+                      {/* [v7.5.82] Unit label only when the item has one —
+                          unit-less items render exactly as before. */}
+                      {item.unit ? (
+                        <span className="text-[10px] font-semibold text-slate-500 whitespace-nowrap">
+                          {menuUnitLabel(item.unit)}
+                        </span>
+                      ) : null}
                       {canManage && (
                         <button
                           type="button"
@@ -803,6 +843,19 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
                 </div>
+                {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
+                <select
+                  value={newItemUnit}
+                  onChange={(e) => setNewItemUnit(e.target.value)}
+                  aria-label={lang === 'my' ? 'ယူနစ်' : 'Unit'}
+                  className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                >
+                  {SHOP_MENU_UNITS.map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {lang === 'my' ? u.labelMy : u.labelEn}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
                   disabled={isSubmittingItem || !newItemName.trim() || !newItemPrice.trim()}

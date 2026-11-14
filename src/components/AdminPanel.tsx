@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db, defaultDb, safeSetDoc, safeUpdateDoc, safeDeleteDoc, trackFirestoreReads } from '../lib/firebase';
 import { ShopReport, ShopReportStatus, shopReportReasonLabel } from '../utils/shopReports';
+import { ShopPriceAlert, ShopPriceAlertStatus, SHOP_PRICE_ALERTS_COLLECTION } from '../utils/shopPriceAlerts';
 import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
 import { useAuth, parseExpiryTime } from '../context/AuthContext';
 import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category, PublicShop } from '../types';
@@ -62,6 +63,9 @@ interface AdminPanelProps {
   transactions?: Transaction[];
   wallets?: Wallet[];
   categories?: Category[];
+  // [v7.5.82] App owns setActiveTab — AdminPanel calls this to switch
+  // tabs (e.g. jumping to the Shops tab from a price alert).
+  onNavigate?: (tab: string) => void;
 }
 
 // ⚠️ Master Admin Email — must match AuthContext and Firestore rules
@@ -82,7 +86,7 @@ const sortUsersNewestFirst = (users: UserDoc[]): UserDoc[] =>
 // a number is what is actually stored. (Same lesson as the users list
 // above — a Firestore orderBy would silently exclude docs lacking the
 // field, so the query has no orderBy and sorting is client-side.)
-const shopReportTime = (r: ShopReport): number => {
+const shopReportTime = (r: { reportedAt: unknown }): number => {
   const v = r.reportedAt as unknown;
   if (!v) return 0;
   if (typeof (v as { toDate?: unknown }).toDate === 'function') {
@@ -105,6 +109,16 @@ const formatShopReportDate = (r: ShopReport): string => {
   return t ? new Date(t).toLocaleDateString('en-GB') : '—';
 };
 
+// [v7.5.82] Shop price alerts, newest first, sorted CLIENT-SIDE —
+// same shape as the reports above (reportedAt is a Date.now() number;
+// no orderBy on the query, so no doc ever drops out of the list).
+const sortShopPriceAlertsNewestFirst = (alerts: ShopPriceAlert[]): ShopPriceAlert[] =>
+  [...alerts].sort((a, b) => shopReportTime(b) - shopReportTime(a));
+const formatShopPriceAlertDate = (a: ShopPriceAlert): string => {
+  const t = shopReportTime(a);
+  return t ? new Date(t).toLocaleDateString('en-GB') : '—';
+};
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   isOpen,
   onClose,
@@ -112,6 +126,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   transactions = [],
   wallets = [],
   categories = [],
+  onNavigate,
 }) => {
   const { user, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'quota' | 'users_codes' | 'broadcast' | 'contact_info' | 'analytics'>('overview');
@@ -140,6 +155,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // [v7.5.81] Id of the report an action is running on (disables both
   // buttons on every row while one action is in flight — no double taps).
   const [actingReportId, setActingReportId] = useState<string | null>(null);
+  // [v7.5.82] Shop price alerts — a shopping-list price that differs
+  // from the shop menu price raises one pending alert per shop + item
+  // + unit (deterministic doc id = the dedupe).
+  const [shopPriceAlerts, setShopPriceAlerts] = useState<ShopPriceAlert[]>([]);
+  const [shopPriceAlertsLoading, setShopPriceAlertsLoading] = useState(true);
+  const [shopPriceAlertsError, setShopPriceAlertsError] = useState<string | null>(null);
   // [wallet-backfill] Prevents double-clicks during the users↔cloud wallet sync
   const [isBackfillingWallets, setIsBackfillingWallets] = useState(false);
 
@@ -669,6 +690,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setShopReportsLoading(false);
     });
 
+    // 5c. [v7.5.82] Live Shop Price Alerts Listener — pending alerts only.
+    // Same shape as the reports listener above: no orderBy on purpose
+    // (client-side newest-first sort in sortShopPriceAlertsNewestFirst),
+    // so a doc never drops out of the list for a missing timestamp.
+    const priceAlertsQuery = query(collection(db, SHOP_PRICE_ALERTS_COLLECTION), where('status', '==', 'pending'));
+    const unsubShopPriceAlerts = onSnapshot(priceAlertsQuery, (snapshot) => {
+      const data: ShopPriceAlert[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ShopPriceAlert));
+      setShopPriceAlerts(sortShopPriceAlertsNewestFirst(data));
+      setShopPriceAlertsError(null);
+      setShopPriceAlertsLoading(false);
+    }, (err) => {
+      console.warn('Realtime shop price alerts sync notice:', err);
+      setShopPriceAlertsError(lang === 'my' ? 'ဈေးနှုန်း Alert များ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပြီး Refresh နှိပ်ပါ' : 'Could not load price alerts — check connection / permissions and tap Refresh.');
+      setShopPriceAlertsLoading(false);
+    });
+
 
 
 
@@ -728,6 +765,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       clearInterval(visitorsTotalCountTimer);
       unsubAuditLog();
       unsubShopReports();
+      unsubShopPriceAlerts();
       unsubSystemTxs();
       unsubSystemWallets();
       unsubSystemCats();
@@ -817,6 +855,50 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     } finally {
       setActingReportId(null);
     }
+  };
+
+  // [v7.5.82] Shop Price Alerts actions. Dismiss only flips the alert
+  // status — alert docs are NEVER deleted; the live listener drops a
+  // dismissed alert from the pending list on its own. Status writes use
+  // safeUpdateDoc (status field only — no deleteField() sentinel, so the
+  // safeUpdateDoc lesson does not bite here). Reuses actingReportId so
+  // only one admin action runs at a time across both alert sections.
+  const handleDismissShopPriceAlert = async (priceAlert: ShopPriceAlert) => {
+    if (!priceAlert.id || actingReportId) return;
+    setActingReportId(priceAlert.id);
+    try {
+      const ok = await safeUpdateDoc(doc(db, SHOP_PRICE_ALERTS_COLLECTION, priceAlert.id), { status: 'dismissed' as ShopPriceAlertStatus });
+      if (!ok) {
+        alert(lang === 'my' ? 'Alert ကို ပယ်ဖျက်၍ မရပါ — ထပ်ကြိုးစားပါ' : 'Could not dismiss this alert — please try again.');
+      }
+    } finally {
+      setActingReportId(null);
+    }
+  };
+
+  // [v7.5.82] Jump to the alert's shop so the admin can fix the price
+  // on the shop card (admins can already edit/delete menu prices —
+  // ShopCard canManage, ShopsView add-price form). The Shops search box
+  // is pre-seeded via the existing `ngwe:search-seed` event — the exact
+  // GlobalSearchModal pattern (GlobalSearchModal.tsx:252-253) — and
+  // ShopsView consumes it with useSearchSeed('shops', setSearchQuery)
+  // (src/hooks/useSearchSeed.ts:9-25); its listener stays live because
+  // all tab views stay mounted, so the seed is consumed even while the
+  // Shops tab is hidden. Then the Admin Panel closes.
+  // The tab switch IS wired: App passes setActiveTab as `onNavigate`
+  // (App.tsx AdminPanel render site), so the admin lands on the Shops
+  // tab with the list already filtered to this shop.
+  // `ngwe:open-shop-form` was NOT used: its ShopsView handler only
+  // matches private shops and would open a NEW-shop prefill for an
+  // existing public shop, and the ShopModal lives inside the hidden
+  // Shops tab div.
+  const handleViewShopFromPriceAlert = (priceAlert: ShopPriceAlert) => {
+    try {
+      sessionStorage.setItem('ngwe_search_seed', priceAlert.shopName.trim());
+      window.dispatchEvent(new CustomEvent('ngwe:search-seed', { detail: { tab: 'shops', query: priceAlert.shopName.trim() } }));
+    } catch { /* ignore */ }
+    onNavigate?.('shops');
+    onClose();
   };
 
   // Active dataset of transactions across the entire system (Default sorted newest first by date)
@@ -3631,6 +3713,90 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           className="flex-1 min-h-[44px] px-3 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 disabled:opacity-50 cursor-pointer"
                         >
                           {lang === 'my' ? 'ပယ်ဖျက်မယ်' : 'Dismiss'}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* [v7.5.82] SHOP PRICE ALERTS — shopping-list prices that
+                differ from the shop menu price. Buttons stack vertically
+                on phones (flex-col) and are min 44px tall, so there is
+                no horizontal overflow at 390px. */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <h3 className="font-bold text-sm text-slate-800 truncate">
+                    {lang === 'my' ? 'ဈေးနှုန်း Alert များ' : 'Shop Price Alerts'}
+                  </h3>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold shrink-0 border ${shopPriceAlerts.length > 0 ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                  {shopPriceAlertsLoading
+                    ? '…'
+                    : lang === 'my'
+                      ? `စောင့်ဆိုင်းဆဲ ${shopPriceAlerts.length} ခု`
+                      : `Pending ${shopPriceAlerts.length}`}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                {lang === 'my'
+                  ? 'ဈေးဝယ်စာရင်းက ဈေးနှုန်းက ဆိုင်မီနူးထဲက ဈေးနဲ့ ကွာနေလို့ တင်ပြထားတာများ — ဆိုင်ကိုသွားပြီး ဈေးပြင်မလား၊ ပယ်ဖျက်မလား ဆုံးဖြတ်ပါ။'
+                  : 'Prices entered from shopping lists that differ from the shop menu — open the shop to fix the price, or dismiss the alert.'}
+              </p>
+              {shopPriceAlertsLoading ? (
+                <p className="text-xs text-slate-500 mt-3">
+                  {lang === 'my' ? 'Alert များ ဆွဲယူနေသည်...' : 'Loading alerts...'}
+                </p>
+              ) : shopPriceAlertsError ? (
+                <div className="mt-3 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{shopPriceAlertsError}</span>
+                </div>
+              ) : shopPriceAlerts.length === 0 ? (
+                <p className="text-xs text-slate-400 mt-3">
+                  {lang === 'my' ? 'ဈေးနှုန်း Alert မရှိသေးပါ' : 'No price alerts.'}
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {shopPriceAlerts.map((priceAlert) => (
+                    <li key={priceAlert.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-slate-800 break-words">{priceAlert.shopName}</div>
+                        <div className="text-xs text-slate-600 mt-0.5 break-words">
+                          {priceAlert.itemName}
+                          {priceAlert.unit ? ` (${priceAlert.unit})` : ''}
+                          {' · '}
+                          {formatMMK(priceAlert.oldPrice)}
+                          {' → '}
+                          {formatMMK(priceAlert.newPrice)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5 break-words">
+                          {(priceAlert.reportedBy || '').split('@')[0] || '—'}
+                          {' · '}
+                          {formatShopPriceAlertDate(priceAlert)}
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => handleViewShopFromPriceAlert(priceAlert)}
+                          disabled={actingReportId !== null}
+                          className="flex-1 min-h-[44px] px-3 py-2.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
+                        >
+                          {lang === 'my' ? 'ဆိုင်ကြည့်မည်' : 'View shop'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissShopPriceAlert(priceAlert)}
+                          disabled={actingReportId !== null}
+                          className="flex-1 min-h-[44px] px-3 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 disabled:opacity-50 cursor-pointer"
+                        >
+                          {actingReportId === priceAlert.id
+                            ? (lang === 'my' ? 'လုပ်ဆောင်နေသည်...' : 'Working...')
+                            : (lang === 'my' ? 'ပယ်ဖျက်မယ်' : 'Dismiss')}
                         </button>
                       </div>
                     </li>

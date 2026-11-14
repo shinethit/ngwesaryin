@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.81';
-export const CURRENT_BUILD_NUMBER = 296;
+export const CURRENT_APP_VERSION = 'v7.5.82';
+export const CURRENT_BUILD_NUMBER = 297;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.82',
+    buildNumber: 297,
+    releaseDate: '2026-11-14',
+    releaseTime: '2:32 PM (MMT)',
+    titleMy: 'ဆိုင်လိပ်စာ Menu — စာရင်းသွင်းရင် ဈေးနှုန်း အသစ် တင်ပေးလို့ရပြီ',
+    titleEn: 'Shop Menus — Update Prices From Your Shopping List',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Shopping List နဲ့ စာရင်းသွင်းရင် ဆိုင်ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးလို့ရပြီ — ပစ္စည်းတူရင် ဈေး Update ဖြစ်ပြီး၊ ပစ္စည်းမတူရင် အသစ်ထည့်ပေးတယ်။ ဈေးက အရမ်းကွာနေရင် အတည်ပြုမေးပြီး၊ Unit (တစ်ခု / တစ်ပါကင် / တစ်ကီလို...) လည်း ရွေးလို့ရတယ်။',
+    descriptionEn: 'When you save a shopping-list entry, you can now update the shop’s menu with the new prices — a matching item updates its price and a new item is added. If a price differs a lot you’ll be asked to confirm, and you can pick the unit (per piece / per pack / per kg…).',
+    changesMy: [
+      'Shopping List နဲ့ စာရင်းသွင်းရင် ဆိုင်ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးလို့ရပြီ — ပစ္စည်းတူရင် ဈေး Update ဖြစ်ပြီး၊ ပစ္စည်းမတူရင် အသစ်ထည့်ပေးပါတယ်။',
+      'ဈေးက အရမ်းကွာနေရင် အတည်ပြုမေးမယ်၊ Unit လည်း ရွေးလို့ရပြီ (တစ်ခု / တစ်ပါကင် / တစ်ကီလို...)။',
+    ],
+    changesEn: [
+      'When you save a shopping-list entry, you can now update the shop’s menu with the new prices — a matching item updates its price, a new item is added.',
+      'You’ll be asked to confirm when a price differs a lot, and you can now pick the unit (per piece / per pack / per kg…).',
+    ],
+  },
   {
     version: 'v7.5.81',
     buildNumber: 296,

@@ -15,11 +15,13 @@ import {
   Repayment,
   PlanType,
   Transaction,
+  TransactionItem,
   TransactionType,
   UNBUDGETED_CATEGORY_ID,
   Wallet,
   WalletPermissions,
   ShopContact,
+  PublicShop,
   DataScope,
   Vehicle,
   FuelLog,
@@ -42,16 +44,27 @@ import { AdBanner } from './components/AdBanner';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { AccountModal } from './components/AccountModal';
 import { NotificationModal } from './components/NotificationModal';
-import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopDetailReminders, addShopDetailReminder } from './utils/shopDetailsReminders';
+import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopDetailReminders, addShopDetailReminder, normalizeShopName, isShopNameNeedingDetails } from './utils/shopDetailsReminders';
 import { ShopDetailsPromptModal } from './components/ShopDetailsPromptModal';
+// [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
+import { ShopMenuUpdatePromptModal } from './components/ShopMenuUpdatePromptModal';
+import {
+  applyShopMenuItems,
+  buildUpdatedMenuItems,
+  computeMenuDiff,
+  shouldOfferMenuUpdate,
+  type MenuUpdateRow,
+  type ShopMenuStore,
+} from './utils/shopMenuUpdate';
+import { submitShopPriceAlert } from './utils/shopPriceAlerts';
 import { LoginScreen } from './components/LoginScreen';
 import { FortuneLogo, LogoStyle } from './components/FortuneLogo';
 import { ClayFloatingCoinButton } from './components/ClayIllustrations';
 import { LayoutDashboard, ArrowLeftRight, HandCoins, Search, Cloud, KeyRound, Trash2, Download, Upload, Menu } from 'lucide-react';
 import { SubCategory, PinLockSettings } from './types';
 import { useAuth, parseExpiryTime } from './context/AuthContext';
-import { doc, collection, onSnapshot, writeBatch, query } from 'firebase/firestore';
-import { db, cleanForFirestore, handleFirestoreError, OperationType, isQuotaExhausted, pauseNetworkDueToQuota, safeSetDoc, safeDeleteDoc } from './lib/firebase';
+import { doc, collection, onSnapshot, writeBatch, query, getDoc } from 'firebase/firestore';
+import { db, cleanForFirestore, handleFirestoreError, OperationType, isQuotaExhausted, pauseNetworkDueToQuota, safeSetDoc, safeDeleteDoc, safeUpdateDoc } from './lib/firebase';
 import { syncQueue } from './lib/syncQueue';
 import { recordSyncOperationStart, finishSyncOperation } from './lib/syncOperationLogger';
 import { PinLockScreen } from './components/PinLockScreen';
@@ -404,6 +417,29 @@ export default function App() {
   // [v7.5.78 C] Shop-details reminders (TransactionModal "Later" choice).
   const shopDetailReminders = useShopDetailReminders();
   const [shopDetailsPromptName, setShopDetailsPromptName] = useState<string | null>(null);
+  // [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
+  // Hosted here, not in TransactionModal, for the same reason as the
+  // details prompt above: the transaction modal unmounts on save.
+  const [menuPrompt, setMenuPrompt] = useState<{
+    shopId: string;
+    shopName: string;
+    isPublic: boolean;
+    shop: ShopContact | PublicShop;
+    rows: MenuUpdateRow[];
+  } | null>(null);
+  const [menuPromptError, setMenuPromptError] = useState<string | null>(null);
+  const [isApplyingMenuUpdate, setIsApplyingMenuUpdate] = useState(false);
+  // The details name that arrived while a menu candidate was resolving
+  // or the menu prompt was open. A ref, not state: nothing renders from
+  // it — it is only consumed by flushPendingShopDetails() when the menu
+  // prompt closes (or when no menu prompt opens at all).
+  const pendingShopDetailsNameRef = useRef<string | null>(null);
+  // Flags the details callback reads synchronously: the candidate
+  // handler runs first (same tick, TransactionModal), so these are set
+  // before onShopNeedsDetails fires and the name gets stashed instead
+  // of opening a second prompt on top of the menu prompt.
+  const menuCandidatePendingRef = useRef(false);
+  const menuPromptOpenRef = useRef(false);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
     try {
       const saved = safeGetItem('ngwe_read_notifications');
@@ -865,6 +901,191 @@ export default function App() {
   const showToast = (msg: string, type: ToastType = 'success') => {
     setToastType(type);
     setToastMessage(msg);
+  };
+
+  // [v7.5.82] DETAILS-PROMPT SEQUENCING — the details prompt must NOT
+  // stack on top of the menu prompt. A details name that arrives while
+  // a menu candidate is resolving or the menu prompt is open is stashed
+  // in pendingShopDetailsNameRef; it is shown (re-checked) only after
+  // the menu prompt closes — or immediately, when no menu prompt opens.
+  const flushPendingShopDetails = () => {
+    const name = pendingShopDetailsNameRef.current;
+    pendingShopDetailsNameRef.current = null;
+    if (!name) return;
+    // Re-check: the shop's details may have been filled meanwhile.
+    // (App's publicShops list carries only id+name, so a public shop
+    // still counts as needing details here; a private shop never
+    // reaches this path — its details prompt was already suppressed
+    // at capture time by isShopNameNeedingDetails.)
+    if (isShopNameNeedingDetails(name, shops, publicShops)) {
+      setShopDetailsPromptName(name);
+    }
+  };
+
+  const handleShopNeedsDetails = (name: string) => {
+    if (menuCandidatePendingRef.current || menuPromptOpenRef.current) {
+      pendingShopDetailsNameRef.current = name;
+    } else {
+      setShopDetailsPromptName(name);
+    }
+  };
+
+  // [v7.5.82] Shop menu auto-update — resolve the typed shop name the
+  // SAME way the details prompt matches it: trim + case-insensitive
+  // (normalizeShopName, shopDetailsReminders.ts), so the menu prompt
+  // and the details prompt agree on which shop a name means. If the
+  // name matches BOTH a public and a private shop, the PUBLIC shop
+  // wins: the shared menu is the point of the feature, and updating
+  // the private menu would hide the new price from everyone else.
+  // If no shop resolves, or nothing differs, or the gate refuses
+  // (guest + public shop) → auto-skip silently, no prompt, no notice.
+  const handleShopMenuUpdateCandidate = async (candidate: { shopName: string; items: TransactionItem[] }) => {
+    // Synchronous part first: the details callback fires right after
+    // this one (same tick, TransactionModal) — the flag makes App stash
+    // the details name instead of showing both prompts at once.
+    menuCandidatePendingRef.current = true;
+    try {
+      const key = normalizeShopName(candidate.shopName);
+      if (!key || !candidate.items || candidate.items.length === 0) return;
+      let resolved: { shop: ShopContact | PublicShop; isPublic: boolean } | null = null;
+      const publicHit = publicShops.find((s) => normalizeShopName(s.name) === key);
+      if (publicHit) {
+        // App's publicShops list carries only id+name (the App.tsx
+        // public-shops snapshot) — fetch the full doc for its menu.
+        // A fetch failure (or a vanished doc) leaves `resolved` null
+        // and the candidate auto-skips: it must NEVER fall back to the
+        // private namesake when a public shop matched.
+        try {
+          const snap = await getDoc(doc(db, 'public_shops', publicHit.id));
+          if (snap.exists()) {
+            resolved = {
+              shop: { id: snap.id, ...(snap.data() as Omit<PublicShop, 'id'>) } as PublicShop,
+              isPublic: true,
+            };
+          }
+        } catch (err) {
+          console.warn('[shopMenuUpdate] public shop fetch failed — skipping menu prompt:', err);
+        }
+        if (!resolved) return;
+      }
+      if (!resolved) {
+        const privateHit = shops.find((s) => normalizeShopName(s.name) === key);
+        if (privateHit) resolved = { shop: privateHit, isPublic: false };
+      }
+      if (!resolved) return;
+      const rows = computeMenuDiff(resolved.shop.items || [], candidate.items);
+      // Gating: public shops need a signed-in user (the public_shops
+      // rules require sign-in); private shops do not — the local path
+      // works for guests on their own private shops (handleUpdateShop
+      // in useDataHandlers.ts:108 has NO auth gate: it always updates
+      // the local list and only writes to the cloud when user?.uid).
+      if (
+        !shouldOfferMenuUpdate({
+          hasItems: candidate.items.length > 0,
+          shopResolved: true,
+          isPublic: resolved.isPublic,
+          isSignedIn: !!user,
+          hasDiff: rows.length > 0,
+        })
+      ) {
+        return;
+      }
+      setMenuPromptError(null);
+      setMenuPrompt({
+        shopId: resolved.shop.id,
+        shopName: resolved.shop.name,
+        isPublic: resolved.isPublic,
+        shop: resolved.shop,
+        rows,
+      });
+      menuPromptOpenRef.current = true;
+      // The pending flag stays up until the prompt closes — the close
+      // handlers flush the stashed details name.
+      return;
+    } finally {
+      // No prompt opened → the details prompt (if one arrived) behaves
+      // exactly as today: show it now.
+      if (!menuPromptOpenRef.current) {
+        menuCandidatePendingRef.current = false;
+        flushPendingShopDetails();
+      }
+    }
+  };
+
+  // [v7.5.82] Apply the checked menu rows. On write FAILURE the real
+  // error is shown in the modal and it STAYS OPEN so the user can retry
+  // or Skip — success is never claimed when the write failed.
+  const handleMenuPromptApply = async (selectedRows: MenuUpdateRow[]) => {
+    if (!menuPrompt) return;
+    setIsApplyingMenuUpdate(true);
+    setMenuPromptError(null);
+    try {
+      const contributorName = user
+        ? user.email || user.displayName || 'အသုံးပြုသူ'
+        : lang === 'my'
+          ? 'ဧည့်သည်'
+          : 'Guest';
+      const updatedItems = buildUpdatedMenuItems(menuPrompt.shop.items || [], selectedRows, contributorName);
+      // Explicit store — mirrors ShopsView's handleAddPricingItem
+      // exactly: public shops via safeUpdateDoc on public_shops,
+      // private shops via App's handleUpdateShop (the util's default
+      // store throws for private shops and must never be relied on).
+      const store: ShopMenuStore = {
+        updatePublicShopItems: async (shopId, items) =>
+          safeUpdateDoc(doc(db, 'public_shops', shopId), { items }),
+        updatePrivateShopItems: async (s, items) =>
+          handleUpdateShop({
+            ...(s as ShopContact),
+            items: items as ShopContact['items'],
+          }),
+      };
+      const ok = await applyShopMenuItems(menuPrompt.shop, menuPrompt.isPublic, updatedItems, store);
+      if (!ok) {
+        setMenuPromptError(
+          lang === 'my' ? 'Menu Update မအောင်မြင်ပါ — ထပ်ကြိုးစားပေးပါ' : 'Menu update failed — please try again'
+        );
+        return;
+      }
+      // Large price jumps are flagged to the admin — fire-and-forget:
+      // a failed alert write must NEVER turn the menu update into a
+      // failure, and it never blocks closing the modal. (For a guest's
+      // private-shop update there is no signed-in user, so
+      // submitShopPriceAlert fail-closes to 'failed' — logged, not shown.)
+      for (const row of selectedRows) {
+        if (!row.isLargeDiff) continue;
+        submitShopPriceAlert({
+          shopId: menuPrompt.shopId,
+          shopName: menuPrompt.shopName,
+          itemName: row.itemName,
+          unit: row.unit,
+          oldPrice: row.oldPrice ?? 0,
+          newPrice: row.newPrice,
+        })
+          .then((res) => {
+            if (res !== 'submitted') {
+              console.warn('[shopMenuUpdate] price alert not submitted for', row.itemName);
+            }
+          })
+          .catch((err) => console.warn('[shopMenuUpdate] price alert failed:', err));
+      }
+      showToast(
+        lang === 'my' ? 'ဆိုင်ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးပြီးပါပြီ ✓' : 'Shop menu updated with the new prices ✓'
+      );
+      setMenuPrompt(null);
+      menuPromptOpenRef.current = false;
+      menuCandidatePendingRef.current = false;
+      flushPendingShopDetails();
+    } finally {
+      setIsApplyingMenuUpdate(false);
+    }
+  };
+
+  const handleMenuPromptSkip = () => {
+    setMenuPrompt(null);
+    setMenuPromptError(null);
+    menuPromptOpenRef.current = false;
+    menuCandidatePendingRef.current = false;
+    flushPendingShopDetails();
   };
 
   // [v7.5.60 G-M6] One Toast element rendered above EVERY return
@@ -3029,7 +3250,8 @@ export default function App() {
         allTransactions={transactions}
         publicShops={publicShops}
         shops={shops}
-        onShopNeedsDetails={setShopDetailsPromptName}
+        onShopNeedsDetails={handleShopNeedsDetails}
+        onShopMenuUpdateCandidate={handleShopMenuUpdateCandidate}
         plan={plan}
         lang={lang}
         fuelLogs={fuelLogs}
@@ -3070,6 +3292,19 @@ export default function App() {
           addShopDetailReminder(name);
           setShopDetailsPromptName(null);
         }}
+      />
+
+      {/* [v7.5.82] Menu prompt renders AFTER the details prompt; the two
+          never open together — see flushPendingShopDetails. */}
+      <ShopMenuUpdatePromptModal
+        isOpen={!!menuPrompt}
+        shopName={menuPrompt?.shopName || ''}
+        rows={menuPrompt?.rows || []}
+        lang={lang}
+        error={menuPromptError}
+        isApplying={isApplyingMenuUpdate}
+        onApply={handleMenuPromptApply}
+        onSkip={handleMenuPromptSkip}
       />
 
       <DebtModal
@@ -3192,6 +3427,7 @@ export default function App() {
           <AdminPanel
             isOpen={isAdminPanelOpen}
             onClose={() => setIsAdminPanelOpen(false)}
+            onNavigate={setActiveTab}
             lang={lang}
             transactions={transactions}
             wallets={computedWallets}

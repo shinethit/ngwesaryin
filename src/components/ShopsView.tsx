@@ -17,6 +17,12 @@ import { ShopReportModal } from './shops/ShopReportModal';
 import type { SubmitShopReportResult } from '../utils/shopReports';
 import { useSearchSeed } from '../hooks/useSearchSeed';
 import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
+import {
+  applyShopMenuItems,
+  buildUpdatedMenuItems,
+  computeMenuDiff,
+  type ShopMenuStore,
+} from '../utils/shopMenuUpdate';
 
 interface ShopsViewProps {
   shops: ShopContact[];
@@ -334,7 +340,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const handleAddPricingItem = async (
     shop: ShopContact | PublicShop,
     name: string,
-    price: number
+    price: number,
+    unit?: string
   ): Promise<boolean> => {
     const currentUser = auth.currentUser;
     const isPublic = 'addedBy' in shop;
@@ -354,48 +361,41 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       ? 'ဧည့်သည်'
       : 'Guest';
 
-    const newItem = {
-      name,
-      price,
-      updatedAt: Date.now(),
-      addedBy: contributorName,
-    };
-
+    // [v7.5.82] Match by name AND unit (shopMenuUpdate): the same item
+    // at a different unit is a separate menu line, never an overwrite.
+    // A re-entered identical name+unit+price changes nothing, so there
+    // is nothing to write — report success without a pointless write.
     const currentItems = shop.items || [];
-    const existingIndex = currentItems.findIndex(
-      (it) => it.name.toLowerCase() === newItem.name.toLowerCase()
-    );
-    let updatedItems = [...currentItems];
-    if (existingIndex >= 0) {
-      updatedItems[existingIndex] = newItem;
-    } else {
-      updatedItems = [newItem, ...updatedItems];
-    }
+    const rows = computeMenuDiff(currentItems, [{ name, price, quantity: 1, unit }]);
+    if (rows.length === 0) return true;
+    const updatedItems = buildUpdatedMenuItems(currentItems, rows, contributorName);
 
-    if (isPublic) {
+    // [v7.5.82] The write goes through applyShopMenuItems with an
+    // explicit store: public shops via Firestore, private shops via the
+    // App's onUpdatePrivateShop prop (the util's default store cannot
+    // reach it, so it must never be relied on for private shops).
+    const store: ShopMenuStore = {
+      updatePublicShopItems: async (shopId, items) =>
+        safeUpdateDoc(doc(db, 'public_shops', shopId), { items }),
+      updatePrivateShopItems: async (s, items) =>
+        onUpdatePrivateShop({
+          ...(s as ShopContact),
+          items: items as ShopContact['items'],
+        }),
+    };
+    const ok = await applyShopMenuItems(shop, isPublic, updatedItems, store);
+    if (!ok && isPublic) {
       // [v7.5.55 C4] Check the safe* return — only the shop's adder/admin
       // may update (rules), so a denied write must show an error instead
       // of fake success.
-      const ok = await safeUpdateDoc(doc(db, 'public_shops', shop.id), {
-        items: updatedItems,
-      });
-      if (!ok) {
-        showNotice(
-          lang === 'my'
-            ? 'ဈေးနှုန်း ထည့်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည်'
-            : 'Could not add the price — only the shop adder and admins can edit prices'
-        );
-        return false;
-      }
-      return true;
-    } else {
-      // [v7.5.55 C5] Await the private save and report its real result —
-      // the price edit must not claim success when the write failed.
-      return await onUpdatePrivateShop({
-        ...(shop as ShopContact),
-        items: updatedItems,
-      });
+      showNotice(
+        lang === 'my'
+          ? 'ဈေးနှုန်း ထည့်၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည်'
+          : 'Could not add the price — only the shop adder and admins can edit prices'
+      );
+      return false;
     }
+    return ok;
   };
 
   const handleDeletePricingItem = async (

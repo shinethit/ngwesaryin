@@ -1,13 +1,13 @@
 {
-  "version": "v7.5.81",
-  "buildNumber": 296,
+  "version": "v7.5.82",
+  "buildNumber": 297,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဆိုင်ကတ်မှာ Report ခလုတ် ပါလာပြီ — ဆိုင်ပိတ်သွားတာ၊ လိပ်စာမှားတာ စတာတွေကို အကြောင်းကြားလို့ရပြီ။",
-    "တင်ထားတဲ့ Report တွေကို စစ်ဆေးပြီး ဆိုင်ဖျက်တာ / Report ပယ်တာ လုပ်နိုင်ပြီ။"
+    "Shopping List နဲ့ စာရင်းသွင်းရင် ဆိုင်ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးလို့ရပြီ — ပစ္စည်းတူရင် ဈေး Update ဖြစ်ပြီး၊ ပစ္စည်းမတူရင် အသစ်ထည့်ပေးပါတယ်။",
+    "ဈေးက အရမ်းကွာနေရင် အတည်ပြုမေးမယ်၊ Unit လည်း ရွေးလို့ရပြီ (တစ်ခု / တစ်ပါကင် / တစ်ကီလို...)။"
   ],
   "changesEn": [
-    "Shop cards now have a Report button — flag a closed shop, a wrong address, and more.",
-    "Reports can now be reviewed — delete the shop or dismiss the report."
+    "When you save a shopping-list entry, you can now update the shop’s menu with the new prices — a matching item updates its price, a new item is added.",
+    "You’ll be asked to confirm when a price differs a lot, and you can now pick the unit (per piece / per pack / per kg…)."
   ]
 }

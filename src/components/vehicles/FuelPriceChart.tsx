@@ -58,18 +58,13 @@ export const FuelPriceChart: React.FC<FuelPriceChartProps> = ({ logs, lang }) =>
 
   const filtered = effectiveFilter === 'all' ? sorted : sorted.filter((l) => (l.fuelType || 'Octane') === effectiveFilter);
 
-  if (sorted.length === 0) {
-    return (
-      <div className="p-8 text-center bg-slate-50 border border-slate-200/80 rounded-3xl">
-        <p className="text-sm text-slate-500">
-          {lang === 'my'
-            ? 'ဆီဈေးနှုန်း အတက်အကျ ပြသရန် ဆီထည့်မှတ်တမ်းများ မရှိသေးပါ'
-            : 'No fuel price data available yet'}
-        </p>
-      </div>
-    );
-  }
-
+  // [v7.5.83] This useMemo MUST stay above the empty-state early return
+  // below: it is a hook, and calling it only when logs exist changes the
+  // hook count between renders (0 logs → 2 hooks, 1+ logs → 3 hooks),
+  // which crashes the whole app ("Rendered more hooks than during the
+  // previous render") the moment the FIRST fuel log is saved. Found
+  // 2026-11-14 while verifying the fuel menu update — the chart is
+  // mounted with 0 logs, then re-renders with 1 log after the save.
   // One row per date; one price key per fuel type (null when that type
   // was not bought that day, so lines never jump across types).
   const chartData = useMemo(() => {
@@ -90,6 +85,18 @@ export const FuelPriceChart: React.FC<FuelPriceChartProps> = ({ logs, lang }) =>
     });
     return [...byDate.values()].map((row) => ({ ...row, ...(metaByDate.get(row.date as string) || {}) }));
   }, [filtered]);
+
+  if (sorted.length === 0) {
+    return (
+      <div className="p-8 text-center bg-slate-50 border border-slate-200/80 rounded-3xl">
+        <p className="text-sm text-slate-500">
+          {lang === 'my'
+            ? 'ဆီဈေးနှုန်း အတက်အကျ ပြသရန် ဆီထည့်မှတ်တမ်းများ မရှိသေးပါ'
+            : 'No fuel price data available yet'}
+        </p>
+      </div>
+    );
+  }
 
   const prices = filtered.map((l) => l.pricePerLiter).filter((p) => p > 0);
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;

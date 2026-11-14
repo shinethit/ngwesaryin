@@ -32,7 +32,8 @@ import type { UnifiedItemInfo } from '../utils/itemIntelligence';
 // in the reminder store.
 import { isShopNameNeedingDetails } from '../utils/shopDetailsReminders';
 // [v7.5.82] Menu units for the shopping-list rows + unit carry-through.
-import { DEFAULT_MENU_UNIT, normalizeMenuUnit, SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
+import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, normalizeMenuUnit, SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
+import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
@@ -1546,23 +1547,43 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       // [v7.5.78 C] Prompt decision — captured BEFORE onSubmit, because
       // the publish opt-in above can create a name-only public stub with
       // this name, which would otherwise hide that it still needs
-      // details. Only the shop name TYPED in the shop field counts: a
-      // fuel gas-station / workshop fallback is not a shop the user named.
+      // details. [v7.5.83] For fuel / vehicle entries the DERIVED
+      // station / workshop name IS the shop (user overruled the v7.5.82
+      // "not a shop the user named" rule, 2026-11-14): a station not in
+      // the directory triggers the details prompt like a new regular
+      // shop, so it can be added instead of silently skipped. General
+      // entries still count only the name typed in the shop field.
       const typedShopName = shopName.trim();
+      const detailsShopName =
+        entryModel === 'fuel' || entryModel === 'vehicle_service' ? derivedShopName : typedShopName;
       const needsShopDetailsPrompt =
-        typedShopName.length > 0 && isShopNameNeedingDetails(typedShopName, shops, publicShops);
+        detailsShopName.length > 0 && isShopNameNeedingDetails(detailsShopName, shops, publicShops);
 
       // [v7.5.82] Menu-update candidate — captured BEFORE onSubmit,
-      // next to the details-prompt decision. Only a general-model
-      // entry that actually carries items (shopping_list or unit_qty)
-      // with a typed shop name can update a menu. A plain/direct
-      // entry has txItems undefined, and fuel / vehicle entries never
-      // build txItems, so they produce NO candidate and no prompt —
-      // as designed.
+      // next to the details-prompt decision. [v7.5.83] Fuel and
+      // maintenance entries now build a ONE-item candidate too (fuel
+      // type per litre at the selected station; service / part per
+      // service at the workshop) — the station / workshop name IS the
+      // shop for them. A plain/direct entry has txItems undefined and
+      // produces no candidate; license renewal and the free tire check
+      // never do either.
       const menuUpdateCandidate =
-        entryModel === 'general' && txItems && txItems.length > 0 && typedShopName.length > 0
-          ? { shopName: typedShopName, items: txItems }
-          : null;
+        entryModel === 'general'
+          ? txItems && txItems.length > 0 && typedShopName.length > 0
+            ? { shopName: typedShopName, items: txItems }
+            : null
+          : buildVehicleMenuCandidate({
+              entryModel,
+              shopName: derivedShopName,
+              fuelType,
+              fuelLiters: parseMyanmarNumber(fuelLiters) || 0,
+              fuelPricePerLiter: parseMyanmarNumber(fuelPricePerLiter) || 0,
+              maintServiceType,
+              maintServiceLabel: SERVICE_TYPE_CONFIG[maintServiceType]?.labelMy,
+              maintTitle,
+              extraNote,
+              finalAmount,
+            });
 
             const saveOk = onSubmit({
         type: entryModel === 'fuel' || entryModel === 'vehicle_service' ? 'expense' : type,
@@ -1592,7 +1613,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         // prompt and stash the details name until it closes, so the
         // two prompts never stack.
         if (menuUpdateCandidate) onShopMenuUpdateCandidate?.(menuUpdateCandidate);
-        if (needsShopDetailsPrompt) onShopNeedsDetails?.(typedShopName);
+        if (needsShopDetailsPrompt) onShopNeedsDetails?.(detailsShopName);
         onClose();
       }
     } catch (err) {

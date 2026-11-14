@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.82';
-export const CURRENT_BUILD_NUMBER = 297;
+export const CURRENT_APP_VERSION = 'v7.5.83';
+export const CURRENT_BUILD_NUMBER = 298;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.83',
+    buildNumber: 298,
+    releaseDate: '2026-11-14',
+    releaseTime: '9:00 PM (MMT)',
+    titleMy: 'ယာဉ်စာရင်း — ဆီ / ပြုပြင်ထိန်းသိမ်းမှု ဈေးနှုန်းလည်း Menu မှာ တင်ပေးလို့ရပြီ',
+    titleEn: 'Vehicle entries — fuel and maintenance prices can now update shop menus too',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ဆီဖြည့်တိုင်း ဆီဆိုင်ရဲ့ Menu မှာ ၁ လီတာ ဈေး အသစ် တင်ပေးလို့ရပြီ — ဆီအမျိုးအစား တူရင် ဈေး Update ဖြစ်ပြီး၊ မတူရင် အသစ်ထည့်ပေးတယ်။ ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု စာရင်းသွင်းရင်လည်း ဝပ်ရှော့ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးလို့ရတယ်။ ဆီဆိုင် / ဝပ်ရှော့ နာမည် ဆိုင်လိပ်စာထဲမှာ မရှိရင် ဆိုင်အသစ်အနေနဲ့ ထည့်လို့ရတယ်။',
+    descriptionEn: 'When you log fuel, you can now update the station’s menu with the new per-litre price — a matching fuel type updates its price and a new one is added. Vehicle maintenance entries can now update the workshop’s menu too, and a station or workshop that isn’t listed yet can be added as a new shop.',
+    changesMy: [
+      'ဆီဖြည့်ရင် ဆိုင်ရဲ့ Menu ကို ၁ လီတာ ဈေး အသစ် တင်ပေးလို့ရပြီ — ဆီအမျိုးအစား (Octane 92 / 95...) တူရင် ဈေး Update ဖြစ်ပြီး၊ မတူရင် အသစ်ထည့်ပေးတယ်။',
+      'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု စာရင်းသွင်းရင်လည်း ဝပ်ရှော့ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးလို့ရပြီ — ဆီဆိုင် / ဝပ်ရှော့ နာမည် မရှိရင် ဆိုင်အသစ်အနေနဲ့ ထည့်လို့ရတယ်။',
+      'ဆီထည့်မှတ်တမ်း ပထမဆုံး ထည့်တဲ့အခါ App တစ်ခုလုံး ပိတ်သွားတဲ့ ပြဿနာကို ပြင်ပေးထားပါတယ်။',
+    ],
+    changesEn: [
+      'When you log fuel, you can now update the station’s menu with the new per-litre price — a matching fuel type updates its price, a new one is added.',
+      'Vehicle maintenance entries can now update the workshop’s menu too — and a station or workshop that isn’t listed yet can be added as a new shop.',
+      'Fixed a crash when saving your first fuel log (the fuel price chart).',
+    ],
+  },
   {
     version: 'v7.5.82',
     buildNumber: 297,

@@ -1,7 +1,7 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "7.5.82",
+  "version": "7.5.83",
   "type": "module",
   "scripts": {
     "test": "vitest run",

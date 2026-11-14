@@ -1,13 +1,15 @@
 {
-  "version": "v7.5.82",
-  "buildNumber": 297,
+  "version": "v7.5.83",
+  "buildNumber": 298,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Shopping List နဲ့ စာရင်းသွင်းရင် ဆိုင်ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးလို့ရပြီ — ပစ္စည်းတူရင် ဈေး Update ဖြစ်ပြီး၊ ပစ္စည်းမတူရင် အသစ်ထည့်ပေးပါတယ်။",
-    "ဈေးက အရမ်းကွာနေရင် အတည်ပြုမေးမယ်၊ Unit လည်း ရွေးလို့ရပြီ (တစ်ခု / တစ်ပါကင် / တစ်ကီလို...)။"
+    "ဆီဖြည့်ရင် ဆိုင်ရဲ့ Menu ကို ၁ လီတာ ဈေး အသစ် တင်ပေးလို့ရပြီ — ဆီအမျိုးအစား (Octane 92 / 95...) တူရင် ဈေး Update ဖြစ်ပြီး၊ မတူရင် အသစ်ထည့်ပေးတယ်။",
+    "ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု စာရင်းသွင်းရင်လည်း ဝပ်ရှော့ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးလို့ရပြီ — ဆီဆိုင် / ဝပ်ရှော့ နာမည် မရှိရင် ဆိုင်အသစ်အနေနဲ့ ထည့်လို့ရတယ်။",
+    "ဆီထည့်မှတ်တမ်း ပထမဆုံး ထည့်တဲ့အခါ App တစ်ခုလုံး ပိတ်သွားတဲ့ ပြဿနာကို ပြင်ပေးထားပါတယ်။"
   ],
   "changesEn": [
-    "When you save a shopping-list entry, you can now update the shop’s menu with the new prices — a matching item updates its price, a new item is added.",
-    "You’ll be asked to confirm when a price differs a lot, and you can now pick the unit (per piece / per pack / per kg…)."
+    "When you log fuel, you can now update the station’s menu with the new per-litre price — a matching fuel type updates its price, a new one is added.",
+    "Vehicle maintenance entries can now update the workshop’s menu too — and a station or workshop that isn’t listed yet can be added as a new shop.",
+    "Fixed a crash when saving your first fuel log (the fuel price chart)."
   ]
 }

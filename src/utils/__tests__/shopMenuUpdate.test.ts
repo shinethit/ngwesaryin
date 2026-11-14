@@ -10,6 +10,7 @@ import {
   SHOP_MENU_UNITS,
   applyShopMenuItems,
   buildUpdatedMenuItems,
+  buildVehicleMenuCandidate,
   computeMenuDiff,
   isLargePriceDifference,
   normalizeMenuItemName,
@@ -381,5 +382,108 @@ describe('shouldOfferMenuUpdate (v7.5.82 gate)', () => {
 
   it('signed-in + private shop → true', () => {
     expect(shouldOfferMenuUpdate({ ...base, isPublic: false, isSignedIn: true })).toBe(true);
+  });
+});
+
+describe('buildVehicleMenuCandidate (v7.5.83)', () => {
+  const fuelBase = {
+    entryModel: 'fuel' as const,
+    shopName: 'Denko',
+    fuelType: 'Octane 92',
+    fuelLiters: 10,
+    fuelPricePerLiter: 3100,
+  };
+
+  it('fuel builds Octane 92 / တစ်လီတာ / price-per-litre, amount = price × litres', () => {
+    const c = buildVehicleMenuCandidate(fuelBase);
+    expect(c).toEqual({
+      shopName: 'Denko',
+      items: [{ name: 'Octane 92', price: 3100, quantity: 10, amount: 31000, unit: 'တစ်လီတာ' }],
+    });
+  });
+
+  it('fuel with no station → null', () => {
+    expect(buildVehicleMenuCandidate({ ...fuelBase, shopName: '' })).toBeNull();
+    expect(buildVehicleMenuCandidate({ ...fuelBase, shopName: '   ' })).toBeNull();
+  });
+
+  it('fuel price 0 → null; litres 0 → null', () => {
+    expect(buildVehicleMenuCandidate({ ...fuelBase, fuelPricePerLiter: 0 })).toBeNull();
+    expect(buildVehicleMenuCandidate({ ...fuelBase, fuelLiters: 0 })).toBeNull();
+    expect(buildVehicleMenuCandidate({ ...fuelBase, fuelPricePerLiter: -100 })).toBeNull();
+  });
+
+  it('fuel with no fuel type → null', () => {
+    expect(buildVehicleMenuCandidate({ ...fuelBase, fuelType: '' })).toBeNull();
+    expect(buildVehicleMenuCandidate({ ...fuelBase, fuelType: '  ' })).toBeNull();
+  });
+
+  it('fuel item flows through computeMenuDiff: 3000 → 3100 is an update row (not large)', () => {
+    const c = buildVehicleMenuCandidate(fuelBase)!;
+    const rows = computeMenuDiff(
+      [{ name: 'Octane 92', price: 3000, unit: 'တစ်လီတာ' }],
+      c.items,
+    );
+    expect(rows).toEqual([
+      { itemName: 'Octane 92', unit: 'တစ်လီတာ', oldPrice: 3000, newPrice: 3100, isNew: false, isLargeDiff: false },
+    ]);
+  });
+
+  it('fuel item flows through computeMenuDiff: a 3x jump flags a large diff', () => {
+    const c = buildVehicleMenuCandidate({ ...fuelBase, fuelPricePerLiter: 9500 })!;
+    const rows = computeMenuDiff(
+      [{ name: 'Octane 92', price: 3000, unit: 'တစ်လီတာ' }],
+      c.items,
+    );
+    expect(rows).toEqual([
+      { itemName: 'Octane 92', unit: 'တစ်လီတာ', oldPrice: 3000, newPrice: 9500, isNew: false, isLargeDiff: true },
+    ]);
+  });
+
+  const maintBase = {
+    entryModel: 'vehicle_service' as const,
+    shopName: 'ဝပ်ရှော့ A',
+    maintServiceType: 'engine_oil',
+    maintServiceLabel: 'အင်ဂျင်ဝိုင် (Engine Oil)',
+    maintTitle: 'အင်ဂျင်ဝိုင် လဲလှယ်ခြင်း',
+    extraNote: '',
+    finalAmount: 45000,
+  };
+
+  it('maintenance builds title / တစ်ခု / total, quantity 1', () => {
+    const c = buildVehicleMenuCandidate(maintBase);
+    expect(c).toEqual({
+      shopName: 'ဝပ်ရှော့ A',
+      items: [{ name: 'အင်ဂျင်ဝိုင် လဲလှယ်ခြင်း', price: 45000, quantity: 1, amount: 45000, unit: 'တစ်ခု' }],
+    });
+  });
+
+  it('maintenance with no title falls back to the service label', () => {
+    const c = buildVehicleMenuCandidate({ ...maintBase, maintTitle: '' });
+    expect(c?.items[0].name).toBe('အင်ဂျင်ဝိုင် (Engine Oil)');
+  });
+
+  it('maintenance with no title and no label falls back to the note, then the default', () => {
+    const c = buildVehicleMenuCandidate({ ...maintBase, maintTitle: '', maintServiceLabel: '' });
+    expect(c?.items[0].name).toBe('ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု');
+    const c2 = buildVehicleMenuCandidate({ ...maintBase, maintTitle: '', maintServiceLabel: '', extraNote: 'ဘရိတ်စစ်ဆေးခြင်း' });
+    expect(c2?.items[0].name).toBe('ဘရိတ်စစ်ဆေးခြင်း');
+  });
+
+  it('maintenance with no workshop → null; amount 0 → null', () => {
+    expect(buildVehicleMenuCandidate({ ...maintBase, shopName: '' })).toBeNull();
+    expect(buildVehicleMenuCandidate({ ...maintBase, finalAmount: 0 })).toBeNull();
+  });
+
+  it('license_renewal → null (a government office is not a shop)', () => {
+    expect(buildVehicleMenuCandidate({ ...maintBase, maintServiceType: 'license_renewal' })).toBeNull();
+  });
+
+  it('tire_pressure → null (free, no price)', () => {
+    expect(buildVehicleMenuCandidate({ entryModel: 'tire_pressure', shopName: 'Denko' })).toBeNull();
+  });
+
+  it('general → null (the helper only handles vehicle models)', () => {
+    expect(buildVehicleMenuCandidate({ entryModel: 'general', shopName: 'Denko' })).toBeNull();
   });
 });

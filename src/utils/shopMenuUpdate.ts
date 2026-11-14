@@ -7,6 +7,11 @@
 // The menu price IS the entry's per-unit price — quantity is how many
 // were bought, so the price is never divided.
 //
+// [v7.5.83] Fuel / maintenance entries build a ONE-item candidate the
+// same way (see buildVehicleMenuCandidate below): the fuel type per
+// litre at the selected station, or the service / part per service at
+// the workshop — the station / workshop name IS the shop for them.
+//
 // The Firestore store is injected so the logic is unit-testable without
 // live Firestore; the default store is built lazily (dynamic import) so
 // importing this module never pulls in firebase.ts — tests pass a stub
@@ -14,6 +19,8 @@
 // NUMBERS — never serverTimestamp() via the safe* wrappers
 // (safeUpdateDoc/safeSetDoc CORRUPT FieldValue sentinels; see
 // AGENTS.md v7.5.64 lesson).
+
+import type { TransactionItem } from '../types';
 
 /** Default unit — one piece. Stored value is the Myanmar string. */
 export const DEFAULT_MENU_UNIT = 'တစ်ခု';
@@ -150,6 +157,84 @@ export interface MenuBuildCurrentItem {
   unit?: string;
   updatedAt?: number;
   addedBy?: string;
+}
+
+// ---------------------------------------------------------------------------
+// [v7.5.83] Vehicle entries (fuel / maintenance) build a ONE-item menu
+// candidate the same way a shopping-list entry does — the station /
+// workshop name IS the shop for them (user overruled the v7.5.82
+// "not a shop the user named" rule, 2026-11-14).
+// ---------------------------------------------------------------------------
+
+export interface VehicleMenuCandidateInput {
+  entryModel: 'general' | 'fuel' | 'vehicle_service' | 'tire_pressure';
+  /** Resolved shop name (derivedShopName): typed name, else station / workshop. */
+  shopName: string;
+  // Fuel (parsed numbers — the caller applies parseMyanmarNumber).
+  fuelType?: string;
+  fuelLiters?: number;
+  fuelPricePerLiter?: number;
+  // Maintenance.
+  maintServiceType?: string;
+  /** Canonical service label (SERVICE_TYPE_CONFIG labelMy) — resolved by the caller. */
+  maintServiceLabel?: string;
+  maintTitle?: string;
+  extraNote?: string;
+  finalAmount?: number;
+}
+
+export interface ShopMenuUpdateCandidate {
+  shopName: string;
+  items: TransactionItem[];
+}
+
+/**
+ * Build the menu-update candidate for a fuel / maintenance entry, or
+ * null when there is nothing to offer. Pure — no Firestore, no UI.
+ *
+ * - Fuel: one item, name = fuel type, unit 'တစ်လီတာ', price = price
+ *   per litre, quantity = litres, amount = price × quantity. Fires
+ *   only when a station name, a fuel type, a price > 0 and litres > 0
+ *   are all present. No station at all → auto-skip, like a general
+ *   entry with no shop.
+ * - Maintenance (not license_renewal): one item, name = title ||
+ *   service label || note || 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု', unit 'တစ်ခု',
+ *   price = total amount, quantity 1. Fires only when a workshop
+ *   name and an amount > 0 are present.
+ * - license_renewal (the "shop" is a government office, not a shop),
+ *   tire_pressure (free, no price) and general entries → null.
+ */
+export function buildVehicleMenuCandidate(
+  input: VehicleMenuCandidateInput,
+): ShopMenuUpdateCandidate | null {
+  const shop = (input.shopName || '').trim();
+  if (input.entryModel === 'fuel') {
+    const name = (input.fuelType || '').trim();
+    const price = input.fuelPricePerLiter ?? 0;
+    const qty = input.fuelLiters ?? 0;
+    if (!shop || !name || !Number.isFinite(price) || price <= 0 || !Number.isFinite(qty) || qty <= 0) {
+      return null;
+    }
+    return {
+      shopName: shop,
+      items: [{ name, price, quantity: qty, amount: price * qty, unit: 'တစ်လီတာ' }],
+    };
+  }
+  if (input.entryModel === 'vehicle_service') {
+    if (input.maintServiceType === 'license_renewal') return null;
+    const amount = input.finalAmount ?? 0;
+    if (!shop || !Number.isFinite(amount) || amount <= 0) return null;
+    const name =
+      (input.maintTitle || '').trim() ||
+      (input.maintServiceLabel || '').trim() ||
+      (input.extraNote || '').trim() ||
+      'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု';
+    return {
+      shopName: shop,
+      items: [{ name, price: amount, quantity: 1, amount, unit: 'တစ်ခု' }],
+    };
+  }
+  return null;
 }
 
 export interface BuiltMenuItem {

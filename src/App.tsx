@@ -49,12 +49,12 @@ import { ShopDetailsPromptModal } from './components/ShopDetailsPromptModal';
 // [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
 import { ShopMenuUpdatePromptModal } from './components/ShopMenuUpdatePromptModal';
 import {
-  applyShopMenuItems,
-  buildUpdatedMenuItems,
-  computeMenuDiff,
-  shouldOfferMenuUpdate,
+  applyResolvedMenuUpdate,
+  buildMenuPromptRows,
+  resolveMenuShop,
   type MenuUpdateRow,
   type ShopMenuStore,
+  type StashedMenuCandidate,
 } from './utils/shopMenuUpdate';
 import { submitShopPriceAlert } from './utils/shopPriceAlerts';
 import { LoginScreen } from './components/LoginScreen';
@@ -440,6 +440,20 @@ export default function App() {
   // of opening a second prompt on top of the menu prompt.
   const menuCandidatePendingRef = useRef(false);
   const menuPromptOpenRef = useRef(false);
+  // [v7.5.85 FIX 2] A menu candidate whose shop did not resolve yet
+  // (a just-typed NEW shop exists in neither list at save time — it
+  // is created right after, via the details prompt). One small
+  // object, overwritten by the next candidate; cleared only when its
+  // prompt opens. If the shop never appears it sits harmlessly.
+  const stashedMenuCandidateRef = useRef<StashedMenuCandidate | null>(null);
+  // [v7.5.85 FIX 2] Full public doc (menu included) for a public
+  // id+name hit — shared by the candidate handler, the stash retry
+  // effect, and the apply-time re-resolution below.
+  const fetchPublicMenuShop = useCallback(async (shopId: string): Promise<PublicShop | null> => {
+    const snap = await getDoc(doc(db, 'public_shops', shopId));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...(snap.data() as Omit<PublicShop, 'id'>) } as PublicShop;
+  }, []);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
     try {
       const saved = safeGetItem('ngwe_read_notifications');
@@ -947,58 +961,36 @@ export default function App() {
     try {
       const key = normalizeShopName(candidate.shopName);
       if (!key || !candidate.items || candidate.items.length === 0) return;
-      let resolved: { shop: ShopContact | PublicShop; isPublic: boolean } | null = null;
-      const publicHit = publicShops.find((s) => normalizeShopName(s.name) === key);
-      if (publicHit) {
-        // App's publicShops list carries only id+name (the App.tsx
-        // public-shops snapshot) — fetch the full doc for its menu.
-        // A fetch failure (or a vanished doc) leaves `resolved` null
-        // and the candidate auto-skips: it must NEVER fall back to the
-        // private namesake when a public shop matched.
-        try {
-          const snap = await getDoc(doc(db, 'public_shops', publicHit.id));
-          if (snap.exists()) {
-            resolved = {
-              shop: { id: snap.id, ...(snap.data() as Omit<PublicShop, 'id'>) } as PublicShop,
-              isPublic: true,
-            };
-          }
-        } catch (err) {
-          console.warn('[shopMenuUpdate] public shop fetch failed — skipping menu prompt:', err);
-        }
-        if (!resolved) return;
-      }
+      // [v7.5.85 FIX 2] Shared resolution (public-first, full public
+      // doc via getDoc, never fall back to a private namesake).
+      const resolved = await resolveMenuShop(candidate.shopName, publicShops, shops, fetchPublicMenuShop);
       if (!resolved) {
-        const privateHit = shops.find((s) => normalizeShopName(s.name) === key);
-        if (privateHit) resolved = { shop: privateHit, isPublic: false };
-      }
-      if (!resolved) return;
-      const rows = computeMenuDiff(resolved.shop.items || [], candidate.items);
-      // Gating: public shops need a signed-in user (the public_shops
-      // rules require sign-in); private shops do not — the local path
-      // works for guests on their own private shops (handleUpdateShop
-      // in useDataHandlers.ts:108 has NO auth gate: it always updates
-      // the local list and only writes to the cloud when user?.uid).
-      if (
-        !shouldOfferMenuUpdate({
-          hasItems: candidate.items.length > 0,
-          shopResolved: true,
-          isPublic: resolved.isPublic,
-          isSignedIn: !!user,
-          hasDiff: rows.length > 0,
-        })
-      ) {
+        // NEW SHOP: it exists in neither list yet — it is created
+        // right after, via the details prompt. STASH the candidate
+        // instead of silently dropping it; the retry effect below
+        // re-runs the SAME resolution + gating when the shop appears.
+        stashedMenuCandidateRef.current = { shopName: candidate.shopName, items: candidate.items };
         return;
       }
+      const rows = buildMenuPromptRows(candidate.items, resolved, !!user);
+      if (!rows) return;
       setMenuPromptError(null);
       setMenuPrompt({
         shopId: resolved.shop.id,
         shopName: resolved.shop.name,
         isPublic: resolved.isPublic,
-        shop: resolved.shop,
+        shop: resolved.shop as ShopContact | PublicShop,
         rows,
       });
       menuPromptOpenRef.current = true;
+      // A prompt opened for this shop supersedes its stashed
+      // candidate (a stash for a DIFFERENT shop is left alone).
+      if (
+        stashedMenuCandidateRef.current &&
+        normalizeShopName(stashedMenuCandidateRef.current.shopName) === key
+      ) {
+        stashedMenuCandidateRef.current = null;
+      }
       // The pending flag stays up until the prompt closes — the close
       // handlers flush the stashed details name.
       return;
@@ -1011,6 +1003,61 @@ export default function App() {
       }
     }
   };
+
+  // [v7.5.85 FIX 2] STASH RETRY — a candidate stashed because its
+  // shop did not exist yet is retried when either shop list changes
+  // (the new shop arriving via the details prompt is the usual
+  // trigger), re-running the SAME resolution + gating as the
+  // candidate handler. Skipped while the menu prompt is open or the
+  // details prompt is still up (the effect re-runs when the details
+  // prompt closes, so the retry is deferred, not lost). The stash is
+  // cleared ONLY on a successful prompt open; if the shop never
+  // appears, or nothing differs / the gate refuses, it sits
+  // harmlessly until the next candidate overwrites it.
+  useEffect(() => {
+    const stashed = stashedMenuCandidateRef.current;
+    if (!stashed) return;
+    if (menuPromptOpenRef.current) return;
+    if (shopDetailsPromptName) return;
+    let cancelled = false;
+    (async () => {
+      menuCandidatePendingRef.current = true;
+      try {
+        const resolved = await resolveMenuShop(stashed.shopName, publicShops, shops, fetchPublicMenuShop);
+        if (cancelled) return;
+        if (!resolved) return;
+        const rows = buildMenuPromptRows(stashed.items, resolved, !!user);
+        if (!rows) return;
+        setMenuPromptError(null);
+        setMenuPrompt({
+          shopId: resolved.shop.id,
+          shopName: resolved.shop.name,
+          isPublic: resolved.isPublic,
+          shop: resolved.shop as ShopContact | PublicShop,
+          rows,
+        });
+        menuPromptOpenRef.current = true;
+        stashedMenuCandidateRef.current = null;
+      } finally {
+        if (!cancelled && !menuPromptOpenRef.current) {
+          menuCandidatePendingRef.current = false;
+          flushPendingShopDetails();
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Retry when the watched lists change, the details prompt closes,
+    // or the user navigates (notably to Shops to check the menu).
+    // The navigation trigger matters: a stashed candidate whose public
+    // getDoc fetch failed has NO list change behind it (the shop is
+    // already listed), so without it the stash would sit until the
+    // next candidate overwrites it — a slow/failed fetch on mobile
+    // data must not lose the update. `user` is read from the closure
+    // of that render, which is current for the lists that just changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shops, publicShops, shopDetailsPromptName, activeTab]);
 
   // [v7.5.82] Apply the checked menu rows. On write FAILURE the real
   // error is shown in the modal and it STAYS OPEN so the user can retry
@@ -1025,7 +1072,24 @@ export default function App() {
         : lang === 'my'
           ? 'ဧည့်သည်'
           : 'Guest';
-      const updatedItems = buildUpdatedMenuItems(menuPrompt.shop.items || [], selectedRows, contributorName);
+      // [v7.5.85 FIX 2] RE-RESOLVE AT APPLY — the prompt holds the
+      // shop SNAPSHOT from save time, but the shop may have been
+      // MOVED (private → public) or DELETED since. Resolve BY NAME
+      // from CURRENT state (public-first, full public doc via
+      // getDoc) and build from the FRESH shop and its CURRENT items.
+      // If it is gone everywhere, show the error and write NOTHING:
+      // calling handleUpdateShop on a deleted private shop would
+      // RESURRECT it in Firestore (safeSetDoc merge) behind a false
+      // success toast, and the public copy would never get the prices.
+      const fresh = await resolveMenuShop(menuPrompt.shopName, publicShops, shops, fetchPublicMenuShop);
+      if (!fresh) {
+        setMenuPromptError(
+          lang === 'my'
+            ? 'ဆိုင်ကို ရှာမတွေ့တော့ပါ — ရွှેષလိုက်ပြီ ဒါမှမဟုတ် ဖျက်လိုက်ပြီ ဖြစ်နိုင်ပါတယ်။'
+            : 'Shop not found anymore — it may have been moved or deleted.'
+        );
+        return;
+      }
       // Explicit store — mirrors ShopsView's handleAddPricingItem
       // exactly: public shops via safeUpdateDoc on public_shops,
       // private shops via App's handleUpdateShop (the util's default
@@ -1039,8 +1103,8 @@ export default function App() {
             items: items as ShopContact['items'],
           }),
       };
-      const ok = await applyShopMenuItems(menuPrompt.shop, menuPrompt.isPublic, updatedItems, store);
-      if (!ok) {
+      const result = await applyResolvedMenuUpdate(fresh, selectedRows, contributorName, store);
+      if (result === 'failed') {
         setMenuPromptError(
           lang === 'my' ? 'Menu Update မအောင်မြင်ပါ — ထပ်ကြိုးစားပေးပါ' : 'Menu update failed — please try again'
         );
@@ -1054,8 +1118,8 @@ export default function App() {
       for (const row of selectedRows) {
         if (!row.isLargeDiff) continue;
         submitShopPriceAlert({
-          shopId: menuPrompt.shopId,
-          shopName: menuPrompt.shopName,
+          shopId: fresh.shop.id,
+          shopName: fresh.shop.name,
           itemName: row.itemName,
           unit: row.unit,
           oldPrice: row.oldPrice ?? 0,

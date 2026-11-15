@@ -21,6 +21,7 @@
 // AGENTS.md v7.5.64 lesson).
 
 import type { TransactionItem } from '../types';
+import { normalizeShopName } from './shopDetailsReminders';
 
 /** Default unit — one piece. Stored value is the Myanmar string. */
 export const DEFAULT_MENU_UNIT = 'တစ်ခု';
@@ -356,6 +357,127 @@ export function shouldOfferMenuUpdate(input: {
   hasDiff: boolean;
 }): boolean {
   return input.hasItems && input.shopResolved && input.hasDiff && (!input.isPublic || input.isSignedIn);
+}
+
+// ---------------------------------------------------------------------------
+// [v7.5.85 FIX 2] Menu candidate survives a new shop and a move.
+// Two defects, one shared resolution:
+//
+// 1. NEW SHOP: at save time a just-typed shop exists in NEITHER list
+//    yet — it is created right after, via the details prompt, as a
+//    `__prefill_` sentinel with NO `items` field — so the candidate
+//    handler used to silently drop the candidate (`if (!resolved)
+//    return`). App now STASHES the candidate (one small object, keyed
+//    by normalized name) and retries it when a matching shop appears
+//    in either list, re-running the SAME resolution + gating.
+// 2. MOVE / DELETE BEFORE CONFIRM: the prompt held the shop SNAPSHOT
+//    from save time, so confirming after a move wrote to the stale
+//    copy — and after a delete, the private write RESURRECTED the
+//    deleted doc in Firestore. App now RE-RESOLVES by name at apply
+//    time (fresh shop, fresh items) and writes nowhere when the shop
+//    is gone.
+//
+// The resolution + gating + apply are pure / injectable here so they
+// are unit-testable without mounting App; App only wires state, the
+// Firestore fetch, and the modal around them.
+// ---------------------------------------------------------------------------
+
+/** One entry of either shop list App watches (public carries id+name only). */
+export interface MenuShopListEntry {
+  id: string;
+  name: string;
+  items?: MenuBuildCurrentItem[];
+}
+
+export interface ResolvedMenuShop {
+  shop: MenuShopListEntry;
+  isPublic: boolean;
+}
+
+/** Fetches the FULL public doc (menu included) for a public id+name hit. */
+export type FetchPublicMenuShop = (shopId: string) => Promise<MenuShopListEntry | null>;
+
+/** A candidate whose shop did not resolve yet — stashed until it appears. */
+export interface StashedMenuCandidate {
+  shopName: string;
+  items: TransactionItem[];
+}
+
+/**
+ * Resolve a shop name the SAME way the details prompt matches it
+ * (trim + case-insensitive). Public-first: if the name matches BOTH
+ * a public and a private shop, the PUBLIC shop wins. If a public
+ * shop matched but its full doc cannot be fetched (fetch failure or
+ * vanished doc), returns null and NEVER falls back to the private
+ * namesake. Returns null when the name matches nothing.
+ */
+export async function resolveMenuShop(
+  shopName: string,
+  publicShops: Array<{ id: string; name: string }>,
+  privateShops: MenuShopListEntry[],
+  fetchPublicShop: FetchPublicMenuShop,
+): Promise<ResolvedMenuShop | null> {
+  const key = normalizeShopName(shopName);
+  if (!key) return null;
+  const publicHit = publicShops.find((s) => normalizeShopName(s.name) === key);
+  if (publicHit) {
+    try {
+      const full = await fetchPublicShop(publicHit.id);
+      if (full) return { shop: full, isPublic: true };
+    } catch (err) {
+      console.warn('[shopMenuUpdate] public shop fetch failed — skipping menu prompt:', err);
+    }
+    return null;
+  }
+  const privateHit = privateShops.find((s) => normalizeShopName(s.name) === key);
+  if (privateHit) return { shop: privateHit, isPublic: false };
+  return null;
+}
+
+/**
+ * Diff a candidate's items against the resolved shop's CURRENT menu
+ * and apply the v7.5.82 gate. Returns the prompt rows, or null when
+ * there is nothing to offer (no diff, or guest + public shop).
+ */
+export function buildMenuPromptRows(
+  candidateItems: TransactionItem[],
+  resolved: ResolvedMenuShop | null,
+  isSignedIn: boolean,
+): MenuUpdateRow[] | null {
+  if (!resolved || !candidateItems || candidateItems.length === 0) return null;
+  const rows = computeMenuDiff(resolved.shop.items || [], candidateItems);
+  if (
+    !shouldOfferMenuUpdate({
+      hasItems: candidateItems.length > 0,
+      shopResolved: true,
+      isPublic: resolved.isPublic,
+      isSignedIn,
+      hasDiff: rows.length > 0,
+    })
+  ) {
+    return null;
+  }
+  return rows;
+}
+
+export type ApplyResolvedMenuUpdateResult = 'applied' | 'not-found' | 'failed';
+
+/**
+ * Apply the checked rows to a FRESHLY resolved shop. Returns
+ * 'not-found' — WITHOUT calling the store at all — when the shop no
+ * longer exists, so a deleted private shop is never resurrected by a
+ * write. 'failed' when the store write fails; 'applied' on success.
+ */
+export async function applyResolvedMenuUpdate(
+  resolved: ResolvedMenuShop | null,
+  selectedRows: MenuUpdateRow[],
+  contributorName: string,
+  store?: ShopMenuStore,
+): Promise<ApplyResolvedMenuUpdateResult> {
+  if (!resolved) return 'not-found';
+  const updatedItems = buildUpdatedMenuItems(resolved.shop.items || [], selectedRows, contributorName);
+  const ok = await applyShopMenuItems(resolved.shop, resolved.isPublic, updatedItems, store);
+  return ok ? 'applied' : 'failed';
 }
 
 /**

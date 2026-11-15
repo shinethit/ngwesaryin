@@ -16,7 +16,8 @@ import { ShopModal } from './shops/ShopModal';
 import { ShopReportModal } from './shops/ShopReportModal';
 import type { SubmitShopReportResult } from '../utils/shopReports';
 import { useSearchSeed } from '../hooks/useSearchSeed';
-import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
+import { resolveShopDetailReminder, normalizeShopName } from '../utils/shopDetailsReminders';
+import { buildMyShopsList } from '../utils/myShops';
 import {
   applyShopMenuItems,
   buildUpdatedMenuItems,
@@ -54,6 +55,17 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const [publicShops, setPublicShops] = useState<PublicShop[]>([]);
   const [loadingPublic, setLoadingPublic] = useState(true);
 
+  // [v7.5.85 FIX 1] "ကိုယ်ပိုင်" = MY shops — the Private tab shows the
+  // user's private shops PLUS the public shops they added (a shop moved
+  // private → public keeps its addedByUid, so it appears in both tabs).
+  // Guests (no uid) see only their private list. The PUBLIC tab is
+  // unchanged (all publicShops). Memoised on the two source lists and
+  // the signed-in uid.
+  const myShopsList = useMemo(
+    () => buildMyShopsList(privateShops, publicShops, auth.currentUser?.uid),
+    [privateShops, publicShops, auth.currentUser?.uid]
+  );
+
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
@@ -67,20 +79,25 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     const onOpenForm = (e: Event) => {
       const shopName = (e as CustomEvent<{ shopName?: string }>).detail?.shopName?.trim();
       if (!shopName) return;
-      const key = shopName.toLowerCase();
-      const existing = privateShops.find((s) => s.name.trim().toLowerCase() === key);
+      const key = normalizeShopName(shopName);
+      // [v7.5.85 FIX 1] Look in MY shops (private + my public): a shop
+      // moved to the public directory still belongs to the user, so the
+      // deep-link must open THAT record for editing instead of starting
+      // a duplicate prefill. The edit flag follows the record found.
+      const existing = myShopsList.find((s) => normalizeShopName(s.name) === key);
       setDirectoryType(plan === 'premium' ? 'private' : 'public');
-      setIsEditingPublic(false);
       if (existing) {
         setEditingShop(existing);
+        setIsEditingPublic('addedBy' in existing);
       } else {
+        setIsEditingPublic(false);
         setEditingShop({ id: `__prefill_${Date.now()}`, name: shopName, phone: '', userId: '', createdAt: Date.now() } as ShopContact);
       }
       setIsModalOpen(true);
     };
     window.addEventListener('ngwe:open-shop-form', onOpenForm);
     return () => window.removeEventListener('ngwe:open-shop-form', onOpenForm);
-  }, [privateShops, plan]);
+  }, [myShopsList, plan]);
   const [selectedTagFilter, setSelectedTagFilter] = useState('all');
 
   // Hierarchical Filter States
@@ -260,7 +277,15 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
   // Delete Handlers
   const handleDelete = async (id: string, name: string) => {
-    if (directoryType === 'public') {
+    // [v7.5.85 FIX 1] Delete by the RECORD's own type, not the tab: the
+    // Private tab now also shows the user's PUBLIC shops, and a public
+    // copy's id is a public_shops doc id — deleting it via the private
+    // handler would silently do nothing. (Falls back to the tab when
+    // the id is not in the shown list, e.g. a stale card.)
+    const shown = directoryType === 'public' ? publicShops : myShopsList;
+    const target = shown.find((s) => s.id === id);
+    const isPublicRecord = target ? 'addedBy' in target : directoryType === 'public';
+    if (isPublicRecord) {
       const confirmMsg =
         lang === 'my'
           ? `"${name}" ကို ပြည်သူ့လမ်းညွှန်ထဲမှ ဖျက်ရန် သေချာပါသလား။`
@@ -672,7 +697,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   };
 
   // Determine active list & Filter
-  const activeShopsList = directoryType === 'public' ? publicShops : privateShops;
+  // [v7.5.85 FIX 1] Private tab = MY shops (private + my public);
+  // Public tab unchanged.
+  const activeShopsList = directoryType === 'public' ? publicShops : myShopsList;
 
   const filteredShops = useMemo(() => {
     return activeShopsList.filter((shop) => {
@@ -939,7 +966,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               <Lock className="w-3.5 h-3.5 text-amber-500" />
               <span>{lang === 'my' ? 'ကိုယ်ပိုင်' : 'Private'}</span>
               <span className="px-1 py-0.2 rounded-full bg-slate-100 text-[9px] text-slate-600 font-extrabold border border-slate-200/60">
-                {privateShops.length}
+                {myShopsList.length}
               </span>
             </button>
           </div>
@@ -1342,7 +1369,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                         <ShopCard
                           key={shop.id}
                           shop={shop}
-                          isPublic={directoryType === 'public'}
+                          isPublic={'addedBy' in shop}
                           lang={lang}
                           viewMode="compact"
                           hasVoted={votedIds.includes(shop.id)}
@@ -1361,7 +1388,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                         <ShopCard
                           key={shop.id}
                           shop={shop}
-                          isPublic={directoryType === 'public'}
+                          isPublic={'addedBy' in shop}
                           lang={lang}
                           viewMode="grid"
                           hasVoted={votedIds.includes(shop.id)}
@@ -1386,7 +1413,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   <ShopCard
                     key={shop.id}
                     shop={shop}
-                    isPublic={directoryType === 'public'}
+                    isPublic={'addedBy' in shop}
                     lang={lang}
                     viewMode="compact"
                     hasVoted={votedIds.includes(shop.id)}
@@ -1405,7 +1432,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   <ShopCard
                     key={shop.id}
                     shop={shop}
-                    isPublic={directoryType === 'public'}
+                    isPublic={'addedBy' in shop}
                     lang={lang}
                     viewMode="grid"
                     hasVoted={votedIds.includes(shop.id)}
@@ -1576,7 +1603,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         lang={lang}
         onOpenUpgradeModal={onOpenUpgradeModal}
         onSave={handleSaveModal}
-        existingShops={directoryType === 'public' ? publicShops : privateShops}
+        existingShops={directoryType === 'public' ? publicShops : myShopsList}
       />
 
       {/* [v7.5.81] Report modal — hosted here in ShopsView, not in ShopCard. */}

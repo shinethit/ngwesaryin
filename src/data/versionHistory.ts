@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.84';
-export const CURRENT_BUILD_NUMBER = 299;
+export const CURRENT_APP_VERSION = 'v7.5.85';
+export const CURRENT_BUILD_NUMBER = 300;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.85',
+    buildNumber: 300,
+    releaseDate: '2026-11-15',
+    releaseTime: '6:44 AM (MMT)',
+    titleMy: 'ပြည်သူ့ထဲထည့်ထားတဲ့ ကိုယ့်ဆိုင်လည်း ကိုယ်ပိုင်ထဲမှာ ပေါ်ပြီ — Menu Update လည်း မပျောက်တော့ဘူး',
+    titleEn: 'My public shops now show in My Shops too — and menu updates no longer get lost',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ကိုယ်ပိုင်ဆိုင်စာရင်းမှာ ကိုယ်ထည့်ထားတဲ့ ပြည်သူ့ဆိုင်တွေပါ ပေါ်တော့မယ် — ပြည်သူ့ထဲ ရွှေ့လိုက်တဲ့ ကိုယ့်ဆိုင်လည်း ကိုယ်ပိုင်ထဲက မပျောက်တော့ဘူး။ ဆိုင်နာမည် ရှိပြီးသား (အသေးစိတ်ပဲ လိုနေတဲ့) ဆိုင်နဲ့ စာရင်းထည့်ရင်လည်း Menu Update prompt ပေါ်တော့မယ် — အသေးစိတ်ဖြည့်ပြီးတာနဲ့ တခါတည်း ပေါ်တယ်။ ဆိုင်ကို ရွှေ့လိုက်ရင်တောင် Update က ဆိုင်အသစ်နေရာကို လိုက်သွားမယ်။',
+    descriptionEn: 'My Shops now lists the public shops I added too — a shop I move to Public no longer vanishes from My Shops. Menu Update prompts now appear even when the shop name already existed and only its details were missing — right after the details are filled, at once. And if the shop is moved, the update follows it to its new place.',
+    changesMy: [
+      'ကိုယ်ပိုင်ထဲမှာ ကိုယ်ထည့်ထားတဲ့ ပြည်သူ့ဆိုင်တွေပါ ပေါ်တော့မယ် — နှစ်နေရာလုံးမှာ မြင်ရမယ်။',
+      'ဆိုင်နာမည် ရှိပြီးသား (အသေးစိတ်ပဲ ထပ်ထည့်ရတဲ့) ဆိုင်နဲ့ စာရင်းထည့်ရင်လည်း Menu Update prompt ပေါ်တော့မယ် — ဆိုင်ကို ရွှေ့လိုက်ရင်တောင် Update က လိုက်သွားမယ်။',
+    ],
+    changesEn: [
+      'My public shops now show in My Shops too — visible in both places.',
+      'Menu Update prompts now appear even when the shop name already existed and only its details were missing — and the update follows the shop even if you move it.',
+    ],
+  },
   {
     version: 'v7.5.84',
     buildNumber: 299,

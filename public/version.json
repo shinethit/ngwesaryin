@@ -1,11 +1,13 @@
 {
-  "version": "v7.5.84",
-  "buildNumber": 299,
+  "version": "v7.5.85",
+  "buildNumber": 300,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အပေါ်က Menu ခလုတ်ကို ဖြုတ်လိုက်ပြီ — Menu ကို အောက်က Menu ခလုတ်နဲ့ပဲ ဖွင့်လို့ရတယ် (အောက် Menu က ဒီအတိုင်းပဲ)။"
+    "ကိုယ်ပိုင်ထဲမှာ ကိုယ်ထည့်ထားတဲ့ ပြည်သူ့ဆိုင်တွေပါ ပေါ်တော့မယ် — နှစ်နေရာလုံးမှာ မြင်ရမယ်။",
+    "ဆိုင်နာမည် ရှိပြီးသား (အသေးစိတ်ပဲ ထပ်ထည့်ရတဲ့) ဆိုင်နဲ့ စာရင်းထည့်ရင်လည်း Menu Update prompt ပေါ်တော့မယ် — ဆိုင်ကို ရွှေ့လိုက်ရင်တောင် Update က လိုက်သွားမယ်။"
   ],
   "changesEn": [
-    "Removed the top Menu button — open the menu from the bottom bar instead (the bottom bar is unchanged)."
+    "My public shops now show in My Shops too — visible in both places.",
+    "Menu Update prompts now appear even when the shop name already existed and only its details were missing — and the update follows the shop even if you move it."
   ]
 }

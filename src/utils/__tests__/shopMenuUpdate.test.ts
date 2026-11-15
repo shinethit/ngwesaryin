@@ -8,13 +8,16 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   DEFAULT_MENU_UNIT,
   SHOP_MENU_UNITS,
+  applyResolvedMenuUpdate,
   applyShopMenuItems,
+  buildMenuPromptRows,
   buildUpdatedMenuItems,
   buildVehicleMenuCandidate,
   computeMenuDiff,
   isLargePriceDifference,
   normalizeMenuItemName,
   normalizeMenuUnit,
+  resolveMenuShop,
   shouldOfferMenuUpdate,
   type MenuUpdateRow,
   type ShopMenuStore,
@@ -485,5 +488,147 @@ describe('buildVehicleMenuCandidate (v7.5.83)', () => {
 
   it('general → null (the helper only handles vehicle models)', () => {
     expect(buildVehicleMenuCandidate({ entryModel: 'general', shopName: 'Denko' })).toBeNull();
+  });
+});
+
+describe('resolveMenuShop (v7.5.85 FIX 2 — stash / retry resolution)', () => {
+  const txItems = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'တစ်ကီလို' }];
+  const fetchPublic = async (id: string) => ({
+    id,
+    name: 'Denko',
+    items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'တစ်ကီလို' }],
+  });
+
+  it('unknown shop (neither list) → null — the candidate is STASHED, not dropped', async () => {
+    const resolved = await resolveMenuShop('New Shop', [], [], fetchPublic);
+    expect(resolved).toBeNull();
+  });
+
+  it('retry after the shop appears: same name now resolves to the private shop', async () => {
+    // Save time: nothing resolves → stash. Later: the details prompt
+    // created the shop → the retry re-runs the SAME resolution.
+    expect(await resolveMenuShop('New Shop', [], [], fetchPublic)).toBeNull();
+    const privateShops = [{ id: 'priv-1', name: 'New Shop', items: [] }];
+    const resolved = await resolveMenuShop('New Shop', [], privateShops, fetchPublic);
+    expect(resolved).toEqual({ shop: privateShops[0], isPublic: false });
+    // And the stashed items now diff against its (empty) menu → a prompt row.
+    const rows = buildMenuPromptRows(txItems, resolved, false);
+    expect(rows).toEqual([
+      { itemName: 'Rice', unit: 'တစ်ကီလို', oldPrice: null, newPrice: 1200, isNew: true, isLargeDiff: false },
+    ]);
+  });
+
+  it('matching is trim + case-insensitive, like the details prompt', async () => {
+    const privateShops = [{ id: 'priv-1', name: 'Denko Shop', items: [] }];
+    const resolved = await resolveMenuShop('  DENKO shop ', [], privateShops, fetchPublic);
+    expect(resolved?.shop.id).toBe('priv-1');
+    expect(resolved?.isPublic).toBe(false);
+  });
+
+  it('public wins over a private namesake and the full doc is fetched by id', async () => {
+    const fetch = vi.fn(fetchPublic);
+    const privateShops = [{ id: 'priv-1', name: 'Denko', items: [] }];
+    const resolved = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], privateShops, fetch);
+    expect(fetch).toHaveBeenCalledWith('pub-9');
+    expect(resolved).toEqual({
+      shop: { id: 'pub-9', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'တစ်ကီလို' }] },
+      isPublic: true,
+    });
+  });
+
+  it('public hit but the full doc is gone → null, NEVER falls back to the private namesake', async () => {
+    const fetch = vi.fn(async () => null);
+    const privateShops = [{ id: 'priv-1', name: 'Denko', items: [] }];
+    const resolved = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], privateShops, fetch);
+    expect(resolved).toBeNull();
+  });
+
+  it('public fetch throwing → null, never falls back to the private namesake', async () => {
+    const fetch = vi.fn(async () => { throw new Error('offline'); });
+    const privateShops = [{ id: 'priv-1', name: 'Denko', items: [] }];
+    const resolved = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], privateShops, fetch);
+    expect(resolved).toBeNull();
+  });
+
+  it('empty / blank name → null', async () => {
+    expect(await resolveMenuShop('', [], [], fetchPublic)).toBeNull();
+    expect(await resolveMenuShop('   ', [], [], fetchPublic)).toBeNull();
+  });
+});
+
+describe('buildMenuPromptRows (v7.5.85 FIX 2 — retry gating)', () => {
+  const txItems = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'တစ်ကီလို' }];
+
+  it('unresolved shop → null', () => {
+    expect(buildMenuPromptRows(txItems, null, true)).toBeNull();
+  });
+
+  it('same price as the fresh menu → null (nothing would change)', () => {
+    const resolved = {
+      shop: { id: 'priv-1', name: 'Denko', items: [{ name: 'Rice', price: 1200, updatedAt: 1, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+      isPublic: false,
+    };
+    expect(buildMenuPromptRows(txItems, resolved, false)).toBeNull();
+  });
+
+  it('guest + public shop → null (gate refuses, as before)', () => {
+    const resolved = {
+      shop: { id: 'pub-9', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 1, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+      isPublic: true,
+    };
+    expect(buildMenuPromptRows(txItems, resolved, false)).toBeNull();
+    expect(buildMenuPromptRows(txItems, resolved, true)).toHaveLength(1);
+  });
+});
+
+describe('applyResolvedMenuUpdate (v7.5.85 FIX 2 — re-resolve at apply)', () => {
+  const rows: MenuUpdateRow[] = [
+    { itemName: 'Rice', unit: 'တစ်ကီလို', oldPrice: 1000, newPrice: 1200, isNew: false, isLargeDiff: false },
+  ];
+
+  it('shop deleted (resolved null) → "not-found" and the store is NEVER called', async () => {
+    const store = stubStore();
+    const result = await applyResolvedMenuUpdate(null, rows, 'a@x.com', store);
+    expect(result).toBe('not-found');
+    expect(store.updatePublicShopItems).not.toHaveBeenCalled();
+    expect(store.updatePrivateShopItems).not.toHaveBeenCalled();
+  });
+
+  it('shop moved to public → apply targets the PUBLIC copy, built from the FRESH menu', async () => {
+    // Save time the prompt held the PRIVATE snapshot (Rice 900, no
+    // Sugar line). By apply time the shop is public with a FRESH menu
+    // (Rice 1000, Sugar 2000) — the write must use the fresh base,
+    // not the stale private snapshot.
+    const fetchPublic = async (id: string) => ({
+      id,
+      name: 'Denko',
+      items: [
+        { name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'တစ်ကီလို' },
+        { name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'a@x.com' },
+      ],
+    });
+    const fresh = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], [], fetchPublic);
+    expect(fresh?.isPublic).toBe(true);
+    const store = stubStore();
+    const result = await applyResolvedMenuUpdate(fresh, rows, 'a@x.com', store);
+    expect(result).toBe('applied');
+    expect(store.updatePublicShopItems).toHaveBeenCalledWith('pub-9', [
+      { name: 'Rice', price: 1200, unit: 'တစ်ကီလို', updatedAt: expect.any(Number), addedBy: 'a@x.com' },
+      { name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'a@x.com' },
+    ]);
+    expect(store.updatePrivateShopItems).not.toHaveBeenCalled();
+  });
+
+  it('private shop still private → private store, store failure → "failed"', async () => {
+    const resolved = {
+      shop: { id: 'priv-1', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+      isPublic: false,
+    };
+    const failing = stubStore({ updatePrivateShopItems: vi.fn(async () => false) });
+    expect(await applyResolvedMenuUpdate(resolved, rows, 'a@x.com', failing)).toBe('failed');
+    const okStore = stubStore();
+    expect(await applyResolvedMenuUpdate(resolved, rows, 'a@x.com', okStore)).toBe('applied');
+    expect(okStore.updatePrivateShopItems).toHaveBeenCalledTimes(1);
+    expect(okStore.updatePublicShopItems).not.toHaveBeenCalled();
   });
 });

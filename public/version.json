@@ -1,13 +1,13 @@
 {
-  "version": "v7.5.85",
-  "buildNumber": 300,
+  "version": "v7.5.86",
+  "buildNumber": 301,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ကိုယ်ပိုင်ထဲမှာ ကိုယ်ထည့်ထားတဲ့ ပြည်သူ့ဆိုင်တွေပါ ပေါ်တော့မယ် — နှစ်နေရာလုံးမှာ မြင်ရမယ်။",
-    "ဆိုင်နာမည် ရှိပြီးသား (အသေးစိတ်ပဲ ထပ်ထည့်ရတဲ့) ဆိုင်နဲ့ စာရင်းထည့်ရင်လည်း Menu Update prompt ပေါ်တော့မယ် — ဆိုင်ကို ရွှေ့လိုက်ရင်တောင် Update က လိုက်သွားမယ်။"
+    "ပစ္စည်းအမည်နဲ့ ဆိုင်တိုင်းရဲ့ ဈေးနှုန်း ရှာလို့ရပြီ — စျေးအသက်သာဆုံးက အရင် ပြမယ်၊ ဆိုင်ကို နှိပ်ရင် အဲဒီဆိုင်ကို ဖွင့်ပြမယ်။",
+    "ပစ္စည်းအမည် ရိုက်တာနဲ့ Database ထဲရှိပြီးသား အမည်တွေ အကြံပေးပေါ်လာမယ် — ရှာတဲ့နေရာရော၊ ဆိုင်မှာ ဈေးထည့်တဲ့နေရာရော။"
   ],
   "changesEn": [
-    "My public shops now show in My Shops too — visible in both places.",
-    "Menu Update prompts now appear even when the shop name already existed and only its details were missing — and the update follows the shop even if you move it."
+    "Search any item across all shops — cheapest first, tap a row to open the shop.",
+    "Item names are suggested from the database as you type — in search and in the shop price form."
   ]
 }

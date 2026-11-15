@@ -19,6 +19,12 @@ import { useSearchSeed } from '../hooks/useSearchSeed';
 import { resolveShopDetailReminder, normalizeShopName } from '../utils/shopDetailsReminders';
 import { buildMyShopsList } from '../utils/myShops';
 import {
+  searchShopMenus,
+  getMenuItemNameSuggestions,
+  collectMenuItemNames,
+  type ShopItemSearchResult,
+} from '../utils/shopItemSearch';
+import {
   applyShopMenuItems,
   buildUpdatedMenuItems,
   computeMenuDiff,
@@ -70,6 +76,21 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
   useSearchSeed('shops', setSearchQuery);
+
+  // [v7.5.86] Search mode — 'shop' (default, shop names: unchanged) or
+  // 'item' (စျေးစုံစမ်းခြင်း: item names across every shop's menu).
+  const [searchMode, setSearchMode] = useState<'shop' | 'item'>('shop');
+  // Debounced item query — the search runs client-side over in-memory
+  // menus (no fetch at all), but the debounce keeps typing smooth on
+  // slow phones by not re-filtering ~1,000 shops' menus per keystroke.
+  const [debouncedItemQuery, setDebouncedItemQuery] = useState('');
+  useEffect(() => {
+    if (searchMode !== 'item') return;
+    const t = setTimeout(() => setDebouncedItemQuery(searchQuery), 150);
+    return () => clearTimeout(t);
+  }, [searchQuery, searchMode]);
+  // [v7.5.86] How many item rows to show (Load-more appends 20, like shops).
+  const [itemVisibleCount, setItemVisibleCount] = useState(20);
 
   // [v7.5.78 C] Deep-link from the transaction shop-details prompt and
   // the notification centre: open the shop form pre-filled with the name.
@@ -701,6 +722,49 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   // Public tab unchanged.
   const activeShopsList = directoryType === 'public' ? publicShops : myShopsList;
 
+  // [v7.5.86] Item search runs over the SAME list the tab already shows
+  // (public menus on the Public tab, my shops on the Private tab) — the
+  // menus are already in memory from the live onSnapshot, so there is no
+  // extra fetch and no per-keystroke network call. Guests see public
+  // menus (what they can already view) + their own local private shops;
+  // another user's private shops are never in this list, so they can
+  // never appear in results. Category/location/sort filters do NOT apply
+  // here — the point is EVERY shop's price for the item, cheapest first.
+  const itemResults = useMemo(
+    () => (searchMode === 'item' ? searchShopMenus(activeShopsList, debouncedItemQuery) : []),
+    [searchMode, activeShopsList, debouncedItemQuery]
+  );
+  const itemSuggestions = useMemo(
+    () =>
+      searchMode === 'item'
+        ? getMenuItemNameSuggestions(activeShopsList, debouncedItemQuery, 8)
+        : [],
+    [searchMode, activeShopsList, debouncedItemQuery]
+  );
+  // All distinct menu item names in the WHOLE database — every public
+  // menu plus the user's own private menus — passed to every ShopCard
+  // so its add-price form can suggest names from the database. NOT
+  // tab-scoped on purpose: the form adds an item to THIS shop, so a
+  // name that exists in another shop's menu must appear while typing
+  // (that is the user's 2026-11-15 correction — 'Panfor' typed in the
+  // form showed nothing). The SEARCH box suggestions stay tab-scoped
+  // (activeShopsList below) so a suggestion always leads to results.
+  const allMenuItemNames = useMemo(
+    () => collectMenuItemNames([...publicShops, ...myShopsList]),
+    [publicShops, myShopsList]
+  );
+  useEffect(() => {
+    setItemVisibleCount(20);
+  }, [debouncedItemQuery, searchMode, directoryType]);
+
+  // [v7.5.86] Tapping an item row OPENS that shop: back to shop mode
+  // with the shop's name in the (shared) search box, so the list filters
+  // to that one shop. Same list, same tab — no navigation needed.
+  const handleOpenShopFromItem = (row: ShopItemSearchResult) => {
+    setSearchMode('shop');
+    setSearchQuery(row.shopName);
+  };
+
   const filteredShops = useMemo(() => {
     return activeShopsList.filter((shop) => {
 
@@ -1025,6 +1089,25 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           {/* 3. COMPACT SEARCH + FILTER BAR                                    */}
           {/* ----------------------------------------------------------------- */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs space-y-2.5">
+            {/* [v7.5.86] Search-mode toggle — shop names (default, unchanged)
+                or item names across every shop's menu (စျေးစုံစမ်းခြင်း:
+                everyone's prices in one place, cheapest first). */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSearchMode('shop')}
+                className={`flex-1 min-h-[44px] px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${searchMode === 'shop' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+              >
+                {lang === 'my' ? '🏪 ဆိုင်နဲ့ ရှာ' : '🏪 By shop'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSearchMode('item'); setDebouncedItemQuery(searchQuery); }}
+                className={`flex-1 min-h-[44px] px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${searchMode === 'item' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+              >
+                {lang === 'my' ? '🛒 ပစ္စည်းနဲ့ ရှာ' : '🛒 By item'}
+              </button>
+            </div>
             {/* Row 1: Search + Location toggle + Reset + Count */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative flex-1 min-w-[160px]">
@@ -1033,22 +1116,32 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  // [v7.5.86] In item mode the box suggests item names
+                  // from the shared menus (datalist below); in shop mode
+                  // it is the unchanged shop-name search.
+                  list={searchMode === 'item' ? 'db-shop-item-suggestions' : undefined}
+                  autoComplete="off"
                   placeholder={
-                    // [v7.5.81] Shortened twice: the full placeholder
-                    // ('ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် ရှာရန်...', 267px
-                    // at 16px) and the first short form ('ဆိုင်အမည်၊ ဖုန်း
-                    // ရှာရန်...', 164px) were both clipped mid-word — the
-                    // input's usable text area at 390px is only ~106px
-                    // (174px box − 36px icon padding − 32px right padding).
-                    // Measured at 390px: 'ဆိုင်ရှာရန်...' 79px fits;
-                    // 'Search shops...' is 114px and still clips, so EN
-                    // is the shorter 'Search...' (64px).
-                    lang === 'my'
+                    // [v7.5.81] Shop placeholders are short on purpose
+                    // (the input's usable text area at 390px is only
+                    // ~106px in shop mode). In item mode the row's other
+                    // controls are hidden, so the input is full-width and
+                    // the longer item placeholder fits.
+                    searchMode === 'item'
+                      ? (lang === 'my' ? 'ပစ္စည်းအမည် ရှာရန်...' : 'Search items...')
+                      : lang === 'my'
                       ? 'ဆိုင်ရှာရန်...'
                       : 'Search...'
                   }
                   className="w-full pl-9 pr-8 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400"
                 />
+                {searchMode === 'item' && (
+                  <datalist id="db-shop-item-suggestions">
+                    {itemSuggestions.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                )}
                 {searchQuery && (
                   <button
                     type="button"
@@ -1060,6 +1153,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 )}
               </div>
 
+              {searchMode === 'shop' && (<>
               {/* Sort Dropdown */}
               <div className="relative shrink-0">
                 <select
@@ -1079,7 +1173,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 </select>
                 <ChevronDown className="w-3 h-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
+              </>)}
 
+              {searchMode === 'shop' && (<>
               {/* Location Filter Icon Button */}
               <button
                 type="button"
@@ -1094,7 +1190,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   </span>
                 )}
               </button>
+              </>)}
 
+              {searchMode === 'shop' && (<>
               {/* Unknown Toggle */}
               <button
                 type="button"
@@ -1105,9 +1203,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 <span>{showUnknown ? '👁️' : '🫣'}</span>
                 <span>{lang === 'my' ? 'အမည်မသိ' : 'Unknown'}</span>
               </button>
+              </>)}
 
               {/* Reset (icon only) */}
-              {hasActiveFilters && (
+              {searchMode === 'shop' && hasActiveFilters && (
                 <button
                   type="button"
                   onClick={handleResetFilters}
@@ -1128,7 +1227,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 changed; no category removed or renamed, no horizontal scroll.
                 "အားလုံး" is the first option, and the ✕ chip in the count
                 row below clears the category in 1 tap. */}
-            <div className="flex items-center gap-2">
+            <div className={searchMode === 'item' ? 'hidden' : 'flex items-center gap-2'}>
               {/* [v7.5.80] Icon-only prefix: the longest category label
                   ("အမည်မသိ / Import လုပ်ထားသော", 245px) must fit inside
                   the select with its padding — a text label ("အမျိုးအစား")
@@ -1156,7 +1255,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             </div>
 
             {/* Row 3: Expandable Location Panel */}
-            {isLocationFilterExpanded && (
+            {searchMode === 'shop' && isLocationFilterExpanded && (
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 animate-fade-in">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {/* State */}
@@ -1259,7 +1358,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             )}
 
             {/* Row 4: Count + Active Filter Chips */}
-            <div className="flex items-center justify-between gap-2 text-[11px]">
+            <div className={searchMode === 'item' ? 'hidden' : 'flex items-center justify-between gap-2 text-[11px]'}>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-slate-800">
                   {loadingPublic && directoryType === 'public'
@@ -1297,7 +1396,115 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           {/* ----------------------------------------------------------------- */}
           {/* [v7.5.55 C30] While the first onSnapshot has not returned, show
               a loading state — never the empty-state card when shops exist. */}
-          {loadingPublic && directoryType === 'public' ? (
+          {searchMode === 'item' ? (
+            // [v7.5.86] ITEM RESULTS — every shop's price for the item,
+            // cheapest first. Tap a row to open that shop. The shop list
+            // (with its category/location/sort filters) is replaced here;
+            // switching back to shop mode restores it unchanged.
+            <div className="space-y-2.5">
+              <p className="text-[11px] font-bold text-slate-800 px-1">
+                {loadingPublic && directoryType === 'public'
+                  ? lang === 'my'
+                    ? 'ဆိုင်များ ရှာဖွေနေပါသည်…'
+                    : 'Loading shops…'
+                  : !debouncedItemQuery.trim()
+                  ? lang === 'my'
+                    ? 'ပစ္စည်းအမည် ရိုက်ပြီး ရှာပါ — ဆိုင်တိုင်းရဲ့ ဈေးတွေ ယှဉ်ပြပေးမယ်။'
+                    : 'Type an item name — prices from every shop, cheapest first.'
+                  : lang === 'my'
+                  ? `တွေ့ရှိ ${itemResults.length} ခု`
+                  : `${itemResults.length} results`}
+              </p>
+              {loadingPublic && directoryType === 'public' ? (
+                <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto animate-pulse">
+                    <Store className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">
+                    {lang === 'my' ? 'ဆိုင်များ ရှာဖွေနေပါသည်…' : 'Loading shops…'}
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    {lang === 'my'
+                      ? 'ပြည်သူ့လမ်းညွှန်မှ ဆိုင်စာရင်းများ ရယူနေပါသည်။ ခဏစောင့်ပေးပါ။'
+                      : 'Fetching the community directory. Please wait a moment.'}
+                  </p>
+                </div>
+              ) : !debouncedItemQuery.trim() ? (
+                <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                    <Search className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">
+                    {lang === 'my' ? 'ပစ္စည်းအမည်နဲ့ ရှာမယ်' : 'Search by item name'}
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    {lang === 'my'
+                      ? 'ဆိုင်တိုင်းရဲ့ Menu ထဲက ပစ္စည်းဈေးတွေ ရှာပေးမယ် — စျေးအသက်သာဆုံးက အရင် ပြမယ်။ ဆိုင်ကို နှိပ်ရင် အဲဒီဆိုင်ကို ဖွင့်ပြမယ်။'
+                      : 'Searches every shop’s menu — cheapest first. Tap a row to open that shop.'}
+                  </p>
+                </div>
+              ) : itemResults.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Search className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">
+                    {lang === 'my' ? 'ဒီပစ္စည်း ဘယ်ဆိုင်မှာမှ မရှိသေးပါ' : 'No shop has this item yet'}
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    {lang === 'my'
+                      ? 'စာလုံးပေါင်း စစ်ကြည့်ပါ၊ သို့မဟုတ် ဆိုင်မှာ ဈေးနှုန်း ထည့်သွင်းပေးနိုင်ပါသည်။'
+                      : 'Check the spelling, or add the price at a shop.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {itemResults.slice(0, itemVisibleCount).map((row, i) => (
+                    <button
+                      key={`${row.shopId}|${row.itemName}|${row.unit}`}
+                      type="button"
+                      onClick={() => handleOpenShopFromItem(row)}
+                      className="w-full min-h-[44px] p-3 bg-white hover:bg-emerald-50/60 border border-slate-200 rounded-xl flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+                    >
+                      <span className="min-w-0">
+                        <span className="block font-bold text-slate-900 text-sm truncate">
+                          {row.itemName}
+                          {row.unit ? <span className="font-medium text-slate-500"> ({row.unit})</span> : null}
+                        </span>
+                        <span className="block text-[11px] text-slate-500 truncate">
+                          {row.shopName}
+                          {row.isPublic ? '' : lang === 'my' ? ' • ကိုယ်ပိုင်' : ' • Private'}
+                        </span>
+                      </span>
+                      <span className="shrink-0 flex flex-col items-end gap-0.5">
+                        <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 text-xs">
+                          {row.price.toLocaleString()} Ks
+                        </span>
+                        {i === 0 && (
+                          <span className="text-[10px] font-bold text-emerald-700">
+                            {lang === 'my' ? '💰 အသက်သာဆုံး' : '💰 Cheapest'}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                  {itemVisibleCount < itemResults.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setItemVisibleCount((c) => c + 20)}
+                      className="w-full min-h-[48px] py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-xs active:scale-[0.99] transition-all cursor-pointer"
+                    >
+                      {lang === 'my' ? 'ပိုပြမည် (နောက် 20 ခု)' : 'Load more (next 20)'}
+                    </button>
+                  ) : itemResults.length > 20 ? (
+                    <p className="text-center text-[11px] font-bold text-slate-500 py-2">
+                      {lang === 'my' ? `✓ အားလုံး ပြပြီးပါပြီ — ${itemResults.length} ခု` : `✓ All shown — ${itemResults.length} results`}
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : loadingPublic && directoryType === 'public' ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto animate-pulse">
                 <Store className="w-6 h-6" />
@@ -1371,6 +1578,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           shop={shop}
                           isPublic={'addedBy' in shop}
                           lang={lang}
+                          menuItemNames={allMenuItemNames}
                           viewMode="compact"
                           hasVoted={votedIds.includes(shop.id)}
                           onToggleVote={handleToggleVote}
@@ -1390,6 +1598,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           shop={shop}
                           isPublic={'addedBy' in shop}
                           lang={lang}
+                          menuItemNames={allMenuItemNames}
                           viewMode="grid"
                           hasVoted={votedIds.includes(shop.id)}
                           onToggleVote={handleToggleVote}
@@ -1415,6 +1624,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     shop={shop}
                     isPublic={'addedBy' in shop}
                     lang={lang}
+                    menuItemNames={allMenuItemNames}
                     viewMode="compact"
                     hasVoted={votedIds.includes(shop.id)}
                     onToggleVote={handleToggleVote}
@@ -1434,6 +1644,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     shop={shop}
                     isPublic={'addedBy' in shop}
                     lang={lang}
+                    menuItemNames={allMenuItemNames}
                     viewMode="grid"
                     hasVoted={votedIds.includes(shop.id)}
                     onToggleVote={handleToggleVote}
@@ -1454,7 +1665,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               nothing renders when the list fits in one batch or is empty
               (the empty state above handles that). The "တွေ့ရှိ N ဆိုင်"
               header above always shows the FULL filtered total. */}
-          {visibleShops.length > SHOPS_BATCH_SIZE && (
+          {searchMode === 'shop' && visibleShops.length > SHOPS_BATCH_SIZE && (
             <div className="pt-1">
               {visibleCount < visibleShops.length ? (
                 <button

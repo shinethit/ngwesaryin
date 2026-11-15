@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.85';
-export const CURRENT_BUILD_NUMBER = 300;
+export const CURRENT_APP_VERSION = 'v7.5.86';
+export const CURRENT_BUILD_NUMBER = 301;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.86',
+    buildNumber: 301,
+    releaseDate: '2026-11-15',
+    releaseTime: '8:04 AM (MMT)',
+    titleMy: 'ပစ္စည်းအမည်နဲ့ ဆိုင်တိုင်းရဲ့ ဈေးနှုန်း ရှာလို့ရပြီ — အားလုံးရဲ့ဈေး ယှဉ်ပြမယ်',
+    titleEn: 'Search any item across all shops — compare everyone\'s prices',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ဆိုင်စာရင်းထဲမှာ ပစ္စည်းအမည်နဲ့ ရှာလို့ရပြီ — ဆိုင်တိုင်းရဲ့ Menu ထဲက အဲဒီပစ္စည်းရဲ့ ဈေးတွေ တစ်နေရာတည်းမှာ ယှဉ်ပြပေးမယ်၊ စျေးအသက်သာဆုံးက အရင်။ ဆိုင်တစ်ဆိုင်ကို နှိပ်ရင် အဲဒီဆိုင်ကို ဖွင့်ပြမယ်။ ပစ္စည်းအမည် ရိုက်တာနဲ့ Database ထဲရှိပြီးသား အမည်တွေ အကြံပေးပေါ်လာမယ် — လူတိုင်းထည့်ထားတဲ့ ဈေးတွေကို ရှာတာ၊ ကိုယ့်ဝယ်ခဲ့တဲ့ မှတ်တမ်းကို ရှာတာ မဟုတ်ဘူး။',
+    descriptionEn: 'You can now search by item name in the Shops tab — every shop’s menu price for that item in one place, cheapest first, and tapping a row opens that shop. Item names are suggested from the database as you type. This searches the prices everyone has entered, not your own purchase history.',
+    changesMy: [
+      'ပစ္စည်းအမည်နဲ့ ဆိုင်တိုင်းရဲ့ ဈေးနှုန်း ရှာလို့ရပြီ — စျေးအသက်သာဆုံးက အရင် ပြမယ်၊ ဆိုင်ကို နှိပ်ရင် အဲဒီဆိုင်ကို ဖွင့်ပြမယ်။',
+      'ပစ္စည်းအမည် ရိုက်တာနဲ့ Database ထဲရှိပြီးသား အမည်တွေ အကြံပေးပေါ်လာမယ် — ရှာတဲ့နေရာရော၊ ဆိုင်မှာ ဈေးထည့်တဲ့နေရာရော။',
+    ],
+    changesEn: [
+      'Search any item across all shops — cheapest first, tap a row to open the shop.',
+      'Item names are suggested from the database as you type — in search and in the shop price form.',
+    ],
+  },
   {
     version: 'v7.5.85',
     buildNumber: 300,

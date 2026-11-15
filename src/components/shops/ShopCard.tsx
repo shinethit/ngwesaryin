@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Store, Phone, MapPin, Edit2, Trash2, Copy, ExternalLink, Sparkles, Check, ThumbsUp, User, AlertTriangle, Plus, X, CreditCard, ChevronDown, ChevronUp, ShoppingBag, Pill, Utensils, Wrench, Package } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
 import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
 import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS } from '../../utils/shopMenuUpdate';
+import { filterItemNameSuggestions } from '../../utils/shopItemSearch';
 import { normalizeMyanmarPhone } from './ShopModal';
 
 interface ShopCardProps {
@@ -21,6 +22,11 @@ interface ShopCardProps {
   // [v7.5.81] Report a public shop — handled by ShopsView (guest check +
   // modal live there); ShopCard only renders the button.
   onReport?: (shop: ShopContact | PublicShop) => void;
+  // [v7.5.86] All distinct menu item names in the tab's shops (from
+  // ShopsView) — the add-price form suggests from the DATABASE, not from
+  // the user's own transactions, so an item that exists in another shop's
+  // menu appears while typing. Optional: other call sites pass nothing.
+  menuItemNames?: string[];
 }
 
 export const ShopCard: React.FC<ShopCardProps> = ({
@@ -35,6 +41,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   onAddPricingItem,
   onDeletePricingItem,
   onReport,
+  menuItemNames = [],
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isItemsExpanded, setIsItemsExpanded] = useState(false);
@@ -44,6 +51,15 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   // [v7.5.82] Per-unit basis of the price being added (default တစ်ခု).
   const [newItemUnit, setNewItemUnit] = useState<string>(DEFAULT_MENU_UNIT);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
+
+  // [v7.5.86] Add-price suggestions from the shared menus — the datalist
+  // id is per-shop (many cards are mounted at once), and the options are
+  // filtered by the typed text here, so the DOM stays small (max 8).
+  const addPriceDatalistId = `db-shop-item-suggestions-${shop.id}`;
+  const addFormSuggestions = useMemo(
+    () => filterItemNameSuggestions(menuItemNames, newItemName, 8),
+    [menuItemNames, newItemName]
+  );
 
   // [v7.5.82] Display label for a stored menu unit (stored value is the
   // Myanmar string). Unit-less items have no label at all.
@@ -482,6 +498,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'}
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
+                    // [v7.5.86] Suggest item names already in the database.
+                    list={addPriceDatalistId}
+                    autoComplete="off"
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
                   <input
@@ -492,6 +511,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     onChange={(e) => setNewItemPrice(e.target.value)}
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
+                  <datalist id={addPriceDatalistId}>
+                    {addFormSuggestions.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
                 </div>
                 {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
                 <select
@@ -832,6 +856,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'}
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
+                    // [v7.5.86] Suggest item names already in the database.
+                    list={addPriceDatalistId}
+                    autoComplete="off"
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
                   <input
@@ -842,6 +869,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     onChange={(e) => setNewItemPrice(e.target.value)}
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
+                  <datalist id={addPriceDatalistId}>
+                    {addFormSuggestions.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
                 </div>
                 {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
                 <select

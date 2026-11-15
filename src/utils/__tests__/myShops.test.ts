@@ -3,7 +3,7 @@
 // added themselves. Pure function, no Firestore/auth — plain objects.
 import { describe, it, expect } from 'vitest';
 
-import { buildMyShopsList } from '../myShops';
+import { buildMyShopsList, buildAllMenuShopsList } from '../myShops';
 import type { ShopContact, PublicShop } from '../../types';
 
 function privateShop(overrides: Partial<ShopContact> = {}): ShopContact {
@@ -81,5 +81,33 @@ describe('buildMyShopsList', () => {
     const result = buildMyShopsList(privates, [], undefined);
     expect(result).not.toBe(privates);
     expect(result).toEqual(privates);
+  });
+});
+
+// [v7.5.87] The menu source for Price Compare's other-shop prices —
+// ALL public menus + own private menus. This is deliberately NOT
+// buildMyShopsList (which keeps only MY public shops): price inquiry
+// must show everyone's prices.
+describe('buildAllMenuShopsList', () => {
+  it("includes other users' public shops, not just my own", () => {
+    const mine = privateShop({ id: 'priv-1', name: 'My Shop' });
+    const others = publicShop({ id: 'pub-2', name: 'Their Shop', addedByUid: 'u2' });
+    const myPublic = publicShop({ id: 'pub-1', name: 'My Public Shop', addedByUid: 'u1' });
+    const result = buildAllMenuShopsList([mine], [others, myPublic]);
+    expect(result.map((s) => s.id)).toEqual(['pub-2', 'pub-1', 'priv-1']);
+  });
+
+  it('dedupes by normalized name, public copy wins over a private namesake', () => {
+    const priv = privateShop({ id: 'priv-1', name: '  Denko Shop ' });
+    const pub = publicShop({ id: 'pub-1', name: 'denko shop', addedByUid: 'u2' });
+    const result = buildAllMenuShopsList([priv], [pub]);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('pub-1');
+    expect('addedBy' in result[0]).toBe(true);
+  });
+
+  it('tolerates empty lists', () => {
+    expect(buildAllMenuShopsList([], [])).toEqual([]);
+    expect(buildAllMenuShopsList([privateShop()], [])).toHaveLength(1);
   });
 });

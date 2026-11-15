@@ -1,13 +1,13 @@
 {
-  "version": "v7.5.86",
-  "buildNumber": 301,
+  "version": "v7.5.87",
+  "buildNumber": 302,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ပစ္စည်းအမည်နဲ့ ဆိုင်တိုင်းရဲ့ ဈေးနှုန်း ရှာလို့ရပြီ — စျေးအသက်သာဆုံးက အရင် ပြမယ်၊ ဆိုင်ကို နှိပ်ရင် အဲဒီဆိုင်ကို ဖွင့်ပြမယ်။",
-    "ပစ္စည်းအမည် ရိုက်တာနဲ့ Database ထဲရှိပြီးသား အမည်တွေ အကြံပေးပေါ်လာမယ် — ရှာတဲ့နေရာရော၊ ဆိုင်မှာ ဈေးထည့်တဲ့နေရာရော။"
+    "ဈေးနှုန်း နှိုင်းယှဉ်မှာ ပစ္စည်းတစ်ခုချင်းစီရဲ့ အတန်ဆုံး တခြားဆိုင်ဈေး (ဘယ်ဆိုင်လဲ၊ ဘယ်လောက်လဲ) ပါ ပေါ်ပြီ — ကိုယ်ဝယ်ခဲ့တဲ့ နောက်ဆုံးဈေးနဲ့ ဘယ်လောက် ကွာလဲဆိုတာပါ ယှဉ်ပြပေးမယ်။",
+    "ဆိုင်ဈေးကို နှိပ်ရင် အဲဒီပစ္စည်းနဲ့ ဆိုင်တိုင်းရဲ့ ဈေးကို ရှာတဲ့နေရာကို တစ်ခါတည်း ဖွင့်ပြမယ်။"
   ],
   "changesEn": [
-    "Search any item across all shops — cheapest first, tap a row to open the shop.",
-    "Item names are suggested from the database as you type — in search and in the shop price form."
+    "Each Price Compare item now shows the cheapest other-shop price — which shop and how much — plus the difference vs your latest purchase price.",
+    "Tapping it opens the Shops item search with that item pre-filled."
   ]
 }

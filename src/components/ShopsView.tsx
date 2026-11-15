@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Store, MapPin, Search, Plus, X, Info, Globe, Lock, LayoutGrid, List, ChevronDown, ChevronUp, Filter, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { ShopContact, PublicShop } from '../types';
 import { db, auth, handleFirestoreError, OperationType, safeSetDoc, safeDeleteDoc, safeUpdateDoc } from '../lib/firebase';
@@ -75,7 +75,15 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
-  useSearchSeed('shops', setSearchQuery);
+  // [v7.5.87] The seed may also carry a mode — Price Compare taps
+  // through with mode 'item' so the Shops ITEM search opens with that
+  // item pre-filled. Only the two known modes are honoured; anything
+  // else is ignored (the search box still gets the query).
+  const handleSearchSeedMode = useCallback((m: string) => {
+    if (m === 'item') setSearchMode('item');
+    else if (m === 'shop') setSearchMode('shop');
+  }, []);
+  useSearchSeed('shops', setSearchQuery, handleSearchSeedMode);
 
   // [v7.5.86] Search mode — 'shop' (default, shop names: unchanged) or
   // 'item' (စျေးစုံစမ်းခြင်း: item names across every shop's menu).

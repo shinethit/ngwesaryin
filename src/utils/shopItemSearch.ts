@@ -24,6 +24,7 @@
 // Same name + different unit = SEPARATE rows (the v7.5.82 rule — the
 // key is name + unit, same as computeMenuDiff).
 import { normalizeMenuItemName, normalizeMenuUnit } from './shopMenuUpdate';
+import { normalizeItemName } from './itemIntelligence';
 import type { ShopContact, PublicShop } from '../types';
 
 export interface ShopItemSearchResult {
@@ -130,4 +131,95 @@ export function getMenuItemNameSuggestions(
   limit = 8
 ): string[] {
   return filterItemNameSuggestions(collectMenuItemNames(shops), query, limit);
+}
+
+// [v7.5.87] Cheapest menu price for ONE own item, for Price Compare.
+//
+// Price Compare shows the cheapest OTHER-shop price next to the user's
+// own purchase price, so the user can be careful next time. This is
+// price INQUIRY (စျေးစုံစမ်းခြင်း) — it reads the SHARED menus, never
+// the user's own purchase history (that stays own-data-only, as it
+// should be, in first/last/trend/cheapestShop).
+//
+// MATCHING IS EXACT, not substring: both sides go through
+// normalizeItemName (itemIntelligence) — Myanmar digits collapse,
+// trailing quantity/unit tokens strip — and the keys must be EQUAL.
+// 'ဆန်' must NOT match 'ဆန်ချော', and a menu 'ဆန် ၁ပြည်' matches an
+// own 'ဆန်' because the normalizer strips the quantity on both sides.
+// This deliberately differs from searchShopMenus above (substring on
+// the menu normalizer): search is forgiving discovery, comparison
+// needs same-item identity.
+//
+// Units are NOT required to match: menu units ('တစ်ကီလို' etc.) and
+// own parsed units ('ပြည်' etc.) use different vocabularies and are
+// not reliably comparable. The cheapest row overall wins, and its
+// menu unit is always carried so the UI can show it next to the price
+// (a unit mismatch stays visible; the tap target opens the full
+// item search so the user can judge).
+export interface CheapestMenuPrice {
+  shopId: string;
+  shopName: string;
+  /** The shop record itself, so the caller can open it. */
+  shop: ShopContact | PublicShop;
+  /** True for a public-directory shop, false for the user's own private shop. */
+  isPublic: boolean;
+  /** Display name as stored in the menu (trimmed, original casing). */
+  itemName: string;
+  price: number;
+  /** Menu unit as stored (normalized via normalizeMenuUnit). */
+  unit: string;
+}
+
+export function getCheapestMenuPrice(
+  shops: ShopItemSearchSource,
+  ownItemName: string
+): CheapestMenuPrice | null {
+  const ownKey = normalizeItemName(ownItemName || '').key;
+  if (!ownKey) return null;
+  let best: CheapestMenuPrice | null = null;
+  for (const shop of shops || []) {
+    const isPublic = 'addedBy' in shop;
+    for (const item of shop.items || []) {
+      if (normalizeItemName(item?.name || '').key !== ownKey) continue;
+      const price =
+        typeof item?.price === 'number' && Number.isFinite(item.price)
+          ? item.price
+          : NaN;
+      if (Number.isNaN(price)) continue;
+      const row: CheapestMenuPrice = {
+        shopId: shop.id,
+        shopName: shop.name,
+        shop,
+        isPublic,
+        itemName: (item.name || '').trim(),
+        price,
+        unit: normalizeMenuUnit(item?.unit),
+      };
+      // Cheapest first; ties break deterministically (shop, then item,
+      // then unit) — same order as searchShopMenus.
+      if (
+        !best ||
+        row.price < best.price ||
+        (row.price === best.price &&
+          (row.shopName.localeCompare(best.shopName) ||
+            row.itemName.localeCompare(best.itemName) ||
+            row.unit.localeCompare(best.unit)) < 0)
+      ) {
+        best = row;
+      }
+    }
+  }
+  return best;
+}
+
+// [v7.5.87] Own latest price vs the cheapest other-shop price — the
+// one-line verdict Price Compare renders under the shop price.
+export function describeOwnVsShopDiff(
+  latestPrice: number,
+  shopPrice: number
+): { diff: number; verdict: 'paid-more' | 'paid-less' | 'same' } {
+  const diff = Math.abs(latestPrice - shopPrice);
+  if (latestPrice > shopPrice) return { diff, verdict: 'paid-more' };
+  if (latestPrice < shopPrice) return { diff, verdict: 'paid-less' };
+  return { diff, verdict: 'same' };
 }

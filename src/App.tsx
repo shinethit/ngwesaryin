@@ -302,6 +302,11 @@ export default function App() {
   const [wallets, setWallets] = usePersistedState<Wallet[]>('ngwe_wallets', INITIAL_WALLETS);
   const [shops, setShops] = usePersistedState<ShopContact[]>('ngwe_shops', []);
   const [publicShops, setPublicShops] = useState<Array<{ id: string; name: string }>>([]);
+  // [v7.5.87] Full public shop docs (menus included) for Price
+  // Compare's other-shop prices. Same bare-collection query as the
+  // id+name listener above and as ShopsView's own subscription, so
+  // the Firestore SDK shares the underlying stream (no extra reads).
+  const [publicShopsFull, setPublicShopsFull] = useState<PublicShop[]>([]);
   const [vehicles, setVehicles] = usePersistedState<Vehicle[]>('ngwe_vehicles', []);
   const [fuelLogs, setFuelLogs] = usePersistedState<FuelLog[]>('ngwe_fuel_logs', []);
   const [vehicleMaintenance, setVehicleMaintenance] = usePersistedState<VehicleMaintenance[]>('ngwe_vehicle_maintenance', []);
@@ -1479,6 +1484,30 @@ export default function App() {
       },
       () => {
         // silent fail — public shops are optional
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // [v7.5.87] Full public shop docs (menus included) for Price
+  // Compare's other-shop prices. Identical bare-collection query to
+  // the listener above and to ShopsView's subscription — the SDK
+  // shares the stream, so this adds no extra reads. On error the
+  // list stays empty and the shop section simply stays hidden (same
+  // as "no menu anywhere"); no new error UI, no loading state.
+  useEffect(() => {
+    const q = query(collection(db, 'public_shops'));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<PublicShop, 'id'>),
+        })) as PublicShop[];
+        setPublicShopsFull(list);
+      },
+      () => {
+        setPublicShopsFull([]);
       }
     );
     return () => unsub();
@@ -2895,6 +2924,8 @@ export default function App() {
                 onDeleteBudget={handleDeleteBudget}
                 onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
                         onSelectTab={setActiveTab}
+                        menuPublicShops={publicShopsFull}
+                        menuPrivateShops={shops}
                         // [v7.5.75] Deep-link: which of the three split
                         // sections to show. 'budget' → Budget,
                         // 'compare' → Compare Price, everything else

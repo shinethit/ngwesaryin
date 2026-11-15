@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart3, Wallet, ShoppingBag } from 'lucide-react';
-import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
+import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, ShopContact, PublicShop } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +35,10 @@ interface AnalyticsViewProps {
   onDeleteBudget: (id: string) => void;
   onOpenUpgradeModal: () => void;
   onSelectTab?: (tab: string) => void;
+  // [v7.5.87] Other-shop menus for Price Compare (App threads the
+  // full-docs public_shops subscription + its own private shops).
+  menuPublicShops?: PublicShop[];
+  menuPrivateShops?: ShopContact[];
   // [v7.5.75] Split: Reports / Budget / Compare Price are top-level
   // tabs now. App passes which section to show; the old 'analytics'
   // id maps to 'reports' (the default).
@@ -48,6 +52,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   plan, lang, maxBudgetCategories,
   onAddBudget, onUpdateBudget, onDeleteBudget,
   onOpenUpgradeModal, onSelectTab, initialSubTab,
+  menuPublicShops, menuPrivateShops,
 }) => {
   const [subTab, setSubTab] = useState<SubTab>(initialSubTab ?? 'reports');
   // [v7.5.75] The single mounted instance follows the top-level tab:
@@ -346,6 +351,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           plan={plan}
           lang={lang}
           onOpenUpgradeModal={onOpenUpgradeModal}
+          menuPublicShops={menuPublicShops}
+          menuPrivateShops={menuPrivateShops}
+          onSelectTab={onSelectTab}
         />
       )}
 

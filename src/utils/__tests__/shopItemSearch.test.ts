@@ -9,6 +9,8 @@ import {
   collectMenuItemNames,
   filterItemNameSuggestions,
   getMenuItemNameSuggestions,
+  getCheapestMenuPrice,
+  describeOwnVsShopDiff,
   type ShopItemSearchSource,
 } from '../shopItemSearch';
 
@@ -205,5 +207,112 @@ describe('getMenuItemNameSuggestions', () => {
 
   it('suggests own-private names too when that list is passed in', () => {
     expect(getMenuItemNameSuggestions(WITH_MY_PRIVATE, 'ဆ')).toEqual(['ဆန်', 'ဆား', 'ဆီ']);
+  });
+});
+
+// [v7.5.87] Price Compare's other-shop price — EXACT normalized-key
+// match (same-item identity), NOT the substring match searchShopMenus
+// uses. Fixtures reuse the public/private shops above; the extra shop
+// below carries the near-miss and Myanmar-digit cases.
+const publicShopC = {
+  id: 'pub-c',
+  name: 'ဆိုင်စီ',
+  addedBy: 'third@example.com',
+  addedByUid: 'uid-other-3',
+  items: [
+    { name: 'ဆန်ချော', price: 100, unit: 'တစ်ကီလို', updatedAt: 1 },
+    { name: 'ဆန် ၁ပြည်', price: 2400, unit: 'တစ်ကီလို', updatedAt: 1 },
+  ],
+} as const;
+
+describe('getCheapestMenuPrice', () => {
+  it('returns the cheapest row across shops, with shop + unit', () => {
+    const best = getCheapestMenuPrice(WITH_MY_PRIVATE, 'ဆန်');
+    expect(best).not.toBeNull();
+    expect(best!.price).toBe(2500);
+    expect(best!.shopName).toBe('ဆိုင်ဘီ');
+    expect(best!.isPublic).toBe(true);
+    expect(best!.unit).toBe('တစ်ကီလို');
+    expect(best!.itemName).toBe('ဆန်');
+  });
+
+  it('cheapest-first across shops incl. own private when passed in', () => {
+    // My private ဆန် is 2600 — pricier than ဆိုင်ဘီ 2500, so the
+    // public shop still wins; with only my list it is the answer.
+    expect(getCheapestMenuPrice([myPrivateShop as any], 'ဆန်')!.price).toBe(2600);
+    expect(getCheapestMenuPrice([myPrivateShop as any], 'ဆန်')!.isPublic).toBe(false);
+  });
+
+  it('exact-key match: ဆန် must NOT match ဆန်ချော', () => {
+    // A shop carrying ONLY ဆန်ချော (no genuine ဆန် row at all).
+    const onlyNearMiss = [
+      { id: 'nm', name: 'Near Miss', addedBy: 'a', addedByUid: 'u', items: [{ name: 'ဆန်ချော', price: 100, unit: 'တစ်ကီလို', updatedAt: 1 }] },
+    ] as unknown as ShopItemSearchSource;
+    expect(getCheapestMenuPrice(onlyNearMiss, 'ဆန်')).toBeNull();
+    expect(getCheapestMenuPrice(onlyNearMiss, 'ဆန်ချော')!.price).toBe(100);
+    // And the full fixture shop still proves the same point for ဆန်ချော
+    // itself — its cheapest ဆန်ချော row is 100, not a ဆန် row.
+    expect(getCheapestMenuPrice([publicShopC as any], 'ဆန်ချော')!.price).toBe(100);
+  });
+
+  it('Myanmar-digit variants collapse: menu ဆန် ၁ပြည် matches own ဆန်', () => {
+    // 'ဆန် ၁ပြည်' normalizes to key 'ဆန်' (digit converted, quantity
+    // stripped) — and at 2400 it is cheaper than ဆိုင်ဘီ's 2500.
+    const shops = [...WITH_MY_PRIVATE, publicShopC as any];
+    const best = getCheapestMenuPrice(shops, 'ဆန်');
+    expect(best!.price).toBe(2400);
+    expect(best!.shopName).toBe('ဆိုင်စီ');
+    // The row carries its MENU display name + menu unit, not the own name.
+    expect(best!.itemName).toBe('ဆန် ၁ပြည်');
+    expect(best!.unit).toBe('တစ်ကီလို');
+  });
+
+  it('own name with quantity matches the same menu item', () => {
+    expect(getCheapestMenuPrice(PUBLIC_ONLY, 'ဆန် 1 ပြည်')!.price).toBe(2500);
+  });
+
+  it('case-insensitive: Panfor matches panfor', () => {
+    expect(getCheapestMenuPrice(PUBLIC_ONLY, 'PANFOR')!.price).toBe(1200);
+  });
+
+  it('ties break deterministically by shop name', () => {
+    const tied = [
+      { id: 't1', name: 'Shop Zeta', addedBy: 'a', addedByUid: 'u1', items: [{ name: 'ဆန်', price: 2000, unit: 'တစ်ကီလို', updatedAt: 1 }] },
+      { id: 't2', name: 'Shop Alpha', addedBy: 'a', addedByUid: 'u2', items: [{ name: 'ဆန်', price: 2000, unit: 'တစ်ကီလို', updatedAt: 1 }] },
+    ] as unknown as ShopItemSearchSource;
+    expect(getCheapestMenuPrice(tied, 'ဆန်')!.shopName).toBe('Shop Alpha');
+    // Order-independent: same result regardless of input order.
+    expect(getCheapestMenuPrice([...tied].reverse(), 'ဆန်')!.shopName).toBe('Shop Alpha');
+  });
+
+  it('no menu anywhere → null', () => {
+    expect(getCheapestMenuPrice(WITH_MY_PRIVATE, 'zzzzqq')).toBeNull();
+    expect(getCheapestMenuPrice([], 'ဆန်')).toBeNull();
+  });
+
+  it('empty own name → null', () => {
+    expect(getCheapestMenuPrice(WITH_MY_PRIVATE, '')).toBeNull();
+    expect(getCheapestMenuPrice(WITH_MY_PRIVATE, '   ')).toBeNull();
+  });
+
+  it('skips menu rows with a non-finite price', () => {
+    const shops = [
+      { id: 'x', name: 'X', addedBy: 'a', addedByUid: 'u', items: [{ name: 'ဆန်', price: NaN, updatedAt: 1 }] },
+    ] as unknown as ShopItemSearchSource;
+    expect(getCheapestMenuPrice(shops, 'ဆန်')).toBeNull();
+  });
+});
+
+describe('describeOwnVsShopDiff', () => {
+  it('paid-more when the own latest price is higher', () => {
+    expect(describeOwnVsShopDiff(3200, 2500)).toEqual({ diff: 700, verdict: 'paid-more' });
+  });
+
+  it('paid-less when the own latest price is lower', () => {
+    expect(describeOwnVsShopDiff(2000, 2500)).toEqual({ diff: 500, verdict: 'paid-less' });
+  });
+
+  it('same when the prices are equal', () => {
+    expect(describeOwnVsShopDiff(2500, 2500)).toEqual({ diff: 0, verdict: 'same' });
   });
 });

@@ -48,3 +48,41 @@ export function buildMyShopsList(
   });
   return order.map((k) => byName.get(k)!);
 }
+
+// [v7.5.87] The menu source for Price Compare's other-shop prices.
+//
+// Price inquiry (စျေးစုံစမ်းခြင်း) must show EVERYONE's prices — all
+// public menus plus the signed-in user's own private menus — so this
+// is NOT buildMyShopsList above: that helper filters the public list
+// to `addedByUid === uid` (MY public shops only), which would hide
+// every other shop's price and defeat the feature. The scope here is
+// the same one ShopsView already uses for the ShopCard add-price
+// suggestions: `[...publicShops, ...myShopsList]`.
+//
+// Dedupe is by normalized shop name, public copy wins (the live
+// record — a shop moved private → public appears in both lists).
+// Another user's private shops can never appear: the caller passes
+// only App's own `shops` state (the signed-in user's private list)
+// plus the public directory. Guests never reach Price Compare at all
+// (App gates the whole Analytics tab), so no guest branch is needed.
+// Pure function — no Firestore, no auth import — unit-testable.
+export function buildAllMenuShopsList(
+  privateShops: ShopContact[],
+  publicShops: PublicShop[]
+): (ShopContact | PublicShop)[] {
+  const byName = new Map<string, ShopContact | PublicShop>();
+  const order: string[] = [];
+  // Public first: a public copy replaces a same-named private copy.
+  [...(publicShops || []), ...(privateShops || [])].forEach((shop, i) => {
+    const key = normalizeShopName(shop.name);
+    const dedupeKey = key === '' ? `__nameless_${i}` : key;
+    if (!byName.has(dedupeKey)) order.push(dedupeKey);
+    // Public entries come first, so only a LATER public entry may
+    // replace an earlier one — a private namesake never overwrites
+    // the public copy.
+    if (!byName.has(dedupeKey) || 'addedBy' in shop) {
+      byName.set(dedupeKey, shop);
+    }
+  });
+  return order.map((k) => byName.get(k)!);
+}

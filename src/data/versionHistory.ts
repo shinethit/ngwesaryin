@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.86';
-export const CURRENT_BUILD_NUMBER = 301;
+export const CURRENT_APP_VERSION = 'v7.5.87';
+export const CURRENT_BUILD_NUMBER = 302;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.87',
+    buildNumber: 302,
+    releaseDate: '2026-11-15',
+    releaseTime: '9:39 AM (MMT)',
+    titleMy: 'ဈေးနှုန်း နှိုင်းယှဉ်မှာ တခြားဆိုင်ဈေးပါ ပေါ်ပြီ — ကိုယ်ဝယ်တာနဲ့ ယှဉ်ကြည့်လို့ရပြီ',
+    titleEn: "Price Compare now shows other shops' prices next to your own",
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ဈေးနှုန်း နှိုင်းယှဉ်မှာ ကိုယ်ဝယ်ခဲ့တဲ့ ဈေးတစ်ခုတည်း မဟုတ်တော့ဘူး — ပစ္စည်းတစ်ခုချင်းစီရဲ့ အတန်ဆုံး တခြားဆိုင်ဈေး (ဘယ်ဆိုင်လဲ၊ ဘယ်လောက်လဲ) ပါ တစ်ခါတည်း ပေါ်ပြီ။ ကိုယ်ဝယ်တာ ပိုပေးခဲ့လား၊ သက်သာခဲ့လား ဆိုတာပါ ယှဉ်ပြပေးမယ်။ ဆိုင်ဈေး ဒါမှမဟုတ် ဆိုင်တိုင်းရဲ့ဈေး ကြည့်မည် ကို နှိပ်ရင် အဲဒီပစ္စည်းနဲ့ ဆိုင်တွေရဲ့ ဈေးရှာတဲ့နေရာကို တစ်ခါတည်း ဖွင့်ပြမယ်။ တခြားဆိုင်ဈေးဆိုတာ လူတိုင်းထည့်ထားတဲ့ ဆိုင်စာရင်း (Menu) ထဲက ဈေးတွေ — ကိုယ့်ဝယ်ခဲ့တဲ့ မှတ်တမ်းကို နှိုင်းယှဉ်တာ မဟုတ်ဘူး။',
+    descriptionEn: "Price Compare no longer shows only what you paid — each item now also shows the cheapest other-shop price (which shop, how much), and whether you paid more or less than that. Tapping the shop price or 'See all shops' prices' opens the Shops item search for that item. Other-shop prices come from everyone's shop menus — not from your own purchase history.",
+    changesMy: [
+      'ဈေးနှုန်း နှိုင်းယှဉ်မှာ ပစ္စည်းတစ်ခုချင်းစီရဲ့ အတန်ဆုံး တခြားဆိုင်ဈေး (ဘယ်ဆိုင်လဲ၊ ဘယ်လောက်လဲ) ပါ ပေါ်ပြီ — ကိုယ်ဝယ်ခဲ့တဲ့ နောက်ဆုံးဈေးနဲ့ ဘယ်လောက် ကွာလဲဆိုတာပါ ယှဉ်ပြပေးမယ်။',
+      'ဆိုင်ဈေးကို နှိပ်ရင် အဲဒီပစ္စည်းနဲ့ ဆိုင်တိုင်းရဲ့ ဈေးကို ရှာတဲ့နေရာကို တစ်ခါတည်း ဖွင့်ပြမယ်။',
+    ],
+    changesEn: [
+      "Each Price Compare item now shows the cheapest other-shop price — which shop and how much — plus the difference vs your latest purchase price.",
+      "Tapping it opens the Shops item search with that item pre-filled.",
+    ],
+  },
   {
     version: 'v7.5.86',
     buildNumber: 301,

@@ -13,9 +13,12 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { Category, PlanType, Transaction, Wallet } from '../types';
+import { Category, PlanType, Transaction, Wallet, ShopContact, PublicShop } from '../types';
 import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
+import { getCheapestMenuPrice, describeOwnVsShopDiff, type CheapestMenuPrice } from '../utils/shopItemSearch';
+import { buildAllMenuShopsList } from '../utils/myShops';
+import { SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
 
 // [v7.5.55 C19] Vehicle sub-categories are costs, not purchasable items —
 // whole fuel bills must never appear as "items" in Compare Price.
@@ -39,6 +42,14 @@ interface ItemPriceAnalyticsViewProps {
   plan: PlanType;
   lang: 'my' | 'en';
   onOpenUpgradeModal?: () => void;
+  // [v7.5.87] Other-shop menus for Price Compare (App threads the
+  // full-docs public_shops subscription + its own private shops).
+  // Optional: without them the shop section simply stays hidden.
+  menuPublicShops?: PublicShop[];
+  menuPrivateShops?: ShopContact[];
+  // [v7.5.87] Tab navigation for the tap-through to the Shops item
+  // search (threaded from AnalyticsView, which already receives it).
+  onSelectTab?: (tab: string) => void;
 }
 
 interface ItemPurchaseRecord {
@@ -85,6 +96,11 @@ interface ItemSummary {
   // [v7.5.55 C9] False when every record is a trip total (no per-unit
   // price exists at all); latestTotal is the newest trip total then.
   hasUnitPrices: boolean;
+  // [v7.5.87] Cheapest OTHER-shop menu price for this item (all public
+  // menus + own private menus, exact normalized-key match). Undefined
+  // when there is no per-unit own price to compare (trip totals) or no
+  // menu anywhere carries the item — the shop section stays hidden.
+  menuCheapest?: CheapestMenuPrice | null;
   latestTotal: number;
   priceDelta: number;
   priceDeltaPercent: number;
@@ -99,11 +115,38 @@ const ITEM_COLORS = [
   { stroke: '#06B6D4', fill: '#ECFEFF', name: 'cyan' }, // Cyan
 ];
 
+// [v7.5.87] Menu unit as a readable label (same mapping ShopCard uses
+// for its menu lines — the stored value is the Myanmar string).
+const menuUnitDisplay = (unit: string, lang: 'my' | 'en'): string => {
+  const found = SHOP_MENU_UNITS.find((u) => u.value === unit);
+  if (!found) return unit;
+  return lang === 'my' ? found.labelMy : found.labelEn;
+};
+
+// [v7.5.87] Human diff line for the shop section — own latest price
+// vs the cheapest other-shop price.
+const shopDiffLine = (item: ItemSummary, lang: 'my' | 'en'): string => {
+  if (!item.menuCheapest) return '';
+  const { diff, verdict } = describeOwnVsShopDiff(item.latestPrice, item.menuCheapest.price);
+  if (verdict === 'paid-more')
+    return lang === 'my'
+      ? `ကိုယ်ဝယ်တာ ${formatLakhs(diff, lang)} ပိုပေးခဲ့တယ်`
+      : `You paid ${formatLakhs(diff, lang)} more`;
+  if (verdict === 'paid-less')
+    return lang === 'my'
+      ? `ကိုယ်ဝယ်တာ ${formatLakhs(diff, lang)} သက်သာတယ်`
+      : `You paid ${formatLakhs(diff, lang)} less`;
+  return lang === 'my' ? 'အတန်ဆုံးဈေးနဲ့ ဝယ်ခဲ့တာပဲ' : 'You bought at the cheapest price';
+};
+
 export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   transactions,
   categories,
   wallets,
   lang,
+  menuPublicShops,
+  menuPrivateShops,
+  onSelectTab,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -126,6 +169,34 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   };
   // [v7.5.68] Per-viewer shared-wallet scope overrides.
   const { sharedWalletScopeOverrides } = useAuth();
+
+  // [v7.5.87] Other-shop menus for the shop-price section: ALL public
+  // menus + the user's own private menus (buildAllMenuShopsList — NOT
+  // buildMyShopsList, which keeps only MY public shops). [] until
+  // App's subscription delivers; the section simply stays hidden
+  // meanwhile. Another user's private shops can never be in either
+  // list, so they can never appear here.
+  const menuSource = useMemo(
+    () => buildAllMenuShopsList(menuPrivateShops ?? [], menuPublicShops ?? []),
+    [menuPrivateShops, menuPublicShops]
+  );
+
+  // [v7.5.87] Open the Shops ITEM search for this item: seed FIRST,
+  // then navigate (same order as GlobalSearchModal — ShopsView stays
+  // mounted, so its listener is live when the event fires).
+  const handleOpenShopSearch = (item: ItemSummary) => {
+    try {
+      sessionStorage.setItem('ngwe_search_seed', item.name);
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(
+      new CustomEvent('ngwe:search-seed', {
+        detail: { tab: 'shops', query: item.name, mode: 'item' },
+      })
+    );
+    if (onSelectTab) onSelectTab('shops');
+  };
 
   const isScopedTx = (t: Transaction) => {
     const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
@@ -403,13 +474,18 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         cheapestShops,
         cheapestNoShopPrice,
         hasUnitPrices,
+        // [v7.5.87] Cheapest other-shop menu price — only when there is
+        // a per-unit own price to compare against. Trip-total-only
+        // items get null (own data only, as now); items with no menu
+        // anywhere get null too (no empty shop section, no noise).
+        menuCheapest: hasUnitPrices ? getCheapestMenuPrice(menuSource, item.name) : null,
         latestTotal,
       };
     });
 
     // Sort by purchase count descending
     return summaries.sort((a, b) => b.totalPurchases - a.totalPurchases || b.totalSpent - a.totalSpent);
-  }, [filteredTransactions, subCategoryMap, lang, sharedWalletScopeOverrides]);
+  }, [filteredTransactions, subCategoryMap, lang, sharedWalletScopeOverrides, menuSource]);
 
   // Filtered item list according to category and search
   const displayedItems = useMemo(() => {
@@ -859,6 +935,22 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                             {formatLakhs(item.hasUnitPrices ? item.latestPrice : item.latestTotal, lang)}
                           </span>
                         </div>
+                        {/* [v7.5.87] Cheapest other-shop price, one line —
+                            taps through to the Shops item search for this
+                            item. stopPropagation: the row click toggles
+                            selection, this button must not. */}
+                        {item.hasUnitPrices && item.menuCheapest && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenShopSearch(item);
+                            }}
+                            className="mt-0.5 block max-w-full truncate text-left text-[10px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
+                          >
+                            🏪 {item.menuCheapest.shopName} · {formatLakhs(item.menuCheapest.price, lang)}
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1001,6 +1093,43 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                         {lang === 'my' ? `(${timeRangeLabel} အတွင်း တွက်ချက်ထားသည်)` : `(computed over ${timeRangeLabel})`}
                       </span>
                     </div>
+                  )}
+                  {/* [v7.5.87] Other shops' prices — the cheapest menu
+                      price for this item across ALL public menus + own
+                      private menus, with the difference vs the user's
+                      own latest price. Labelled 'တခြားဆိုင်တွေရဲ့ဈေး',
+                      NEVER 'အတန်ဆုံးဆိုင်' — that label means the
+                      own-data cheapest block above. The whole section
+                      taps through to the Shops item search for this
+                      item (cards are not selection toggles, so no
+                      stopPropagation is needed here). Shown only when
+                      there is a per-unit own price AND a menu price. */}
+                  {item.hasUnitPrices && item.menuCheapest && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenShopSearch(item)}
+                      className="block w-full text-left pt-2 border-t border-slate-100 text-xs cursor-pointer"
+                    >
+                      <span className="text-[10px] text-slate-400 block">
+                        {lang === 'my' ? 'တခြားဆိုင်တွေရဲ့ဈေး' : "Other shops' prices"}
+                      </span>
+                      <span className="font-bold text-emerald-700">
+                        {item.menuCheapest.shopName}
+                      </span>
+                      <span className="font-mono text-slate-600">
+                        {' '}· {formatLakhs(item.menuCheapest.price, lang)} (
+                        {menuUnitDisplay(item.menuCheapest.unit, lang)})
+                      </span>
+                      <span className="ml-1 px-1 py-px rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                        💰 {lang === 'my' ? 'အသက်သာဆုံး' : 'Cheapest'}
+                      </span>
+                      <span className="block text-[11px] text-slate-600 mt-0.5">
+                        {shopDiffLine(item, lang)}
+                      </span>
+                      <span className="block text-[11px] font-bold text-indigo-600 mt-0.5">
+                        {lang === 'my' ? 'ဆိုင်တိုင်းရဲ့ဈေး ကြည့်မည် ›' : "See all shops' prices ›"}
+                      </span>
+                    </button>
                   )}
                 </div>
               );

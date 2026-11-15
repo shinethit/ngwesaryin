@@ -1,15 +1,13 @@
 {
-  "version": "v7.5.89",
-  "buildNumber": 304,
+  "version": "v7.5.90",
+  "buildNumber": 305,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဖြည့်ပြီးသား Public ဆိုင်မှာ အသေးစိတ် ဖြည့်ဖို့ သတိပေးချက် ထပ်မပေါ်တော့ဘူး — ဆိုင်ရဲ့ အချက်အလက်အပြည့်အစုံနဲ့ စစ်တော့မယ်။",
-    "ဆိုင်နာမည် ပြောင်းရင် Menu လည်း လိုက်ပါပြီ — သူများဆိုင်ကို ပြင်ရင်လည်း ဆိုင်အသစ် ထပ်မဆောက်တော့ဘူး။",
-    "ဆိုင်ထည့်တဲ့အခါ ကိုယ်ပိုင် သီးသန့် / Public သီးသန့် / နှစ်ခုလုံး ရွေးလို့ရပြီ — နှစ်ခုလုံးဆို Menu ပါ နှစ်နေရာလုံး ရောက်မယ်။"
+    "ဆိုင်ရွှေ့တဲ့အခါ ရောက်မယ့်ဘက်မှာ နာမည်တူဆိုင် ရှိနေရင် ရွှေ့လို့ မရတော့ဘူး — ဆိုင်ထပ်မဖြစ်တော့ဘူး။",
+    "ဆိုင်အသေးစိတ် ဖြည့်တဲ့အခါ နာမည်ပြောင်းလိုက်ရင်လည်း Menu က ဆိုင်အသစ်နာမည်နဲ့ လိုက်ပါပြီ။"
   ],
   "changesEn": [
-    "The fill-details prompt no longer appears for a public shop whose details are already filled — the check now uses the full shop details.",
-    "Renaming a shop now keeps its menu — editing someone elses public shop no longer creates a duplicate.",
-    "When adding a shop you can now choose Private only, Public only, or both — both copies the menu to both places."
+    "Moving a shop is now blocked when a same-name shop already exists on the destination side — no more duplicates from moves.",
+    "If you rename a shop while filling its details, the menu update now follows the new name."
   ]
 }

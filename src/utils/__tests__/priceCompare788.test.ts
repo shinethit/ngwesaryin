@@ -125,31 +125,31 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.5.89 — history entry and version.json in sync', () => {
-  it('current version is v7.5.89 / build 304', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.5.89');
-    expect(CURRENT_BUILD_NUMBER).toBe(304);
-    expect(VERSION_JSON.version).toBe('v7.5.89');
-    expect(VERSION_JSON.buildNumber).toBe(304);
+describe('Version v7.5.90 — history entry and version.json in sync', () => {
+  it('current version is v7.5.90 / build 305', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.5.90');
+    expect(CURRENT_BUILD_NUMBER).toBe(305);
+    expect(VERSION_JSON.version).toBe('v7.5.90');
+    expect(VERSION_JSON.buildNumber).toBe(305);
     // releasedAt is never rewritten by a version bump.
     expect(VERSION_JSON.releasedAt).toBe('2026-11-11T14:29:07.044Z');
   });
 
-  it('top history entry is the v7.5.89 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.5.90 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.5.89');
-    expect(entry.buildNumber).toBe(304);
+    expect(entry.version).toBe('v7.5.90');
+    expect(entry.buildNumber).toBe(305);
     expect(entry.releaseDate).toBe('2026-11-15');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('ဖြည့်ပြီးသား ဆိုင်မှာ သတိပေးချက် မပေါ်တော့ဘူး — ဆိုင်ထည့်ရင် နှစ်ခုလုံး ရွေးလို့ရပြီ');
-    expect(entry.titleEn).toBe('Details prompt fixed for filled shops — add a shop to Private, Public, or both');
+    expect(entry.titleMy).toBe('ဆိုင်ရွှေ့ / နာမည်ပြောင်းရင် ထပ်မဖြစ်တော့ဘူး — Menu လိုက်ပါမှု ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('Moves and renames no longer duplicate shops — menu follows the new name');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(2);
+    expect(entry.changesEn).toHaveLength(2);
   });
 });

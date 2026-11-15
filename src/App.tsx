@@ -44,7 +44,7 @@ import { AdBanner } from './components/AdBanner';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { AccountModal } from './components/AccountModal';
 import { NotificationModal } from './components/NotificationModal';
-import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopDetailReminders, addShopDetailReminder, normalizeShopName, isShopNameNeedingDetails } from './utils/shopDetailsReminders';
+import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopDetailReminders, addShopDetailReminder, normalizeShopName, isShopNameNeedingDetails, SHOP_DETAILS_SAVED_EVENT, type ShopDetailsSavedDetail } from './utils/shopDetailsReminders';
 import { ShopDetailsPromptModal } from './components/ShopDetailsPromptModal';
 // [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
 import { ShopMenuUpdatePromptModal } from './components/ShopMenuUpdatePromptModal';
@@ -53,6 +53,7 @@ import {
   buildMenuPromptRows,
   resolveMenuShop,
   resolveMenuShopById,
+  updateStashedCandidateForSavedShop,
   type MenuUpdateRow,
   type ResolvedMenuShop,
   type ShopMenuStore,
@@ -453,6 +454,14 @@ export default function App() {
   // object, overwritten by the next candidate; cleared only when its
   // prompt opens. If the shop never appears it sits harmlessly.
   const stashedMenuCandidateRef = useRef<StashedMenuCandidate | null>(null);
+  // [v7.5.90 F2] Bumped whenever the details-saved listener REWRITES
+  // the stash (a rename in the details form). The retry effect below
+  // watches it: the shop list may already have changed BEFORE the
+  // save event arrives — a private save updates the local list before
+  // its cloud write resolves — so the retry may already have run,
+  // and missed, with the OLD name. The bump re-runs it after the
+  // rewrite, when the shop exists under its NEW name.
+  const [stashedCandidateSeq, setStashedCandidateSeq] = useState(0);
   // [v7.5.85 FIX 2] Full public doc (menu included) for a public
   // id+name hit — shared by the candidate handler, the stash retry
   // effect, and the apply-time re-resolution below.
@@ -1076,8 +1085,44 @@ export default function App() {
     // next candidate overwrites it — a slow/failed fetch on mobile
     // data must not lose the update. `user` is read from the closure
     // of that render, which is current for the lists that just changed.
+    // [v7.5.90 F2] ... or the details-saved listener rewrote the stash
+    // (a rename in the details form) — see stashedCandidateSeq.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shops, publicShops, shopDetailsPromptName, activeTab]);
+  }, [shops, publicShops, shopDetailsPromptName, activeTab, stashedCandidateSeq]);
+
+  // [v7.5.90 F2] A details-fill save that RENAMED the shop (X → Y)
+  // must move the stashed menu candidate with it: the stash still
+  // says X, the shop now exists only as Y, and the retry above would
+  // never resolve. ShopsView dispatches `ngwe:shop-details-saved`
+  // on every successful ShopModal save; when the stash's folded name
+  // matches the folded OLD name (or the folded details-prompt name —
+  // the prompt is cleared by Fill Now before the form opens, so the
+  // old name is the usual match) the stash is rewritten to the SAVED
+  // name with the saved id attached when ShopsView knows it. A save
+  // for a DIFFERENT shop never touches the stash, and with no stash
+  // this listener is a no-op. The seq bump re-runs the retry effect
+  // (see stashedCandidateSeq): the shop list may already have
+  // changed before this event arrives, so the retry may already have
+  // run — and missed — with the old name.
+  useEffect(() => {
+    const onShopDetailsSaved = (e: Event) => {
+      const detail = (e as CustomEvent<ShopDetailsSavedDetail>).detail;
+      if (!detail) return;
+      const stashed = stashedMenuCandidateRef.current;
+      const next = updateStashedCandidateForSavedShop(stashed, {
+        oldName: detail.oldName,
+        savedName: detail.savedName,
+        shopId: detail.shopId,
+        promptName: shopDetailsPromptName,
+      });
+      if (next && next !== stashed) {
+        stashedMenuCandidateRef.current = next;
+        setStashedCandidateSeq((s) => s + 1);
+      }
+    };
+    window.addEventListener(SHOP_DETAILS_SAVED_EVENT, onShopDetailsSaved);
+    return () => window.removeEventListener(SHOP_DETAILS_SAVED_EVENT, onShopDetailsSaved);
+  }, [shopDetailsPromptName]);
 
   // [v7.5.82] Apply the checked menu rows. On write FAILURE the real
   // error is shown in the modal and it STAYS OPEN so the user can retry

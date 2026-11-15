@@ -100,6 +100,34 @@ export async function moveWithCreateFirst(
 }
 
 /**
+ * MOVE hard block (v7.5.90 F1): destination-side duplicate check
+ * before a create-then-delete move. `destinationShops` is ONLY the
+ * list on the side the shop is moving TO — a same folded name there
+ * refuses the move (`blocked: true`) and NEITHER callback runs, so
+ * nothing is created and nothing is deleted and the modal can stay
+ * open. A same-name record on the SOURCE side is the record being
+ * moved and must never block itself, so it is never passed here.
+ * When the destination is clear this delegates to
+ * moveWithCreateFirst unchanged (same create-then-delete order and
+ * same `{ moved, deleteOk }` semantics, plus `blocked: false`).
+ * The Both-save counterpart creation is NOT a move and never goes
+ * through this helper — it keeps creating/updating the counterpart
+ * as before.
+ */
+export async function moveShopWithDestinationCheck(
+  name: string,
+  destinationShops: readonly (ShopContact | PublicShop)[],
+  createCopy: () => Promise<boolean>,
+  deleteOriginal: () => Promise<boolean>
+): Promise<{ moved: boolean; deleteOk: boolean | null; blocked: boolean }> {
+  if (isDuplicateShopName(name, [destinationShops])) {
+    return { moved: false, deleteOk: null, blocked: true };
+  }
+  const result = await moveWithCreateFirst(createCopy, deleteOriginal);
+  return { ...result, blocked: false };
+}
+
+/**
  * Shared field shape for the PUBLIC copy of a shop. Same content as
  * the private copy (see buildPrivateShopFields) except for the
  * directory-only fields (id / addedBy / addedByUid / createdAt /

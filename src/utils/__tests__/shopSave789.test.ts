@@ -10,6 +10,7 @@ import {
   isDuplicateShopName,
   findCounterpartShop,
   moveWithCreateFirst,
+  moveShopWithDestinationCheck,
   buildPublicShopFields,
   buildPrivateShopFields,
   buildCounterpartUpdateFields,
@@ -157,6 +158,129 @@ describe('moveWithCreateFirst (public → private move order)', () => {
       async () => false
     );
     expect(result).toEqual({ moved: true, deleteOk: false });
+  });
+});
+
+describe('moveShopWithDestinationCheck (v7.5.90 F1 move hard block)', () => {
+  // Fake in-memory destination / source lists behind the same
+  // injected-callback pattern the moveWithCreateFirst tests use: the
+  // create callback appends the copy to the destination list, the
+  // delete callback removes the original from the source list.
+  function fakeMove(
+    destination: (ShopContact | PublicShop)[],
+    source: (ShopContact | PublicShop)[],
+    name: string,
+    createSucceeds = true,
+    deleteSucceeds = true
+  ) {
+    const calls: string[] = [];
+    const dest = [...destination];
+    const src = [...source];
+    const run = () =>
+      moveShopWithDestinationCheck(
+        name,
+        dest,
+        async () => {
+          calls.push('create');
+          dest.push(publicShop({ id: 'pub-new', name, addedByUid: 'u1' }));
+          return createSucceeds;
+        },
+        async () => {
+          calls.push('delete');
+          src.pop();
+          return deleteSucceeds;
+        }
+      );
+    return { dest, src, calls, run };
+  }
+
+  it('blocks a private → public move when the public directory already has the name', async () => {
+    const dest = [publicShop({ id: 'pub-9', name: 'Denko', addedByUid: 'u2' })];
+    const src = [privateShop({ id: 'priv-1', name: 'Denko' })];
+    const m = fakeMove(dest, src, 'Denko');
+    const result = await m.run();
+    expect(result).toEqual({ moved: false, deleteOk: null, blocked: true });
+    expect(m.calls).toEqual([]);
+    expect(m.dest).toHaveLength(1);
+    expect(m.src).toHaveLength(1);
+  });
+
+  it('blocks a public → private move when the private list already has the name', async () => {
+    const dest = [privateShop({ id: 'priv-9', name: 'Denko' })];
+    const src = [publicShop({ id: 'pub-1', name: 'Denko', addedByUid: 'u1' })];
+    const m = fakeMove(dest, src, 'Denko');
+    const result = await m.run();
+    expect(result).toEqual({ moved: false, deleteOk: null, blocked: true });
+    expect(m.calls).toEqual([]);
+    expect(m.dest).toHaveLength(1);
+    expect(m.src).toHaveLength(1);
+  });
+
+  it('blocks on a folded-name collision (Myanmar digit variant)', async () => {
+    const dest = [publicShop({ id: 'pub-9', name: 'တောင်ကြီးဆေးဆိုင် ၇', addedByUid: 'u2' })];
+    const src = [privateShop({ id: 'priv-1', name: 'တောင်ကြီးဆေးဆိုင် 7' })];
+    const m = fakeMove(dest, src, 'တောင်ကြီးဆေးဆိုင် 7');
+    const result = await m.run();
+    expect(result).toEqual({ moved: false, deleteOk: null, blocked: true });
+    expect(m.calls).toEqual([]);
+    expect(m.dest).toHaveLength(1);
+    expect(m.src).toHaveLength(1);
+  });
+
+  it('does NOT block when the same name lives only on the SOURCE side', async () => {
+    // The record being moved is on the source side and is never in
+    // the destination list passed in — the destination here holds
+    // only an unrelated shop, so the move must proceed.
+    const dest = [publicShop({ id: 'pub-9', name: 'Some Other Shop', addedByUid: 'u2' })];
+    const src = [privateShop({ id: 'priv-1', name: 'Denko' })];
+    const m = fakeMove(dest, src, 'Denko');
+    const result = await m.run();
+    expect(result).toEqual({ moved: true, deleteOk: true, blocked: false });
+    expect(m.calls).toEqual(['create', 'delete']);
+    expect(m.dest).toHaveLength(2);
+    expect(m.src).toHaveLength(0);
+  });
+
+  it('succeeds exactly as before with NO collision (private → public regression)', async () => {
+    const dest = [publicShop({ id: 'pub-9', name: 'Other Shop', addedByUid: 'u2' })];
+    const src = [privateShop({ id: 'priv-1', name: 'Denko' })];
+    const m = fakeMove(dest, src, 'Denko');
+    const result = await m.run();
+    expect(result).toEqual({ moved: true, deleteOk: true, blocked: false });
+    expect(m.calls).toEqual(['create', 'delete']);
+    expect(m.dest).toHaveLength(2);
+    expect(m.dest[1].name).toBe('Denko');
+    expect(m.src).toHaveLength(0);
+  });
+
+  it('succeeds exactly as before with NO collision (public → private regression)', async () => {
+    const dest = [privateShop({ id: 'priv-9', name: 'Other Shop' })];
+    const src = [publicShop({ id: 'pub-1', name: 'Denko', addedByUid: 'u1' })];
+    const m = fakeMove(dest, src, 'Denko');
+    const result = await m.run();
+    expect(result).toEqual({ moved: true, deleteOk: true, blocked: false });
+    expect(m.calls).toEqual(['create', 'delete']);
+    expect(m.dest).toHaveLength(2);
+    expect(m.src).toHaveLength(0);
+  });
+
+  it('still counts as moved when the delete fails after a clear destination', async () => {
+    const dest = [publicShop({ id: 'pub-9', name: 'Other Shop', addedByUid: 'u2' })];
+    const src = [privateShop({ id: 'priv-1', name: 'Denko' })];
+    const m = fakeMove(dest, src, 'Denko', true, false);
+    const result = await m.run();
+    expect(result).toEqual({ moved: true, deleteOk: false, blocked: false });
+    expect(m.dest).toHaveLength(2);
+  });
+
+  it('never deletes when the create fails after a clear destination', async () => {
+    const dest = [publicShop({ id: 'pub-9', name: 'Other Shop', addedByUid: 'u2' })];
+    const src = [privateShop({ id: 'priv-1', name: 'Denko' })];
+    const m = fakeMove(dest, src, 'Denko', false, true);
+    const result = await m.run();
+    expect(result).toEqual({ moved: false, deleteOk: null, blocked: false });
+    expect(m.calls).toEqual(['create']);
+    expect(m.src).toHaveLength(1);
   });
 });
 

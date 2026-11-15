@@ -24,6 +24,46 @@ export const SHOP_REMINDERS_CHANGED_EVENT = 'ngwe:shop-reminders-changed';
 // listens and opens the ShopModal pre-filled with the name.
 export const OPEN_SHOP_FORM_EVENT = 'ngwe:open-shop-form';
 
+// [v7.5.90 F2] Details-saved event — same pattern as
+// `ngwe:open-shop-form`: ShopsView dispatches it after a SUCCESSFUL
+// ShopModal save (never on a failed save — the modal stays open
+// then), and App listens so a stashed menu candidate can follow a
+// rename: the stash still carries the name the form was OPENED with,
+// the shop now exists only under the SAVED name, and without this
+// the stash retry would never resolve.
+export const SHOP_DETAILS_SAVED_EVENT = 'ngwe:shop-details-saved';
+
+/** Payload of `ngwe:shop-details-saved`. */
+export interface ShopDetailsSavedDetail {
+  /** Name the form was opened with (`editingShop.name` before save,
+   *  or the prefill name for a new shop). Undefined for a plain
+   *  "+ Add Shop" create, which has no opening name. */
+  oldName?: string;
+  /** Name the shop was saved under. */
+  savedName: string;
+  /** Saved record's id when ShopsView knows it: public creates /
+   *  edits / moves mint or keep it locally. Undefined for private
+   *  creates and public → private moves — App mints the private id
+   *  (useDataHandlers.handleAddShop) and only returns a boolean, so
+   *  the id is not visible here; the listener still rewrites the
+   *  stash by NAME, which is what the rename fix needs. */
+  shopId?: string;
+  /** Which side the saved record landed on. */
+  isPublic: boolean;
+}
+
+/** Dispatch `ngwe:shop-details-saved` (same guard pattern as
+ *  dispatchOpenShopForm below). */
+export function dispatchShopDetailsSaved(detail: ShopDetailsSavedDetail): void {
+  try {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent(SHOP_DETAILS_SAVED_EVENT, { detail }));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export interface ShopDetailReminder {
   id: string;
   shopName: string;

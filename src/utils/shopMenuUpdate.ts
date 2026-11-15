@@ -408,6 +408,74 @@ export interface StashedMenuCandidate {
   items: TransactionItem[];
 }
 
+// ---------------------------------------------------------------------------
+// [v7.5.90 F2] A details-fill save that RENAMED the shop (X → Y) must
+// move the stashed candidate with it. Pure decision helper — App's
+// `ngwe:shop-details-saved` listener is a thin wrapper around it, so
+// the matching rule is unit-testable without mounting App.
+// ---------------------------------------------------------------------------
+
+/** What App's details-saved listener knows about a ShopModal save. */
+export interface SavedShopForStash {
+  /** Name the form was opened with (prefill name for a new shop). */
+  oldName?: string;
+  /** Name the shop was saved under. */
+  savedName: string;
+  /** Saved record's id when known (see SHOP_DETAILS_SAVED_EVENT). */
+  shopId?: string;
+  /** Fallback match name — App's details-prompt name at save time.
+   *  The prompt is cleared by Fill Now before the form opens, so
+   *  `oldName` is the usual match; this covers a save whose opening
+   *  name is unknown but whose prompt name still matches the stash. */
+  promptName?: string | null;
+}
+
+/**
+ * [v7.5.90 F2] Rewrite a stashed menu candidate for a shop that was
+ * just saved in the details form, or leave it alone.
+ *
+ * - No stash → null (the listener is a no-op).
+ * - Folded stash name matches the folded OLD name (or the folded
+ *   prompt name) → a NEW stash: `shopName` becomes the SAVED name
+ *   (trimmed), the saved id is attached when known, an id the stash
+ *   already carried is kept when the save brings none, and `items`
+ *   are preserved by reference. The no-rename case still attaches
+ *   the id — this is the writer the v7.5.89 A5 comment says the stash
+ *   was missing.
+ * - Anything else (a save for a DIFFERENT shop, an empty saved name,
+ *   no opening name at all) → the SAME stash object, untouched.
+ * - A matching save that changes nothing (same folded name, same id)
+ *   also returns the same object, so the listener can tell "updated"
+ *   from "unchanged" by reference (`next !== stash`).
+ *
+ * Matching is the shared folded name (normalizeShopName: trim +
+ * case-insensitive, Myanmar digits folded, whitespace collapsed), so
+ * 'ဆိုင် ၇' and 'ဆိုင် 7' are the same shop here, as everywhere else
+ * in the save path.
+ */
+export function updateStashedCandidateForSavedShop(
+  stash: StashedMenuCandidate | null,
+  saved: SavedShopForStash,
+): StashedMenuCandidate | null {
+  if (!stash) return null;
+  const savedName = (saved.savedName || '').trim();
+  if (!savedName) return stash;
+  const stashKey = normalizeShopName(stash.shopName);
+  if (!stashKey) return stash;
+  const oldKey = normalizeShopName(saved.oldName || '');
+  const promptKey = normalizeShopName(saved.promptName || '');
+  const matches =
+    (oldKey !== '' && stashKey === oldKey) || (promptKey !== '' && stashKey === promptKey);
+  if (!matches) return stash;
+  const nextShopId = (saved.shopId || '').trim() || stash.shopId;
+  if (normalizeShopName(savedName) === stashKey && nextShopId === stash.shopId) return stash;
+  return {
+    shopName: savedName,
+    ...(nextShopId ? { shopId: nextShopId } : {}),
+    items: stash.items,
+  };
+}
+
 /**
  * [v7.5.89 A5] Resolve by the shop's ID, not its name — a rename
  * between prompt-open and Apply must still land on the right doc.

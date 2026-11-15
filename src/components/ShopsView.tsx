@@ -16,12 +16,12 @@ import { ShopModal } from './shops/ShopModal';
 import { ShopReportModal } from './shops/ShopReportModal';
 import type { SubmitShopReportResult } from '../utils/shopReports';
 import { useSearchSeed } from '../hooks/useSearchSeed';
-import { resolveShopDetailReminder, normalizeShopName } from '../utils/shopDetailsReminders';
+import { resolveShopDetailReminder, normalizeShopName, dispatchShopDetailsSaved } from '../utils/shopDetailsReminders';
 import { buildMyShopsList, findShopByName } from '../utils/myShops';
 import {
   isDuplicateShopName,
   findCounterpartShop,
-  moveWithCreateFirst,
+  moveShopWithDestinationCheck,
   buildPublicShopFields,
   buildPrivateShopFields,
   buildCounterpartUpdateFields,
@@ -557,6 +557,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     targetDirectory: 'public' | 'private' | 'both';
   }): Promise<boolean> => {
     const currentUser = auth.currentUser;
+    // [v7.5.90 F2] Name the form was OPENED with — captured once, before
+    // any save branch runs. A stashed menu candidate still carries this
+    // name; when the form saves under a DIFFERENT name, App must move
+    // the stash to the saved name or the menu update never happens.
+    const formOldName = editingShop?.name;
+    // [v7.5.90 F2] Tell App a details-fill save landed. Called ONLY on
+    // the `return true` paths below — never on a failed save (the modal
+    // stays open) and never with the OLD record's id on a move (the new
+    // copy has a different id, or none visible here — see each site).
+    const notifyDetailsSaved = (shopId: string | undefined, isPublic: boolean) => {
+      dispatchShopDetailsSaved({ oldName: formOldName, savedName: data.name, shopId, isPublic });
+    };
 
     // [v7.5.89 B3] Save to BOTH places — a COPY, never a move: two
     // docs, one per collection, with DIFFERENT ids and the same
@@ -619,6 +631,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           return false;
         }
         clearDetailReminders(data.name, oldName);
+        // [v7.5.90 F2] Public copy's id is known; the private copy's
+        // id is minted inside onAddPrivateShop, so the public id is
+        // the one the stash retry resolves by (public-first, as usual).
+        notifyDetailsSaved(pubId, true);
         return true;
       }
 
@@ -690,6 +706,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         }
       }
       clearDetailReminders(data.name, oldName);
+      // [v7.5.90 F2] The EDITED record's id and side — the counterpart
+      // copy (if one was created / updated on the other side) keeps
+      // its own id; the retry resolves the record the user edited.
+      notifyDetailsSaved(editingShop.id, isEditingPublic);
       return true;
     }
 
@@ -709,29 +729,55 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       // it must fall through to the create path, not the move path (the
       // move would try to delete a shop that never existed).
       if (editingShop && !isEditingPublic && !editingShop.id.startsWith('__prefill_')) {
-        const id = `pub_shop_${Date.now()}`;
-        const okCreate = await safeSetDoc(doc(db, 'public_shops', id), {
-          id,
-          name: data.name,
-          phone: data.phones[0] || '',
-          phones: data.phones,
-          stateRegion: data.stateRegion,
-          township: data.township,
-          city: data.city,
-          ward: data.ward,
-          address: data.addresses[0] || '',
-          addresses: data.addresses,
-          note: data.note,
-          subCategory: data.subCategory,
-          addedBy: currentUser.email || currentUser.displayName || 'အသုံးပြုသူ',
-          addedByUid: currentUser.uid,
-          createdAt: Date.now(),
-          helpfulCount: 0,
-          kpayNumber: data.kpayNumber,
-          generalNotes: data.generalNotes,
-          items: (editingShop as ShopContact).items || [],
-        });
-        if (!okCreate) {
+        // [v7.5.90 F1] MOVE hard block: a same folded name already in
+        // the DESTINATION list (public directory) refuses the move —
+        // the same wording as the v7.5.89 create hard block. The
+        // check is destination-side only; the private original being
+        // moved never blocks itself. Blocked = nothing created,
+        // nothing deleted, modal stays open.
+        // [v7.5.90 F2] The new public id is minted inside the create
+        // callback below, so it is captured here for the success path
+        // (the stash retry resolves the NEW copy by this id).
+        let movedPublicId: string | undefined;
+        const moved = await moveShopWithDestinationCheck(
+          data.name,
+          publicShops,
+          () => {
+            const id = `pub_shop_${Date.now()}`;
+            movedPublicId = id;
+            return safeSetDoc(doc(db, 'public_shops', id), {
+              id,
+              name: data.name,
+              phone: data.phones[0] || '',
+              phones: data.phones,
+              stateRegion: data.stateRegion,
+              township: data.township,
+              city: data.city,
+              ward: data.ward,
+              address: data.addresses[0] || '',
+              addresses: data.addresses,
+              note: data.note,
+              subCategory: data.subCategory,
+              addedBy: currentUser.email || currentUser.displayName || 'အသုံးပြုသူ',
+              addedByUid: currentUser.uid,
+              createdAt: Date.now(),
+              helpfulCount: 0,
+              kpayNumber: data.kpayNumber,
+              generalNotes: data.generalNotes,
+              items: (editingShop as ShopContact).items || [],
+            });
+          },
+          () => onDeletePrivateShop(editingShop.id)
+        );
+        if (moved.blocked) {
+          showNotice(
+            lang === 'my'
+              ? `သတိပေးချက်: "${data.name}" အမည်တူ ဆိုင် ရှိနေပါပြီ — အမည်တူ ဆိုင်အသစ် ထပ်ထည့်၍ မရပါ`
+              : `A shop named "${data.name}" already exists — a duplicate cannot be added`
+          );
+          return false;
+        }
+        if (!moved.moved) {
           showNotice(
             lang === 'my'
               ? 'ပြည်သူ့လမ်းညွှန်သို့ ရွှေ့၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
@@ -744,17 +790,25 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         // fails — the handler toasts that failure and the user can remove
         // the private copy by hand. Returning false here would re-run the
         // create on retry and duplicate the public shop.
-        await onDeletePrivateShop(editingShop.id);
+        // (The delete already ran inside the move helper above; its
+        // result is ignored here exactly as before.)
         // [v7.5.78 C] Details filled via the public directory — clear
         // any pending reminder for this shop.
         // [v7.5.89 B5] Also clear the OLD name on a rename.
         clearDetailReminders(data.name, editingShop.name);
+        // [v7.5.90 F2] The OLD private id must NOT be reported — the
+        // new public copy has a different id (movedPublicId).
+        notifyDetailsSaved(movedPublicId, true);
         return true;
       }
 
       // [v7.5.55 C5] Check the safe* returns — a rejected write must show
       // an error and keep the modal open (ShopModal closes only on true).
+      // [v7.5.90 F2] The saved public id: the edited record's id, or
+      // the id minted by the create branch below.
+      let savedPublicId: string | undefined;
       if (editingShop && isEditingPublic) {
+        savedPublicId = editingShop.id;
         const shopRef = doc(db, 'public_shops', editingShop.id);
         const ok = await safeUpdateDoc(shopRef, {
           name: data.name,
@@ -793,6 +847,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           return false;
         }
         const id = `pub_shop_${Date.now()}`;
+        savedPublicId = id;
         const shopRef = doc(db, 'public_shops', id);
         const ok = await safeSetDoc(shopRef, {
           id,
@@ -829,6 +884,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       // [v7.5.89 B5] Also clear the OLD name when the shop was renamed
       // (or when a prefill was saved under a new name).
       clearDetailReminders(data.name, editingShop?.name);
+      // [v7.5.90 F2] savedPublicId is the edited id or the minted id.
+      notifyDetailsSaved(savedPublicId, true);
       return true;
     } else {
       // Save Private Shop
@@ -854,13 +911,29 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       // private copy — and the user is told to remove the leftover
       // public copy by hand.
       if (editingShop && isEditingPublic) {
-        const moved = await moveWithCreateFirst(
+        // [v7.5.90 F1] MOVE hard block: a same folded name already in
+        // the DESTINATION list (private list) refuses the move — the
+        // same wording as the v7.5.89 create hard block. The check is
+        // destination-side only; the public original being moved never
+        // blocks itself. Blocked = nothing created, nothing deleted,
+        // modal stays open.
+        const moved = await moveShopWithDestinationCheck(
+          data.name,
+          privateShops,
           () =>
             onAddPrivateShop(
               buildPrivateShopFields(data, (editingShop as PublicShop).items || [])
             ),
           () => safeDeleteDoc(doc(db, 'public_shops', editingShop.id))
         );
+        if (moved.blocked) {
+          showNotice(
+            lang === 'my'
+              ? `သတိပေးချက်: "${data.name}" အမည်တူ ဆိုင် ရှိနေပါပြီ — အမည်တူ ဆိုင်အသစ် ထပ်ထည့်၍ မရပါ`
+              : `A shop named "${data.name}" already exists — a duplicate cannot be added`
+          );
+          return false;
+        }
         if (!moved.moved) {
           showNotice(
             lang === 'my'
@@ -879,6 +952,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         // [v7.5.78 C] Details filled via the private list — clear any
         // pending reminder for this shop (and the old name on a rename).
         clearDetailReminders(data.name, editingShop.name);
+        // [v7.5.90 F2] The new private id is minted inside
+        // onAddPrivateShop (App) and not visible here — the stash is
+        // still rewritten by NAME, which is what the rename fix needs.
+        // The OLD public id must NOT be reported: that doc is deleted.
+        notifyDetailsSaved(undefined, false);
         return true;
       }
 
@@ -888,7 +966,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       // [v7.5.78 C] A `__prefill_` sentinel is a NEW shop, not an update —
       // it falls through to the ADD path below.
       if (editingShop && !isEditingPublic && !editingShop.id.startsWith('__prefill_')) {
-        return await onUpdatePrivateShop({
+        const ok = await onUpdatePrivateShop({
           ...(editingShop as ShopContact),
           name: data.name,
           phone: data.phones[0] || '',
@@ -904,6 +982,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           kpayNumber: data.kpayNumber,
           generalNotes: data.generalNotes,
         });
+        // [v7.5.90 F2] Only on success — a false return keeps the
+        // modal open for retry, so no event fires.
+        if (ok) notifyDetailsSaved(editingShop.id, false);
+        return ok;
       }
       // [v7.5.89 B3] CREATE hard block (private side): a same-name
       // record in EITHER list refuses the save — a warning is not
@@ -917,7 +999,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         );
         return false;
       }
-      return await onAddPrivateShop({
+      const ok = await onAddPrivateShop({
         name: data.name,
         phone: data.phones[0] || '',
         phones: data.phones,
@@ -933,6 +1015,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         generalNotes: data.generalNotes,
         items: [],
       });
+      // [v7.5.90 F2] The new private id is minted inside
+      // onAddPrivateShop (App) and not visible here — the stash is
+      // still rewritten by NAME. Only on success.
+      if (ok) notifyDetailsSaved(undefined, false);
+      return ok;
     }
   };
 

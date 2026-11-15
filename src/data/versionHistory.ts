@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.89';
-export const CURRENT_BUILD_NUMBER = 304;
+export const CURRENT_APP_VERSION = 'v7.5.90';
+export const CURRENT_BUILD_NUMBER = 305;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.90',
+    buildNumber: 305,
+    releaseDate: '2026-11-15',
+    releaseTime: '6:42 PM (MMT)',
+    titleMy: 'ဆိုင်ရွှေ့ / နာမည်ပြောင်းရင် ထပ်မဖြစ်တော့ဘူး — Menu လိုက်ပါမှု ပြင်ဆင်ခြင်း',
+    titleEn: 'Moves and renames no longer duplicate shops — menu follows the new name',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆိုင်ရွှေ့တဲ့အခါ ရောက်မယ့်ဘက်မှာ နာမည်တူဆိုင် ရှိနေရင် ရွှေ့လို့ မရတော့ဘူး — ဆိုင်ထပ်မဖြစ်တော့ဘူး။ ဆိုင်အသေးစိတ် ဖြည့်တဲ့အခါ နာမည်ပြောင်းလိုက်ရင်လည်း Menu က ဆိုင်အသစ်နာမည်နဲ့ လိုက်ပါပြီ။',
+    descriptionEn: 'Moving a shop is now blocked when a same-name shop already exists on the destination side — no more duplicates from moves. If you rename a shop while filling its details, the menu update now follows the new name.',
+    changesMy: [
+      'ဆိုင်ရွှေ့တဲ့အခါ ရောက်မယ့်ဘက်မှာ နာမည်တူဆိုင် ရှိနေရင် ရွှေ့လို့ မရတော့ဘူး — ဆိုင်ထပ်မဖြစ်တော့ဘူး။',
+      'ဆိုင်အသေးစိတ် ဖြည့်တဲ့အခါ နာမည်ပြောင်းလိုက်ရင်လည်း Menu က ဆိုင်အသစ်နာမည်နဲ့ လိုက်ပါပြီ။',
+    ],
+    changesEn: [
+      'Moving a shop is now blocked when a same-name shop already exists on the destination side — no more duplicates from moves.',
+      'If you rename a shop while filling its details, the menu update now follows the new name.',
+    ],
+  },
   {
     version: 'v7.5.89',
     buildNumber: 304,

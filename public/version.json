@@ -1,13 +1,15 @@
 {
-  "version": "v7.5.87",
-  "buildNumber": 302,
+  "version": "v7.5.88",
+  "buildNumber": 303,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဈေးနှုန်း နှိုင်းယှဉ်မှာ ပစ္စည်းတစ်ခုချင်းစီရဲ့ အတန်ဆုံး တခြားဆိုင်ဈေး (ဘယ်ဆိုင်လဲ၊ ဘယ်လောက်လဲ) ပါ ပေါ်ပြီ — ကိုယ်ဝယ်ခဲ့တဲ့ နောက်ဆုံးဈေးနဲ့ ဘယ်လောက် ကွာလဲဆိုတာပါ ယှဉ်ပြပေးမယ်။",
-    "ဆိုင်ဈေးကို နှိပ်ရင် အဲဒီပစ္စည်းနဲ့ ဆိုင်တိုင်းရဲ့ ဈေးကို ရှာတဲ့နေရာကို တစ်ခါတည်း ဖွင့်ပြမယ်။"
+    "ဈေးနှုန်း နှိုင်းယှဉ်မှာ အဖြေကို အပေါ်ဆုံးတင်ပြီ — ဖွင့်ဖွင့်ချင်း ပစ္စည်းတစ်ခုချင်းစီရဲ့ ကိုယ်ဝယ်ခဲ့တဲ့ဈေးနဲ့ အတန်ဆုံးဆိုင်ဈေး မြင်ရမယ်။",
+    "ပစ္စည်းတစ်တန်းကို နှိပ်ရင် အဲဒီပစ္စည်းရဲ့ အသေးစိတ်ကတ်ကို ဖွင့်ပြမယ် (အရင်က Chart ထဲက ဖြုတ်ချလိုက်သလို ဖြစ်နေတယ်)။",
+    "စာရှည်တွေ တိုပြီး Home က Premium ခလုတ်အမည်ကို ရှင်းလင်းအောင် ပြင်ထားတယ်။"
   ],
   "changesEn": [
-    "Each Price Compare item now shows the cheapest other-shop price — which shop and how much — plus the difference vs your latest purchase price.",
-    "Tapping it opens the Shops item search with that item pre-filled."
+    "Price Compare now shows the answer first — your price and the cheapest shop price are visible as soon as the page opens.",
+    "Tapping an item row now opens that item’s detail card (before, it removed the item from the chart).",
+    "Shortened the long explanations and clarified the Premium button name on Home."
   ]
 }

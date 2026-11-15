@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { History, TrendingUp, TrendingDown, Search, Calendar, Filter, Check, BarChart3, LineChart as LineChartIcon, Package, ShoppingBag, RotateCcw } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -157,6 +157,15 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
   // empty with an honest empty state, never snap back to the top 2.
   const [selectedItemNames, setSelectedItemNames] = useState<string[] | null>(null);
   const [limitNotice, setLimitNotice] = useState(false);
+  // [v7.5.88] Row tap opens the item's metric card: the highlighted
+  // card's key, cleared ~2s after each highlight.
+  const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current !== null) clearTimeout(highlightTimeoutRef.current);
+    };
+  }, []);
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
@@ -520,6 +529,15 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
     return allItemSummaries.slice(0, 2);
   }, [selectedItemNames, allItemSummaries]);
 
+  // [v7.5.88] Scroll to the highlighted card once it exists (covers
+  // the case where the tap just added the item, so the card renders
+  // only after this state update).
+  useEffect(() => {
+    if (highlightedKey === null) return;
+    const el = document.getElementById(`compare-card-${highlightedKey}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [highlightedKey, activeSelectedItems]);
+
   // Toggle item selection
   const handleToggleItem = (chartKey: string) => {
     setSelectedItemNames((prev) => {
@@ -539,6 +557,41 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         return [...currentList, chartKey];
       }
     });
+  };
+
+  // [v7.5.88] Row tap OPENS the item's metric card — it used to
+  // toggle chart membership, so tapping an item to see it removed it
+  // from the chart instead. Adds the item first when it is not
+  // selected yet (same 5-max rule and limit notice as the checkbox);
+  // at 5 there is no card to scroll to, so no scroll happens.
+  // Already selected: just scroll + highlight, never a toggle.
+  const handleOpenItem = (chartKey: string) => {
+    const isSelected = activeSelectedItems.some((s) => s.chartKey === chartKey);
+    if (!isSelected) {
+      const currentList =
+        selectedItemNames === null
+          ? activeSelectedItems.map((it) => it.chartKey)
+          : selectedItemNames;
+      if (currentList.length >= 5) {
+        setLimitNotice(true);
+        return;
+      }
+      setSelectedItemNames((prev) => {
+        const list = prev === null ? activeSelectedItems.map((it) => it.chartKey) : prev;
+        if (list.includes(chartKey) || list.length >= 5) return list;
+        return [...list, chartKey];
+      });
+    }
+    if (highlightTimeoutRef.current !== null) clearTimeout(highlightTimeoutRef.current);
+    setHighlightedKey(chartKey);
+    highlightTimeoutRef.current = setTimeout(() => setHighlightedKey(null), 2000);
+    // Repeat tap on the already-highlighted item: the effect above
+    // does not re-run (key unchanged), so scroll directly.
+    if (highlightedKey === chartKey) {
+      setTimeout(() => {
+        document.getElementById(`compare-card-${chartKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
   };
 
   const handleSelectAllTop = () => {
@@ -691,21 +744,14 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                     ? '🛒 ဈေးနှုန်း နှိုင်းယှဉ်'
                     : '🛒 Compare Price'}
                 </h1>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100/70 text-indigo-800 border border-indigo-200">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100/70 text-indigo-800 border border-indigo-200 whitespace-nowrap shrink-0">
                   {lang === 'my' ? 'စိတ်ကြိုက် နှိုင်းယှဉ်ချက်' : 'Custom Comparison'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
                 {lang === 'my'
-                  ? 'ဝယ်ခဲ့သမျှ ပစ္စည်းတစ်ခုချင်းစီ၏ ဝယ်ယူခဲ့သောအကြိမ်ရေ၊ ဈေးနှုန်းအတက်အကျ Trend များကို စိတ်ကြိုက်ရွေးချယ်ပြီး Chart ဖြင့် ကြည့်ရှုနိုင်ပါသည်'
-                  : 'Select custom items to visualize price changes, purchase frequency, and total expenditure over time'}
-              </p>
-              {/* [v7.5.60 E13/S-73] Consistent naming is what makes
-                  comparison work at all — say so on the screen. */}
-              <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
-                {lang === 'my'
-                  ? '💡 ပစ္စည်းအမည်ကို တစ်သမတ်တည်း ရေးမှ နှိုင်းယှဉ်နိုင်ပါတယ် (ဥပမာ — “ဆန်” ကို အမြဲ “ဆန်” လို့ပဲ ရေးပါ)'
-                  : '💡 Prices can only be compared when the item name is always written the same way (e.g. always write “rice” the same way)'}
+                  ? 'ပစ္စည်းတစ်ခုကို နှိပ်ရင် ကိုယ်ဝယ်ခဲ့တဲ့ဈေးနဲ့ တခြားဆိုင်တွေရဲ့ဈေး ယှဉ်ပြမယ်'
+                  : 'Tap an item to compare your price with other shops’ prices'}
               </p>
               {mixedCurrencies.size > 1 && (
                 <p className="text-[11px] text-indigo-800 bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1.5 mt-2">
@@ -766,10 +812,14 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Left = Item Selector & Catalog, Right = Interactive Chart & Metrics */}
+      {/* Main Grid: [v7.5.88] Three direct children so mobile order is
+          metric cards (1st) → selector (2nd) → chart + table (3rd),
+          via order-1/2/3; desktop keeps the old two-column layout via
+          explicit lg placement (selector col 1 rows 1-2, cards + chart
+          col 5). */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Custom Item Selector (Catalog & Quick Search) */}
-        <div className="lg:col-span-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+        <div className="order-2 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:col-span-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Package className="w-4 h-4 text-indigo-600" />
@@ -778,7 +828,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               </span>
             </div>
             <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
-              {activeSelectedItems.length} / 5
+              {lang === 'my' ? `${activeSelectedItems.length} / 5 မျိုး` : `${activeSelectedItems.length} / 5 items`}
             </span>
           </div>
 
@@ -789,7 +839,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               onClick={handleSelectAllTop}
               className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
             >
-              {lang === 'my' ? '⚡ ထိပ်ဆုံး ၃ မျိုး ရွေးမည်' : '⚡ Top 3 Items'}
+              {lang === 'my' ? '⚡ အဝယ်များဆုံး ၃ မျိုး ရွေးမည်' : '⚡ Top 3 most-bought'}
             </button>
             {selectedItemNames !== null && (
               <button
@@ -819,6 +869,14 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                 className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:border-indigo-400 focus:outline-none transition-colors"
               />
             </div>
+
+            {/* [v7.5.88] Name-consistency tip, shortened and moved here
+                from the header — it belongs with the item list. */}
+            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+              {lang === 'my'
+                ? '💡 ပစ္စည်းအမည်ကို တစ်သမတ်တည်း ရေးမှ နှိုင်းယှဉ်နိုင်ပါတယ်'
+                : '💡 Prices compare only when the item name is always written the same way'}
+            </p>
 
             <select
               value={selectedCategory}
@@ -893,7 +951,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                 return (
                   <div
                     key={item.chartKey}
-                    onClick={() => handleToggleItem(item.chartKey)}
+                    onClick={() => handleOpenItem(item.chartKey)}
                     className={`pt-2 pb-2 px-2.5 rounded-2xl flex items-center justify-between gap-2 cursor-pointer transition-all ${
                       isSelected
                         ? 'bg-indigo-50/70 border border-indigo-200/80 shadow-2xs'
@@ -901,7 +959,16 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
+                      {/* [v7.5.88] The checkbox is the ONLY chart-membership
+                          toggle now (the row tap opens the item's card).
+                          It had no onClick of its own — it toggled only
+                          via the row — so it gets one, with
+                          stopPropagation so the row does not also fire. */}
                       <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleItem(item.chartKey);
+                        }}
                         className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
                           isSelected
                             ? 'bg-indigo-600 border-indigo-600 text-white'
@@ -980,8 +1047,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Chart, Summary Metric Cards & Purchase Timeline Table */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* [v7.5.88] Metric cards FIRST on mobile (order-1) — the
+            answer, not the controls. Desktop: col 5, row 1. */}
+        <div className="order-1 lg:col-start-5 lg:col-span-8 lg:row-start-1">
           {/* Active Items Metric Highlights */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {activeSelectedItems.map((item, idx) => {
@@ -989,8 +1057,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               return (
                 <div
                   key={item.chartKey}
+                  id={`compare-card-${item.chartKey}`}
                   style={{ borderLeftColor: colorObj.stroke }}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/90 border-l-4 shadow-2xs space-y-2 relative overflow-hidden"
+                  className={`bg-white p-4 rounded-2xl border border-slate-200/90 border-l-4 shadow-2xs space-y-2 relative overflow-hidden scroll-mt-4 ${highlightedKey === item.chartKey ? 'ring-2 ring-indigo-400' : ''}`}
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="font-bold text-xs text-slate-900 truncate">
@@ -1135,7 +1204,11 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               );
             })}
           </div>
+        </div>
 
+        {/* [v7.5.88] Chart + purchase table (order-3 on mobile).
+            Desktop: col 5, row 2 — under the metric cards. */}
+        <div className="order-3 lg:col-start-5 lg:col-span-8 lg:row-start-2 space-y-6">
           {/* Chart Display Box */}
           <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1288,7 +1361,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                 frequencyChartData.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-slate-400 text-xs">
                     {lang === 'my'
-                      ? 'ပစ္စည်း မရွေးထားပါ — ဘယ်ဘက်စာရင်းမှ ရွေးချယ်ပါ'
+                      ? 'ပစ္စည်း မရွေးထားပါ — အပေါ်က စာရင်းမှ ရွေးချယ်ပါ'
                       : 'No items selected — pick items from the catalog'}
                   </div>
                 ) : (
@@ -1377,7 +1450,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             {selectedItemsPurchaseLogs.length === 0 ? (
               <div className="py-8 text-center text-slate-400 text-xs">
                 {lang === 'my'
-                  ? 'ပစ္စည်းများကို ဘယ်ဘက်မှ ရွေးချယ်ပြီး မှတ်တမ်းအသေးစိတ်ကို ကြည့်ရှုနိုင်ပါသည်'
+                  ? 'ပစ္စည်းများကို အပေါ်က စာရင်းမှ ရွေးချယ်ပြီး မှတ်တမ်းအသေးစိတ်ကို ကြည့်ရှုနိုင်ပါသည်'
                   : 'Select items from the catalog to inspect their purchase history'}
               </div>
             ) : (

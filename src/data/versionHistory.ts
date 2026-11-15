@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.87';
-export const CURRENT_BUILD_NUMBER = 302;
+export const CURRENT_APP_VERSION = 'v7.5.88';
+export const CURRENT_BUILD_NUMBER = 303;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.88',
+    buildNumber: 303,
+    releaseDate: '2026-11-15',
+    releaseTime: '10:14 AM (MMT)',
+    titleMy: 'ဈေးနှုန်း နှိုင်းယှဉ် သုံးရလွယ်အောင် ပြင်ဆင်ခြင်း — အဖြေကို အပေါ်ဆုံးတင်ပြီ',
+    titleEn: 'Price Compare made easier — the answer now comes first',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဈေးနှုန်း နှိုင်းယှဉ်ကို ဖွင့်လိုက်တာနဲ့ အဖြေကို အရင်မြင်ရတော့မယ် — ပစ္စည်းတစ်ခုချင်းစီရဲ့ ကိုယ်ဝယ်ခဲ့တဲ့ဈေးနဲ့ အတန်ဆုံးဆိုင်ဈေးက အပေါ်ဆုံးမှာ ပေါ်ပြီ။ ပစ္စည်းတစ်တန်းကို နှိပ်ရင် အဲဒီပစ္စည်းရဲ့ အသေးစိတ်ကတ်ကို ဖွင့်ပြမယ် — အရင်က Chart ထဲက ဖြုတ်ချလိုက်သလို ဖြစ်နေတယ်။ စာရှည်တွေကို တိုလိုက်ပြီး Home က Premium ခလုတ်အမည်ကိုလည်း ရှင်းလင်းအောင် ပြင်ထားတယ်။',
+    descriptionEn: 'Price Compare now shows the answer first — your price and the cheapest shop price for each item are visible as soon as the page opens. Tapping an item row opens that item’s detail card instead of removing it from the chart. Long explanations are shortened, and the Premium button on Home is renamed so it is no longer confused with Price Compare.',
+    changesMy: [
+      'ဈေးနှုန်း နှိုင်းယှဉ်မှာ အဖြေကို အပေါ်ဆုံးတင်ပြီ — ဖွင့်ဖွင့်ချင်း ပစ္စည်းတစ်ခုချင်းစီရဲ့ ကိုယ်ဝယ်ခဲ့တဲ့ဈေးနဲ့ အတန်ဆုံးဆိုင်ဈေး မြင်ရမယ်။',
+      'ပစ္စည်းတစ်တန်းကို နှိပ်ရင် အဲဒီပစ္စည်းရဲ့ အသေးစိတ်ကတ်ကို ဖွင့်ပြမယ် (အရင်က Chart ထဲက ဖြုတ်ချလိုက်သလို ဖြစ်နေတယ်)။',
+      'စာရှည်တွေ တိုပြီး Home က Premium ခလုတ်အမည်ကို ရှင်းလင်းအောင် ပြင်ထားတယ်။',
+    ],
+    changesEn: [
+      'Price Compare now shows the answer first — your price and the cheapest shop price are visible as soon as the page opens.',
+      'Tapping an item row now opens that item’s detail card (before, it removed the item from the chart).',
+      'Shortened the long explanations and clarified the Premium button name on Home.',
+    ],
+  },
   {
     version: 'v7.5.87',
     buildNumber: 302,

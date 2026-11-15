@@ -428,7 +428,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       title: lang === 'my' ? '၂။ Premium ဝယ်ယူနည်း (ဈေးနှုန်းနှင့် Activation Code)' : '2. Getting Premium (Prices & Activation Code)',
       icon: Crown,
       steps: lang === 'my' ? [
-        '"ဈေးနှုန်း" (Plans) စာမျက်နှာတွင် Premium ဈေးနှုန်းများကို ကြည့်နိုင်သည် — ၁ လ ၂,၀၀၀ ကျပ်၊ ၁၂ လ ၂၀,၀၀၀ ကျပ်။',
+        '"Premium ဈေးနှုန်း" (Plans) စာမျက်နှာတွင် Premium ဈေးနှုန်းများကို ကြည့်နိုင်သည် — ၁ လ ၂,၀၀၀ ကျပ်၊ ၁၂ လ ၂၀,၀၀၀ ကျပ်။',
         'အကောင့်ဖွင့်ပြီး ရက် ၃၀ အတွင်းဆိုလျှင် ၃ လ အခမဲ့ Premium Trial ကို ရယူနိုင်ပါသည်။',
         'KBZPay/WavePay ဖြင့် ငွေပေးချေပြီး Admin ထံမှ ရသော Activation Code ကို ထည့်သွင်းကာ Premium ဖွင့်နိုင်ပါသည်။',
       ] : [

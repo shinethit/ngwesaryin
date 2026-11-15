@@ -673,14 +673,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </span>
           </button>
 
-          {/* 6. Plans — [v7.5.75] relabelled အစီအစဉ် → ဈေးနှုန်း (ဈ); still opens the Plans/pricing page, NOT Price Comparison. */}
+          {/* 6. Plans — [v7.5.75] relabelled အစီအစဉ် → ဈေးနှုန်း; [v7.5.88] ဈေးနှုန်း → Premium ဈေးနှုန်း (the standalone 'ဈေးနှုန်း' read as Price Compare); still opens the Plans/pricing page, NOT Price Comparison. */}
           <button type="button" onClick={() => onSelectTab('plans')}
             className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-xs">
               <Crown className="w-3.5 h-3.5" />
             </div>
             <span className="text-[10px] font-bold text-amber-900 leading-relaxed text-center">
-              {lang === 'my' ? 'ဈေးနှုန်း' : 'Plans'}
+              {lang === 'my' ? 'Premium ဈေးနှုန်း' : 'Premium Pricing'}
             </span>
           </button>
 

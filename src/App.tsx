@@ -2485,7 +2485,6 @@ export default function App() {
         onOpenShareApp={() => setIsShareAppModalOpen(true)}
         currentPlan={plan}
         usageChip={usageChip}
-        onOpenSidebar={() => setIsSidebarOpen(true)}
         onOpenSearch={() => setIsSearchModalOpen(true)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
         onLockApp={handleLockApp}

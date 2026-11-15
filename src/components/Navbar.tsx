@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Menu, Lock, Bell, Share2, WifiOff, X } from 'lucide-react';
+import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Lock, Bell, Share2, WifiOff, X } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
@@ -11,7 +11,6 @@ interface NavbarProps {
   // [v7.5.60 C-N1] Compact one-line plan/usage summary, e.g.
   // "Free · မှတ်တမ်း 82/100 · အကြွေး 3/5" (computed by App).
   usageChip?: string;
-  onOpenSidebar: () => void;
   onOpenSearch: () => void;
   onOpenAccountModal: () => void;
   onLockApp: () => void;
@@ -30,7 +29,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   currentPlan,
   usageChip,
-  onOpenSidebar,
   onOpenSearch,
   onOpenAccountModal,
   onLockApp,
@@ -118,22 +116,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
       <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-18 gap-1 sm:gap-3">
-          {/* Left: Sidebar Hamburger Button + Logo & Brand */}
+          {/* Left: Logo & Brand */}
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-            {/* Sidebar Drawer Toggle Button */}
-            <button
-              id="sidebar-toggle-btn"
-              type="button"
-              onClick={onOpenSidebar}
-              className="min-h-11 min-w-11 p-1.5 sm:p-2.5 rounded-xl text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0"
-              title={lang === 'my' ? 'Sidebar Menu ဖွင့်ရန်' : 'Open Navigation Menu'}
-            >
-              <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-slate-800" />
-              <span className="hidden md:inline text-xs font-bold text-slate-800">
-                {lang === 'my' ? 'မီနူး' : 'Menu'}
-              </span>
-            </button>
-
+            {/* [v7.5.84] Top Menu button removed — the bottom-nav "မီနူး"
+                button is the single entry point to the sidebar. */}
             {/* Fortune Logo with Quick Auspicious Switcher */}
             <div className="relative shrink-0" ref={logoPickerRef}>
               <button

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.83';
-export const CURRENT_BUILD_NUMBER = 298;
+export const CURRENT_APP_VERSION = 'v7.5.84';
+export const CURRENT_BUILD_NUMBER = 299;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.84',
+    buildNumber: 299,
+    releaseDate: '2026-11-15',
+    releaseTime: '6:30 AM (MMT)',
+    titleMy: 'အပေါ် Menu ခလုတ် ဖြုတ်လိုက်ပြီ — အောက် Menu နဲ့ပဲ ဖွင့်လို့ရတော့မယ်',
+    titleEn: 'Removed the top Menu button — open the menu from the bottom bar',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Menu က ၂ နေရာ ဖြစ်နေတာကို ပြင်ပေးထားတယ် — အပေါ်က Menu ခလုတ်ကို ဖြုတ်လိုက်ပြီ။ Menu ကို အောက်က Menu ခလုတ်နဲ့ပဲ ဖွင့်လို့ရတယ် (အောက် Menu က ဒီအတိုင်းပဲ)။',
+    descriptionEn: 'The menu was in two places — the top Menu button is removed. Open the menu from the bottom bar instead (the bottom bar is unchanged).',
+    changesMy: [
+      'အပေါ်က Menu ခလုတ်ကို ဖြုတ်လိုက်ပြီ — Menu ကို အောက်က Menu ခလုတ်နဲ့ပဲ ဖွင့်လို့ရတယ် (အောက် Menu က ဒီအတိုင်းပဲ)။',
+    ],
+    changesEn: [
+      'Removed the top Menu button — open the menu from the bottom bar instead (the bottom bar is unchanged).',
+    ],
+  },
   {
     version: 'v7.5.83',
     buildNumber: 298,

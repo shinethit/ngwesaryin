@@ -4,7 +4,7 @@ import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { mergeAndCleanCategories } from '../utils/categoryCleanUp';
 import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
-import { normalizeShopName, resolveShopDetailReminder } from '../utils/shopDetailsReminders';
+import { normalizeShopName, resolveShopDetailReminder, clearShopDetailDismissal } from '../utils/shopDetailsReminders';
 import { UNBUDGETED_CATEGORY_ID } from '../types';
 import type {
   BudgetConfig,
@@ -87,7 +87,9 @@ export function useDataHandlers({
     };
     setShops((prev) => [newShop, ...prev]);
     // [v7.5.78 C] Shop details filled — clear any pending reminder.
+    // [v7.5.91 D3] Filling details clears the dismissal too.
     resolveShopDetailReminder(shopData.name);
+    clearShopDetailDismissal(shopData.name);
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
@@ -115,9 +117,13 @@ export function useDataHandlers({
       prev.map((s) => (s.id === updatedShop.id ? updatedShop : s))
     );
     // [v7.5.78 C] Shop details filled — clear any pending reminder.
+    // [v7.5.91 D3] Filling details clears the dismissal too (saved +
+    // old name on a rename, same as the reminder).
     resolveShopDetailReminder(updatedShop.name);
+    clearShopDetailDismissal(updatedShop.name);
     if (oldName && normalizeShopName(oldName) !== normalizeShopName(updatedShop.name)) {
       resolveShopDetailReminder(oldName);
+      clearShopDetailDismissal(oldName);
     }
 
     if (user?.uid) {

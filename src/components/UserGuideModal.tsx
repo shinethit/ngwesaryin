@@ -470,11 +470,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       title: lang === 'my' ? '၁။ ဆိုင်လိပ်စာ ရှာဖွေခြင်းနှင့် သိမ်းဆည်းခြင်း' : '1. Finding & Saving Shops',
       icon: Store,
       steps: lang === 'my' ? [
-        'Sidebar ရှိ "ဆိုင်လိပ်စာ" တွင် ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် တို့ဖြင့် ဆိုင်များကို ရှာဖွေနိုင်သည်။',
+        'အောက်ခြေ bar ရှိ "ဆိုင်လိပ်စာ" တွင် ဆိုင်အမည်၊ ဖုန်း၊ KPay၊ မြို့နယ် တို့ဖြင့် ဆိုင်များကို ရှာဖွေနိုင်သည်။',
         'မိမိ အသုံးပြုသော ဆိုင်ကို "+ ဆိုင်အသစ် ထည့်သွင်းမည်" ဖြင့် ကိုယ်ပိုင် ဆိုင်လိပ်စာအဖြစ် သိမ်းထားနိုင်သည် — ကိုယ်ပိုင်ဆိုင် သိမ်းဆည်းခြင်းသည် Premium အတွက်သာ ဖြစ်ပါသည်။',
         'ဆိုင်အချက်အလက် အသစ် ထည့်သွင်းပေးခြင်းဖြင့် အခြားသူများလည်း ထိုဆိုင်ကို ရှာတွေ့နိုင်ပါသည်။',
       ] : [
-        'Find shops by name, phone, KPay, or township in "Shops & Addresses" in the Sidebar.',
+        'Find shops by name, phone, KPay, or township in "Shops & Addresses" in the bottom bar.',
         'Save a shop you use with "+ Add Shop" as your own shop contact — saving personal shops is Premium-only.',
         'You can also submit a new shop so other users can find it.',
       ],

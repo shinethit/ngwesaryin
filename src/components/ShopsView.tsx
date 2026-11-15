@@ -16,7 +16,7 @@ import { ShopModal } from './shops/ShopModal';
 import { ShopReportModal } from './shops/ShopReportModal';
 import type { SubmitShopReportResult } from '../utils/shopReports';
 import { useSearchSeed } from '../hooks/useSearchSeed';
-import { resolveShopDetailReminder, normalizeShopName, dispatchShopDetailsSaved } from '../utils/shopDetailsReminders';
+import { resolveShopDetailReminder, normalizeShopName, dispatchShopDetailsSaved, shopHasDetails, filterShopsNeedingDetails, clearShopDetailDismissal, OPEN_SHOPS_NEEDS_DETAILS_EVENT } from '../utils/shopDetailsReminders';
 import { buildMyShopsList, findShopByName } from '../utils/myShops';
 import {
   isDuplicateShopName,
@@ -157,6 +157,22 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     window.addEventListener('ngwe:open-shop-form', onOpenForm);
     return () => window.removeEventListener('ngwe:open-shop-form', onOpenForm);
   }, [myShopsList, publicShops, plan]);
+  // [v7.5.91 D4] "Shops missing details" filter — narrows the current
+  // tab's list to shops where !shopHasDetails (phone OR address only;
+  // menu alone does NOT count). No localStorage persistence, like the
+  // other filters. Hidden in item-search mode (it applies to shop
+  // results only). Turned ON by the floating-bar Shops badge tap via
+  // `ngwe:open-shops-needs-details` (ShopsView stays mounted while
+  // hidden, so the listener is always live).
+  const [showNeedsDetailsOnly, setShowNeedsDetailsOnly] = useState(false);
+  useEffect(() => {
+    const onNeedsDetails = () => {
+      setSearchMode('shop');
+      setShowNeedsDetailsOnly(true);
+    };
+    window.addEventListener(OPEN_SHOPS_NEEDS_DETAILS_EVENT, onNeedsDetails);
+    return () => window.removeEventListener(OPEN_SHOPS_NEEDS_DETAILS_EVENT, onNeedsDetails);
+  }, []);
   const [selectedTagFilter, setSelectedTagFilter] = useState('all');
 
   // Hierarchical Filter States
@@ -537,6 +553,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     resolveShopDetailReminder(savedName);
     if (previousName && normalizeShopName(previousName) !== normalizeShopName(savedName)) {
       resolveShopDetailReminder(previousName);
+    }
+    // [v7.5.91 D3] Filling details clears the dismissal too — same
+    // paths, same names (saved + old on a rename).
+    clearShopDetailDismissal(savedName);
+    if (previousName && normalizeShopName(previousName) !== normalizeShopName(savedName)) {
+      clearShopDetailDismissal(previousName);
     }
   };
 
@@ -1072,7 +1094,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   };
 
   const filteredShops = useMemo(() => {
-    return activeShopsList.filter((shop) => {
+    // [v7.5.91 D4] Needs-details filter narrows the SAME list first,
+    // so it composes with search / category / sort / location below.
+    const base = showNeedsDetailsOnly
+      ? filterShopsNeedingDetails(activeShopsList)
+      : activeShopsList;
+    return base.filter((shop) => {
 
       // 1. Tag type filter (Category သို့မဟုတ် Sub Category နဲ့ ကိုက်ညီမှုရှာခြင်း)
       if (selectedTagFilter !== 'all') {
@@ -1142,6 +1169,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     });
   }, [
     activeShopsList,
+    showNeedsDetailsOnly,
     selectedTagFilter,
     selectedStateRegionFilter,
     selectedTownshipFilter,
@@ -1253,11 +1281,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   // states listed here).
   useEffect(() => {
     setVisibleCount(SHOPS_BATCH_SIZE);
-  }, [searchQuery, selectedTagFilter, sortMode, selectedStateRegionFilter, selectedTownshipFilter, selectedCityFilter, selectedWardFilter, showUnknown, directoryType]);
+  }, [searchQuery, selectedTagFilter, sortMode, selectedStateRegionFilter, selectedTownshipFilter, selectedCityFilter, selectedWardFilter, showUnknown, directoryType, showNeedsDetailsOnly]);
 
     const hasActiveFilters =
     searchQuery.trim() !== '' ||
     selectedTagFilter !== 'all' ||
+    showNeedsDetailsOnly ||
     selectedStateRegionFilter !== 'all' ||
     selectedTownshipFilter !== 'all' ||
     selectedCityFilter !== 'all' ||
@@ -1266,6 +1295,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedTagFilter('all');
+    setShowNeedsDetailsOnly(false);
     setSelectedStateRegionFilter('all');
     setSelectedTownshipFilter('all');
     setSelectedCityFilter('all');
@@ -1560,6 +1590,24 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </div>
             </div>
 
+            {/* [v7.5.91 D4] Needs-details filter chip — hidden in item
+                mode (it applies to shop results only). Toggles the
+                filter; the amber state matches the card marker. */}
+            <div className={searchMode === 'item' ? 'hidden' : 'flex items-center gap-2'}>
+              <button
+                type="button"
+                onClick={() => setShowNeedsDetailsOnly((v) => !v)}
+                aria-pressed={showNeedsDetailsOnly}
+                className={`min-h-[44px] px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  showNeedsDetailsOnly
+                    ? 'bg-amber-100 border-amber-300 text-amber-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {lang === 'my' ? '⚠️ အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ' : '⚠️ Shops missing details'}
+              </button>
+            </div>
+
             {/* Row 3: Expandable Location Panel */}
             {searchMode === 'shop' && isLocationFilterExpanded && (
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 animate-fade-in">
@@ -1691,6 +1739,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-bold border border-slate-200">
                     🏷️ {PRESET_TAGS.find((t) => t.value === selectedTagFilter)?.labelMy || selectedTagFilter}
                     <button type="button" onClick={() => setSelectedTagFilter('all')} className="hover:text-black ml-0.5 min-h-[28px] min-w-[28px] p-1 flex items-center justify-center">✕</button>
+                  </span>
+                )}
+                {showNeedsDetailsOnly && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 text-amber-800 rounded text-[10px] font-bold border border-amber-200">
+                    ⚠️ {lang === 'my' ? 'အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ' : 'Shops missing details'}
+                    <button type="button" onClick={() => setShowNeedsDetailsOnly(false)} className="hover:text-amber-950 ml-0.5 min-h-[28px] min-w-[28px] p-1 flex items-center justify-center">✕</button>
                   </span>
                 )}
               </div>
@@ -1830,12 +1884,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 <Store className="w-6 h-6" />
               </div>
               <h3 className="font-bold text-slate-800 text-sm">
-                {lang === 'my' ? 'ရှာဖွေမှုနှင့် ကိုက်ညီသော ဆိုင်မတွေ့ပါ' : 'No matching shops found'}
+                {showNeedsDetailsOnly
+                  ? (lang === 'my' ? 'အသေးစိတ် ပြည့်စုံပြီးသော ဆိုင်များသာ ရှိပါတယ်' : 'All shops here have their details filled')
+                  : (lang === 'my' ? 'ရှာဖွေမှုနှင့် ကိုက်ညီသော ဆိုင်မတွေ့ပါ' : 'No matching shops found')}
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                {lang === 'my'
+                {showNeedsDetailsOnly
+                  ? (lang === 'my'
+                    ? 'ဒီစာရင်းထဲက ဆိုင်တိုင်းမှာ ဖုန်း သို့မဟုတ် လိပ်စာ ရှိနေပါပြီ။'
+                    : 'Every shop in this list already has a phone or an address.')
+                  : (lang === 'my'
                   ? 'အခြားမြို့နယ် သို့မဟုတ် ဆိုင်အမျိုးအစား ပြောင်းလဲရှာဖွေပါ၊ သို့မဟုတ် ဆိုင်အချက်အလက် အသစ် ထည့်သွင်းပေးနိုင်ပါသည်။'
-                  : 'Try adjusting your search criteria or contribute this shop to the directory.'}
+                  : 'Try adjusting your search criteria or contribute this shop to the directory.')}
               </p>
               <div className="flex items-center justify-center gap-2 pt-2">
                 {hasActiveFilters && (

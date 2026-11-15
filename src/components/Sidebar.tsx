@@ -1,13 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History, Database, Store } from 'lucide-react';
+import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History, Database } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { CURRENT_APP_VERSION } from '../data/versionHistory';
-// [v7.5.78 C] Live "fill in shop details later" reminders — the Shops
-// menu item shows how many shops still need their details filled.
-import { useShopDetailReminders } from '../utils/shopDetailsReminders';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -62,7 +59,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, isGuest, isSyncing, isAdmin, logout, activeWorkspaceId } = useAuth();
   const { isInstalled, isStandalone } = usePWAInstall();
-  const shopDetailReminders = useShopDetailReminders();
   const [showLogoPicker, setShowLogoPicker] = useState(false);
   const logoPickerRef = useRef<HTMLDivElement>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -200,12 +196,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       labelEn: '7 - Data Management',
       icon: Database,
     },
-    {
-      id: 'shops',
-      labelMy: '၈ - ဆိုင်လိပ်စာ',
-      labelEn: '8 - Shops & Addresses',
-      icon: Store,
-    },
+    // [v7.5.91] Shops REMOVED from the Sidebar — it now lives in the
+    // floating bottom bar (with its amber reminders badge). Debts stays
+    // here, so it is no longer duplicated.
   ];
 
   const handleSelectNav = (id: string) => {
@@ -591,21 +584,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {item.count}
                     </span>
                   )}
-                  {/* [v7.5.78 C] Shops needing details: amber count of
-                      "fill later" reminders — tapping the row still
-                      opens the Shops tab as before. */}
-                  {item.id === 'shops' && shopDetailReminders.length > 0 && (
-                    <span
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
-                      title={
-                        lang === 'my'
-                          ? `အသေးစိတ် မဖြည့်ရသေးသော ဆိုင် ${shopDetailReminders.length} ဆိုင်`
-                          : `${shopDetailReminders.length} shop(s) still need details`
-                      }
-                    >
-                      {shopDetailReminders.length}
-                    </span>
-                  )}
+                  {/* [v7.5.91] The Shops amber reminders badge moved
+                      to the floating bottom bar with Shops — see
+                      App.tsx. Nothing else renders a badge here. */}
                   <ChevronRight
                     className={`w-3.5 h-3.5 opacity-40 transition-transform group-hover:translate-x-0.5 ${
                       isActive ? 'text-white opacity-80' : 'text-slate-400'

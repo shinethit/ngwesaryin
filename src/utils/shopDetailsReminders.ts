@@ -16,6 +16,17 @@
 import { useEffect, useState } from 'react';
 
 export const SHOP_DETAIL_REMINDERS_KEY = 'ngwe_shop_detail_reminders';
+// [v7.5.91 D3] "Not now" dismissals — names the user asked never to be
+// prompted about again. Same lazy-localStorage pattern as the reminders
+// store above; a dismissal is cleared when the shop's details are
+// filled (same save paths that resolve reminders).
+export const SHOP_DETAIL_DISMISSED_KEY = 'ngwe_shop_detail_dismissed';
+// Fired (same-tab) after every dismissal add/clear so the prompt check
+// (which reads the dismissed set) stays fresh without a reload.
+export const SHOP_DISMISSED_CHANGED_EVENT = 'ngwe:shop-dismissed-changed';
+// [v7.5.91 D2] Deep-link event — the floating-bar Shops badge dispatches
+// it, ShopsView listens and turns the needs-details filter ON.
+export const OPEN_SHOPS_NEEDS_DETAILS_EVENT = 'ngwe:open-shops-needs-details';
 // Fired (same-tab) after every add/resolve so the bell badge, the
 // NotificationModal and the Sidebar badge refresh without a reload.
 export const SHOP_REMINDERS_CHANGED_EVENT = 'ngwe:shop-reminders-changed';
@@ -217,21 +228,136 @@ export function hasShopDetailReminder(shopName: string): boolean {
 }
 
 // ---------------------------------------------------------------------
+// [v7.5.91 D3] Dismissals ("လောလောဆယ် မဖြည့်သေးပါ" / Not now).
+// Later = remind me (a reminder: badge + notifications). Not now =
+// stop asking: the reminder is removed AND the name is recorded here
+// so future saves with that shop do NOT re-prompt. The filter and the
+// card marker IGNORE dismissal — they are computed from shop DATA, so
+// a dismissed shop still shows in the filter with its marker and can
+// be filled later from there. Filling details clears the dismissal
+// (same save paths that resolve reminders).
+// ---------------------------------------------------------------------
+
+export interface ShopDetailDismissal {
+  /** normalized name (trim + lowercase + digit-folded) — the dedupe key. */
+  key: string;
+  shopName: string;
+  dismissedAt: number;
+}
+
+function notifyDismissedChanged(): void {
+  try {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent(SHOP_DISMISSED_CHANGED_EVENT));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadShopDetailDismissals(): ShopDetailDismissal[] {
+  try {
+    const raw = readRaw(SHOP_DETAIL_DISMISSED_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const byKey = new Map<string, ShopDetailDismissal>();
+    let changed = false;
+    for (const r of parsed) {
+      if (!r || typeof (r as ShopDetailDismissal).shopName !== 'string') {
+        changed = true;
+        continue;
+      }
+      const key = normalizeShopName((r as ShopDetailDismissal).shopName);
+      if (!key) {
+        changed = true;
+        continue;
+      }
+      const existing = byKey.get(key);
+      if (existing) {
+        changed = true;
+        if ((r as ShopDetailDismissal).dismissedAt < existing.dismissedAt) {
+          byKey.set(key, { key, shopName: (r as ShopDetailDismissal).shopName, dismissedAt: (r as ShopDetailDismissal).dismissedAt });
+        }
+        continue;
+      }
+      if ((r as ShopDetailDismissal).key !== key) changed = true;
+      byKey.set(key, {
+        key,
+        shopName: (r as ShopDetailDismissal).shopName,
+        dismissedAt: typeof (r as ShopDetailDismissal).dismissedAt === 'number' ? (r as ShopDetailDismissal).dismissedAt : Date.now(),
+      });
+    }
+    const list = [...byKey.values()];
+    if (changed) writeRaw(SHOP_DETAIL_DISMISSED_KEY, JSON.stringify(list));
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+/** Folded-name keys of all dismissals — the shape the prompt check takes. */
+export function loadShopDetailDismissedKeys(): Set<string> {
+  return new Set(loadShopDetailDismissals().map((d) => d.key));
+}
+
+function persistShopDetailDismissals(list: ShopDetailDismissal[]): void {
+  writeRaw(SHOP_DETAIL_DISMISSED_KEY, JSON.stringify(list));
+  notifyDismissedChanged();
+}
+
+/**
+ * Dismiss a shop: remove its reminder (if present) AND record the name
+ * so future saves do NOT re-prompt. Returns true when a dismissal was
+ * newly recorded.
+ */
+export function dismissShopDetailReminder(shopName: string): boolean {
+  const name = (shopName || '').trim();
+  const key = normalizeShopName(name);
+  if (!key) return false;
+  // The reminder goes away with the dismissal — the badge drops at once.
+  resolveShopDetailReminder(name);
+  const current = loadShopDetailDismissals();
+  if (current.some((d) => d.key === key)) return false;
+  persistShopDetailDismissals([...current, { key, shopName: name, dismissedAt: Date.now() }]);
+  return true;
+}
+
+export function isShopDetailDismissed(shopName: string, dismissed?: Set<string> | string[] | ShopDetailDismissal[]): boolean {
+  const key = normalizeShopName(shopName);
+  if (!key) return false;
+  if (!dismissed) return loadShopDetailDismissals().some((d) => d.key === key);
+  if (dismissed instanceof Set) return dismissed.has(key);
+  return dismissed.some((d) => (typeof d === 'string' ? normalizeShopName(d) : d.key) === key);
+}
+
+/** Filling details clears the dismissal (same paths as resolve). */
+export function clearShopDetailDismissal(shopName: string): boolean {
+  const key = normalizeShopName(shopName);
+  if (!key) return false;
+  const current = loadShopDetailDismissals();
+  const next = current.filter((d) => d.key !== key);
+  if (next.length === current.length) return false;
+  persistShopDetailDismissals(next);
+  return true;
+}
+
+// ---------------------------------------------------------------------
 // Matching: does this shop name still need its details filled?
 // ---------------------------------------------------------------------
 
-/** [v7.5.89 A2] A directory record "has details" FOR THE PROMPT
- *  when it carries a real way to reach / find the shop — a phone, an
- *  address, or priced menu items. Region / township / city / ward /
- *  subCategory / KPay number / general notes alone do NOT count: a
- *  public shop with only a township filled still needs its phone or
- *  address filled, and counting those fields suppressed the prompt
- *  for it. `note` is deliberately EXCLUDED: ShopModal stores the
- *  shop CATEGORY in `note` (default "grocery"), so every form-saved
- *  shop has a note even with nothing else filled — it proves nothing.
- *  `items` (priced items) also count as details. Only consumer is
- *  isShopNameNeedingDetails below — no other caller wants the old
- *  loose rule. */
+/** [v7.5.91 D1] A directory record "has details" FOR THE PROMPT
+ *  when it carries a real way to reach / find the shop — a phone or an
+ *  address ONLY. [v7.5.89 A2] Region / township / city / ward /
+ *  subCategory / KPay number / general notes alone do NOT count, and
+ *  `note` is deliberately EXCLUDED: ShopModal stores the shop CATEGORY
+ *  in `note` (default "grocery"), so every form-saved shop has a note
+ *  even with nothing else filled — it proves nothing. [v7.5.91 D1]
+ *  `items` (priced menu items) NO LONGER count: a shop with a menu but
+ *  no phone/address is NOT filled — it prompts on the next save,
+ *  appears in the needs-details filter, and carries the card marker.
+ *  One source of truth: the prompt check, the card marker and the
+ *  filter all read this helper. */
 export interface ShopDetailsLike {
   phone?: string;
   phones?: string[];
@@ -253,26 +379,73 @@ export function shopHasDetails(shop: ShopDetailsLike | null | undefined): boolea
   if (nonEmpty(shop.phone) || nonEmpty(shop.address)) return true;
   if ((shop.phones || []).some((p) => nonEmpty(p))) return true;
   if ((shop.addresses || []).some((a) => nonEmpty(a))) return true;
-  if ((shop.items || []).length > 0) return true;
   return false;
+}
+
+/** Shops in a list that still need details (D1 definition) — the D4
+ *  filter's helper, so the filter is unit-testable without a view. */
+export function filterShopsNeedingDetails<T extends ShopDetailsLike>(shops: T[]): T[] {
+  return (shops || []).filter((s) => !shopHasDetails(s));
+}
+
+/** Pure re-validation (D1): drop reminders whose shop NOW has details
+ *  (folded-name match, either list). Menu-only no longer counts, so a
+ *  reminder for a menu-only shop is KEPT. */
+export function filterStaleShopDetailReminders(
+  reminders: ShopDetailReminder[],
+  shops: ({ name: string } & ShopDetailsLike)[]
+): ShopDetailReminder[] {
+  const byKey = new Map<string, ShopDetailsLike>();
+  for (const s of shops || []) {
+    const key = normalizeShopName(s.name);
+    if (key && !byKey.has(key)) byKey.set(key, s);
+  }
+  return (reminders || []).filter((r) => {
+    const shop = byKey.get(r.key);
+    return !shop || !shopHasDetails(shop);
+  });
+}
+
+/**
+ * Load-time sweep (D1): persist the re-validated reminder list, dropping
+ * reminders whose shop now has details — without the user opening
+ * anything. Only writes when something actually dropped.
+ */
+export function pruneShopDetailReminders(
+  shops: ({ name: string } & ShopDetailsLike)[]
+): ShopDetailReminder[] {
+  const current = loadShopDetailReminders();
+  const kept = filterStaleShopDetailReminders(current, shops);
+  if (kept.length !== current.length) persistShopDetailReminders(kept);
+  return kept;
 }
 
 /**
  * True when the shop name needs the "fill in details now?" prompt:
- * no PRIVATE shop with that name exists (a private record always went
- * through the ShopModal, which requires region + township, so it
- * always carries details) and no PUBLIC shop with that name HAS
- * details (a name-only public stub — auto-published from a transaction
- * with the opt-in ticked — does NOT suppress the prompt).
+ * no PRIVATE shop with that name HAS details and no PUBLIC shop with
+ * that name HAS details, and the name is not dismissed.
+ * [v7.5.91 D1] The private side is no longer name-only: a private
+ * record WITHOUT details does NOT suppress — the prompt fires, and its
+ * fill flow opens THAT record for editing (v7.5.89 prefill). The old
+ * justification ("a private record always went through the ShopModal,
+ * which requires region + township, so it always carries details") is
+ * wrong under the D1 definition: region + township are NOT details.
+ * [v7.5.91 D3] `dismissed` is the folded-name set from
+ * loadShopDetailDismissedKeys() — a dismissed name never prompts.
  */
 export function isShopNameNeedingDetails(
   shopName: string,
-  privateShops: { name: string }[],
-  publicShops: ({ name: string } & ShopDetailsLike)[]
+  privateShops: ({ name: string } & ShopDetailsLike)[],
+  publicShops: ({ name: string } & ShopDetailsLike)[],
+  dismissed?: Set<string> | string[]
 ): boolean {
   const key = normalizeShopName(shopName);
   if (!key) return false;
-  if ((privateShops || []).some((s) => normalizeShopName(s.name) === key)) return false;
+  if (dismissed) {
+    const has = dismissed instanceof Set ? dismissed.has(key) : dismissed.some((d) => normalizeShopName(d) === key);
+    if (has) return false;
+  }
+  if ((privateShops || []).some((s) => normalizeShopName(s.name) === key && shopHasDetails(s))) return false;
   if ((publicShops || []).some((s) => normalizeShopName(s.name) === key && shopHasDetails(s))) return false;
   return true;
 }
@@ -283,6 +456,19 @@ export function dispatchOpenShopForm(shopName: string): void {
   try {
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
       window.dispatchEvent(new CustomEvent(OPEN_SHOP_FORM_EVENT, { detail: { shopName: (shopName || '').trim() } }));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** [v7.5.91 D2] Ask ShopsView to turn the needs-details filter ON
+ *  (listener lives in ShopsView). Dispatched by the floating-bar Shops
+ *  badge tap; the caller switches to the Shops tab itself. */
+export function dispatchOpenShopsNeedsDetails(): void {
+  try {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent(OPEN_SHOPS_NEEDS_DETAILS_EVENT));
     }
   } catch {
     /* ignore */

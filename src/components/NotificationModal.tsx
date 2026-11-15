@@ -17,7 +17,8 @@ import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 import { getMaintenanceAlerts } from '../utils/vehicleAnalytics';
 // [v7.5.78 C] Shop-details "fill later" reminders (one per shop name).
-import { dispatchOpenShopForm, useShopDetailReminders } from '../utils/shopDetailsReminders';
+// [v7.5.91 D3] dismissShopDetailReminder — the per-reminder "Not now".
+import { dispatchOpenShopForm, dismissShopDetailReminder, useShopDetailReminders } from '../utils/shopDetailsReminders';
 
 export interface NotificationItem {
   id: string;
@@ -779,6 +780,24 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     >
                       <CheckCircle2 className={`w-4 h-4 ${isRead ? 'text-emerald-500' : 'text-slate-400'}`} />
                     </button>
+
+                    {/* [v7.5.91 D3] Dismiss a shop reminder — "Not now":
+                        the reminder is removed AND the name is recorded
+                        so future saves do NOT re-prompt. Unlike mark-as-
+                        read (which only dims), this really clears it.
+                        The shop stays findable via the needs-details
+                        filter in the Shops tab. */}
+                    {notif.type === 'shop' && notif.shopName && (
+                      <button
+                        type="button"
+                        onClick={() => dismissShopDetailReminder(notif.shopName!)}
+                        className="p-2.5 rounded-xl border border-slate-300 bg-white text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center gap-1"
+                        title={lang === 'my' ? 'လောလောဆယ် မဖြည့်သေးပါ — ထပ်မမေးတော့ပါ' : 'Not now — do not ask again'}
+                      >
+                        <X className="w-4 h-4" />
+                        <span className="hidden sm:inline">{lang === 'my' ? 'မဖြည့်သေးပါ' : 'Not now'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

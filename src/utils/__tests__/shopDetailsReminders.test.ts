@@ -28,6 +28,7 @@ installWindowStub();
 // lazily inside functions (never at import time).
 import {
   SHOP_DETAIL_REMINDERS_KEY,
+  SHOP_DETAIL_DISMISSED_KEY,
   normalizeShopName,
   shopHasDetails,
   isShopNameNeedingDetails,
@@ -36,6 +37,16 @@ import {
   hasShopDetailReminder,
   loadShopDetailReminders,
   shopReminderId,
+  dismissShopDetailReminder,
+  isShopDetailDismissed,
+  clearShopDetailDismissal,
+  loadShopDetailDismissals,
+  loadShopDetailDismissedKeys,
+  filterShopsNeedingDetails,
+  filterStaleShopDetailReminders,
+  pruneShopDetailReminders,
+  dispatchOpenShopsNeedsDetails,
+  OPEN_SHOPS_NEEDS_DETAILS_EVENT,
 } from '../shopDetailsReminders';
 
 describe('normalizeShopName', () => {
@@ -72,14 +83,31 @@ describe('shopHasDetails', () => {
     expect(shopHasDetails({} as any)).toBe(false);
   });
 
-  // [v7.5.89 A2] Only phone / address / items count as details.
-  it('only phone / address / items count', () => {
+  // [v7.5.91 D1] "Filled" = phone OR address ONLY. A menu alone does
+  // NOT count — a shop with items but no phone/address is NOT filled.
+  it('only phone / address count — items (menu) alone do NOT', () => {
     expect(shopHasDetails({ phone: '091234' })).toBe(true);
     expect(shopHasDetails({ phones: ['091234'] })).toBe(true);
     expect(shopHasDetails({ address: 'Main Road' })).toBe(true);
     expect(shopHasDetails({ addresses: ['Main Road'] })).toBe(true);
-    expect(shopHasDetails({ items: [{ name: 'rice', price: 1 }] })).toBe(true);
     expect(shopHasDetails({ phones: ['  '] })).toBe(false);
+    expect(shopHasDetails({ items: [{ name: 'rice', price: 1 }] })).toBe(false);
+  });
+
+  it('phone-only is filled', () => {
+    expect(shopHasDetails({ phone: '091234', items: [] })).toBe(true);
+    expect(shopHasDetails({ phones: ['091234'] })).toBe(true);
+  });
+
+  it('address-only is filled', () => {
+    expect(shopHasDetails({ address: 'Main Road' })).toBe(true);
+    expect(shopHasDetails({ addresses: ['No. 1, Main Road'] })).toBe(true);
+  });
+
+  it('items-only (menu, no phone/address) is NOT filled', () => {
+    expect(
+      shopHasDetails({ items: [{ name: 'rice', price: 1000 }, { name: 'oil', price: 5000 }] })
+    ).toBe(false);
   });
 
   // [v7.5.89 A2] Region / township / city / ward / subCategory /
@@ -134,8 +162,29 @@ describe('isShopNameNeedingDetails', () => {
     expect(isShopNameNeedingDetails('   ', [], [])).toBe(false);
   });
 
-  it('a private shop with that name suppresses the prompt (form requires region+township)', () => {
-    expect(isShopNameNeedingDetails('My Shop', [{ name: '  MY SHOP ' }], [])).toBe(false);
+  // [v7.5.91 D1] The private side is no longer name-only: a private
+  // record suppresses ONLY when it HAS details (phone or address).
+  it('a private shop WITH a phone suppresses the prompt', () => {
+    expect(
+      isShopNameNeedingDetails('My Shop', [{ name: '  MY SHOP ', phone: '09123' }], [])
+    ).toBe(false);
+  });
+
+  it('a private shop WITHOUT details does NOT suppress the prompt', () => {
+    expect(isShopNameNeedingDetails('My Shop', [{ name: '  MY SHOP ' }], [])).toBe(true);
+    expect(
+      isShopNameNeedingDetails(
+        'My Shop',
+        [{ name: 'My Shop', stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' }],
+        []
+      )
+    ).toBe(true);
+  });
+
+  it('a private shop with ONLY a menu does NOT suppress the prompt', () => {
+    expect(
+      isShopNameNeedingDetails('My Shop', [{ name: 'My Shop', items: [{ name: 'rice', price: 1 }] }], [])
+    ).toBe(true);
   });
 
   it('a public shop WITH details suppresses the prompt', () => {
@@ -160,10 +209,20 @@ describe('isShopNameNeedingDetails', () => {
     ).toBe(true);
   });
 
-  it('a public shop with items (menu) suppresses the prompt', () => {
+  // [v7.5.91 D1] A menu alone does NOT count as filled — a public shop
+  // with only items still prompts.
+  it('a public shop with ONLY items (menu) does NOT suppress the prompt', () => {
     expect(
       isShopNameNeedingDetails('Denko', [], [{ name: 'Denko', items: [{ name: 'rice', price: 1 }] }])
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  // [v7.5.91 D3] A dismissed name never prompts, even with no record.
+  it('a dismissed name does NOT prompt', () => {
+    const dismissed = new Set(['denko']);
+    expect(isShopNameNeedingDetails('Denko', [], [], dismissed)).toBe(false);
+    expect(isShopNameNeedingDetails('Denko', [], [], ['denko'])).toBe(false);
+    expect(isShopNameNeedingDetails('Other', [], [], dismissed)).toBe(true);
   });
 
   // [v7.5.89 A2] Phone is optional, but region/township alone no
@@ -300,5 +359,148 @@ describe('reminder migration (old keys re-keyed on load)', () => {
     const second = loadShopDetailReminders();
     expect(second).toEqual(first);
     expect(store.get(SHOP_DETAIL_REMINDERS_KEY)).toBe(JSON.stringify(first));
+  });
+});
+
+// [v7.5.91 D3] Dismissals ("လောလောဆယ် မဖြည့်သေးပါ" / Not now).
+describe('dismissals (Not now — stop asking)', () => {
+  beforeEach(() => {
+    store.clear();
+  });
+
+  it('dismiss removes the reminder AND records the dismissal', () => {
+    addShopDetailReminder('Shop A');
+    expect(loadShopDetailReminders()).toHaveLength(1);
+    expect(dismissShopDetailReminder('Shop A')).toBe(true);
+    expect(loadShopDetailReminders()).toHaveLength(0);
+    expect(isShopDetailDismissed('Shop A')).toBe(true);
+    expect(isShopDetailDismissed('shop a')).toBe(true);
+    expect(loadShopDetailDismissals()).toHaveLength(1);
+    expect(loadShopDetailDismissals()[0].key).toBe('shop a');
+    expect(store.get(SHOP_DETAIL_DISMISSED_KEY)).toContain('Shop A');
+  });
+
+  it('dismiss is idempotent — a second dismiss is a no-op', () => {
+    expect(dismissShopDetailReminder('Shop A')).toBe(true);
+    expect(dismissShopDetailReminder('  SHOP A ')).toBe(false);
+    expect(loadShopDetailDismissals()).toHaveLength(1);
+  });
+
+  it('dismissed names do not re-prompt (via the dismissed set)', () => {
+    dismissShopDetailReminder('Shop ၇');
+    const dismissed = loadShopDetailDismissedKeys();
+    expect(dismissed.has('shop 7')).toBe(true);
+    expect(isShopNameNeedingDetails('Shop 7', [], [], dismissed)).toBe(false);
+    expect(isShopNameNeedingDetails('Shop ၇', [], [], dismissed)).toBe(false);
+    expect(isShopNameNeedingDetails('Other Shop', [], [], dismissed)).toBe(true);
+  });
+
+  it('ignores empty names', () => {
+    expect(dismissShopDetailReminder('   ')).toBe(false);
+    expect(loadShopDetailDismissals()).toHaveLength(0);
+  });
+
+  it('clearing a dismissal lets the name prompt again', () => {
+    dismissShopDetailReminder('Shop A');
+    expect(clearShopDetailDismissal('  SHOP a ')).toBe(true);
+    expect(isShopDetailDismissed('Shop A')).toBe(false);
+    expect(isShopNameNeedingDetails('Shop A', [], [], loadShopDetailDismissedKeys())).toBe(true);
+    expect(clearShopDetailDismissal('Shop A')).toBe(false);
+  });
+
+  it('"Later" still ADDS a reminder — only "Not now" dismisses', () => {
+    addShopDetailReminder('Shop A');
+    expect(isShopDetailDismissed('Shop A')).toBe(false);
+    expect(loadShopDetailReminders()).toHaveLength(1);
+  });
+});
+
+// [v7.5.91 D1] Re-validation — a reminder for a shop that NOW has
+// details disappears without the user opening it.
+describe('reminder re-validation (prune when details filled)', () => {
+  beforeEach(() => {
+    store.clear();
+  });
+
+  it('drops the reminder when the shop now has a phone', () => {
+    addShopDetailReminder('Shop A');
+    addShopDetailReminder('Shop B');
+    const kept = pruneShopDetailReminders([
+      { name: 'Shop A', phone: '09123' },
+      { name: 'Shop B' },
+    ]);
+    expect(kept.map((r) => r.shopName)).toEqual(['Shop B']);
+    expect(loadShopDetailReminders().map((r) => r.shopName)).toEqual(['Shop B']);
+  });
+
+  it('keeps the reminder when the shop has ONLY a menu (not filled)', () => {
+    addShopDetailReminder('Shop A');
+    const kept = pruneShopDetailReminders([
+      { name: 'Shop A', items: [{ name: 'rice', price: 1 }] },
+    ]);
+    expect(kept).toHaveLength(1);
+    expect(loadShopDetailReminders()).toHaveLength(1);
+  });
+
+  it('keeps the reminder when the shop has ONLY a township', () => {
+    addShopDetailReminder('Shop A');
+    const kept = pruneShopDetailReminders([{ name: 'Shop A', township: 'တောင်ကြီး' }]);
+    expect(kept).toHaveLength(1);
+  });
+
+  it('matches by folded name (Myanmar digits) and is a no-op when nothing drops', () => {
+    addShopDetailReminder('Shop ၇');
+    const kept = pruneShopDetailReminders([{ name: 'Shop 7', address: 'Main Road' }]);
+    expect(kept).toHaveLength(0);
+    // Second prune with nothing to drop leaves the store untouched.
+    const rawBefore = store.get(SHOP_DETAIL_REMINDERS_KEY);
+    pruneShopDetailReminders([{ name: 'Shop 7', address: 'Main Road' }]);
+    expect(store.get(SHOP_DETAIL_REMINDERS_KEY)).toBe(rawBefore);
+  });
+
+  it('filterStaleShopDetailReminders is pure — it does not persist', () => {
+    addShopDetailReminder('Shop A');
+    const reminders = loadShopDetailReminders();
+    const kept = filterStaleShopDetailReminders(reminders, [{ name: 'Shop A', phone: '09' }]);
+    expect(kept).toHaveLength(0);
+    expect(loadShopDetailReminders()).toHaveLength(1);
+  });
+});
+
+// [v7.5.91 D4] Needs-details filter helper.
+describe('filterShopsNeedingDetails', () => {
+  it('keeps only shops without a phone or an address', () => {
+    const shops = [
+      { name: 'A', phone: '09' },
+      { name: 'B', address: 'Main Road' },
+      { name: 'C', items: [{ name: 'rice', price: 1 }] },
+      { name: 'D', township: 'တောင်ကြီး' },
+      { name: 'E' },
+    ];
+    expect(filterShopsNeedingDetails(shops).map((s) => s.name)).toEqual(['C', 'D', 'E']);
+  });
+
+  it('ignores dismissal — a dismissed shop still shows in the filter', () => {
+    // The filter is computed from shop DATA only; dismissal is never
+    // consulted here (a dismissed shop is filled later from the filter).
+    const shops = [{ name: 'A' }, { name: 'B', phone: '09' }];
+    expect(filterShopsNeedingDetails(shops).map((s) => s.name)).toEqual(['A']);
+  });
+
+  it('returns an empty list for an empty list', () => {
+    expect(filterShopsNeedingDetails([])).toEqual([]);
+  });
+});
+
+// [v7.5.91 D2] Floating-bar badge event.
+describe('dispatchOpenShopsNeedsDetails', () => {
+  it('dispatches the needs-details event', () => {
+    const dispatchEvent = (globalThis as any).window.dispatchEvent as ReturnType<typeof vi.fn>;
+    dispatchEvent.mockClear();
+    dispatchOpenShopsNeedsDetails();
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    const event = dispatchEvent.mock.calls[0][0] as CustomEvent;
+    expect(event.type).toBe(OPEN_SHOPS_NEEDS_DETAILS_EVENT);
+    expect(event.type).toBe('ngwe:open-shops-needs-details');
   });
 });

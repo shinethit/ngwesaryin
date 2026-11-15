@@ -7,6 +7,7 @@ import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS } from '../../utils/shopMenuUpdate';
 import { filterItemNameSuggestions } from '../../utils/shopItemSearch';
 import { normalizeMyanmarPhone } from './ShopModal';
+import { shopHasDetails } from '../../utils/shopDetailsReminders';
 
 interface ShopCardProps {
   shop: ShopContact | PublicShop;
@@ -72,6 +73,23 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
   const pub = isPublic ? (shop as PublicShop) : null;
   const votesCount = pub ? (pub as any).helpfulCount || 0 : 0;
+
+  // [v7.5.91 D1/D2] "Filled" = phone OR address (menu alone does NOT
+  // count). A shop lacking details carries an amber chip in BOTH views;
+  // tapping it opens the shop form for THAT shop (onOpenEdit). The chip
+  // ignores dismissal — it is computed from shop DATA, so a dismissed
+  // shop still shows it and can be filled later from here.
+  const needsDetails = !shopHasDetails(shop);
+  const detailsChip = needsDetails ? (
+    <button
+      type="button"
+      onClick={() => onOpenEdit(shop)}
+      className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 whitespace-nowrap cursor-pointer shrink-0"
+      title={lang === 'my' ? 'အသေးစိတ် ဖြည့်ရန် နှိပ်ပါ' : 'Tap to fill in details'}
+    >
+      {lang === 'my' ? 'အသေးစိတ် မပြည့်သေးပါ' : 'Details incomplete'}
+    </button>
+  ) : null;
 
   // Resolve Tag
   const isUnknown = shop.name.startsWith('Unknown ');
@@ -216,6 +234,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                   {tagLabel}
                   {shop.subCategory && <span className="opacity-70 ml-1">({shop.subCategory})</span>}
                 </span>
+                {detailsChip}
                 {shop.kpayNumber && (
                   <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-md flex items-center gap-1 border border-indigo-100">
                     <CreditCard className="w-2.5 h-2.5" /> KPay
@@ -590,6 +609,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 🔒 {lang === 'my' ? 'သီးသန့်' : 'Private'}
               </span>
             )}
+            {/* [v7.5.91 D2] Needs-details chip — same as compact view. */}
+            {detailsChip}
           </div>
 
           {/* Upvote & Action Menu */}

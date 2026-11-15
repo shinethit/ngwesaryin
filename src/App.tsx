@@ -44,7 +44,7 @@ import { AdBanner } from './components/AdBanner';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { AccountModal } from './components/AccountModal';
 import { NotificationModal } from './components/NotificationModal';
-import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopDetailReminders, addShopDetailReminder, normalizeShopName, isShopNameNeedingDetails, SHOP_DETAILS_SAVED_EVENT, type ShopDetailsSavedDetail } from './utils/shopDetailsReminders';
+import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopDetailReminders, addShopDetailReminder, dismissShopDetailReminder, loadShopDetailDismissedKeys, pruneShopDetailReminders, dispatchOpenShopsNeedsDetails, normalizeShopName, isShopNameNeedingDetails, SHOP_DETAILS_SAVED_EVENT, type ShopDetailsSavedDetail } from './utils/shopDetailsReminders';
 import { ShopDetailsPromptModal } from './components/ShopDetailsPromptModal';
 // [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
 import { ShopMenuUpdatePromptModal } from './components/ShopMenuUpdatePromptModal';
@@ -63,7 +63,7 @@ import { submitShopPriceAlert } from './utils/shopPriceAlerts';
 import { LoginScreen } from './components/LoginScreen';
 import { FortuneLogo, LogoStyle } from './components/FortuneLogo';
 import { ClayFloatingCoinButton } from './components/ClayIllustrations';
-import { LayoutDashboard, ArrowLeftRight, HandCoins, Search, Cloud, KeyRound, Trash2, Download, Upload, Menu } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Search, Cloud, KeyRound, Trash2, Download, Upload, Menu, Store } from 'lucide-react';
 import { SubCategory, PinLockSettings } from './types';
 import { useAuth, parseExpiryTime } from './context/AuthContext';
 import { doc, collection, onSnapshot, writeBatch, query, getDoc } from 'firebase/firestore';
@@ -425,6 +425,13 @@ export default function App() {
   // [v7.5.78 C] Shop-details reminders (TransactionModal "Later" choice).
   const shopDetailReminders = useShopDetailReminders();
   const [shopDetailsPromptName, setShopDetailsPromptName] = useState<string | null>(null);
+  // [v7.5.91 D1] Re-validation sweep — a reminder for a shop that NOW
+  // has details (phone or address) disappears without the user opening
+  // it. Runs whenever either shop list changes; prune only writes when
+  // something actually dropped, so this never loops.
+  useEffect(() => {
+    pruneShopDetailReminders([...shops, ...publicShopsFull]);
+  }, [shops, publicShopsFull]);
   // [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
   // Hosted here, not in TransactionModal, for the same reason as the
   // details prompt above: the transaction modal unmounts on save.
@@ -946,7 +953,8 @@ export default function App() {
     // [v7.5.89 A1] The FULL public docs are passed (not the id+name
     // list): a public shop WITH phone/address must suppress the
     // prompt here, exactly as at capture time in TransactionModal.
-    if (isShopNameNeedingDetails(name, shops, publicShopsFull)) {
+    // [v7.5.91 D3] A dismissed name never re-prompts.
+    if (isShopNameNeedingDetails(name, shops, publicShopsFull, loadShopDetailDismissedKeys())) {
       setShopDetailsPromptName(name);
     }
   };
@@ -3370,21 +3378,52 @@ export default function App() {
             />
           </div>
 
-          <button
-            onClick={() => handleBottomTabSelect('debts')}
-            className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
-              activeTab === 'debts'
-                ? 'text-emerald-700 font-semibold'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-            title="Debts"
-          >
-            <HandCoins className="w-6 h-6" />
-            <span className="text-[10px] leading-[1.6]">{lang === 'my' ? 'အကြွေး' : 'Debts'}</span>
-            {plan === 'guest' && (
-              <span className="absolute -top-2 right-1 px-1 py-px rounded text-[8px] font-bold bg-slate-200 text-slate-700 border border-slate-300 whitespace-nowrap">🔒 LOCK</span>
+          {/* [v7.5.91] Shops replaces Debts in the bottom bar — the two
+              were duplicated (Debts was in the bar AND the Sidebar).
+              Debts stays in the Sidebar (with its guest 🔒 LOCK).
+              The amber reminders badge moved here with Shops: same
+              count (shopDetailReminders.length), same title. Tapping
+              the BUTTON opens Shops normally; tapping the BADGE opens
+              Shops WITH the needs-details filter ON (the badge is its
+              own button, 28px hit area, so it does not also trigger
+              the normal open). */}
+          <div className="relative">
+            <button
+              onClick={() => handleBottomTabSelect('shops')}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'shops'
+                  ? 'text-emerald-700 font-semibold'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+              title="Shops"
+            >
+              <Store className="w-6 h-6" />
+              <span className="text-[10px] leading-[1.6]">{lang === 'my' ? 'ဆိုင်လိပ်စာ' : 'Shops'}</span>
+            </button>
+            {shopDetailReminders.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleBottomTabSelect('shops');
+                  dispatchOpenShopsNeedsDetails();
+                }}
+                className="absolute -top-1 right-0 min-w-[28px] min-h-[28px] px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center cursor-pointer"
+                title={
+                  lang === 'my'
+                    ? `အသေးစိတ် မဖြည့်ရသေးသော ဆိုင် ${shopDetailReminders.length} ဆိုင်`
+                    : `${shopDetailReminders.length} shop(s) still need details`
+                }
+                aria-label={
+                  lang === 'my'
+                    ? 'အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များသာ ပြမည်'
+                    : 'Show only shops missing details'
+                }
+              >
+                {shopDetailReminders.length}
+              </button>
             )}
-          </button>
+          </div>
 
           <button
             onClick={() => setIsSidebarOpen(true)}
@@ -3454,6 +3493,10 @@ export default function App() {
         }}
         onLater={(name) => {
           addShopDetailReminder(name);
+          setShopDetailsPromptName(null);
+        }}
+        onNotNow={(name) => {
+          dismissShopDetailReminder(name);
           setShopDetailsPromptName(null);
         }}
       />

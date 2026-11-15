@@ -16,12 +16,17 @@ import { Store } from 'lucide-react';
 //   - Later   → App stores ONE reminder per shop name (deduped) that
 //               lives in Notifications + the Sidebar Shops badge until
 //               the details are filled.
+// [v7.5.91 D3] A third, quiet action — Not now → the reminder (if any)
+// is removed AND the name is recorded as dismissed, so future saves
+// with that shop do NOT re-prompt. The shop stays findable via the
+// needs-details filter in the Shops tab.
 interface ShopDetailsPromptModalProps {
   isOpen: boolean;
   shopName: string;
   lang: 'my' | 'en';
   onFillNow: (shopName: string) => void;
   onLater: (shopName: string) => void;
+  onNotNow?: (shopName: string) => void;
 }
 
 export const ShopDetailsPromptModal: React.FC<ShopDetailsPromptModalProps> = ({
@@ -30,6 +35,7 @@ export const ShopDetailsPromptModal: React.FC<ShopDetailsPromptModalProps> = ({
   lang,
   onFillNow,
   onLater,
+  onNotNow,
 }) => {
   if (!isOpen) return null;
 
@@ -71,6 +77,15 @@ export const ShopDetailsPromptModal: React.FC<ShopDetailsPromptModalProps> = ({
           >
             {lang === 'my' ? 'နောက်မှ ဖြည့်မည်' : 'Later'}
           </button>
+          {onNotNow && (
+            <button
+              type="button"
+              onClick={() => onNotNow(shopName)}
+              className="w-full px-4 py-2 min-h-[44px] rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-50 font-bold text-xs cursor-pointer active:scale-[0.98] transition-all"
+            >
+              {lang === 'my' ? 'လောလောဆယ် မဖြည့်သေးပါ' : 'Not now'}
+            </button>
+          )}
         </div>
       </div>
     </div>

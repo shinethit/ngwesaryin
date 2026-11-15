@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.90';
-export const CURRENT_BUILD_NUMBER = 305;
+export const CURRENT_APP_VERSION = 'v7.5.91';
+export const CURRENT_BUILD_NUMBER = 306;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.91',
+    buildNumber: 306,
+    releaseDate: '2026-11-15',
+    releaseTime: '8:56 PM (MMT)',
+    titleMy: 'အသေးစိတ် မပြည့်သေးတဲ့ ဆိုင်များ filter နဲ့ မဖြည့်သေးပါ ရွေးစရာ',
+    titleEn: 'Filter for shops missing details, plus a Not now option',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ဆိုင်စာရင်းမှာ အသေးစိတ် မပြည့်သေးတဲ့ ဆိုင်တွေကို အမှတ်အသားနဲ့ ပြပြီ — filter ဖွင့်ရင် အဲဒီဆိုင်တွေပဲ ပြမယ်။ မဖြည့်ချင်သေးရင် "လောလောဆယ် မဖြည့်သေးပါ" လို့ ရွေးလို့ရပြီ — သတိပေးချက် ပျောက်ပြီး ထပ်မမေးတော့ဘူး။ "ဖြည့်ပြီး" ဆိုတာ ဖုန်း သို့မဟုတ် လိပ်စာ ရှိမှ လို့ သေချာသတ်မှတ်ထားတယ် — Menu သီးသန့်ရှိရုံနဲ့ မပြည့်သေးဘူးလို့ သတ်မှတ်မယ်။ အောက်ခြေ bar မှာလည်း အကြွေးအစား ဆိုင်လိပ်စာ ပြောင်းထားတယ် — အကြွေးက Sidebar ထဲမှာ ရှိတယ်။',
+    descriptionEn: 'Shops missing details now carry a marker in the list, and a filter shows only those shops. You can now choose Not now — the reminder goes away and will not ask again. Filled now clearly means having a phone or an address — a menu alone does not count as filled. The bottom bar now has Shops in place of Debts; Debts remains in the sidebar.',
+    changesMy: [
+      'ဆိုင်စာရင်းမှာ အသေးစိတ် မပြည့်သေးတဲ့ ဆိုင်တွေကို အမှတ်အသားနဲ့ ပြမယ် — filter ဖွင့်ရင် အဲဒီဆိုင်တွေပဲ ပြမယ်။',
+      'မဖြည့်ချင်သေးရင် "လောလောဆယ် မဖြည့်သေးပါ" လို့ ရွေးလို့ရပြီ — သတိပေးချက် ပျောက်ပြီး ထပ်မမေးတော့ဘူး၊ filter ကနေ နောက်မှ ပြန်ဖြည့်လို့ရတယ်။',
+      '"ဖြည့်ပြီး" ဆိုတာ ဖုန်း သို့မဟုတ် လိပ်စာ ရှိမှ လို့ သေချာသတ်မှတ်ထားတယ် — Menu သီးသန့်ရှိရုံနဲ့ မပြည့်သေးဘူးလို့ သတ်မှတ်မယ်။',
+      'အောက်ခြေ bar မှာ အကြွေးအစား ဆိုင်လိပ်စာ ပြောင်းထားတယ် — အကြွေးက Sidebar ထဲမှာ ရှိတယ်။',
+    ],
+    changesEn: [
+      'Shops missing details now carry a marker in the list, and a filter shows only those shops.',
+      'You can now choose Not now — the reminder goes away and will not ask again; the shop stays findable in the filter for later.',
+      'Filled now clearly means having a phone or an address — a menu alone does not count as filled.',
+      'The bottom bar now has Shops in place of Debts; Debts remains in the sidebar.',
+    ],
+  },
   {
     version: 'v7.5.90',
     buildNumber: 305,

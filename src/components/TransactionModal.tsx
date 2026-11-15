@@ -30,7 +30,7 @@ import { getAllItemSuggestions, findMatchingItemInfo, normalizeItemName } from '
 import type { UnifiedItemInfo } from '../utils/itemIntelligence';
 // [v7.5.78 C] Shop-details prompt trigger — the matching rule lives
 // in the reminder store.
-import { isShopNameNeedingDetails, type ShopDetailsLike } from '../utils/shopDetailsReminders';
+import { isShopNameNeedingDetails, loadShopDetailDismissedKeys, type ShopDetailsLike } from '../utils/shopDetailsReminders';
 // [v7.5.82] Menu units for the shopping-list rows + unit carry-through.
 import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, normalizeMenuUnit, SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
 import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
@@ -1560,7 +1560,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const detailsShopName =
         entryModel === 'fuel' || entryModel === 'vehicle_service' ? derivedShopName : typedShopName;
       const needsShopDetailsPrompt =
-        detailsShopName.length > 0 && isShopNameNeedingDetails(detailsShopName, shops, publicShops);
+        detailsShopName.length > 0 &&
+        isShopNameNeedingDetails(detailsShopName, shops, publicShops, loadShopDetailDismissedKeys());
 
       // [v7.5.82] Menu-update candidate — captured BEFORE onSubmit,
       // next to the details-prompt decision. [v7.5.83] Fuel and

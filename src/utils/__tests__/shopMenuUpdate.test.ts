@@ -18,6 +18,7 @@ import {
   normalizeMenuItemName,
   normalizeMenuUnit,
   resolveMenuShop,
+  resolveMenuShopById,
   shouldOfferMenuUpdate,
   type MenuUpdateRow,
   type ShopMenuStore,
@@ -536,23 +537,90 @@ describe('resolveMenuShop (v7.5.85 FIX 2 — stash / retry resolution)', () => {
     });
   });
 
-  it('public hit but the full doc is gone → null, NEVER falls back to the private namesake', async () => {
+  // [v7.5.89 A6] A public hit whose full doc is gone / fails to fetch
+  // FALLS BACK to the private namesake instead of returning null.
+  it('public hit but the full doc is gone → falls back to the private namesake', async () => {
     const fetch = vi.fn(async () => null);
     const privateShops = [{ id: 'priv-1', name: 'Denko', items: [] }];
     const resolved = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], privateShops, fetch);
-    expect(resolved).toBeNull();
+    expect(resolved).toEqual({ shop: privateShops[0], isPublic: false });
   });
 
-  it('public fetch throwing → null, never falls back to the private namesake', async () => {
+  it('public fetch throwing → falls back to the private namesake', async () => {
     const fetch = vi.fn(async () => { throw new Error('offline'); });
     const privateShops = [{ id: 'priv-1', name: 'Denko', items: [] }];
     const resolved = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], privateShops, fetch);
-    expect(resolved).toBeNull();
+    expect(resolved).toEqual({ shop: privateShops[0], isPublic: false });
+  });
+
+  it('public hit gone and NO private namesake → null', async () => {
+    const fetch = vi.fn(async () => null);
+    expect(await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], [], fetch)).toBeNull();
+  });
+
+  // [v7.5.89 A6] Among same-name duplicates prefer the doc WITH items.
+  it('among same-name public duplicates prefers the doc WITH items', async () => {
+    const fetch = vi.fn(async (id: string) =>
+      id === 'pub-empty'
+        ? { id, name: 'Denko', items: [] }
+        : { id, name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 1, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+    );
+    const resolved = await resolveMenuShop(
+      'Denko',
+      [{ id: 'pub-empty', name: 'Denko' }, { id: 'pub-full', name: 'Denko' }],
+      [],
+      fetch,
+    );
+    expect(resolved?.shop.id).toBe('pub-full');
+    expect(resolved?.isPublic).toBe(true);
+  });
+
+  it('among same-name private duplicates prefers the doc WITH items', async () => {
+    const privateShops = [
+      { id: 'priv-empty', name: 'Denko', items: [] },
+      { id: 'priv-full', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 1, addedBy: 'a' }] },
+    ];
+    const resolved = await resolveMenuShop('Denko', [], privateShops, fetchPublic);
+    expect(resolved?.shop.id).toBe('priv-full');
+    expect(resolved?.isPublic).toBe(false);
+  });
+
+  it('a single public hit with an empty menu still resolves (first fetched)', async () => {
+    const fetch = vi.fn(async (id: string) => ({ id, name: 'Denko', items: [] }));
+    const resolved = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], [], fetch);
+    expect(resolved?.shop.id).toBe('pub-9');
+    expect(resolved?.isPublic).toBe(true);
   });
 
   it('empty / blank name → null', async () => {
     expect(await resolveMenuShop('', [], [], fetchPublic)).toBeNull();
     expect(await resolveMenuShop('   ', [], [], fetchPublic)).toBeNull();
+  });
+});
+
+describe('resolveMenuShopById (v7.5.89 A5 — re-resolve by id after rename)', () => {
+  it('public shop renamed after prompt-open still resolves by id, under its new name', async () => {
+    const fetch = vi.fn(async (id: string) => ({ id, name: 'Denko New Name', items: [] }));
+    const resolved = await resolveMenuShopById('pub-9', true, [], fetch);
+    expect(fetch).toHaveBeenCalledWith('pub-9');
+    expect(resolved).toEqual({ shop: { id: 'pub-9', name: 'Denko New Name', items: [] }, isPublic: true });
+  });
+
+  it('private shop renamed still resolves by id from the local list', async () => {
+    const privateShops = [{ id: 'priv-1', name: 'Renamed Shop', items: [] }];
+    const resolved = await resolveMenuShopById('priv-1', false, privateShops, async () => null);
+    expect(resolved).toEqual({ shop: privateShops[0], isPublic: false });
+  });
+
+  it('unknown id → null (caller falls back to name resolution)', async () => {
+    expect(await resolveMenuShopById('pub-gone', true, [], async () => null)).toBeNull();
+    expect(await resolveMenuShopById('priv-gone', false, [], async () => null)).toBeNull();
+    expect(await resolveMenuShopById('', true, [], async () => null)).toBeNull();
+  });
+
+  it('public fetch throwing → null', async () => {
+    const fetch = vi.fn(async () => { throw new Error('offline'); });
+    expect(await resolveMenuShopById('pub-9', true, [], fetch)).toBeNull();
   });
 });
 

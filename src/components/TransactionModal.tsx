@@ -30,7 +30,7 @@ import { getAllItemSuggestions, findMatchingItemInfo, normalizeItemName } from '
 import type { UnifiedItemInfo } from '../utils/itemIntelligence';
 // [v7.5.78 C] Shop-details prompt trigger — the matching rule lives
 // in the reminder store.
-import { isShopNameNeedingDetails } from '../utils/shopDetailsReminders';
+import { isShopNameNeedingDetails, type ShopDetailsLike } from '../utils/shopDetailsReminders';
 // [v7.5.82] Menu units for the shopping-list rows + unit carry-through.
 import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, normalizeMenuUnit, SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
 import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
@@ -52,7 +52,10 @@ interface TransactionModalProps {
   wallets: WalletType[];
   allTransactions?: Transaction[];
   shops?: ShopContact[];
-  publicShops?: Array<{ id: string; name: string }>;
+  // [v7.5.89 A1] FULL public docs (phone/address/items included), not
+  // id+name stubs — isShopNameNeedingDetails below needs the details
+  // fields to suppress the prompt for a filled public shop.
+  publicShops?: Array<{ id: string; name: string } & ShopDetailsLike>;
   vehicles?: Vehicle[];
   plan: PlanType;
   lang: 'my' | 'en';

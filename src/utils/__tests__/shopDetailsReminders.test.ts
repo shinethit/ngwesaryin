@@ -43,6 +43,20 @@ describe('normalizeShopName', () => {
     expect(normalizeShopName('  Denko Shop ')).toBe('denko shop');
     expect(normalizeShopName('')).toBe('');
   });
+
+  // [v7.5.89 A3] Myanmar digits fold to Latin — '၇' and '7' are the
+  // same shop, so a reminder stored under one spelling resolves
+  // under the other.
+  it('folds Myanmar digits to Latin', () => {
+    expect(normalizeShopName('Shop ၇')).toBe('shop 7');
+    expect(normalizeShopName('ဆိုင်ရာ ၇')).toBe(normalizeShopName('ဆိုင်ရာ 7'));
+    expect(normalizeShopName('၁၂၃')).toBe('123');
+  });
+
+  it('collapses internal whitespace runs — "a  b" matches "a b"', () => {
+    expect(normalizeShopName('Denko   Shop')).toBe('denko shop');
+    expect(normalizeShopName('a  b')).toBe(normalizeShopName('a b'));
+  });
 });
 
 describe('shopHasDetails', () => {
@@ -58,24 +72,35 @@ describe('shopHasDetails', () => {
     expect(shopHasDetails({} as any)).toBe(false);
   });
 
-  it('any contact/location field counts', () => {
+  // [v7.5.89 A2] Only phone / address / items count as details.
+  it('only phone / address / items count', () => {
     expect(shopHasDetails({ phone: '091234' })).toBe(true);
     expect(shopHasDetails({ phones: ['091234'] })).toBe(true);
-    expect(shopHasDetails({ township: 'တောင်ကြီး' })).toBe(true);
-    expect(shopHasDetails({ city: 'Taunggyi' })).toBe(true);
-    expect(shopHasDetails({ kpayNumber: '09123' })).toBe(true);
+    expect(shopHasDetails({ address: 'Main Road' })).toBe(true);
+    expect(shopHasDetails({ addresses: ['Main Road'] })).toBe(true);
     expect(shopHasDetails({ items: [{ name: 'rice', price: 1 }] })).toBe(true);
     expect(shopHasDetails({ phones: ['  '] })).toBe(false);
   });
 
-  // [v7.5.79] Phone is optional — a phone-less shop with region +
-  // township still HAS details, so a form save of it clears the
-  // reminder.
-  it('phone-less shop with region + township HAS details', () => {
+  // [v7.5.89 A2] Region / township / city / ward / subCategory /
+  // KPay / notes alone do NOT count — a public shop with only a
+  // township still needs its phone or address filled.
+  it('region / township / city / KPay / notes alone do NOT count', () => {
+    expect(shopHasDetails({ township: 'တောင်ကြီး' })).toBe(false);
+    expect(shopHasDetails({ city: 'Taunggyi' })).toBe(false);
+    expect(shopHasDetails({ kpayNumber: '09123' })).toBe(false);
+    expect(shopHasDetails({ subCategory: 'grocery', generalNotes: 'near market' })).toBe(false);
+    expect(shopHasDetails({ stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' })).toBe(false);
+  });
+
+  // [v7.5.89 A2] Phone is optional, but region + township alone no
+  // longer count as details — the prompt must still show so the
+  // phone/address can be filled.
+  it('phone-less shop with region + township only does NOT have details', () => {
     expect(
       shopHasDetails({ phone: '', phones: [], stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' })
-    ).toBe(true);
-    expect(shopHasDetails({ stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' })).toBe(true);
+    ).toBe(false);
+    expect(shopHasDetails({ stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' })).toBe(false);
   });
 
   // [v7.5.79] Phone is optional — a phone-less record with nothing else
@@ -123,15 +148,32 @@ describe('isShopNameNeedingDetails', () => {
     expect(isShopNameNeedingDetails('Denko', [], [{ name: 'Denko', phone: '', phones: [] }])).toBe(true);
   });
 
-  // [v7.5.79] Phone is optional — a phone-less public shop WITH
-  // region/township suppresses the prompt (it has details); a
-  // phone-less stub with no region/township does NOT.
-  it('a phone-less public shop WITH region/township suppresses the prompt', () => {
+  it('a public shop with ONLY a township does NOT suppress the prompt', () => {
+    expect(
+      isShopNameNeedingDetails('Denko', [], [{ name: 'Denko', township: 'တောင်ကြီး' }])
+    ).toBe(true);
+  });
+
+  it('a public shop with ONLY a subCategory does NOT suppress the prompt', () => {
+    expect(
+      isShopNameNeedingDetails('Denko', [], [{ name: 'Denko', subCategory: 'grocery' }])
+    ).toBe(true);
+  });
+
+  it('a public shop with items (menu) suppresses the prompt', () => {
+    expect(
+      isShopNameNeedingDetails('Denko', [], [{ name: 'Denko', items: [{ name: 'rice', price: 1 }] }])
+    ).toBe(false);
+  });
+
+  // [v7.5.89 A2] Phone is optional, but region/township alone no
+  // longer suppress the prompt — the phone/address still need filling.
+  it('a phone-less public shop with ONLY region/township does NOT suppress the prompt', () => {
     expect(
       isShopNameNeedingDetails('Denko', [], [
         { name: 'Denko', phone: '', phones: [], stateRegion: 'ရှမ်းပြည်နယ်', township: 'တောင်ကြီး' },
       ])
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('a phone-less stub with no region/township does NOT suppress the prompt', () => {
@@ -190,5 +232,73 @@ describe('reminder store (one per shop, deduped)', () => {
     expect(resolveShopDetailReminder('  SHOP a ')).toBe(true);
     expect(loadShopDetailReminders().map((r) => r.shopName)).toEqual(['Shop B']);
     expect(resolveShopDetailReminder('Shop A')).toBe(false);
+  });
+
+  it('Myanmar-digit and Latin-digit spellings dedupe to one reminder', () => {
+    expect(addShopDetailReminder('Shop ၇').added).toBe(true);
+    expect(addShopDetailReminder('Shop 7').added).toBe(false);
+    expect(loadShopDetailReminders()).toHaveLength(1);
+    expect(hasShopDetailReminder('Shop ၇')).toBe(true);
+    expect(hasShopDetailReminder('Shop 7')).toBe(true);
+  });
+
+  it('double-space and single-space spellings dedupe to one reminder', () => {
+    expect(addShopDetailReminder('Shop  A').added).toBe(true);
+    expect(addShopDetailReminder('Shop A').added).toBe(false);
+    expect(loadShopDetailReminders()).toHaveLength(1);
+  });
+});
+
+// [v7.5.89 A3] Migration — reminders stored under the OLD normalizer
+// (trim + lowercase only) are re-keyed on load through the new
+// digit-folding / whitespace-collapsing normalizer.
+describe('reminder migration (old keys re-keyed on load)', () => {
+  beforeEach(() => {
+    store.clear();
+  });
+
+  function seedRaw(reminders: unknown[]) {
+    store.set(SHOP_DETAIL_REMINDERS_KEY, JSON.stringify(reminders));
+  }
+
+  it('re-keys an old-key reminder ("၇" → "7") and it then resolves', () => {
+    seedRaw([{ id: 'notif_shop_shop ၇', shopName: 'Shop ၇', key: 'shop ၇', createdAt: 100 }]);
+    const loaded = loadShopDetailReminders();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].key).toBe('shop 7');
+    expect(loaded[0].id).toBe('notif_shop_shop 7');
+    expect(loaded[0].shopName).toBe('Shop ၇');
+    // The migrated key is persisted, so the reminder resolves by the
+    // new (Latin-digit) spelling.
+    expect(resolveShopDetailReminder('Shop 7')).toBe(true);
+    expect(loadShopDetailReminders()).toHaveLength(0);
+  });
+
+  it('dedupes same-name reminders under the new key, keeping the earliest createdAt', () => {
+    seedRaw([
+      { id: 'notif_shop_shop 7', shopName: 'Shop 7', key: 'shop 7', createdAt: 200 },
+      { id: 'notif_shop_shop ၇', shopName: 'Shop ၇', key: 'shop ၇', createdAt: 100 },
+    ]);
+    const loaded = loadShopDetailReminders();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].createdAt).toBe(100);
+    expect(loaded[0].key).toBe('shop 7');
+  });
+
+  it('collapses whitespace in stored keys ("shop  a" → "shop a")', () => {
+    seedRaw([{ id: 'notif_shop_shop  a', shopName: 'Shop  A', key: 'shop  a', createdAt: 50 }]);
+    const loaded = loadShopDetailReminders();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].key).toBe('shop a');
+    expect(loaded[0].id).toBe('notif_shop_shop a');
+    expect(hasShopDetailReminder('Shop A')).toBe(true);
+  });
+
+  it('loading an already-migrated store is a no-op (idempotent)', () => {
+    seedRaw([{ id: 'notif_shop_shop 7', shopName: 'Shop 7', key: 'shop 7', createdAt: 100 }]);
+    const first = loadShopDetailReminders();
+    const second = loadShopDetailReminders();
+    expect(second).toEqual(first);
+    expect(store.get(SHOP_DETAIL_REMINDERS_KEY)).toBe(JSON.stringify(first));
   });
 });

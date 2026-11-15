@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.88';
-export const CURRENT_BUILD_NUMBER = 303;
+export const CURRENT_APP_VERSION = 'v7.5.89';
+export const CURRENT_BUILD_NUMBER = 304;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.89',
+    buildNumber: 304,
+    releaseDate: '2026-11-15',
+    releaseTime: '6:07 PM (MMT)',
+    titleMy: 'ဖြည့်ပြီးသား ဆိုင်မှာ သတိပေးချက် မပေါ်တော့ဘူး — ဆိုင်ထည့်ရင် နှစ်ခုလုံး ရွေးလို့ရပြီ',
+    titleEn: 'Details prompt fixed for filled shops — add a shop to Private, Public, or both',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆိုင်အသေးစိတ် ဖြည့်ပြီးသား Public ဆိုင်မှာ "အသေးစိတ် ဖြည့်မလား" သတိပေးချက် ထပ်မပေါ်တော့ဘူး — ဆိုင်ရဲ့ အချက်အလက် အပြည့်အစုံနဲ့ စစ်တော့မယ်။ ဆိုင်နာမည် ပြောင်းရင် Menu လည်း လိုက်ပါပြီ၊ သူများဆိုင်ကို ပြင်ရင်လည်း ဆိုင်အသစ် ထပ်မဆောက်တော့ဘူး။ ဆိုင်ထည့်တဲ့အခါ ကိုယ်ပိုင် သီးသန့် / Public သီးသန့် / နှစ်ခုလုံး ရွေးလို့ရပြီ — နှစ်ခုလုံးဆို Menu ပါ နှစ်နေရာလုံး ရောက်မယ်။',
+    descriptionEn: 'The fill-details prompt no longer appears for a public shop whose details are already filled — the check now uses the full shop details. Renaming a shop keeps its menu, and editing someone elses public shop no longer creates a duplicate. When adding a shop you can now choose Private only, Public only, or both — both copies the menu to both places.',
+    changesMy: [
+      'ဖြည့်ပြီးသား Public ဆိုင်မှာ အသေးစိတ် ဖြည့်ဖို့ သတိပေးချက် ထပ်မပေါ်တော့ဘူး — ဆိုင်ရဲ့ အချက်အလက်အပြည့်အစုံနဲ့ စစ်တော့မယ်။',
+      'ဆိုင်နာမည် ပြောင်းရင် Menu လည်း လိုက်ပါပြီ — သူများဆိုင်ကို ပြင်ရင်လည်း ဆိုင်အသစ် ထပ်မဆောက်တော့ဘူး။',
+      'ဆိုင်ထည့်တဲ့အခါ ကိုယ်ပိုင် သီးသန့် / Public သီးသန့် / နှစ်ခုလုံး ရွေးလို့ရပြီ — နှစ်ခုလုံးဆို Menu ပါ နှစ်နေရာလုံး ရောက်မယ်။',
+    ],
+    changesEn: [
+      'The fill-details prompt no longer appears for a public shop whose details are already filled — the check now uses the full shop details.',
+      'Renaming a shop now keeps its menu — editing someone elses public shop no longer creates a duplicate.',
+      'When adding a shop you can now choose Private only, Public only, or both — both copies the menu to both places.',
+    ],
+  },
   {
     version: 'v7.5.88',
     buildNumber: 303,

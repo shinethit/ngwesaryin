@@ -1,15 +1,15 @@
 {
-  "version": "v7.5.88",
-  "buildNumber": 303,
+  "version": "v7.5.89",
+  "buildNumber": 304,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဈေးနှုန်း နှိုင်းယှဉ်မှာ အဖြေကို အပေါ်ဆုံးတင်ပြီ — ဖွင့်ဖွင့်ချင်း ပစ္စည်းတစ်ခုချင်းစီရဲ့ ကိုယ်ဝယ်ခဲ့တဲ့ဈေးနဲ့ အတန်ဆုံးဆိုင်ဈေး မြင်ရမယ်။",
-    "ပစ္စည်းတစ်တန်းကို နှိပ်ရင် အဲဒီပစ္စည်းရဲ့ အသေးစိတ်ကတ်ကို ဖွင့်ပြမယ် (အရင်က Chart ထဲက ဖြုတ်ချလိုက်သလို ဖြစ်နေတယ်)။",
-    "စာရှည်တွေ တိုပြီး Home က Premium ခလုတ်အမည်ကို ရှင်းလင်းအောင် ပြင်ထားတယ်။"
+    "ဖြည့်ပြီးသား Public ဆိုင်မှာ အသေးစိတ် ဖြည့်ဖို့ သတိပေးချက် ထပ်မပေါ်တော့ဘူး — ဆိုင်ရဲ့ အချက်အလက်အပြည့်အစုံနဲ့ စစ်တော့မယ်။",
+    "ဆိုင်နာမည် ပြောင်းရင် Menu လည်း လိုက်ပါပြီ — သူများဆိုင်ကို ပြင်ရင်လည်း ဆိုင်အသစ် ထပ်မဆောက်တော့ဘူး။",
+    "ဆိုင်ထည့်တဲ့အခါ ကိုယ်ပိုင် သီးသန့် / Public သီးသန့် / နှစ်ခုလုံး ရွေးလို့ရပြီ — နှစ်ခုလုံးဆို Menu ပါ နှစ်နေရာလုံး ရောက်မယ်။"
   ],
   "changesEn": [
-    "Price Compare now shows the answer first — your price and the cheapest shop price are visible as soon as the page opens.",
-    "Tapping an item row now opens that item’s detail card (before, it removed the item from the chart).",
-    "Shortened the long explanations and clarified the Premium button name on Home."
+    "The fill-details prompt no longer appears for a public shop whose details are already filled — the check now uses the full shop details.",
+    "Renaming a shop now keeps its menu — editing someone elses public shop no longer creates a duplicate.",
+    "When adding a shop you can now choose Private only, Public only, or both — both copies the menu to both places."
   ]
 }

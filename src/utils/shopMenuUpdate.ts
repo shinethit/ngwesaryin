@@ -397,19 +397,54 @@ export interface ResolvedMenuShop {
 /** Fetches the FULL public doc (menu included) for a public id+name hit. */
 export type FetchPublicMenuShop = (shopId: string) => Promise<MenuShopListEntry | null>;
 
-/** A candidate whose shop did not resolve yet — stashed until it appears. */
+/** A candidate whose shop did not resolve yet — stashed until it appears.
+ *  [v7.5.89 A5] `shopId` is carried alongside the name when it is
+ *  known, so the retry can resolve by id (rename-proof). No writer
+ *  knows it today — a stash means "no match anywhere", so the shop
+ *  does not exist yet — and it stays undefined until one does. */
 export interface StashedMenuCandidate {
   shopName: string;
+  shopId?: string;
   items: TransactionItem[];
 }
 
 /**
+ * [v7.5.89 A5] Resolve by the shop's ID, not its name — a rename
+ * between prompt-open and Apply must still land on the right doc.
+ * Public: the full doc via the injected fetch; private: the local
+ * list by id. Returns null when the id is unknown (moved / deleted)
+ * — callers fall back to the name-based resolveMenuShop.
+ */
+export async function resolveMenuShopById(
+  shopId: string,
+  isPublic: boolean,
+  privateShops: MenuShopListEntry[],
+  fetchPublicShop: FetchPublicMenuShop,
+): Promise<ResolvedMenuShop | null> {
+  if (!shopId) return null;
+  if (isPublic) {
+    try {
+      const full = await fetchPublicShop(shopId);
+      if (full) return { shop: full, isPublic: true };
+    } catch (err) {
+      console.warn('[shopMenuUpdate] public shop fetch by id failed:', err);
+    }
+    return null;
+  }
+  const hit = privateShops.find((s) => s.id === shopId);
+  return hit ? { shop: hit, isPublic: false } : null;
+}
+
+/**
  * Resolve a shop name the SAME way the details prompt matches it
- * (trim + case-insensitive). Public-first: if the name matches BOTH
- * a public and a private shop, the PUBLIC shop wins. If a public
- * shop matched but its full doc cannot be fetched (fetch failure or
- * vanished doc), returns null and NEVER falls back to the private
- * namesake. Returns null when the name matches nothing.
+ * (normalizeShopName: trim + case-insensitive, Myanmar digits folded).
+ * Public-first: if the name matches BOTH a public and a private shop,
+ * the PUBLIC shop wins. [v7.5.89 A6] If a public match's full doc
+ * cannot be fetched (fetch failure or vanished doc), FALL BACK to the
+ * private namesake instead of returning null — a failed fetch must
+ * not lose the menu update. Among same-name duplicates (public or
+ * private) prefer the doc WITH menu items over an empty one.
+ * Returns null when the name matches nothing.
  */
 export async function resolveMenuShop(
   shopName: string,
@@ -419,17 +454,22 @@ export async function resolveMenuShop(
 ): Promise<ResolvedMenuShop | null> {
   const key = normalizeShopName(shopName);
   if (!key) return null;
-  const publicHit = publicShops.find((s) => normalizeShopName(s.name) === key);
-  if (publicHit) {
+  const publicHits = publicShops.filter((s) => normalizeShopName(s.name) === key);
+  let firstPublic: MenuShopListEntry | null = null;
+  for (const hit of publicHits) {
     try {
-      const full = await fetchPublicShop(publicHit.id);
-      if (full) return { shop: full, isPublic: true };
+      const full = await fetchPublicShop(hit.id);
+      if (!full) continue;
+      if ((full.items || []).length > 0) return { shop: full, isPublic: true };
+      if (!firstPublic) firstPublic = full;
     } catch (err) {
-      console.warn('[shopMenuUpdate] public shop fetch failed — skipping menu prompt:', err);
+      console.warn('[shopMenuUpdate] public shop fetch failed — trying next match:', err);
     }
-    return null;
   }
-  const privateHit = privateShops.find((s) => normalizeShopName(s.name) === key);
+  if (firstPublic) return { shop: firstPublic, isPublic: true };
+  const privateHits = privateShops.filter((s) => normalizeShopName(s.name) === key);
+  const privateHit =
+    privateHits.find((s) => (s.items || []).length > 0) ?? privateHits[0];
   if (privateHit) return { shop: privateHit, isPublic: false };
   return null;
 }

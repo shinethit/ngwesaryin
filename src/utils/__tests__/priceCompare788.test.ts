@@ -125,26 +125,26 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.5.88 — history entry and version.json in sync', () => {
-  it('current version is v7.5.88 / build 303', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.5.88');
-    expect(CURRENT_BUILD_NUMBER).toBe(303);
-    expect(VERSION_JSON.version).toBe('v7.5.88');
-    expect(VERSION_JSON.buildNumber).toBe(303);
+describe('Version v7.5.89 — history entry and version.json in sync', () => {
+  it('current version is v7.5.89 / build 304', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.5.89');
+    expect(CURRENT_BUILD_NUMBER).toBe(304);
+    expect(VERSION_JSON.version).toBe('v7.5.89');
+    expect(VERSION_JSON.buildNumber).toBe(304);
     // releasedAt is never rewritten by a version bump.
     expect(VERSION_JSON.releasedAt).toBe('2026-11-11T14:29:07.044Z');
   });
 
-  it('top history entry is the v7.5.88 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.5.89 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.5.88');
-    expect(entry.buildNumber).toBe(303);
+    expect(entry.version).toBe('v7.5.89');
+    expect(entry.buildNumber).toBe(304);
     expect(entry.releaseDate).toBe('2026-11-15');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('ဈေးနှုန်း နှိုင်းယှဉ် သုံးရလွယ်အောင် ပြင်ဆင်ခြင်း — အဖြေကို အပေါ်ဆုံးတင်ပြီ');
-    expect(entry.titleEn).toBe('Price Compare made easier — the answer now comes first');
+    expect(entry.titleMy).toBe('ဖြည့်ပြီးသား ဆိုင်မှာ သတိပေးချက် မပေါ်တော့ဘူး — ဆိုင်ထည့်ရင် နှစ်ခုလုံး ရွေးလို့ရပြီ');
+    expect(entry.titleEn).toBe('Details prompt fixed for filled shops — add a shop to Private, Public, or both');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

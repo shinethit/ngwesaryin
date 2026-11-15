@@ -32,10 +32,26 @@ export interface ShopDetailReminder {
   createdAt: number;
 }
 
-/** The app's existing shop-name rule (TransactionModal `isNewShopName`,
- *  ShopModal duplicate check): trim, then case-insensitive compare. */
+/** Myanmar digits → Latin, mirroring normalizeItemName
+ *  (itemIntelligence.ts:25-28). Kept local — importing
+ *  itemIntelligence would pull heavier deps into this tiny module,
+ *  which must stay importable in the node vitest env. */
+const MYANMAR_DIGITS: Record<string, string> = {
+  '၀': '0', '၁': '1', '၂': '2', '၃': '3', '၄': '4',
+  '၅': '5', '၆': '6', '၇': '7', '၈': '8', '၉': '9',
+};
+
+/** The app's shop-name rule: trim, fold Myanmar digits to Latin,
+ *  case-insensitive, internal whitespace runs collapsed to one space.
+ *  [v7.5.89 A3] '၇' vs '7' and 'a  b' vs 'a b' are the SAME shop.
+ *  (TransactionModal `isNewShopName` / ShopModal duplicate check use
+ *  their own inline trim+lowercase — this is the shared util rule.) */
 export function normalizeShopName(name: string): string {
-  return (name || '').trim().toLowerCase();
+  return (name || '')
+    .replace(/[၀-၉]/g, (d) => MYANMAR_DIGITS[d] ?? d)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 }
 
 /** Notification-centre id for a reminder — shared with App's bell
@@ -78,10 +94,45 @@ export function loadShopDetailReminders(): ShopDetailReminder[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
+    const valid = parsed.filter(
       (r): r is ShopDetailReminder =>
         !!r && typeof (r as ShopDetailReminder).shopName === 'string' && typeof (r as ShopDetailReminder).key === 'string'
     );
+    // [v7.5.89 A3] MIGRATION — normalizeShopName now folds Myanmar
+    // digits and collapses whitespace, so a reminder stored under the
+    // old rule (key 'shop ၇') would never match its new key ('shop 7')
+    // and would sit uncleared forever. Re-key every stored reminder
+    // through the new normalizer and dedupe by key, keeping the
+    // EARLIEST createdAt (and that entry's display name). Persists
+    // only when something actually changed, so a migrated store is
+    // not rewritten on every load.
+    let changed = false;
+    const byKey = new Map<string, ShopDetailReminder>();
+    for (const r of valid) {
+      const key = normalizeShopName(r.shopName);
+      if (!key) {
+        changed = true;
+        continue;
+      }
+      const id = shopReminderId(key);
+      const existing = byKey.get(key);
+      if (existing) {
+        changed = true;
+        if (r.createdAt < existing.createdAt) {
+          byKey.set(key, { id, shopName: r.shopName, key, createdAt: r.createdAt });
+        }
+        continue;
+      }
+      if (r.key !== key || r.id !== id) changed = true;
+      byKey.set(key, { id, shopName: r.shopName, key, createdAt: r.createdAt });
+    }
+    const migrated = [...byKey.values()];
+    if (changed) {
+      // Direct write, no change event: the caller already receives
+      // the migrated list, and a re-load now finds nothing to migrate.
+      writeRaw(SHOP_DETAIL_REMINDERS_KEY, JSON.stringify(migrated));
+    }
+    return migrated;
   } catch {
     return [];
   }
@@ -129,11 +180,18 @@ export function hasShopDetailReminder(shopName: string): boolean {
 // Matching: does this shop name still need its details filled?
 // ---------------------------------------------------------------------
 
-/** A directory record "has details" when any real contact/location
- *  field is filled. `note` is deliberately EXCLUDED: ShopModal stores
- *  the shop CATEGORY in `note` (default "grocery"), so every form-saved
+/** [v7.5.89 A2] A directory record "has details" FOR THE PROMPT
+ *  when it carries a real way to reach / find the shop — a phone, an
+ *  address, or priced menu items. Region / township / city / ward /
+ *  subCategory / KPay number / general notes alone do NOT count: a
+ *  public shop with only a township filled still needs its phone or
+ *  address filled, and counting those fields suppressed the prompt
+ *  for it. `note` is deliberately EXCLUDED: ShopModal stores the
+ *  shop CATEGORY in `note` (default "grocery"), so every form-saved
  *  shop has a note even with nothing else filled — it proves nothing.
- *  `items` (priced items) also count as details. */
+ *  `items` (priced items) also count as details. Only consumer is
+ *  isShopNameNeedingDetails below — no other caller wants the old
+ *  loose rule. */
 export interface ShopDetailsLike {
   phone?: string;
   phones?: string[];
@@ -152,19 +210,7 @@ export interface ShopDetailsLike {
 export function shopHasDetails(shop: ShopDetailsLike | null | undefined): boolean {
   if (!shop) return false;
   const nonEmpty = (v?: string) => !!v && v.trim().length > 0;
-  if (
-    nonEmpty(shop.phone) ||
-    nonEmpty(shop.address) ||
-    nonEmpty(shop.subCategory) ||
-    nonEmpty(shop.stateRegion) ||
-    nonEmpty(shop.township) ||
-    nonEmpty(shop.city) ||
-    nonEmpty(shop.ward) ||
-    nonEmpty(shop.kpayNumber) ||
-    nonEmpty(shop.generalNotes)
-  ) {
-    return true;
-  }
+  if (nonEmpty(shop.phone) || nonEmpty(shop.address)) return true;
   if ((shop.phones || []).some((p) => nonEmpty(p))) return true;
   if ((shop.addresses || []).some((a) => nonEmpty(a))) return true;
   if ((shop.items || []).length > 0) return true;

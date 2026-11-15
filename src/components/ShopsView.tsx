@@ -17,7 +17,15 @@ import { ShopReportModal } from './shops/ShopReportModal';
 import type { SubmitShopReportResult } from '../utils/shopReports';
 import { useSearchSeed } from '../hooks/useSearchSeed';
 import { resolveShopDetailReminder, normalizeShopName } from '../utils/shopDetailsReminders';
-import { buildMyShopsList } from '../utils/myShops';
+import { buildMyShopsList, findShopByName } from '../utils/myShops';
+import {
+  isDuplicateShopName,
+  findCounterpartShop,
+  moveWithCreateFirst,
+  buildPublicShopFields,
+  buildPrivateShopFields,
+  buildCounterpartUpdateFields,
+} from '../utils/shopSave';
 import {
   searchShopMenus,
   getMenuItemNameSuggestions,
@@ -72,6 +80,21 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     [privateShops, publicShops, auth.currentUser?.uid]
   );
 
+  // [v7.5.89 B2] The modal's duplicate warning must see BOTH tabs: a
+  // rename colliding with a same-named shop on the OTHER tab warns
+  // too. Deduped by id — the user's own public shops appear in both
+  // source lists.
+  const allExistingShops = useMemo(() => {
+    const seen = new Set<string>();
+    const out: (ShopContact | PublicShop)[] = [];
+    for (const s of [...publicShops, ...myShopsList]) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      out.push(s);
+    }
+    return out;
+  }, [publicShops, myShopsList]);
+
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
@@ -104,21 +127,28 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   // the notification centre: open the shop form pre-filled with the name.
   // Plan-aware: Premium saves to the private list; Free / guest saves to
   // the public directory (private save is Premium-gated).
+  // [v7.5.89 B1] Search MY shops first (own record → edit in place),
+  // then the FULL public directory — a public shop added by someone
+  // else, or one of the 874 imports, must open THAT record for editing
+  // instead of minting a `__prefill_` duplicate with an empty menu
+  // while the old doc keeps the menu. Only when NO record exists
+  // anywhere is a prefill minted (so the sentinel still routes to
+  // CREATE at save time). When a record IS found, the directory type
+  // follows the RECORD (public → 'public', private → 'private'), not
+  // the plan.
   useEffect(() => {
     const onOpenForm = (e: Event) => {
       const shopName = (e as CustomEvent<{ shopName?: string }>).detail?.shopName?.trim();
       if (!shopName) return;
-      const key = normalizeShopName(shopName);
-      // [v7.5.85 FIX 1] Look in MY shops (private + my public): a shop
-      // moved to the public directory still belongs to the user, so the
-      // deep-link must open THAT record for editing instead of starting
-      // a duplicate prefill. The edit flag follows the record found.
-      const existing = myShopsList.find((s) => normalizeShopName(s.name) === key);
-      setDirectoryType(plan === 'premium' ? 'private' : 'public');
+      const existing =
+        findShopByName(myShopsList, shopName) ?? findShopByName(publicShops, shopName);
       if (existing) {
+        const isPublic = 'addedBy' in existing;
+        setDirectoryType(isPublic ? 'public' : 'private');
         setEditingShop(existing);
-        setIsEditingPublic('addedBy' in existing);
+        setIsEditingPublic(isPublic);
       } else {
+        setDirectoryType(plan === 'premium' ? 'private' : 'public');
         setIsEditingPublic(false);
         setEditingShop({ id: `__prefill_${Date.now()}`, name: shopName, phone: '', userId: '', createdAt: Date.now() } as ShopContact);
       }
@@ -126,7 +156,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     };
     window.addEventListener('ngwe:open-shop-form', onOpenForm);
     return () => window.removeEventListener('ngwe:open-shop-form', onOpenForm);
-  }, [myShopsList, plan]);
+  }, [myShopsList, publicShops, plan]);
   const [selectedTagFilter, setSelectedTagFilter] = useState('all');
 
   // Hierarchical Filter States
@@ -497,6 +527,19 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     }
   };
 
+  // [v7.5.89 B5] Clear the details reminder for the SAVED name, and
+  // for the OLD name too when the shop was renamed — a reminder keyed
+  // by the old name would otherwise never clear (rename orphan). The
+  // private-update path goes through onUpdatePrivateShop, whose
+  // handler resolves the old name itself; this helper covers the
+  // public-side saves in this file.
+  const clearDetailReminders = (savedName: string, previousName?: string) => {
+    resolveShopDetailReminder(savedName);
+    if (previousName && normalizeShopName(previousName) !== normalizeShopName(savedName)) {
+      resolveShopDetailReminder(previousName);
+    }
+  };
+
   // Save Modal Data Handler
   const handleSaveModal = async (data: {
     name: string;
@@ -511,9 +554,144 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     generalNotes: string;
     // [v7.5.55 C3] subCategory is collected by the modal — save it.
     subCategory: string;
-    targetDirectory: 'public' | 'private';
+    targetDirectory: 'public' | 'private' | 'both';
   }): Promise<boolean> => {
     const currentUser = auth.currentUser;
+
+    // [v7.5.89 B3] Save to BOTH places — a COPY, never a move: two
+    // docs, one per collection, with DIFFERENT ids and the same
+    // content. Later edits of one copy diverge by default (the form
+    // says so under the Both card); no silent cross-copy sync.
+    if (data.targetDirectory === 'both') {
+      // Both requires sign-in (like Public) and Premium (like Private).
+      if (!currentUser) {
+        showNotice(
+          lang === 'my'
+            ? 'နှစ်နေရာလုံးမှာ သိမ်းဆည်းရန် ဦးစွာ အကောင့်ဝင်ရန် လိုအပ်ပါသည်'
+            : 'Please sign in first to save in both places'
+        );
+        return false;
+      }
+      if (plan !== 'premium') {
+        showNotice(
+          lang === 'my'
+            ? 'နှစ်နေရာလုံးမှာ သိမ်းဆည်းရန် Premium အသုံးပြုသူ ဖြစ်ရန် လိုအပ်ပါသည်'
+            : 'Premium plan required to save in both places'
+        );
+        if (onOpenUpgradeModal) onOpenUpgradeModal();
+        return false;
+      }
+      const isEdit = !!editingShop && !editingShop.id.startsWith('__prefill_');
+      const oldName = isEdit ? editingShop!.name : undefined;
+      const addedBy = currentUser.email || currentUser.displayName || 'အသုံးပြုသူ';
+
+      if (!isEdit) {
+        // CREATE + both: hard-block when the name exists in EITHER
+        // list, before writing anything.
+        if (isDuplicateShopName(data.name, [publicShops, privateShops])) {
+          showNotice(
+            lang === 'my'
+              ? `သတိပေးချက်: "${data.name}" အမည်တူ ဆိုင် ရှိနေပါပြီ — အမည်တူ ဆိုင်အသစ် ထပ်ထည့်၍ မရပါ`
+              : `A shop named "${data.name}" already exists — a duplicate cannot be added`
+          );
+          return false;
+        }
+        // A new shop has no menu yet — items: [] on BOTH copies.
+        const pubId = `pub_shop_${Date.now()}`;
+        const okPub = await safeSetDoc(
+          doc(db, 'public_shops', pubId),
+          buildPublicShopFields(data, addedBy, currentUser.uid, pubId, [])
+        );
+        if (!okPub) {
+          showNotice(
+            lang === 'my'
+              ? 'ဆိုင်ကို သိမ်း၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
+              : 'Could not save the shop — please check your connection and permissions'
+          );
+          return false;
+        }
+        const okPriv = await onAddPrivateShop(buildPrivateShopFields(data, []));
+        if (!okPriv) {
+          // The public copy already landed — roll it back so a retry
+          // does not leave a half-saved pair (the hard block above
+          // would then refuse the retry as a "duplicate").
+          await safeDeleteDoc(doc(db, 'public_shops', pubId));
+          return false;
+        }
+        clearDetailReminders(data.name, oldName);
+        return true;
+      }
+
+      // EDIT + both: update the record being edited, and the same-name
+      // record on the other side — updating its non-menu fields and
+      // keeping ITS own items, or creating it as a copy INCLUDING the
+      // edited record's menu when no counterpart exists.
+      const editedItems = (editingShop as ShopContact | PublicShop).items || [];
+      if (isEditingPublic) {
+        const okPub = await safeUpdateDoc(
+          doc(db, 'public_shops', editingShop!.id),
+          buildCounterpartUpdateFields(data)
+        );
+        if (!okPub) {
+          showNotice(
+            lang === 'my'
+              ? 'ဆိုင်ကို သိမ်း၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည် (သို့မဟုတ် အင်တာနက် စစ်ပေးပါ)'
+              : 'Could not save the shop — only the shop adder and admins can edit it (or check your connection)'
+          );
+          return false;
+        }
+        const counterpart = findCounterpartShop(oldName!, data.name, privateShops);
+        if (counterpart) {
+          // Spread over the counterpart record: its own items survive.
+          const okPriv = await onUpdatePrivateShop({
+            ...(counterpart as ShopContact),
+            ...buildCounterpartUpdateFields(data),
+          });
+          if (!okPriv) return false;
+        } else {
+          const okPriv = await onAddPrivateShop(buildPrivateShopFields(data, editedItems));
+          if (!okPriv) return false;
+        }
+      } else {
+        // Spread over the edited record: its own items survive.
+        const okPriv = await onUpdatePrivateShop({
+          ...(editingShop as ShopContact),
+          ...buildCounterpartUpdateFields(data),
+        });
+        if (!okPriv) return false;
+        const counterpart = findCounterpartShop(oldName!, data.name, publicShops);
+        if (counterpart) {
+          const okPub = await safeUpdateDoc(
+            doc(db, 'public_shops', counterpart.id),
+            buildCounterpartUpdateFields(data)
+          );
+          if (!okPub) {
+            showNotice(
+              lang === 'my'
+                ? 'ဆိုင်ကို သိမ်း၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ပြင်နိုင်ပါသည် (သို့မဟုတ် အင်တာနက် စစ်ပေးပါ)'
+                : 'Could not save the shop — only the shop adder and admins can edit it (or check your connection)'
+            );
+            return false;
+          }
+        } else {
+          const pubId = `pub_shop_${Date.now()}`;
+          const okPub = await safeSetDoc(
+            doc(db, 'public_shops', pubId),
+            buildPublicShopFields(data, addedBy, currentUser.uid, pubId, editedItems)
+          );
+          if (!okPub) {
+            showNotice(
+              lang === 'my'
+                ? 'ဆိုင်ကို သိမ်း၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
+                : 'Could not save the shop — please check your connection and permissions'
+            );
+            return false;
+          }
+        }
+      }
+      clearDetailReminders(data.name, oldName);
+      return true;
+    }
 
     if (data.targetDirectory === 'public') {
       if (!currentUser) {
@@ -569,7 +747,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         await onDeletePrivateShop(editingShop.id);
         // [v7.5.78 C] Details filled via the public directory — clear
         // any pending reminder for this shop.
-        resolveShopDetailReminder(data.name);
+        // [v7.5.89 B5] Also clear the OLD name on a rename.
+        clearDetailReminders(data.name, editingShop.name);
         return true;
       }
 
@@ -601,6 +780,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           return false;
         }
       } else {
+        // [v7.5.89 B3] CREATE hard block: a same-name record in EITHER
+        // list refuses the save — a warning is not enough. The modal
+        // stays open so the user can pick a different name or edit the
+        // existing shop instead.
+        if (isDuplicateShopName(data.name, [publicShops, privateShops])) {
+          showNotice(
+            lang === 'my'
+              ? `သတိပေးချက်: "${data.name}" အမည်တူ ဆိုင် ရှိနေပါပြီ — အမည်တူ ဆိုင်အသစ် ထပ်ထည့်၍ မရပါ`
+              : `A shop named "${data.name}" already exists — a duplicate cannot be added`
+          );
+          return false;
+        }
         const id = `pub_shop_${Date.now()}`;
         const shopRef = doc(db, 'public_shops', id);
         const ok = await safeSetDoc(shopRef, {
@@ -635,7 +826,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       }
       // [v7.5.78 C] Public save landed (create or update) — the shop now
       // has details, so clear any pending reminder for this name.
-      resolveShopDetailReminder(data.name);
+      // [v7.5.89 B5] Also clear the OLD name when the shop was renamed
+      // (or when a prefill was saved under a new name).
+      clearDetailReminders(data.name, editingShop?.name);
       return true;
     } else {
       // Save Private Shop
@@ -649,38 +842,44 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         return false;
       }
 
-      // [v7.5.55 C27] Moving a PUBLIC shop to Private: delete the public
-      // copy first (checked); only then save the private copy.
+      // [v7.5.55 C27] Moving a PUBLIC shop to Private: create the
+      // private copy FIRST (checked); only then remove the public
+      // original.
+      // [v7.5.89 B3] This used to delete first — if the private save
+      // then failed, the menu was gone together with the public doc.
+      // Create-then-delete (like private → public): a failed private
+      // save leaves the public original untouched and the modal open
+      // for retry. A failed delete after a landed private copy still
+      // reports success — retrying the create would duplicate the
+      // private copy — and the user is told to remove the leftover
+      // public copy by hand.
       if (editingShop && isEditingPublic) {
-        const okDel = await safeDeleteDoc(doc(db, 'public_shops', editingShop.id));
-        if (!okDel) {
+        const moved = await moveWithCreateFirst(
+          () =>
+            onAddPrivateShop(
+              buildPrivateShopFields(data, (editingShop as PublicShop).items || [])
+            ),
+          () => safeDeleteDoc(doc(db, 'public_shops', editingShop.id))
+        );
+        if (!moved.moved) {
           showNotice(
             lang === 'my'
-              ? 'ကိုယ်ပိုင်စာရင်းသို့ ရွှေ့၍ မရပါ — ဆိုင်ထည့်သူနှင့် admin သာ ရွှေ့နိုင်ပါသည်'
-              : 'Could not move the shop to your private list — only the shop adder and admins can move it'
+              ? 'ကိုယ်ပိုင်စာရင်းသို့ ရွှေ့၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက် စစ်ပေးပါ'
+              : 'Could not move the shop to your private list — please check your connection and permissions'
           );
           return false;
         }
-        // [v7.5.55 C5] Await the private save and report its real result —
-        // the public copy is already deleted, so a failed private save
-        // keeps the modal open with the data still in the form for retry
-        // (deleting a gone public doc succeeds trivially on retry).
-        return await onAddPrivateShop({
-          name: data.name,
-          phone: data.phones[0] || '',
-          phones: data.phones,
-          address: data.addresses[0] || '',
-          addresses: data.addresses,
-          note: data.note,
-          subCategory: data.subCategory,
-          stateRegion: data.stateRegion,
-          township: data.township,
-          city: data.city,
-          ward: data.ward,
-          kpayNumber: data.kpayNumber,
-          generalNotes: data.generalNotes,
-          items: (editingShop as PublicShop).items || [],
-        });
+        if (!moved.deleteOk) {
+          showNotice(
+            lang === 'my'
+              ? 'ကိုယ်ပိုင်စာရင်းသို့ ရွှေ့ပြီးပါပြီ — ပြည်သူ့လမ်းညွှန်မှ မိတ္တူဟောင်းကို ဖျက်၍ မရပါ၊ ကိုယ်တိုင် ဖျက်ပေးပါ'
+              : 'Moved to your private list — the old public copy could not be removed, please delete it by hand'
+          );
+        }
+        // [v7.5.78 C] Details filled via the private list — clear any
+        // pending reminder for this shop (and the old name on a rename).
+        clearDetailReminders(data.name, editingShop.name);
+        return true;
       }
 
       // [v7.5.55 C5, private half] The private-shop callbacks are async and
@@ -705,6 +904,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           kpayNumber: data.kpayNumber,
           generalNotes: data.generalNotes,
         });
+      }
+      // [v7.5.89 B3] CREATE hard block (private side): a same-name
+      // record in EITHER list refuses the save — a warning is not
+      // enough. The modal stays open so the user can pick a different
+      // name or edit the existing shop instead.
+      if (isDuplicateShopName(data.name, [publicShops, privateShops])) {
+        showNotice(
+          lang === 'my'
+            ? `သတိပေးချက်: "${data.name}" အမည်တူ ဆိုင် ရှိနေပါပြီ — အမည်တူ ဆိုင်အသစ် ထပ်ထည့်၍ မရပါ`
+            : `A shop named "${data.name}" already exists — a duplicate cannot be added`
+        );
+        return false;
       }
       return await onAddPrivateShop({
         name: data.name,
@@ -1822,7 +2033,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         lang={lang}
         onOpenUpgradeModal={onOpenUpgradeModal}
         onSave={handleSaveModal}
-        existingShops={directoryType === 'public' ? publicShops : myShopsList}
+        existingShops={allExistingShops}
       />
 
       {/* [v7.5.81] Report modal — hosted here in ShopsView, not in ShopCard. */}

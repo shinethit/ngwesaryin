@@ -52,7 +52,9 @@ import {
   applyResolvedMenuUpdate,
   buildMenuPromptRows,
   resolveMenuShop,
+  resolveMenuShopById,
   type MenuUpdateRow,
+  type ResolvedMenuShop,
   type ShopMenuStore,
   type StashedMenuCandidate,
 } from './utils/shopMenuUpdate';
@@ -932,11 +934,10 @@ export default function App() {
     pendingShopDetailsNameRef.current = null;
     if (!name) return;
     // Re-check: the shop's details may have been filled meanwhile.
-    // (App's publicShops list carries only id+name, so a public shop
-    // still counts as needing details here; a private shop never
-    // reaches this path — its details prompt was already suppressed
-    // at capture time by isShopNameNeedingDetails.)
-    if (isShopNameNeedingDetails(name, shops, publicShops)) {
+    // [v7.5.89 A1] The FULL public docs are passed (not the id+name
+    // list): a public shop WITH phone/address must suppress the
+    // prompt here, exactly as at capture time in TransactionModal.
+    if (isShopNameNeedingDetails(name, shops, publicShopsFull)) {
       setShopDetailsPromptName(name);
     }
   };
@@ -967,7 +968,8 @@ export default function App() {
       const key = normalizeShopName(candidate.shopName);
       if (!key || !candidate.items || candidate.items.length === 0) return;
       // [v7.5.85 FIX 2] Shared resolution (public-first, full public
-      // doc via getDoc, never fall back to a private namesake).
+      // doc via getDoc; a failed public fetch falls back to the
+      // private namesake — v7.5.89 A6).
       const resolved = await resolveMenuShop(candidate.shopName, publicShops, shops, fetchPublicMenuShop);
       if (!resolved) {
         // NEW SHOP: it exists in neither list yet — it is created
@@ -1028,7 +1030,20 @@ export default function App() {
     (async () => {
       menuCandidatePendingRef.current = true;
       try {
-        const resolved = await resolveMenuShop(stashed.shopName, publicShops, shops, fetchPublicMenuShop);
+        // [v7.5.89 A5] A stashed candidate that carries a shop id
+        // resolves by id first (rename-proof — the shop may have
+        // been renamed between stash and retry); otherwise by name.
+        // The id is tried as public first, then private: the stash
+        // does not record which list the shop is in.
+        let resolved: ResolvedMenuShop | null = null;
+        if (stashed.shopId) {
+          resolved =
+            (await resolveMenuShopById(stashed.shopId, true, shops, fetchPublicMenuShop)) ??
+            (await resolveMenuShopById(stashed.shopId, false, shops, fetchPublicMenuShop));
+        }
+        if (!resolved) {
+          resolved = await resolveMenuShop(stashed.shopName, publicShops, shops, fetchPublicMenuShop);
+        }
         if (cancelled) return;
         if (!resolved) return;
         const rows = buildMenuPromptRows(stashed.items, resolved, !!user);
@@ -1079,14 +1094,19 @@ export default function App() {
           : 'Guest';
       // [v7.5.85 FIX 2] RE-RESOLVE AT APPLY — the prompt holds the
       // shop SNAPSHOT from save time, but the shop may have been
-      // MOVED (private → public) or DELETED since. Resolve BY NAME
-      // from CURRENT state (public-first, full public doc via
-      // getDoc) and build from the FRESH shop and its CURRENT items.
+      // MOVED (private → public), RENAMED, or DELETED since.
+      // [v7.5.89 A5] Resolve by the prompt's shop ID first, so a
+      // rename between open and Apply still lands on the right doc
+      // (under its CURRENT name and items); fall back to the
+      // name-based resolution for a move, which changes the id.
+      // Build from the FRESH shop and its CURRENT items.
       // If it is gone everywhere, show the error and write NOTHING:
       // calling handleUpdateShop on a deleted private shop would
       // RESURRECT it in Firestore (safeSetDoc merge) behind a false
       // success toast, and the public copy would never get the prices.
-      const fresh = await resolveMenuShop(menuPrompt.shopName, publicShops, shops, fetchPublicMenuShop);
+      const fresh =
+        (await resolveMenuShopById(menuPrompt.shopId, menuPrompt.isPublic, shops, fetchPublicMenuShop)) ??
+        (await resolveMenuShop(menuPrompt.shopName, publicShops, shops, fetchPublicMenuShop));
       if (!fresh) {
         setMenuPromptError(
           lang === 'my'
@@ -3332,6 +3352,11 @@ export default function App() {
         </div>
       </div>
 
+      {/* [v7.5.89 A1] publicShops below is the FULL public docs, not
+          the id+name list — TransactionModal's capture-time details
+          check needs the details fields to suppress the prompt for a
+          filled public shop. Autocomplete / isNewShopName only read
+          id+name, so the full docs are compatible there. */}
       <TransactionModal
         isOpen={isTxModalOpen}
         initialType={txModalInitialType}
@@ -3342,7 +3367,7 @@ export default function App() {
         wallets={computedWallets}
         vehicles={vehicles}
         allTransactions={transactions}
-        publicShops={publicShops}
+        publicShops={publicShopsFull}
         shops={shops}
         onShopNeedsDetails={handleShopNeedsDetails}
         onShopMenuUpdateCandidate={handleShopMenuUpdateCandidate}

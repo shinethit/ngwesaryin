@@ -4,7 +4,7 @@ import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { mergeAndCleanCategories } from '../utils/categoryCleanUp';
 import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
-import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
+import { normalizeShopName, resolveShopDetailReminder } from '../utils/shopDetailsReminders';
 import { UNBUDGETED_CATEGORY_ID } from '../types';
 import type {
   BudgetConfig,
@@ -106,12 +106,19 @@ export function useDataHandlers({
   };
 
   const handleUpdateShop = async (updatedShop: ShopContact): Promise<boolean> => {
+    // [v7.5.89 A4] Rename — the reminder is keyed by NAME, so look up
+    // the OLD name before overwriting: resolving only the new name
+    // leaves a stale reminder under the old name that never clears.
+    const oldName = shops.find((s) => s.id === updatedShop.id)?.name;
     updatedShop = { ...updatedShop, updatedAt: Date.now(), version: (updatedShop.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
     setShops((prev) =>
       prev.map((s) => (s.id === updatedShop.id ? updatedShop : s))
     );
     // [v7.5.78 C] Shop details filled — clear any pending reminder.
     resolveShopDetailReminder(updatedShop.name);
+    if (oldName && normalizeShopName(oldName) !== normalizeShopName(updatedShop.name)) {
+      resolveShopDetailReminder(oldName);
+    }
 
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;

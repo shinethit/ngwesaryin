@@ -43,7 +43,7 @@ interface ShopModalProps {
     kpayNumber: string;
     generalNotes: string;
     subCategory: string;
-    targetDirectory: 'public' | 'private';
+    targetDirectory: 'public' | 'private' | 'both';
   }) => Promise<boolean>;
   existingShops: (ShopContact | PublicShop)[];
 }
@@ -60,7 +60,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   onSave,
   existingShops,
 }) => {
-  const [formDirectoryType, setFormDirectoryType] = useState<'public' | 'private'>(directoryType);
+  const [formDirectoryType, setFormDirectoryType] = useState<'public' | 'private' | 'both'>(directoryType);
   const [formName, setFormName] = useState('');
   const [formCategory, setFormCategory] = useState('grocery');
   const [formSubCategory, setFormSubCategory] = useState('');
@@ -382,6 +382,10 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   ? lang === 'my'
                     ? 'ပြည်သူလူထု အတူတကွ ရှာဖွေနိုင်ရန် ဝိုင်းဝန်းဖြည့်သွင်းပေးပါ'
                     : 'Share shop details with the community'
+                  : formDirectoryType === 'both'
+                  ? lang === 'my'
+                    ? 'နှစ်နေရာလုံးမှာ တစ်ပုံစံတည်း သိမ်းမယ်'
+                    : 'Save identically in both places'
                   : lang === 'my'
                   ? 'သင်တစ်ဦးတည်းသာ မြင်တွေ့နိုင်မည့် သီးသန့်စာရင်းတွင် သိမ်းဆည်းမည်'
                   : 'Save privately for your personal reference'}
@@ -400,13 +404,28 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         {/* MODAL BODY FORM */}
         <form ref={formRef} onSubmit={handleSubmit} noValidate className="p-4 sm:p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden">
           {/* DIRECTORY TARGET SELECTOR — shown for create AND edit so a shop
-              can move between Public / Private (v7.5.55 C27). */}
+              can move between Public / Private (v7.5.55 C27).
+              [v7.5.89 B2] THREE-way now: Public / Private / Both. On EDIT
+              the record's current location is shown as a label above,
+              and this selector is the DESTINATION (today one control
+              did both jobs). Cards are STACKED (flex-col), not a 3-col
+              grid: at 390px each card is ~110px wide in a grid and the
+              Burmese labels wrap mid-phrase ("ပြည်သူ့ / လမ်းညွှန်",
+              "နှစ်ခု / လုံး") — stacked, each label sits on one line
+              and each card stays well over the 44px tap target. */}
           {(
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 {lang === 'my' ? 'သိမ်းဆည်းမည့် နေရာရွေးချယ်ရန် *' : 'Save Location *'}
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              {editingShop && !editingShop.id.startsWith('__prefill_') && (
+                <p className="text-[11px] font-semibold text-slate-500">
+                  {lang === 'my'
+                    ? `လက်ရှိနေရာ: ${isEditingPublic ? 'ပြည်သူ့လမ်းညွှန်' : 'ကိုယ်ပိုင်စာရင်း'}`
+                    : `Current location: ${isEditingPublic ? 'Public Directory' : 'Private List'}`}
+                </p>
+              )}
+              <div className="flex flex-col gap-2">
                 {/* Public Card */}
                 <button
                   type="button"
@@ -416,15 +435,15 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     setFormError(null);
                     setFormDirectoryType('public');
                   }}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer min-h-[44px] ${
                     formDirectoryType === 'public'
                       ? 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
                       : 'bg-white border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="flex items-center gap-1.5 font-bold text-slate-900 text-xs min-w-0">
-                      <Globe className="w-4 h-4 text-emerald-600" />
+                    <span className="flex items-center gap-1 font-bold text-slate-900 text-xs min-w-0">
+                      <Globe className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>{lang === 'my' ? 'ပြည်သူ့လမ်းညွှန်' : 'Public Directory'}</span>
                     </span>
                     {formDirectoryType === 'public' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
@@ -449,15 +468,15 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       setFormDirectoryType('private');
                     }
                   }}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer min-h-[44px] ${
                     formDirectoryType === 'private'
                       ? 'bg-amber-50/70 border-amber-500 ring-2 ring-amber-500/20 shadow-xs'
                       : 'bg-white border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="flex items-center gap-1.5 font-bold text-slate-900 text-xs min-w-0">
-                      <Lock className="w-4 h-4 text-amber-600" />
+                    <span className="flex items-center gap-1 font-bold text-slate-900 text-xs min-w-0">
+                      <Lock className="w-4 h-4 text-amber-600 shrink-0" />
                       <span>{lang === 'my' ? 'ကိုယ်ပိုင်စာရင်း ⭐️' : 'Private List ⭐️'}</span>
                     </span>
                     {formDirectoryType === 'private' && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
@@ -466,7 +485,57 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     {lang === 'my' ? 'မိမိတစ်ဦးတည်းသာ လုံခြုံစွာ သီးသန့်သိမ်းဆည်းမည့်စာရင်း' : 'Visible only to your account'}
                   </p>
                 </button>
+
+                {/* Both Card — [v7.5.89 B2] A COPY in both places, never
+                    a move. Premium-gated exactly like Private (same
+                    disabled state + Premium note + upgrade modal on
+                    tap for non-Premium). Sign-in is required like
+                    Public, but the form only ever opens signed-in
+                    (ShopsView gates guests at open), so no extra
+                    check is needed here. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (plan !== 'premium') {
+                      setFormError(
+                        lang === 'my'
+                          ? 'နှစ်နေရာလုံးမှာ သိမ်းဆည်းခြင်းက Premium အင်္ဂါရပ် ဖြစ်ပါသည်။ Premium သို့ အဆင့်မြှင့်တင်ပါ'
+                          : 'Saving in both places is a Premium VIP feature. Please upgrade to unlock.'
+                      );
+                      if (onOpenUpgradeModal) onOpenUpgradeModal();
+                    } else {
+                      setFormError(null);
+                      setFormDirectoryType('both');
+                    }
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer min-h-[44px] ${
+                    formDirectoryType === 'both'
+                      ? 'bg-teal-50/70 border-teal-500 ring-2 ring-teal-500/20 shadow-xs'
+                      : 'bg-white border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="flex items-center gap-1 font-bold text-slate-900 text-xs min-w-0">
+                      <Globe className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>{lang === 'my' ? 'နှစ်ခုလုံး' : 'Both'}</span>
+                    </span>
+                    {formDirectoryType === 'both' && <Check className="w-4 h-4 text-teal-600 shrink-0" />}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    {lang === 'my' ? 'ပြည်သူ့လမ်းညွှန်နဲ့ ကိုယ်ပိုင်စာရင်း နှစ်ခုလုံး' : 'Public directory and private list'}
+                  </p>
+                </button>
               </div>
+              {/* [v7.5.89 B2] Both = two copies that diverge by default —
+                  later edits of one copy do not change the other. */}
+              {formDirectoryType === 'both' && (
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  {lang === 'my'
+                    ? 'နှစ်နေရာလုံးမှာ တစ်ပုံစံတည်း သိမ်းမယ်။ နောက်ပိုင်း တစ်ခုချင်း ပြင်ရင် တစ်ခုချင်းစီပဲ ပြောင်းမယ်။'
+                    : 'Saved identically in both places. Later edits to one copy do not change the other.'}
+                </p>
+              )}
             </div>
           )}
 

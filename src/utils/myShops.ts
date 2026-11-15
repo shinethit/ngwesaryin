@@ -9,10 +9,42 @@
 // the shop simply shows up in both places because the public copy
 // carries the user's uid.
 //
+// [v7.5.89 B4] SAME-NAME RULE — one shop name = one shop. A name that
+// already exists in EITHER list (public directory or private list,
+// matched by folded name — trim + lowercase via normalizeShopName)
+// must never be created again: the save path hard-blocks the duplicate
+// (see shopSave.isDuplicateShopName) and the details-prompt deep-link
+// opens the existing record for editing instead of minting a new doc
+// (see findShopByName below). When two records with the same folded
+// name do meet in one list — the brief window during a move, or a
+// legacy duplicate — dedupe keeps ONE: prefer the record WITH a menu
+// (non-empty items), because the menu is the data that must not be
+// lost; otherwise the later (public) copy wins, as before.
+//
 // Pure function — no Firestore, no auth import (the caller passes the
 // uid) — so it is unit-testable in the node vitest env.
 import { ShopContact, PublicShop } from '../types';
 import { normalizeShopName } from './shopDetailsReminders';
+
+/**
+ * First record in `shops` whose folded name equals `name` (trim +
+ * lowercase via normalizeShopName — the same folding the save path and
+ * the reminders use, so a record found here is the record the save
+ * path would block as a duplicate). Used by the details-prompt
+ * deep-link (v7.5.89 B1): search MY shops first, then the FULL public
+ * directory, so a public shop added by someone else (or one of the 874
+ * imports) opens THAT record for editing instead of minting a
+ * `__prefill_` duplicate with an empty menu. Returns undefined when no
+ * record exists anywhere.
+ */
+export function findShopByName<T extends ShopContact | PublicShop>(
+  shops: readonly T[],
+  name: string
+): T | undefined {
+  const key = normalizeShopName(name);
+  if (!key) return undefined;
+  return shops.find((s) => normalizeShopName(s.name) === key);
+}
 
 /**
  * Build the list shown in the Private ("ကိုယ်ပိုင်") tab.
@@ -22,7 +54,9 @@ import { normalizeShopName } from './shopDetailsReminders';
  * - Signed-in → `[...privateShops, ...myPublicShops]`, deduped by
  *   normalized shop name. When both copies exist (the brief window
  *   during a move, before the private original is deleted) the PUBLIC
- *   copy wins — it is the live record.
+ *   copy wins — it is the live record — UNLESS only one of them has a
+ *   menu: the record WITH items wins, so a menu is never silently
+ *   dropped by the dedupe (v7.5.89 B4).
  */
 export function buildMyShopsList(
   privateShops: ShopContact[],
@@ -43,8 +77,21 @@ export function buildMyShopsList(
     // Nameless records (should not happen — the form requires a name)
     // never collapse into each other.
     const dedupeKey = key === '' ? `__nameless_${i}` : key;
-    if (!byName.has(dedupeKey)) order.push(dedupeKey);
-    byName.set(dedupeKey, shop);
+    if (!byName.has(dedupeKey)) {
+      order.push(dedupeKey);
+      byName.set(dedupeKey, shop);
+      return;
+    }
+    // [v7.5.89 B4] Same folded name twice: prefer the record WITH a
+    // menu (non-empty items) — the menu is the data that must not be
+    // lost. When both have a menu, or neither does, the LATER entry
+    // wins as before (public copies come after private ones, so a
+    // public copy replaces a same-named private copy in place — its
+    // position is kept).
+    const prev = byName.get(dedupeKey)!;
+    const prevHasMenu = (prev.items?.length ?? 0) > 0;
+    const nextHasMenu = (shop.items?.length ?? 0) > 0;
+    if (nextHasMenu || !prevHasMenu) byName.set(dedupeKey, shop);
   });
   return order.map((k) => byName.get(k)!);
 }

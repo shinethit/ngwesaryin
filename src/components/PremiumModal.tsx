@@ -4,6 +4,7 @@ import { Crown, Check, X, Sparkles, ShieldCheck, ExternalLink, LogIn, KeyRound, 
 import confetti from 'canvas-confetti';
 import { PlanType, ContactInfo } from '../types';
 import { fetchContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';
+import { computePromoExpiry, redeemPromoCodeInOrder, promoRedeemErrorMessage } from '../utils/premiumActivation';
 import { getDoc, doc } from 'firebase/firestore';
 import { db, safeUpdateDoc, safeSetDoc } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -203,59 +204,57 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
               : 'This activation code has expired. Please request a new code from Admin.'
           );
         } else {
-          // [v7.5.55 E6] Write ORDER matters: the profile write goes
-          // FIRST and its boolean return is checked; the code is marked
-          // used ONLY after the profile write succeeds. Burning the code
-          // first used to lose the code (and the renewal) when the
-          // profile write was rejected — e.g. canUpgradePremium() in
-          // Firestore rules rejects a premium user, so a renewal burned
-          // the code and granted nothing.
+          // [v7.5.92] Write ORDER matters — burn FIRST, profile SECOND.
+          // firestore.rules canUpgradePremium() Path B requires the code
+          // to ALREADY be isUsed == true AND usedBy == this uid at
+          // profile-write time, so the old order (profile first, burn
+          // after) was ALWAYS denied by the rules — a deadlock no code
+          // could ever be redeemed through. redeemPromoCodeInOrder
+          // burns first; only then writes the profile.
+          // (The v7.5.55 concern — burning first then losing the code
+          // on a rejected profile write — no longer applies the same
+          // way: a burn that succeeds is now REQUIRED for the profile
+          // write to pass at all, and a profile failure after a burn
+          // is reported honestly below instead of silently.)
           const months = Number(codeData.months) || 1;
-          const isLifetime = months >= 900;
           const now = new Date();
-          // Renewals STACK onto the existing expiry (max(now, current)).
-          const currentExpMs = userProfile?.premiumExpiresAt ? new Date(userProfile.premiumExpiresAt).getTime() : NaN;
-          const baseMs = !isNaN(currentExpMs) && currentExpMs > now.getTime() ? currentExpMs : now.getTime();
-          const expiresAt = isLifetime
-            ? new Date(baseMs + 100 * 365.25 * 24 * 60 * 60 * 1000).toISOString()
-            : new Date(baseMs + months * 30 * 24 * 60 * 60 * 1000).toISOString();
+          const { isLifetime, expiresAt } = computePromoExpiry({
+            months,
+            currentPremiumExpiresAt: userProfile?.premiumExpiresAt,
+            nowMs: now.getTime(),
+          });
 
           const userRef = doc(db, 'users', user.uid);
-          const profileOk = await safeSetDoc(userRef, {
-            plan: 'premium',
-            premiumActivatedAt: now.toISOString(),
-            premiumExpiresAt: expiresAt,
-            premiumMonths: months,
-            premiumCodeUsed: cleanCode,
-            email: user.email || '',
-            displayName: user.displayName || '',
-            updatedAt: now.toISOString(),
-          }, { merge: true });
-          if (!profileOk) {
-            setPromoError(
-              lang === 'my'
-                ? 'Premium ဖွင့်၍ မရပါ — ကုဒ်ကို မသုံးသေးပါ (ထပ်ကြိုးစားနိုင်ပါသည်)။ အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ'
-                : 'Could not activate Premium — the code was NOT used, please try again. Check connection / permissions.'
-            );
-            return;
-          }
-
-          const codeOk = await safeUpdateDoc(codeRef, {
-            isUsed: true,
-            usedBy: user.uid,
-            usedEmail: user.email || '',
-            usedAt: now.toISOString(),
+          const outcome = await redeemPromoCodeInOrder({
+            burnCode: () =>
+              safeUpdateDoc(codeRef, {
+                isUsed: true,
+                usedBy: user.uid,
+                usedEmail: user.email || '',
+                usedAt: now.toISOString(),
+              }),
+            writeProfile: () =>
+              safeSetDoc(
+                userRef,
+                {
+                  plan: 'premium',
+                  premiumActivatedAt: now.toISOString(),
+                  premiumExpiresAt: expiresAt,
+                  premiumMonths: months,
+                  premiumCodeUsed: cleanCode,
+                  email: user.email || '',
+                  displayName: user.displayName || '',
+                  updatedAt: now.toISOString(),
+                },
+                { merge: true },
+              ),
           });
-          if (!codeOk) {
-            // Profile is already premium; the code was NOT burned, so
-            // it can still be redeemed. Tell the user honestly instead
-            // of pretending everything worked.
-            setPromoError(
-              lang === 'my'
-                ? 'Premium ဖွင့်ပြီးသော်လည်း ကုဒ်ကို အသုံးပြုပြီးအဖြစ် မှတ်သား၍ မရပါ — Admin ကို ဆက်သွယ်ပါ (ကုဒ်သည် ထပ်သုံးနိုင်သေးသည်)'
-                : 'Premium was activated, but the code could not be marked as used — please contact Admin (the code can still be redeemed).'
-            );
-            if (refreshUserProfile) await refreshUserProfile();
+          if (outcome.status !== 'success') {
+            // Burn failed → the profile was never written and nothing
+            // was activated. Profile failed after a burn → the code IS
+            // spent; say so honestly (ask Admin for a new code).
+            // Either way the finally below clears isVerifying.
+            setPromoError(promoRedeemErrorMessage(outcome, lang) || '');
             return;
           }
 

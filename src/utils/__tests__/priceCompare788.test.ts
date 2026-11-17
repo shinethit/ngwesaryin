@@ -125,12 +125,12 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.5.91 — history entry and version.json in sync', () => {
-  it('current version is v7.5.91 / build 306', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.5.91');
-    expect(CURRENT_BUILD_NUMBER).toBe(306);
-    expect(VERSION_JSON.version).toBe('v7.5.91');
-    expect(VERSION_JSON.buildNumber).toBe(306);
+describe('Version v7.5.92 — history entry and version.json in sync', () => {
+  it('current version is v7.5.92 / build 307', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.5.92');
+    expect(CURRENT_BUILD_NUMBER).toBe(307);
+    expect(VERSION_JSON.version).toBe('v7.5.92');
+    expect(VERSION_JSON.buildNumber).toBe(307);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -139,21 +139,21 @@ describe('Version v7.5.91 — history entry and version.json in sync', () => {
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.5.91 feature entry with no Admin mention', () => {
+  it('top history entry is the v7.5.92 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.5.91');
-    expect(entry.buildNumber).toBe(306);
-    expect(entry.releaseDate).toBe('2026-11-15');
-    expect(entry.tag).toBe('feature');
-    expect(entry.tagLabelMy).toBe('Feature အသစ်');
-    expect(entry.tagLabelEn).toBe('New Feature');
-    expect(entry.titleMy).toBe('အသေးစိတ် မပြည့်သေးတဲ့ ဆိုင်များ filter နဲ့ မဖြည့်သေးပါ ရွေးစရာ');
-    expect(entry.titleEn).toBe('Filter for shops missing details, plus a Not now option');
+    expect(entry.version).toBe('v7.5.92');
+    expect(entry.buildNumber).toBe(307);
+    expect(entry.releaseDate).toBe('2026-11-17');
+    expect(entry.tag).toBe('fix');
+    expect(entry.tagLabelMy).toBe('Bug Fix');
+    expect(entry.tagLabelEn).toBe('Bug Fix');
+    expect(entry.titleMy).toBe('Trial နဲ့ Activation Code ပြန်အလုပ်ဖြစ်ပြီ');
+    expect(entry.titleEn).toBe('Free trial and activation codes work again');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(4);
-    expect(entry.changesEn).toHaveLength(4);
+    expect(entry.changesMy).toHaveLength(2);
+    expect(entry.changesEn).toHaveLength(2);
   });
 });

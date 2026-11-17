@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.91';
-export const CURRENT_BUILD_NUMBER = 306;
+export const CURRENT_APP_VERSION = 'v7.5.92';
+export const CURRENT_BUILD_NUMBER = 307;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.92',
+    buildNumber: 307,
+    releaseDate: '2026-11-17',
+    releaseTime: '7:03 PM (MMT)',
+    titleMy: 'Trial နဲ့ Activation Code ပြန်အလုပ်ဖြစ်ပြီ',
+    titleEn: 'Free trial and activation codes work again',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အကောင့်အသစ်က ၃ လ အခမဲ့ Premium trial ကို အခု ရယူလို့ရပြီ။ Activation Code ထည့်ပြီး Premium ဖွင့်လို့ရပြီ — ကုတ်မှန်ရင် ဖွင့်ပေးမယ်။',
+    descriptionEn: 'New accounts can claim the 3-month free Premium trial again. Activation codes redeem properly again — a valid code activates Premium.',
+    changesMy: [
+      'အကောင့်အသစ်က ၃ လ အခမဲ့ Premium trial ကို အခု ရယူလို့ရပြီ။',
+      'Activation Code ထည့်ပြီး Premium ဖွင့်လို့ရပြီ — ကုတ်မှန်ရင် ဖွင့်ပေးမယ်။',
+    ],
+    changesEn: [
+      'New accounts can claim the 3-month free Premium trial again.',
+      'Activation codes redeem properly again — a valid code activates Premium.',
+    ],
+  },
   {
     version: 'v7.5.91',
     buildNumber: 306,

@@ -22,6 +22,7 @@ import { safeGetItem, safeSetItem, safeRemoveItem, setStorageScope } from '../ut
 import { getSharedWalletDocId, recomputeSharedWalletBalance } from '../lib/sharedWalletService';
 import { fetchMyRefs, deleteSharedWalletRef, subscribeMyRefs } from '../lib/sharedWalletRefs';
 import { computeSyncSignature, computeContentFingerprint } from '../utils/syncGuards';
+import { buildTrialProfileUpdate } from '../utils/premiumActivation';
 import { isWalletMatch } from '../utils/walletBalance';
 
 interface AuthContextType {
@@ -436,29 +437,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       }
 
-      // Calculate 3 months (90 days) expiration
+      // [v7.5.92] buildTrialProfileUpdate ALWAYS includes
+      // premiumCodeUsed: null — firestore.rules Path A reads that field
+      // directly, and a missing field errors and denies the trial write.
       const now = new Date();
-      let expiresAt: string;
-      if (data.plan === 'premium' && data.premiumExpiresAt) {
-        const currentExp = new Date(data.premiumExpiresAt).getTime();
-        if (currentExp > nowTime) {
-          expiresAt = new Date(currentExp + 90 * 24 * 60 * 60 * 1000).toISOString();
-        } else {
-          expiresAt = new Date(nowTime + 90 * 24 * 60 * 60 * 1000).toISOString();
-        }
-      } else {
-        expiresAt = new Date(nowTime + 90 * 24 * 60 * 60 * 1000).toISOString();
-      }
-
-      const updatedProfile = {
-        plan: 'premium' as PlanType,
-        premiumExpiresAt: expiresAt,
-        premiumActivatedAt: now.toISOString(),
-        premiumMonths: (data.premiumMonths || 0) + 3,
-        trialClaimed: true,
-        trialClaimedAt: now.toISOString(),
-        accountCreatedAt: rawCreatedAt,
-      };
+      const updatedProfile = buildTrialProfileUpdate({
+        plan: data.plan,
+        premiumExpiresAt: data.premiumExpiresAt,
+        premiumMonths: data.premiumMonths,
+        nowIso: now.toISOString(),
+        nowMs: nowTime,
+        rawCreatedAt,
+      });
+      const expiresAt = updatedProfile.premiumExpiresAt;
 
       // [trial-fix] safeSetDoc returns boolean — MUST check before
       // committing local state. Previously always returned success

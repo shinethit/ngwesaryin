@@ -1,17 +1,13 @@
 {
-  "version": "v7.5.91",
-  "buildNumber": 306,
+  "version": "v7.5.92",
+  "buildNumber": 307,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဆိုင်စာရင်းမှာ အသေးစိတ် မပြည့်သေးတဲ့ ဆိုင်တွေကို အမှတ်အသားနဲ့ ပြမယ် — filter ဖွင့်ရင် အဲဒီဆိုင်တွေပဲ ပြမယ်။",
-    "မဖြည့်ချင်သေးရင် \"လောလောဆယ် မဖြည့်သေးပါ\" လို့ ရွေးလို့ရပြီ — သတိပေးချက် ပျောက်ပြီး ထပ်မမေးတော့ဘူး၊ filter ကနေ နောက်မှ ပြန်ဖြည့်လို့ရတယ်။",
-    "\"ဖြည့်ပြီး\" ဆိုတာ ဖုန်း သို့မဟုတ် လိပ်စာ ရှိမှ လို့ သေချာသတ်မှတ်ထားတယ် — Menu သီးသန့်ရှိရုံနဲ့ မပြည့်သေးဘူးလို့ သတ်မှတ်မယ်။",
-    "အောက်ခြေ bar မှာ အကြွေးအစား ဆိုင်လိပ်စာ ပြောင်းထားတယ် — အကြွေးက Sidebar ထဲမှာ ရှိတယ်။"
+    "အကောင့်အသစ်က ၃ လ အခမဲ့ Premium trial ကို အခု ရယူလို့ရပြီ။",
+    "Activation Code ထည့်ပြီး Premium ဖွင့်လို့ရပြီ — ကုတ်မှန်ရင် ဖွင့်ပေးမယ်။"
   ],
   "changesEn": [
-    "Shops missing details now carry a marker in the list, and a filter shows only those shops.",
-    "You can now choose Not now — the reminder goes away and will not ask again; the shop stays findable in the filter for later.",
-    "Filled now clearly means having a phone or an address — a menu alone does not count as filled.",
-    "The bottom bar now has Shops in place of Debts; Debts remains in the sidebar."
+    "New accounts can claim the 3-month free Premium trial again.",
+    "Activation codes redeem properly again — a valid code activates Premium."
   ]
 }

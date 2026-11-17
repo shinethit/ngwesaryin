@@ -631,4 +631,90 @@ describe('Firestore Rules — shared wallet security', () => {
     await assertSucceeds(updateDoc(doc(asAdmin(), 'shop_price_alerts', 'shop_1_rice_kg'), { status: 'dismissed' }));
     await assertSucceeds(updateDoc(doc(asAdmin(), 'shop_price_alerts', 'shop_1_rice_kg'), { status: 'resolved' }));
   });
+
+  // ── v7.5.92 — Trial + activation-code fixes ──
+  // NOTE: same Java caveat as the v7.5.82 tests above — written but
+  // UNRUN on this VM (no Java for the Firestore emulator).
+
+  // Seed helper: a user doc EXACTLY as AuthContext signupWithEmail
+  // writes it (AuthContext.tsx:897-905) — NO premiumCodeUsed, NO
+  // trialClaimed, NO premiumActivatedAt, NO premiumMonths. This is
+  // the production shape the old rules (direct premiumCodeUsed
+  // access) rejected on every trial claim.
+  const seedProductionUser = async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', OWNER_UID), {
+        userId: OWNER_UID,
+        email: OWNER_EMAIL,
+        displayName: 'Owner',
+        photoURL: '',
+        plan: 'free',
+        collaborators: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    });
+  };
+
+  const CODE_ID = 'TESTCODE123';
+
+  const seedUnusedCode = async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'activationCodes', CODE_ID), {
+        code: CODE_ID,
+        isUsed: false,
+        months: 3,
+        createdAt: new Date().toISOString(),
+        createdBy: ADMIN_UID,
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+    });
+  };
+
+  it('36. [v7.5.92] Trial SUCCEEDS on a production-shaped user doc (no premiumCodeUsed field)', async () => {
+    await seedProductionUser();
+    await assertSucceeds(updateDoc(doc(asOwner(), 'users', OWNER_UID), {
+      plan: 'premium',
+      premiumExpiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      premiumActivatedAt: new Date().toISOString(),
+      premiumMonths: 3,
+      trialClaimed: true,
+      trialClaimedAt: new Date().toISOString(),
+      premiumCodeUsed: null,
+    }));
+  });
+
+  it('37. [v7.5.92] Code redeem SUCCEEDS with the burn-first order', async () => {
+    await seedProductionUser();
+    await seedUnusedCode();
+    // Step 1 — burn the code first (isUsed false -> true, usedBy = me).
+    await assertSucceeds(updateDoc(doc(asOwner(), 'activationCodes', CODE_ID), {
+      isUsed: true,
+      usedBy: OWNER_UID,
+    }));
+    // Step 2 — then write the profile upgrade against the burned code.
+    await assertSucceeds(updateDoc(doc(asOwner(), 'users', OWNER_UID), {
+      plan: 'premium',
+      premiumExpiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      premiumActivatedAt: new Date().toISOString(),
+      premiumMonths: 3,
+      premiumCodeUsed: CODE_ID,
+    }));
+  });
+
+  it('38. [v7.5.92] Trial SUCCEEDS even when the update omits premiumCodeUsed (rules .get() hardening)', async () => {
+    await seedProductionUser();
+    // The app now writes premiumCodeUsed: null (test 36), but the
+    // hardened rule must ALSO allow a trial update that omits the
+    // field entirely — under the OLD direct-access rule this was
+    // denied (missing-field error); under .get() it passes.
+    await assertSucceeds(updateDoc(doc(asOwner(), 'users', OWNER_UID), {
+      plan: 'premium',
+      premiumExpiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      premiumActivatedAt: new Date().toISOString(),
+      premiumMonths: 3,
+      trialClaimed: true,
+      trialClaimedAt: new Date().toISOString(),
+    }));
+  });
 });

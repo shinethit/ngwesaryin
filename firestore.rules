@@ -94,18 +94,33 @@ service cloud.firestore {
             && request.resource.data.premiumExpiresAt.size() >= 20
             && request.resource.data.premiumExpiresAt.size() <= 30
             && (
-              request.resource.data.premiumCodeUsed == null
-              || request.resource.data.premiumCodeUsed == ''
+              // [v7.5.92] .get() with defaults: a fresh account doc has NO
+              // premiumCodeUsed field (signup never writes it), so direct
+              // field access errored and denied every trial claim.
+              request.resource.data.get('premiumCodeUsed', null) == null
+              || request.resource.data.get('premiumCodeUsed', '') == ''
             )
           )
           ||
-          // Path B: valid activation code owned by user — unchanged
+          // Path B: valid activation code — [v7.5.92] also accept a live
+          // unused code. The app now burns the code BEFORE writing the
+          // profile (B1, the normal path); B2 keeps the old profile-first
+          // order safe in future. No expiry check here — the app checks
+          // expiry before redeeming. Residual race: two users redeeming
+          // the same code at once could both pass this rule before
+          // either burn lands (accepted).
           (
             request.resource.data.premiumCodeUsed is string
             && request.resource.data.premiumCodeUsed.size() > 0
             && exists(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed))
-            && get(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed)).data.isUsed == true
-            && get(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed)).data.usedBy == request.auth.uid
+            && (
+              (
+                get(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed)).data.isUsed == true
+                && get(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed)).data.usedBy == request.auth.uid
+              )
+              ||
+              get(/databases/$(database)/documents/activationCodes/$(request.resource.data.premiumCodeUsed)).data.isUsed == false
+            )
           )
         );
     }

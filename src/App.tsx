@@ -3303,6 +3303,7 @@ export default function App() {
             vehicleMaintenance={vehicleMaintenance}
             tirePressureLogs={tirePressureLogs}
             wallets={computedWallets}
+            transactions={transactions}
             plan={plan}
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
                 onSaveVehicle={(v) => handleSaveVehicle(v as Vehicle)}

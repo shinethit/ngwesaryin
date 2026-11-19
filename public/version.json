@@ -1,13 +1,15 @@
 {
-  "version": "v7.5.92",
-  "buildNumber": 307,
+  "version": "v7.5.93",
+  "buildNumber": 308,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အကောင့်အသစ်က ၃ လ အခမဲ့ Premium trial ကို အခု ရယူလို့ရပြီ။",
-    "Activation Code ထည့်ပြီး Premium ဖွင့်လို့ရပြီ — ကုတ်မှန်ရင် ဖွင့်ပေးမယ်။"
+    "ယာဉ်ပြုပြင်မှတ်တမ်းမှာ ပစ္စည်း အများကြီး တစ်ခါတည်း ထည့်လို့ရပြီ — ဥပမာ မီးသီး၊ Wiper၊ လေစစ် တစ်ကြိမ်တည်း ၃ တန်း။",
+    "အတန်းတစ်ခုချင်းစီမှာ ဝန်ဆောင်မှု အမျိုးအစား ရွေးလို့ရတယ် — အမျိုးအစားတစ်ခုချင်းစီရဲ့ နောက်တစ်ခါ လဲရမယ့် သတိပေးချက်ပါ သီးခြား မှတ်ပေးတယ်။",
+    "စုစုပေါင်း အလိုလို ပေါင်းပေးတယ်၊ သိမ်းပြီးရင် စာရင်းထဲမှာ တစ်တန်းချင်း ဖွင့်ကြည့်လို့ရတယ်။"
   ],
   "changesEn": [
-    "New accounts can claim the 3-month free Premium trial again.",
-    "Activation codes redeem properly again — a valid code activates Premium."
+    "Add multiple parts in one vehicle service entry — e.g. headlight, wiper and air filter in one visit.",
+    "Each row has its own service type — every type gets its own next-due reminder.",
+    "The total adds up automatically, and saved rows can be expanded in the transaction list."
   ]
 }

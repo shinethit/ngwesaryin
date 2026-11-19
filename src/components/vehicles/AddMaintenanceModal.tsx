@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Wrench, Gauge, Shield, Save, Trash2, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
-import { VehicleMaintenance, Vehicle, Wallet, VehicleServiceType } from '../../types';
+import { VehicleMaintenance, Vehicle, Wallet, VehicleServiceType, TransactionItem } from '../../types';
 import { SERVICE_TYPE_CONFIG } from '../../utils/vehicleAnalytics';
 import { parseMyanmarNumber } from '../../utils/myanmarDigits';
+// [v7.5.93] Multi-row service entries — same row design as
+// TransactionModal (per-row service type, price/qty/amount, unit).
+import { ROW_SERVICE_TYPES } from '../../utils/vehicleServiceRows';
+import { SHOP_MENU_UNITS, DEFAULT_MENU_UNIT, normalizeMenuUnit } from '../../utils/shopMenuUpdate';
 
 interface AddMaintenanceModalProps {
   isOpen: boolean;
@@ -10,6 +14,11 @@ interface AddMaintenanceModalProps {
   onSave: (maintenance: Partial<VehicleMaintenance>) => void;
   onDelete?: (id: string) => void;
   editingMaintenance?: VehicleMaintenance | null;
+  // [v7.5.93] Items of the transaction linked to editingMaintenance
+  // (resolved by VehiclesView from the transactions list). Present
+  // only when the record was saved with rows — an old record without
+  // them keeps the old single title+cost behaviour.
+  editingTransactionItems?: TransactionItem[];
   vehicles: Vehicle[];
   wallets: Wallet[];
   selectedVehicleId?: string;
@@ -17,12 +26,26 @@ interface AddMaintenanceModalProps {
   vehicleMaintenance?: VehicleMaintenance[];
 }
 
+// [v7.5.93] One blank service row — serviceType defaults to the
+// visit's current main type (changing the main type never rewrites
+// existing rows' types).
+const blankServiceRow = (type: VehicleServiceType): TransactionItem => ({
+  id: `row_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+  name: '',
+  price: 0,
+  quantity: 1,
+  amount: 0,
+  unit: DEFAULT_MENU_UNIT,
+  serviceType: type,
+});
+
 export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   isOpen,
   onClose,
   onSave,
   onDelete,
   editingMaintenance,
+  editingTransactionItems,
   vehicles,
   wallets,
   selectedVehicleId,
@@ -44,6 +67,97 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   const [syncToExpense, setSyncToExpense] = useState(true);
   const [note, setNote] = useState('');
 
+  // [v7.5.93] Multi-row service entries. `useServiceRows` is false
+  // only when editing an OLD record whose linked transaction carries
+  // no items — that keeps the old single title+cost behaviour. New
+  // entries always start with rows (one blank row).
+  const [useServiceRows, setUseServiceRows] = useState(true);
+  const [serviceRows, setServiceRows] = useState<TransactionItem[]>([]);
+  const serviceRowsContainerRef = useRef<HTMLDivElement>(null);
+  const newlyAddedRowIdRef = useRef<string | null>(null);
+
+  // [v7.5.93] Valid rows — EXACTLY the TransactionModal rule (name
+  // required, qty > 0; empty rows dropped, zero-price rows kept) with
+  // amount recomputed as price x qty. The handler re-applies the same
+  // rule via groupServiceRowsByType, so modal and handler always agree.
+  const validServiceRows = useMemo(
+    () =>
+      serviceRows
+        .filter((r) => r.name.trim() && (Number(r.quantity) || 0) > 0)
+        .map((r) => {
+          const p = Number(r.price) || 0;
+          const q = Number(r.quantity) || 0;
+          return {
+            name: r.name.trim(),
+            price: p,
+            quantity: q,
+            amount: Number((p * q).toFixed(2)),
+            unit: normalizeMenuUnit(r.unit),
+            ...(r.serviceType ? { serviceType: r.serviceType } : {}),
+          } as TransactionItem;
+        }),
+    [serviceRows]
+  );
+  // The rows total IS the visit cost — the single cost field below
+  // only displays it while rows are shown (one source of truth).
+  const serviceRowsTotal = useMemo(
+    () => validServiceRows.reduce((s, r) => s + (Number(r.amount) || 0), 0),
+    [validServiceRows]
+  );
+
+  const updateServiceRow = (
+    id: string,
+    field: 'serviceType' | 'name' | 'price' | 'quantity' | 'unit',
+    val: string | VehicleServiceType
+  ) => {
+    setServiceRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        if (field === 'price' || field === 'quantity') {
+          const num = parseMyanmarNumber(val as string);
+          const parsed = Number.isNaN(num) ? 0 : num;
+          const next = { ...row, [field]: parsed };
+          // Amount is auto: price x qty (the save normalises it the
+          // same way, so what is shown is what is saved).
+          next.amount = Number(((Number(next.price) || 0) * (Number(next.quantity) || 0)).toFixed(2));
+          return next;
+        }
+        return { ...row, [field]: val };
+      })
+    );
+  };
+
+  const addServiceRow = () => {
+    const newRow = blankServiceRow(serviceType);
+    newlyAddedRowIdRef.current = newRow.id || null;
+    setServiceRows((prev) => [...prev, newRow]);
+  };
+
+  // [v7.5.93] Scroll to the new row + focus its name input, same as
+  // TransactionModal's shopping-list rows.
+  useEffect(() => {
+    if (newlyAddedRowIdRef.current && serviceRowsContainerRef.current) {
+      const targetId = newlyAddedRowIdRef.current;
+      const timer = setTimeout(() => {
+        if (serviceRowsContainerRef.current) {
+          serviceRowsContainerRef.current.scrollTo({ top: serviceRowsContainerRef.current.scrollHeight, behavior: 'smooth' });
+        }
+        const inputElem = document.getElementById(`input-maint-row-name-${targetId}`);
+        if (inputElem) inputElem.focus();
+        newlyAddedRowIdRef.current = null;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [serviceRows.length]);
+
+  // Never zero rows — removing the last row leaves one blank row.
+  const removeServiceRow = (id: string) => {
+    setServiceRows((prev) => {
+      const filtered = prev.filter((r) => r.id !== id);
+      return filtered.length > 0 ? filtered : [blankServiceRow(serviceType)];
+    });
+  };
+
   const currentVehicle = useMemo(() => {
     return vehicles.find((v) => v.id === vehicleId) || vehicles[0];
   }, [vehicles, vehicleId]);
@@ -64,6 +178,13 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   }, [vehicleMaintenance, vehicleId, serviceType, editingMaintenance]);
 
   const isLicenseRenewal = serviceType === 'license_renewal';
+
+  // [v7.5.93] Rows are shown unless this is a licence visit (single
+  // fee) or the form is editing an old record without items.
+  const showServiceRows = !isLicenseRenewal && useServiceRows;
+  // Cost shown in the single cost field: the rows total while rows
+  // are shown, the editable input otherwise.
+  const displayCost = showServiceRows ? serviceRowsTotal : (cost === '' ? 0 : Number(cost));
 
   const handleServiceTypeChange = (type: VehicleServiceType) => {
     setServiceType(type);
@@ -162,6 +283,27 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       setWalletId(editingMaintenance.walletId);
       setSyncToExpense(editingMaintenance.syncToExpense ?? true);
       setNote(editingMaintenance.note || '');
+      // [v7.5.93] Edit mode: restore the rows from the linked
+      // transaction's items (a row without a serviceType belongs to
+      // the visit's main type). No items (old record) → single
+      // title+cost behaviour, exactly as before.
+      if (editingTransactionItems && editingTransactionItems.length > 0) {
+        setUseServiceRows(true);
+        setServiceRows(
+          editingTransactionItems.map((it) => ({
+            id: it.id || blankServiceRow(editingMaintenance.serviceType).id,
+            name: it.name || '',
+            price: Number(it.price) || 0,
+            quantity: Number(it.quantity) || 0,
+            amount: Number(((Number(it.price) || 0) * (Number(it.quantity) || 0)).toFixed(2)),
+            unit: it.unit || DEFAULT_MENU_UNIT,
+            serviceType: it.serviceType || editingMaintenance.serviceType,
+          }))
+        );
+      } else {
+        setUseServiceRows(false);
+        setServiceRows([]);
+      }
     } else {
       const vId = selectedVehicleId || vehicles[0]?.id || '';
       const v = vehicles.find((item) => item.id === vId) || vehicles[0];
@@ -182,14 +324,28 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       setWalletId(vehicleWalletExists ? v!.walletId! : (wallets[0]?.id || ''));
       setSyncToExpense(true);
       setNote('');
+      // [v7.5.93] A new entry always starts with one blank row (its
+      // type defaults to the visit's main type, 'engine_oil').
+      setUseServiceRows(true);
+      setServiceRows([blankServiceRow('engine_oil')]);
     }
-  }, [editingMaintenance, isOpen, vehicles, selectedVehicleId, wallets, lang]);
+  }, [editingMaintenance, editingTransactionItems, isOpen, vehicles, selectedVehicleId, wallets, lang]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vehicleId || !date || cost === '' || (!title.trim() && !isLicenseRenewal)) {
+    // [v7.5.93] Rows active = not a licence visit AND the form is in
+    // rows mode. Then the rows total IS the cost and the save gate is
+    // total > 0 (same rule as TransactionModal's multi-row save);
+    // otherwise the single editable cost field gates as before.
+    const rowsActive = showServiceRows;
+    if (!vehicleId || !date || (!title.trim() && !isLicenseRenewal)) {
+      return;
+    }
+    if (rowsActive) {
+      if (serviceRowsTotal <= 0) return;
+    } else if (cost === '') {
       return;
     }
 
@@ -226,7 +382,12 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
 
     const maintId = editingMaintenance?.id || `maint_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    onSave({
+    // [v7.5.93] The rows travel to the handler on the save payload.
+    // VehicleMaintenance itself has no `items` field (types.ts is
+    // owned by the TransactionModal side), so the payload carries it
+    // as an extra property — the handler reads it, the stored
+    // maintenance record never keeps it.
+    const payload: Partial<VehicleMaintenance> & { items?: TransactionItem[] } = {
       id: maintId,
       transactionId: editingMaintenance?.transactionId,
       vehicleId,
@@ -235,7 +396,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       odometer: isLicenseRenewal ? (currentVehicle?.currentOdometer || 0) : Number(odometer),
       serviceType,
       title: title.trim() || (isLicenseRenewal ? (lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal') : ''),
-      cost: Number(cost),
+      cost: rowsActive ? serviceRowsTotal : Number(cost),
       sparePartBrand: sparePartBrand.trim() || undefined,
       workshopName: workshopName.trim() || undefined,
       expectedLifespanKm: expectedLifespanKm !== '' ? Number(expectedLifespanKm) : undefined,
@@ -244,7 +405,10 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       syncToExpense,
       note: note.trim(),
       createdAt: editingMaintenance?.createdAt || Date.now(),
-    });
+    };
+    if (rowsActive) payload.items = validServiceRows;
+
+    onSave(payload);
 
     onClose();
   };
@@ -301,6 +465,63 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
             <input type="text" required={!isLicenseRenewal} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={lang === 'my' ? 'ဥပမာ - အင်ဂျင်ဝိုင် အသစ်လဲလှယ်ခြင်း' : 'e.g. Engine Oil Replacement'} className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
+          {/* [v7.5.93] Multi-row service entries — same design as
+              TransactionModal's shopping-list rows, plus a service-type
+              select per row. Each row's type is tracked separately, so
+              one visit can cover several services. The rows total drives
+              the cost below. Hidden for licence renewal (single fee)
+              and when editing an old record without items. */}
+          {!isLicenseRenewal && useServiceRows && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                  {lang === 'my' ? 'လဲလှယ်သည့် ပစ္စည်း / ဝန်ဆောင်မှု' : 'Parts / Services'}
+                </span>
+                <span className="text-[11px] text-slate-500">{lang === 'my' ? 'အမျိုးအစားတစ်ခုစီ သီးခြား မှတ်မည်' : 'Each type tracked separately'}</span>
+              </div>
+              <div ref={serviceRowsContainerRef} className="space-y-2 max-h-72 overflow-y-auto overflow-x-hidden pr-1">
+                {serviceRows.map((row, idx) => (
+                  <div key={row.id || idx} className="bg-slate-50 rounded-xl p-2.5 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={row.serviceType || serviceType}
+                        onChange={(e) => updateServiceRow(row.id || '', 'serviceType', e.target.value as VehicleServiceType)}
+                        className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none cursor-pointer"
+                      >
+                        {ROW_SERVICE_TYPES.map((t) => (
+                          <option key={t} value={t}>{lang === 'my' ? SERVICE_TYPE_CONFIG[t].labelMy : SERVICE_TYPE_CONFIG[t].labelEn}</option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => removeServiceRow(row.id || '')} className="p-1 text-slate-400 hover:text-rose-600 shrink-0 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="text" id={`input-maint-row-name-${row.id}`} value={row.name} onChange={(e) => updateServiceRow(row.id || '', 'name', e.target.value)} placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'} className="flex-1 min-w-0 text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <input type="text" inputMode="decimal" value={row.price || ''} onChange={(e) => updateServiceRow(row.id || '', 'price', e.target.value)} placeholder="ဈေး" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
+                      <input type="text" inputMode="decimal" value={row.quantity || ''} onChange={(e) => updateServiceRow(row.id || '', 'quantity', e.target.value)} placeholder="Qty" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
+                      <input type="text" inputMode="decimal" value={row.amount || ''} readOnly placeholder="Total" className="min-w-0 w-full text-base font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
+                      <select
+                        value={row.unit || DEFAULT_MENU_UNIT}
+                        onChange={(e) => updateServiceRow(row.id || '', 'unit', e.target.value)}
+                        className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none cursor-pointer"
+                      >
+                        {SHOP_MENU_UNITS.map((u) => (
+                          <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={addServiceRow} className="w-full mt-2 py-1.5 border-2 border-dashed border-blue-300 rounded-xl text-xs font-bold text-blue-800 hover:bg-blue-50 cursor-pointer">+ {lang === 'my' ? 'ပစ္စည်း ထည့်မည်' : 'Add item'}</button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">{lang === 'my' ? 'လဲလှယ်သည့် ရက်စွဲ *' : 'Date *'}</label>
@@ -325,14 +546,21 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">{lang === 'my' ? 'ကုန်ကျစရိတ် (MMK) *' : 'Cost (MMK) *'}</label>
-              <input type="text" inputMode="decimal" required value={cost} onChange={(e) => setCost(handleNumberInput(e.target.value))} placeholder="e.g. 120000" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-900" />
-              {lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && cost && (
+              {/* [v7.5.93] While rows are shown the cost is read-only:
+                  it IS the rows total (one source of truth). The
+                  single editable field returns for licence / old
+                  single-cost records. */}
+              <input type="text" inputMode="decimal" required={!showServiceRows} readOnly={showServiceRows} value={showServiceRows ? (serviceRowsTotal > 0 ? serviceRowsTotal : '') : cost} onChange={(e) => setCost(handleNumberInput(e.target.value))} placeholder="e.g. 120000" className={`w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-900 ${showServiceRows ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : ''}`} />
+              {showServiceRows && (
+                <p className="text-[10px] text-slate-500 mt-1">{lang === 'my' ? '* အထက်ပါ ပစ္စည်းစာရင်းမှ အလိုအလျောက် စုစုပေါင်း တွက်ပါသည်' : '* Auto-totalled from the items list above'}</p>
+              )}
+              {lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && displayCost > 0 && (
                 <div className="text-[10px] mt-1 flex items-center gap-1">
                   <span className="text-slate-500">{lang === 'my' ? 'ယခင်ကုန်ကျစရိတ်:' : 'Prev Cost:'} {lastMaintLogForComparison.cost.toLocaleString()} Ks</span>
-                  {Number(cost) > lastMaintLogForComparison.cost ? (
-                    <span className="text-rose-600 font-bold flex items-center gap-0.5"><TrendingUp className="w-3 h-3" /> +{Math.round(((Number(cost) - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
-                  ) : Number(cost) < lastMaintLogForComparison.cost ? (
-                    <span className="text-emerald-600 font-bold flex items-center gap-0.5"><TrendingDown className="w-3 h-3" /> {Math.round(((Number(cost) - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
+                  {displayCost > lastMaintLogForComparison.cost ? (
+                    <span className="text-rose-600 font-bold flex items-center gap-0.5"><TrendingUp className="w-3 h-3" /> +{Math.round(((displayCost - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
+                  ) : displayCost < lastMaintLogForComparison.cost ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-0.5"><TrendingDown className="w-3 h-3" /> {Math.round(((displayCost - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
                   ) : <span className="text-slate-400">(Same)</span>}
                 </div>
               )}

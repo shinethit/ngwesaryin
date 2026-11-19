@@ -12,6 +12,11 @@ export interface TransactionItem {
   price: number;
   quantity: number;
   amount: number;
+  // [v7.5.93] Per-row service type for vehicle_service multi-row
+  // entries — each row carries its own type so one visit can track
+  // several services separately. Optional: old items lack it and fall
+  // back to the visit's main service type.
+  serviceType?: VehicleServiceType;
   // [v7.5.82] Per-unit basis of `price` (e.g. 'တစ်ခု' / 'တစ်ပါကင်' /
   // 'တစ်ကီလို') — the shopping-list entry form stamps it; a plain /
   // direct entry has no unit. Used to match the shop menu line when a
@@ -529,6 +534,10 @@ export interface VehicleLinkData {
   // Maintenance fields
   serviceType?: VehicleServiceType;
   title?: string;
+  // [v7.5.93] Raw typed visit title (before the title || note ||
+  // default coalescing in `title`) — the per-type record titles need
+  // the un-coalesced value so a row name can outrank the extra note.
+  maintTitle?: string;
   sparePartBrand?: string;
   workshopName?: string;
   expectedLifespanKm?: number;

@@ -7,11 +7,17 @@ import type {
   Category,
   FuelLog,
   Transaction,
+  TransactionItem,
   TirePressureLog,
   Vehicle,
   VehicleMaintenance,
   Wallet,
 } from '../types';
+import {
+  groupServiceRowsByType,
+  resolvePerTypeTitle,
+  resolveVehicleServiceSubCategory,
+} from '../utils/vehicleServiceRows';
 
 interface UseVehicleHandlersParams {
   user: { uid: string } | null;
@@ -343,13 +349,35 @@ export function useVehicleHandlers({
     showToast(lang === 'my' ? 'ဆီထည့်မှတ်တမ်း ဖျက်ပြီးပါပြီ ✓' : 'Fuel log deleted ✓');
   };
 
-  const handleSaveMaintenance = (maintData: VehicleMaintenance) => {
-    const maintId = maintData.id || `maint_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const targetVehicle = vehicles.find((v) => v.id === maintData.vehicleId);
+  // [v7.5.93] `items` travels on the save payload from
+  // AddMaintenanceModal (VehicleMaintenance itself has no `items`
+  // field — the modal attaches the rows, the handler consumes them,
+  // and no maintenance record ever stores them).
+  const handleSaveMaintenance = (maintData: VehicleMaintenance & { items?: TransactionItem[] }) => {
+    const { items: incomingItems, ...maintInput } = maintData;
+    const maintId = maintInput.id || `maint_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const targetVehicle = vehicles.find((v) => v.id === maintInput.vehicleId);
     const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
-    const txId = maintData.transactionId || `tx_maint_${maintId}`;
+    const txId = maintInput.transactionId || `tx_maint_${maintId}`;
+    // [v7.5.93] Multi-row visit: group the valid rows by their OWN
+    // service type (same filter as the modal — name required, qty >
+    // 0, zero-price rows kept). A licence visit has no rows, so its
+    // items are ignored and the old single-record path runs. No rows
+    // (old-style) → the exact old single-record behavior below.
+    const rowGroups =
+      maintInput.serviceType === 'license_renewal'
+        ? []
+        : groupServiceRowsByType(incomingItems || [], maintInput.serviceType);
+    const hasRows = rowGroups.length > 0;
+    const rowsTotal = rowGroups.reduce((s, g) => s + g.cost, 0);
+    const visitCost = hasRows ? rowsTotal : maintInput.cost;
+    // Rows stamped with their group type (a row without one belongs
+    // to the group it was filed under) — these ARE the tx items.
+    const txItems: TransactionItem[] | undefined = hasRows
+      ? rowGroups.flatMap((g) => g.rows.map((r) => ({ ...r, serviceType: g.serviceType })))
+      : undefined;
     // [v7.2.4] note ?? '' so Firestore merge actually clears cleared notes
-    const maint: VehicleMaintenance = { ...maintData, id: maintId, transactionId: txId, note: maintData.note ?? '', createdAt: maintData.createdAt || Date.now(), updatedAt: Date.now(), version: (maintData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
+    const maint: VehicleMaintenance = { ...maintInput, id: maintId, transactionId: txId, cost: visitCost, note: maintInput.note ?? '', createdAt: maintInput.createdAt || Date.now(), updatedAt: Date.now(), version: (maintInput.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
 
     // [FIX v6.1.3] Resolve wallet — if maint.walletId no longer exists, fall back to first wallet.
     const resolvedMaintWalletId = (maint.walletId && computedWallets.some((w) => w.id === maint.walletId))
@@ -368,18 +396,33 @@ export function useVehicleHandlers({
         (c.nameEn && c.nameEn.toLowerCase().includes('vehicle management'))
       ) || categories.find((c) => c.type === 'expense') || categories[0];
 
+      // [v7.5.93] Sub-category alignment (was hard-coded
+      // sub_veh_maintenance for EVERY type): tires → sub_veh_tire,
+      // engine_oil → sub_veh_parts, else sub_veh_maintenance. The
+      // modal path never picks a sub-category, so none is passed.
+      // [v7.5.93] A previous save of THIS tx may have carried items
+      // (multi-row visit later re-saved without rows, e.g. switched
+      // to licence) — cleanForFirestore strips `undefined`, so a
+      // missing key would leave the stale array in Firestore; write
+      // an explicit empty array to clear it.
+      const prevTx = transactions.find((t) => t.id === txId);
       const maintTx: Transaction = {
         id: txId,
         type: 'expense',
         amount: maint.cost,
         category: vehicleCat?.id || 'cat_vehicle',
-        subCategoryId: 'sub_veh_maintenance',
+        subCategoryId: resolveVehicleServiceSubCategory(maint.serviceType),
         walletId: maint.walletId,
         date: maint.date,
         // [v7.2.3] Preserve user note as-is; fall back to auto summary.
         note: maint.note
           ? maint.note
           : `[ယာဉ်ပြုပြင်ထိန်းသိမ်းစရိတ်] ${vehicleName} - ${maint.serviceType}: ${maint.title}${maint.workshopName ? ` (${maint.workshopName})` : ''}`,
+        ...(txItems && txItems.length > 0
+          ? { items: txItems }
+          : prevTx?.items && prevTx.items.length > 0
+            ? { items: [] }
+            : {}),
         createdAt: maint.createdAt || Date.now(),
         updatedAt: Date.now(),
         version: 1,
@@ -405,20 +448,93 @@ export function useVehicleHandlers({
       removeLinkedTransaction(txId);
     }
 
-    const existsMaint = vehicleMaintenance.some((m) => m.id === maint.id);
-    const nextMaint = existsMaint ? vehicleMaintenance.map((m) => (m.id === maint.id ? maint : m)) : [maint, ...vehicleMaintenance];
-    setVehicleMaintenance(nextMaint);
-    safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(nextMaint));
+    // [v7.5.93] Old records of THIS visit: every record sharing this
+    // transactionId, plus the edited record itself when it carries no
+    // link (pre-7.5.93 records may not). Only ever this visit's
+    // records — nothing else is touched.
+    const oldLinked = vehicleMaintenance.filter((m) => m.transactionId === txId || m.id === maintId);
+    const hasSiblingRecords = oldLinked.some((m) => m.id !== maintId);
+    if (hasRows || hasSiblingRecords) {
+      // Multi-row save, or a re-save that drops sibling records
+      // (e.g. a multi-row visit switched to licence): delete every
+      // old record of this visit and recreate — one record per
+      // DISTINCT row service type, each costing only its own type's
+      // rows. Same delete pattern as useTransactionHandlers'
+      // multi-row edit (state filter + markVehicleLogDeleted +
+      // safeDeleteDoc per record).
+      const newRecords: VehicleMaintenance[] = hasRows
+        ? rowGroups.map((g, gi) => ({
+            id: `maint_${Date.now()}_${gi}`,
+            vehicleId: maint.vehicleId,
+            vehicleName: maint.vehicleName,
+            date: maint.date,
+            odometer: maint.odometer,
+            serviceType: g.serviceType,
+            // The modal's note is the extra note (same as the
+            // TransactionModal path, which passes the tx note).
+            title: resolvePerTypeTitle(maint.title, maint.serviceType, g.serviceType, g.rows, maint.note ?? ''),
+            cost: g.cost,
+            sparePartBrand: maint.sparePartBrand,
+            workshopName: maint.workshopName,
+            expectedLifespanKm: maint.expectedLifespanKm,
+            expectedLifespanDays: maint.expectedLifespanDays,
+            lastReplacedDate: maint.date,
+            lastReplacedOdometer: maint.odometer,
+            syncToExpense: maint.syncToExpense,
+            transactionId: txId,
+            walletId: maint.walletId,
+            note: maint.note,
+            userId: maint.userId,
+            createdAt: maint.createdAt,
+            updatedAt: Date.now(),
+            version: maint.version,
+            lastEditedBy: maint.lastEditedBy,
+          }))
+        : [maint];
+      const newIds = new Set(newRecords.map((m) => m.id));
+      const nextMaint = [
+        ...newRecords,
+        ...vehicleMaintenance.filter((m) => m.transactionId !== txId && m.id !== maintId),
+      ];
+      setVehicleMaintenance(nextMaint);
+      safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(nextMaint));
 
-    if (user?.uid) {
-      const targetUid = activeWorkspaceId || user.uid;
-      safeSetDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', maint.id), {
-        ...maint,
-        userId: targetUid,
-      }, { merge: true });
+      const targetUid = user?.uid ? activeWorkspaceId || user.uid : null;
+      // Delete only old records that are NOT reused by the new save
+      // (the single-record re-save reuses maintId — deleting it first
+      // would race the set below and could lose the record).
+      for (const old of oldLinked) {
+        if (newIds.has(old.id)) continue;
+        markVehicleLogDeleted('vehicleMaintenance', old.id);
+        if (targetUid) safeDeleteDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', old.id));
+      }
+      if (targetUid) {
+        for (const m of newRecords) {
+          safeSetDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', m.id), {
+            ...m,
+            userId: targetUid,
+          }, { merge: true });
+        }
+      }
+
+      recalculateVehicleOdometer(maint.vehicleId, fuelLogs, nextMaint, tirePressureLogs);
+    } else {
+      // No rows, no siblings — the exact old single-record behavior.
+      const existsMaint = vehicleMaintenance.some((m) => m.id === maint.id);
+      const nextMaint = existsMaint ? vehicleMaintenance.map((m) => (m.id === maint.id ? maint : m)) : [maint, ...vehicleMaintenance];
+      setVehicleMaintenance(nextMaint);
+      safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(nextMaint));
+
+      if (user?.uid) {
+        const targetUid = activeWorkspaceId || user.uid;
+        safeSetDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', maint.id), {
+          ...maint,
+          userId: targetUid,
+        }, { merge: true });
+      }
+
+      recalculateVehicleOdometer(maint.vehicleId, fuelLogs, nextMaint, tirePressureLogs);
     }
-
-    recalculateVehicleOdometer(maint.vehicleId, fuelLogs, nextMaint, tirePressureLogs);
 
     showToast(lang === 'my' ? 'ပြုပြင်ထိန်းသိမ်းမှု မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Maintenance record saved ✓');
   };
@@ -431,15 +547,48 @@ export function useVehicleHandlers({
 
     const linkedTx = transactions.find((t) => t.id === txId);
     if (linkedTx) {
-      markTxDeleted(txId);
-      setTransactions((prev) => {
-        const next = prev.filter((t) => t.id !== txId);
-        safeSetItem('ngwe_transactions', JSON.stringify(next));
-        return next;
-      });
-      if (user?.uid) {
-        const targetUid = activeWorkspaceId || user.uid;
-        safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', txId));
+      // [v7.5.93] One visit can now own several records sharing ONE
+      // transaction. Deleting a single card must NOT delete the shared
+      // tx while sibling records remain — shrink the tx to the
+      // siblings' costs (and keep only their rows) instead.
+      const siblings = vehicleMaintenance.filter((m) => m.transactionId === txId && m.id !== maintId);
+      if (siblings.length === 0) {
+        markTxDeleted(txId);
+        setTransactions((prev) => {
+          const next = prev.filter((t) => t.id !== txId);
+          safeSetItem('ngwe_transactions', JSON.stringify(next));
+          return next;
+        });
+        if (user?.uid) {
+          const targetUid = activeWorkspaceId || user.uid;
+          safeDeleteDoc(doc(db, 'users', targetUid, 'transactions', txId));
+        }
+      } else {
+        const remainingTypes = new Set(siblings.map((m) => m.serviceType));
+        // Rows without a type belong to the visit's main type, which
+        // cannot be attributed to one record — keep them rather than
+        // drop a row that may belong to a remaining record.
+        const remainingItems = (linkedTx.items || []).filter(
+          (r) => !r.serviceType || remainingTypes.has(r.serviceType)
+        );
+        const updatedTx: Transaction = {
+          ...linkedTx,
+          amount: siblings.reduce((s, m) => s + (Number(m.cost) || 0), 0),
+          items: remainingItems,
+          updatedAt: Date.now(),
+        };
+        setTransactions((prev) => {
+          const next = prev.map((t) => (t.id === txId ? updatedTx : t));
+          safeSetItem('ngwe_transactions', JSON.stringify(next));
+          return next;
+        });
+        if (user?.uid) {
+          const targetUid = activeWorkspaceId || user.uid;
+          safeSetDoc(doc(db, 'users', targetUid, 'transactions', txId), {
+            ...updatedTx,
+            userId: targetUid,
+          }, { merge: true });
+        }
       }
     }
 

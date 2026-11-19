@@ -6,6 +6,9 @@ import { syncQueue } from '../lib/syncQueue';
 import { markTxDeleted, unmarkTxDeleted, markVehicleLogDeleted } from '../utils/deletedMarkers';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { getLocalDateString } from '../utils/dateUtils';
+// [v7.5.93] Multi-row vehicle service entries: one maintenance record
+// per distinct row service type, each with its own cost + title.
+import { groupServiceRowsByType, resolvePerTypeTitle } from '../utils/vehicleServiceRows';
 import { isWalletMatch } from '../utils/walletBalance';
 import {
   saveSharedWalletTransaction,
@@ -492,6 +495,70 @@ export function useTransactionHandlers({
           }
         }
         if (linkedMaint) {
+          // [v7.5.93] Multi-row edit: the saved rows may now span
+          // different types than the old record(s), so delete EVERY
+          // record linked to THIS transactionId and recreate one per
+          // distinct row type (same delete pattern as
+          // handleDeleteTransaction: state filter +
+          // markVehicleLogDeleted + safeDeleteDoc via deleteDocChecked).
+          // No items (old-style / license) → the exact old
+          // single-record update below.
+          const linkedMaints = vehicleMaintenance.filter((m) => m.transactionId === editingTransaction.id);
+          const editRowGroups =
+            sanitizedTx.items && sanitizedTx.items.length > 0
+              ? groupServiceRowsByType(sanitizedTx.items, vehicleLinkData.serviceType || linkedMaint.serviceType || 'general_repair')
+              : [];
+          if (editRowGroups.length > 0 && linkedMaints.length > 0) {
+            const uid = user?.uid ? activeWorkspaceId || user.uid : null;
+            setVehicleMaintenance((prev) => {
+              const next = prev.filter((m) => m.transactionId !== editingTransaction.id);
+              safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
+              return next;
+            });
+            for (const old of linkedMaints) {
+              markVehicleLogDeleted('vehicleMaintenance', old.id);
+              if (uid) deleteDocChecked(doc(db, 'users', uid, 'vehicleMaintenance', old.id));
+            }
+            const recreated: VehicleMaintenance[] = editRowGroups.map((g, gi) => ({
+              id: `maint_${Date.now()}_${gi}`,
+              vehicleId: vehicleLinkData.vehicleId,
+              vehicleName: linkedMaint.vehicleName,
+              date: sanitizedTx.date,
+              odometer: vehicleLinkData.odometer || linkedMaint.odometer,
+              serviceType: g.serviceType,
+              title: resolvePerTypeTitle(
+                vehicleLinkData.maintTitle ?? vehicleLinkData.title ?? '',
+                vehicleLinkData.serviceType || linkedMaint.serviceType || 'general_repair',
+                g.serviceType,
+                g.rows,
+                sanitizedTx.note || '',
+              ),
+              cost: g.cost,
+              sparePartBrand: vehicleLinkData.sparePartBrand || linkedMaint.sparePartBrand,
+              workshopName: vehicleLinkData.workshopName || linkedMaint.workshopName,
+              expectedLifespanKm: vehicleLinkData.expectedLifespanKm || linkedMaint.expectedLifespanKm,
+              expectedLifespanDays: vehicleLinkData.expectedLifespanDays || linkedMaint.expectedLifespanDays,
+              lastReplacedDate: sanitizedTx.date,
+              lastReplacedOdometer: vehicleLinkData.odometer || linkedMaint.odometer,
+              syncToExpense: true,
+              transactionId: editingTransaction.id,
+              walletId: sanitizedTx.walletId,
+              note: sanitizedTx.note,
+              userId: linkedMaint.userId,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            }));
+            setVehicleMaintenance((prev) => {
+              const next = [...recreated, ...prev];
+              safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
+              return next;
+            });
+            if (uid) {
+              for (const m of recreated) {
+                persistDoc(doc(db, 'users', uid, 'vehicleMaintenance', m.id), { ...m, userId: uid }, { merge: true });
+              }
+            }
+          } else {
           const updatedMaint: VehicleMaintenance = {
             ...linkedMaint,
             vehicleId: vehicleLinkData.vehicleId,
@@ -516,6 +583,24 @@ export function useTransactionHandlers({
           if (user?.uid) {
             const uid = activeWorkspaceId || user.uid;
             persistDoc(doc(db, 'users', uid, 'vehicleMaintenance', updatedMaint.id), { ...updatedMaint, userId: uid }, { merge: true });
+          }
+          // [v7.5.93] Edit-down-to-zero-rows: the single-record update
+          // above keeps only the first linked record — delete any
+          // SIBLING records from the earlier multi-row save so their
+          // stale costs do not linger (same delete pattern as above).
+          if (linkedMaints.length > 1) {
+            const delUid = user?.uid ? activeWorkspaceId || user.uid : null;
+            setVehicleMaintenance((prev) => {
+              const next = prev.filter((m) => m.id === updatedMaint.id || m.transactionId !== editingTransaction.id);
+              safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
+              return next;
+            });
+            for (const old of linkedMaints) {
+              if (old.id === updatedMaint.id) continue;
+              markVehicleLogDeleted('vehicleMaintenance', old.id);
+              if (delUid) deleteDocChecked(doc(db, 'users', delUid, 'vehicleMaintenance', old.id));
+            }
+          }
           }
         }
         if (linkedTire) {
@@ -890,6 +975,65 @@ export function useTransactionHandlers({
           }, { merge: true });
         }
       } else if (vehicleLinkData.logType === 'maintenance') {
+        // [v7.5.93] Multi-row visit: one record per DISTINCT row service
+        // type — each record's cost is ONLY that type's rows' sum, so the
+        // records' costs add up to exactly the visit total (no double
+        // count: calculateCostPerKm sums each record's cost once,
+        // vehicleAnalytics.ts:304, and calculateMaintenanceLifespans
+        // tracks the latest record PER service type,
+        // vehicleAnalytics.ts:334-390). No items (old-style / license)
+        // → the exact old single-record behavior below.
+        const rowGroups =
+          sanitizedTx.items && sanitizedTx.items.length > 0
+            ? groupServiceRowsByType(sanitizedTx.items, vehicleLinkData.serviceType || 'general_repair')
+            : [];
+        if (rowGroups.length > 0) {
+          const newMaints: VehicleMaintenance[] = rowGroups.map((g, gi) => ({
+            id: `maint_${Date.now()}_${gi}`,
+            vehicleId: vehicleLinkData.vehicleId,
+            vehicleName,
+            date: sanitizedTx.date,
+            odometer: odo,
+            serviceType: g.serviceType,
+            title: resolvePerTypeTitle(
+              vehicleLinkData.maintTitle ?? vehicleLinkData.title ?? '',
+              vehicleLinkData.serviceType || 'general_repair',
+              g.serviceType,
+              g.rows,
+              sanitizedTx.note || '',
+            ),
+            cost: g.cost,
+            sparePartBrand: vehicleLinkData.sparePartBrand,
+            workshopName: vehicleLinkData.workshopName,
+            expectedLifespanKm: vehicleLinkData.expectedLifespanKm,
+            expectedLifespanDays: vehicleLinkData.expectedLifespanDays,
+            lastReplacedDate: sanitizedTx.date,
+            lastReplacedOdometer: odo,
+            syncToExpense: true,
+            transactionId: id,
+            walletId: sanitizedTx.walletId,
+            note: sanitizedTx.note,
+            userId: user?.uid || 'guest',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          }));
+
+          setVehicleMaintenance((prev) => {
+            const next = [...newMaints, ...prev];
+            safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
+            return next;
+          });
+
+          if (user?.uid) {
+            const targetUid = activeWorkspaceId || user.uid;
+            for (const m of newMaints) {
+              persistDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', m.id), {
+                ...m,
+                userId: targetUid,
+              }, { merge: true });
+            }
+          }
+        } else {
         const maintId = `maint_${Date.now()}`;
         const maint: VehicleMaintenance = {
           id: maintId,
@@ -927,6 +1071,7 @@ export function useTransactionHandlers({
             ...maint,
             userId: targetUid,
           }, { merge: true });
+        }
         }
       } else if (vehicleLinkData.logType === 'tire') {
         const tireId = `tire_${Date.now()}`;

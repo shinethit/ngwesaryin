@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.92';
-export const CURRENT_BUILD_NUMBER = 307;
+export const CURRENT_APP_VERSION = 'v7.5.93';
+export const CURRENT_BUILD_NUMBER = 308;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.93',
+    buildNumber: 308,
+    releaseDate: '2026-11-18',
+    releaseTime: '6:28 PM (MMT)',
+    titleMy: 'ယာဉ်ပြုပြင်မှတ်တမ်းမှာ ပစ္စည်း အများကြီး တစ်ခါတည်း ထည့်လို့ရပြီ',
+    titleEn: 'Add multiple parts in one vehicle service entry',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ယာဉ်ပြုပြင်မှတ်တမ်းမှာ ပစ္စည်း အများကြီး တစ်ခါတည်း ထည့်လို့ရပြီ — အတန်းတစ်ခုချင်းစီမှာ ဝန်ဆောင်မှု အမျိုးအစား ရွေးလို့ရတယ်၊ စုစုပေါင်း အလိုလို ပေါင်းပေးတယ်။',
+    descriptionEn: 'Add multiple parts in one vehicle service entry — each row has its own service type, and the total adds up automatically.',
+    changesMy: [
+      'ယာဉ်ပြုပြင်မှတ်တမ်းမှာ ပစ္စည်း အများကြီး တစ်ခါတည်း ထည့်လို့ရပြီ — ဥပမာ မီးသီး၊ Wiper၊ လေစစ် တစ်ကြိမ်တည်း ၃ တန်း။',
+      'အတန်းတစ်ခုချင်းစီမှာ ဝန်ဆောင်မှု အမျိုးအစား ရွေးလို့ရတယ် — အမျိုးအစားတစ်ခုချင်းစီရဲ့ နောက်တစ်ခါ လဲရမယ့် သတိပေးချက်ပါ သီးခြား မှတ်ပေးတယ်။',
+      'စုစုပေါင်း အလိုလို ပေါင်းပေးတယ်၊ သိမ်းပြီးရင် စာရင်းထဲမှာ တစ်တန်းချင်း ဖွင့်ကြည့်လို့ရတယ်။',
+    ],
+    changesEn: [
+      'Add multiple parts in one vehicle service entry — e.g. headlight, wiper and air filter in one visit.',
+      'Each row has its own service type — every type gets its own next-due reminder.',
+      'The total adds up automatically, and saved rows can be expanded in the transaction list.',
+    ],
+  },
   {
     version: 'v7.5.92',
     buildNumber: 307,

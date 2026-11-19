@@ -34,6 +34,8 @@ import { isShopNameNeedingDetails, loadShopDetailDismissedKeys, type ShopDetails
 // [v7.5.82] Menu units for the shopping-list rows + unit carry-through.
 import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, normalizeMenuUnit, SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
 import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
+// [v7.5.93] Per-row service types for multi-row vehicle service entries.
+import { ROW_SERVICE_TYPES, resolveVehicleServiceSubCategory } from '../utils/vehicleServiceRows';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
@@ -413,7 +415,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             setQuantity(String(editTransaction.quantity || 1));
           } else if (editTransaction.items && editTransaction.items.length > 0) {
             setEntryMode('shopping_list');
-            setShoppingItems(editTransaction.items);
+            // [v7.5.93] Saved rows carry no `id` (validItems drops it),
+            // so stamp one per row — row updates match by id, and
+            // several id-less rows would all update at once. The
+            // serviceType (when saved) rides along untouched; a missing
+            // one falls back to the visit's main type at save time.
+            setShoppingItems(editTransaction.items.map((it, i) => ({ ...it, id: it.id || `item_${Date.now()}_${i}` })));
           } else {
             setEntryMode('direct');
           }
@@ -663,12 +670,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const newlyAddedItemIdRef = useRef<string | null>(null);
   const [isShoppingPriceHistoryOpen, setIsShoppingPriceHistoryOpen] = useState(false);
 
-  const addShoppingItemRow = () => {
+  const addShoppingItemRow = (serviceType?: VehicleServiceType) => {
     const newId = `item_${Date.now()}`;
     newlyAddedItemIdRef.current = newId;
     setShoppingItems((prev) => [
       ...prev,
-      { id: newId, name: '', price: 0, quantity: 1, amount: 0 },
+      // [v7.5.93] A vehicle row starts at the visit's CURRENT main
+      // type; changing the main type later never rewrites a row.
+      { id: newId, name: '', price: 0, quantity: 1, amount: 0, ...(serviceType ? { serviceType } : {}) },
     ]);
   };
 
@@ -1250,11 +1259,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const validItems = shoppingItems.filter((i) => i.name.trim() && parseMyanmarNumber(i.quantity as any) > 0).map((i) => {
       const p = parseMyanmarNumber(i.price as any) || 0;
       const q = parseMyanmarNumber(i.quantity as any) || 0;
-      return { name: i.name.trim(), price: p, quantity: q, amount: p * q, unit: normalizeMenuUnit(i.unit) };
+      // [v7.5.93] Carry the row's own serviceType through — the map
+      // rebuilds the object, so a dropped type would collapse every
+      // row back onto the visit's main type. (Only stamped when set;
+      // an undefined key must never reach Firestore.)
+      return { name: i.name.trim(), price: p, quantity: q, amount: p * q, unit: normalizeMenuUnit(i.unit), ...(i.serviceType ? { serviceType: i.serviceType } : {}) };
     });
     let finalAmount = numAmount;
     if (isFreeTireCheck && (!finalAmount || finalAmount <= 0)) finalAmount = 0;
-    if (entryMode === 'shopping_list' && validItems.length > 0) {
+    // [v7.5.93] A multi-row vehicle visit is driven by its rows exactly
+    // like a shopping list — the rows total IS the amount. (The shared
+    // amount input is already driven live by updateShoppingItem, so this
+    // recompute only re-asserts the same total at save time.)
+    const isMultiRow = entryMode === 'shopping_list' || (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal');
+    if (isMultiRow && validItems.length > 0) {
       finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);
     } else if (entryMode === 'unit_qty' && parseMyanmarNumber(unitPrice) > 0 && parseMyanmarNumber(quantity) > 0) {
       finalAmount = parseMyanmarNumber(unitPrice) * parseMyanmarNumber(quantity);
@@ -1345,6 +1363,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           logType: 'maintenance',
           serviceType: maintServiceType,
           title: maintTitle.trim() || extraNote.trim() || (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Service'),
+          // [v7.5.93] Raw typed title for the per-type record titles.
+          maintTitle: maintTitle.trim() || undefined,
           sparePartBrand: maintSparePartBrand.trim() || undefined,
           workshopName: maintWorkshopName.trim() || undefined,
           expectedLifespanKm: parseMyanmarNumber(maintLifespanKm) || undefined,
@@ -1448,17 +1468,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         // [v7.5.53] Tire-pressure check goes under the tire subcategory.
         targetSubCategory = 'sub_veh_tire';
       } else if (entryModel === 'vehicle_service') {
-        if (!targetSubCategory || targetSubCategory === 'sub_veh_fuel') {
-          if (maintServiceType === 'tires') targetSubCategory = 'sub_veh_tire';
-          else if (maintServiceType === 'engine_oil') targetSubCategory = 'sub_veh_parts';
-          else targetSubCategory = 'sub_veh_maintenance';
-        }
+        // [v7.5.93] Same rule as before, now in resolveVehicleServiceSubCategory.
+        targetSubCategory = resolveVehicleServiceSubCategory(maintServiceType, targetSubCategory);
       }
 
       let finalNote: string | undefined = undefined;
       let txItems: TransactionItem[] | undefined = undefined;
 
-      if (entryModel === 'fuel' || entryModel === 'vehicle_service' || entryModel === 'tire_pressure') {
+      if (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal') {
+        // [v7.5.93] Multi-row visit: the rows ARE the transaction items
+        // (each with its own serviceType) — the handler creates one
+        // maintenance record per distinct row type from them.
+        finalNote = extraNote.trim() || undefined;
+        txItems = validItems.length > 0 ? validItems : undefined;
+      } else if (entryModel === 'fuel' || entryModel === 'vehicle_service' || entryModel === 'tire_pressure') {
         finalNote = extraNote.trim() || undefined;
       } else if (entryMode === 'shopping_list') {
         finalNote = extraNote.trim() || undefined;
@@ -1587,6 +1610,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               maintTitle,
               extraNote,
               finalAmount,
+              // [v7.5.93] Multi-row visit: the candidate emits one item
+              // per row; the helper falls back to the single-item
+              // synthesis when there are no rows.
+              rows: validItems.length > 0 ? validItems : undefined,
             });
 
             const saveOk = onSubmit({
@@ -2064,6 +2091,70 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       <FileText className="w-4 h-4 text-slate-400 shrink-0" />
                       <input type="text" value={maintTitle} onChange={(e) => setMaintTitle(e.target.value)} placeholder={lang === 'my' ? 'ခေါင်းစဉ် / အသေးစိတ်' : 'Title / Details'} className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none" />
                     </div>
+                    {/* [v7.5.93] Multi-row service entries — one row per
+                        part / service, EACH with its own service type, so
+                        one visit can track several services separately.
+                        Same mechanics as the shopping list (name +
+                        past-price hint + near-duplicate warning, price /
+                        qty / amount, unit, never zero rows); the rows
+                        total drives the shared amount input live via
+                        updateShoppingItem. Hidden for license renewal. */}
+                    <div className="px-3 py-3 border-b border-slate-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5"><Wrench className="w-3.5 h-3.5" />{lang === 'my' ? 'လဲလှယ်သည့် ပစ္စည်း / ဝန်ဆောင်မှု' : 'Parts / Services'}</span>
+                      </div>
+                      <div ref={shoppingListContainerRef} className="space-y-2 max-h-72 overflow-y-auto overflow-x-hidden pr-1">
+                        {shoppingItems.map((item, idx) => {
+                          const pastPurchase = getPastPriceForItem(item.name);
+                          const similarName = item.name.trim() ? findSimilarItemName(item.name) : null;
+                          return (
+                            <div key={item.id || idx} className="bg-slate-50 rounded-xl p-2.5 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={item.serviceType || maintServiceType}
+                                  onChange={(e) => updateShoppingItem(item.id || '', 'serviceType', e.target.value as VehicleServiceType)}
+                                  className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
+                                >
+                                  {ROW_SERVICE_TYPES.map((t) => (
+                                    <option key={t} value={t}>{lang === 'my' ? SERVICE_TYPE_CONFIG[t].labelMy : SERVICE_TYPE_CONFIG[t].labelEn}</option>
+                                  ))}
+                                </select>
+                                <button type="button" onClick={() => removeShoppingItemRow(item.id || '')} className="p-1 text-slate-400 hover:text-rose-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input type="text" id={`input-name-${item.id || idx}`} list="db-item-suggestions" value={item.name} onChange={(e) => updateShoppingItem(item.id || '', 'name', e.target.value)} placeholder={lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item name'} className="flex-1 min-w-0 text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none" />
+                              </div>
+                              {similarName && (
+                                <button type="button" onClick={() => updateShoppingItem(item.id || '', 'name', similarName.name)} className="w-full text-left text-[11px] font-semibold text-amber-800 bg-amber-100/80 hover:bg-amber-100 border border-amber-200 rounded-lg px-2 py-1">
+                                  {lang === 'my'
+                                    ? `⚠️ ဆင်တူသော အမည် ရှိပါသည်: “${similarName.name}”${similarName.latestPrice > 0 ? ` (${formatMMK(similarName.latestPrice)})` : ''} — နှိပ်၍ သုံးမည်`
+                                    : `⚠️ Similar name exists: “${similarName.name}”${similarName.latestPrice > 0 ? ` (${formatMMK(similarName.latestPrice)})` : ''} — tap to use it`}
+                                </button>
+                              )}
+                              <div className="grid grid-cols-3 gap-1.5">
+                                <input type="text" inputMode="decimal" value={item.price || ''} onChange={(e) => updateShoppingItem(item.id || '', 'price', e.target.value)} placeholder="ဈေး" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono" />
+                                <input type="text" inputMode="decimal" value={item.quantity || ''} onChange={(e) => updateShoppingItem(item.id || '', 'quantity', e.target.value)} placeholder="Qty" className="min-w-0 w-full text-base font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-center" />
+                                <input type="text" inputMode="decimal" value={item.amount || ''} onChange={(e) => updateShoppingItem(item.id || '', 'amount', e.target.value)} placeholder="Total" className="min-w-0 w-full text-base font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
+                                <select
+                                  value={item.unit || DEFAULT_MENU_UNIT}
+                                  onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
+                                  className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
+                                >
+                                  {SHOP_MENU_UNITS.map((u) => (
+                                    <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              {pastPurchase && item.price > 0 && (<div className="text-[10px] text-slate-500">{lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})</div>)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button type="button" onClick={() => addShoppingItemRow(maintServiceType)} className="w-full mt-2 py-1.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50">+ {lang === 'my' ? 'ပစ္စည်း ထည့်မည်' : 'Add item'}</button>
+                    </div>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
                       <input type="text" value={maintWorkshopName} onChange={(e) => setMaintWorkshopName(e.target.value)} placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'} className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none" />
@@ -2152,7 +2243,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     );
                   })}
                 </div>
-                <button type="button" onClick={addShoppingItemRow} className="w-full mt-2 py-1.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50">+ {lang === 'my' ? 'ပစ္စည်းထပ်ထည့်' : 'Add item'}</button>
+                <button type="button" onClick={() => addShoppingItemRow()} className="w-full mt-2 py-1.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50">+ {lang === 'my' ? 'ပစ္စည်းထပ်ထည့်' : 'Add item'}</button>
               </div>
             )}
 

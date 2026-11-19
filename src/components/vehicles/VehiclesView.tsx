@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle, EyeOff, RotateCcw, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
-import { Vehicle, FuelLog, VehicleMaintenance, TirePressureLog, Wallet, PlanType } from '../../types';
+import { Vehicle, FuelLog, VehicleMaintenance, TirePressureLog, Wallet, PlanType, Transaction, TransactionItem } from '../../types';
 import { DEFAULT_PLAN_LIMITS } from '../../data/initialData';
 import { formatLakhs, formatShortDate } from '../../utils/formatters';
 import {
@@ -26,6 +26,10 @@ interface VehiclesViewProps {
   vehicleMaintenance: VehicleMaintenance[];
   tirePressureLogs: TirePressureLog[];
   wallets: Wallet[];
+  // [v7.5.93] Optional — App passes the transactions list down (the
+  // view never fetches Firestore itself). Used for the per-visit item
+  // count line and for restoring rows when editing a multi-row visit.
+  transactions?: Transaction[];
   onSaveVehicle: (vehicle: Partial<Vehicle>) => void;
   onDeleteVehicle: (id: string) => void;
   onSaveFuelLog: (log: Partial<FuelLog>) => void;
@@ -50,6 +54,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   vehicleMaintenance,
   tirePressureLogs,
   wallets,
+  transactions,
   onSaveVehicle,
   onDeleteVehicle,
   onSaveFuelLog,
@@ -257,6 +262,43 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
     () => calculateMaintenanceLifespans(vehicleMaintenanceLogs),
     [vehicleMaintenanceLogs]
   );
+
+  // [v7.5.93] Linked transactions, for the per-visit item count line
+  // and for restoring rows when editing a multi-row visit.
+  const transactionsById = useMemo(
+    () => new Map((transactions || []).map((t) => [t.id, t])),
+    [transactions]
+  );
+  // Items of the record being edited, by maintenance-record id.
+  const maintTxItemsByMaintId = useMemo(() => {
+    const map = new Map<string, TransactionItem[]>();
+    for (const m of vehicleMaintenanceLogs) {
+      if (!m.transactionId) continue;
+      const items = transactionsById.get(m.transactionId)?.items;
+      if (items && items.length > 0) map.set(m.id, items);
+    }
+    return map;
+  }, [vehicleMaintenanceLogs, transactionsById]);
+  const editingMaintenanceTxItems = useMemo(() => {
+    if (!editingMaintenance?.transactionId) return undefined;
+    return transactionsById.get(editingMaintenance.transactionId)?.items;
+  }, [editingMaintenance, transactionsById]);
+
+  // [v7.5.93] The visit's MAIN record for the edit modal: a
+  // multi-row visit has one card per type, but the modal edits the
+  // WHOLE visit — open the record matching the first saved row's type
+  // (rows are created main-type-first), so its title and main type
+  // prefill. Otherwise re-saving from a non-main card would rewrite
+  // the main group's title to a part name. Falls back to the clicked
+  // record (old single records, or rows without a type).
+  const resolvePrimaryMaintenance = (clicked: VehicleMaintenance): VehicleMaintenance => {
+    if (!clicked.transactionId) return clicked;
+    const siblings = vehicleMaintenanceLogs.filter((m) => m.transactionId === clicked.transactionId);
+    if (siblings.length <= 1) return clicked;
+    const firstRowType = transactionsById.get(clicked.transactionId)?.items?.[0]?.serviceType;
+    if (!firstRowType) return clicked;
+    return siblings.find((m) => m.serviceType === firstRowType) || clicked;
+  };
   const healthStatuses = useMemo(() => {
     if (!currentVehicle) return [];
     return calculateServiceHealthStatuses(currentVehicle, vehicleMaintenanceLogs);
@@ -1183,7 +1225,11 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                {maintenanceLifespans.map((log) => (
+                {maintenanceLifespans.map((log) => {
+                  // [v7.5.93] Items of the visit this record belongs to
+                  // (resolved via the record's transactionId).
+                  const txItems = maintTxItemsByMaintId.get(log.id);
+                  return (
                   <div
                     key={log.id}
                     className="p-4 rounded-2xl border border-slate-100 bg-slate-50/60 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -1201,6 +1247,16 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                             </span>
                           )}
                         </div>
+
+                        {/* [v7.5.93] One line when the visit carried
+                            rows: item count + first item name. */}
+                        {txItems && txItems.length > 0 && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            {lang === 'my'
+                              ? `${txItems.length} မျိုး · ${txItems[0].name}${txItems.length > 1 ? ' …' : ''}`
+                              : `${txItems.length} items · ${txItems[0].name}${txItems.length > 1 ? ' …' : ''}`}
+                          </div>
+                        )}
 
                         <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
                           {/* [v7.5.60 D-S2] DD/MM/YYYY, not ISO. */}
@@ -1255,7 +1311,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                           onClick={() => {
                             const original = vehicleMaintenanceLogs.find((m) => m.id === log.id);
                             if (original) {
-                              setEditingMaintenance(original);
+                              // [v7.5.93] Open the visit's MAIN record
+                              // (not necessarily the clicked card) so
+                              // the modal edits the whole visit.
+                              setEditingMaintenance(resolvePrimaryMaintenance(original));
                               setIsMaintenanceModalOpen(true);
                             }
                           }}
@@ -1282,7 +1341,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1489,6 +1549,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         onSave={onSaveMaintenance}
         onDelete={onDeleteMaintenance}
         editingMaintenance={editingMaintenance}
+        editingTransactionItems={editingMaintenanceTxItems}
         vehicles={activeVehicles}
         wallets={wallets}
         selectedVehicleId={currentVehicle?.id}

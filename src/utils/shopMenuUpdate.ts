@@ -182,6 +182,10 @@ export interface VehicleMenuCandidateInput {
   maintTitle?: string;
   extraNote?: string;
   finalAmount?: number;
+  /** [v7.5.93] Multi-row service entries: the valid rows (each with
+   *  its own serviceType) — the candidate emits ONE item per row.
+   *  Absent / empty → the old single-item synthesis below. */
+  rows?: TransactionItem[];
 }
 
 export interface ShopMenuUpdateCandidate {
@@ -198,10 +202,12 @@ export interface ShopMenuUpdateCandidate {
  *   only when a station name, a fuel type, a price > 0 and litres > 0
  *   are all present. No station at all → auto-skip, like a general
  *   entry with no shop.
- * - Maintenance (not license_renewal): one item, name = title ||
- *   service label || note || 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု', unit 'တစ်ခု',
- *   price = total amount, quantity 1. Fires only when a workshop
- *   name and an amount > 0 are present.
+ * - Maintenance (not license_renewal): [v7.5.93] one item PER valid
+ *   row (each row keeps its own name / price / quantity / amount /
+ *   unit), so every part of a multi-row visit can update the menu.
+ *   With no rows, the OLD single-item synthesis (title || service
+ *   label || note || default, total amount, quantity 1).
+ *   Fires only when a workshop name and an amount > 0 are present.
  * - license_renewal (the "shop" is a government office, not a shop),
  *   tire_pressure (free, no price) and general entries → null.
  */
@@ -225,6 +231,24 @@ export function buildVehicleMenuCandidate(
     if (input.maintServiceType === 'license_renewal') return null;
     const amount = input.finalAmount ?? 0;
     if (!shop || !Number.isFinite(amount) || amount <= 0) return null;
+    // [v7.5.93] Multi-row visit: one candidate item per valid row.
+    const rowItems = (input.rows || [])
+      .filter((r) => r && typeof r.name === 'string' && r.name.trim() && Number(r.quantity) > 0)
+      .map((r) => {
+        const price = Number(r.price) || 0;
+        const quantity = Number(r.quantity) || 0;
+        const rowAmount = Number(r.amount);
+        return {
+          name: r.name.trim(),
+          price,
+          quantity,
+          amount: Number.isFinite(rowAmount) ? rowAmount : price * quantity,
+          unit: normalizeMenuUnit(r.unit),
+        };
+      });
+    if (rowItems.length > 0) {
+      return { shopName: shop, items: rowItems };
+    }
     const name =
       (input.maintTitle || '').trim() ||
       (input.maintServiceLabel || '').trim() ||

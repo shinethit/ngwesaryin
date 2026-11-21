@@ -145,7 +145,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
               key={p.id}
               type="button"
               onClick={() => onPresetChange(p.id)}
-              className={`px-2.5 py-3 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 preset === p.id
                   ? 'bg-white text-indigo-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -213,8 +213,11 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
             </span>
           </div>
           {/* [v7.5.60 D-S1] Lakh display, exact kyat in tooltip. */}
+          {/* [v7.5.94] Amount values never truncate: long lakh values
+              wrap (unit stays visible on line 2); exact kyat stays in
+              the title tooltip. */}
           <div
-            className="mt-0.5 font-mono font-black text-amber-900 text-sm truncate"
+            className="mt-0.5 font-mono font-black text-amber-900 text-sm leading-tight break-words"
             title={`${fuelTotal.toLocaleString()} MMK`}
           >
             {formatLakhs(fuelTotal, lang)}
@@ -233,7 +236,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
             </span>
           </div>
           <div
-            className="mt-0.5 font-mono font-black text-blue-900 text-sm truncate"
+            className="mt-0.5 font-mono font-black text-blue-900 text-sm leading-tight break-words"
             title={`${maintTotal.toLocaleString()} MMK`}
           >
             {formatLakhs(maintTotal, lang)}
@@ -252,7 +255,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
             </span>
           </div>
           <div
-            className="mt-0.5 font-mono font-black text-teal-900 text-sm truncate"
+            className="mt-0.5 font-mono font-black text-teal-900 text-sm leading-tight break-words"
             title={`${tireTotal.toLocaleString()} MMK`}
           >
             {formatLakhs(tireTotal, lang)}
@@ -286,7 +289,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
             </div>
             <div className="mt-0.5 flex items-baseline gap-0.5">
               <span
-                className="font-mono font-black text-lg text-emerald-300 leading-none truncate"
+                className="font-mono font-black text-lg text-emerald-300 leading-tight break-words"
                 title={`${grandTotal.toLocaleString()} MMK`}
               >
                 {formatLakhs(grandTotal, lang)}
@@ -306,12 +309,12 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
             {costPerKmData.costPerKm !== null ? (
               <>
                 <div className="mt-0.5 flex items-baseline gap-0.5">
-                  <span className="font-mono font-black text-lg text-indigo-900 leading-none truncate">
+                  <span className="font-mono font-black text-lg text-indigo-900 leading-tight break-words">
                     {costPerKmData.costPerKm.toFixed(2)}
                   </span>
                   <span className="text-[11px] font-bold text-indigo-700">Ks/km</span>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                <div className="text-[11px] text-slate-500 mt-0.5 leading-tight break-words">
                   {costPerKmData.totalDistance.toLocaleString()} km
                 </div>
               </>

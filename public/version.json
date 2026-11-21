@@ -1,15 +1,17 @@
 {
-  "version": "v7.5.93",
-  "buildNumber": 308,
+  "version": "v7.5.94",
+  "buildNumber": 309,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ယာဉ်ပြုပြင်မှတ်တမ်းမှာ ပစ္စည်း အများကြီး တစ်ခါတည်း ထည့်လို့ရပြီ — ဥပမာ မီးသီး၊ Wiper၊ လေစစ် တစ်ကြိမ်တည်း ၃ တန်း။",
-    "အတန်းတစ်ခုချင်းစီမှာ ဝန်ဆောင်မှု အမျိုးအစား ရွေးလို့ရတယ် — အမျိုးအစားတစ်ခုချင်းစီရဲ့ နောက်တစ်ခါ လဲရမယ့် သတိပေးချက်ပါ သီးခြား မှတ်ပေးတယ်။",
-    "စုစုပေါင်း အလိုလို ပေါင်းပေးတယ်၊ သိမ်းပြီးရင် စာရင်းထဲမှာ တစ်တန်းချင်း ဖွင့်ကြည့်လို့ရတယ်။"
+    "ယာဉ်ကုန်ကျစရိတ် အနှစ်ချုပ်မှာ ဈေးကို ဖြတ်မပြတော့ဘူး — \"သိန်း\" အပြည့်မြင်ရပြီး Tab တန်းလည်း မျက်နှာပြင်ထဲ ဆန့်ပြီ။",
+    "ယာဉ်ခလုတ် ၃ ခုရဲ့ စာသား ဖြတ်နေသလို မမြင်ရအောင် ခလုတ်ကို ကျယ်ပြီး နှိပ်ရ ပိုလွယ်အောင် ပြင်ထားတယ်။",
+    "Smart Calendar မှာ စာရင်းတစ်ခုချင်းစီရဲ့ အမျိုးအစားခွဲ အမည်နဲ့ ပစ္စည်း အမည်တွေ ပြမယ်။",
+    "လေချိန်ထည့်ဖို့ အမျိုးအစားခွဲ ရွေးပြီးတာနဲ့ ခလုတ် ၄ ခု အမြဲပေါ်နေပြီ — တစ်ချက်နှိပ်ရုံပဲ။"
   ],
   "changesEn": [
-    "Add multiple parts in one vehicle service entry — e.g. headlight, wiper and air filter in one visit.",
-    "Each row has its own service type — every type gets its own next-due reminder.",
-    "The total adds up automatically, and saved rows can be expanded in the transaction list."
+    "Vehicle cost amounts are no longer cut off, and the tabs row fits the screen.",
+    "The vehicle action buttons have more breathing room and larger tap targets.",
+    "Smart Calendar now shows each entry's sub-category name and item names.",
+    "The four vehicle entry-type tiles now stay visible, so tire pressure is one tap away."
   ]
 }

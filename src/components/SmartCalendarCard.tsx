@@ -2,6 +2,10 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tag, Wallet as WalletIcon, Check, Filter } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, getCategoryDisplayName } from '../utils/formatters';
+import {
+  resolveCalendarDetailMainLabel,
+  formatCalendarDetailItems,
+} from '../utils/calendarDetailLabels';
 import { isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -584,7 +588,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
               <table className="w-full table-fixed text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
-                    <th className="py-2.5 px-3">{lang === 'my' ? 'အမျိုးအစား / မှတ်ချက်' : 'Category / Note'}</th>
+                    <th className="py-2.5 px-3">{lang === 'my' ? 'အမျိုးအစားခွဲ / အသေးစိတ်' : 'Sub-category / Details'}</th>
                     <th className="py-2.5 px-3 text-right w-24">{lang === 'my' ? 'ပမာဏ (သိန်း)' : 'Amount (lakh)'}</th>
                   </tr>
                 </thead>
@@ -593,6 +597,12 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                     const isInc = t.type === 'income';
                     const cat = catMap.get(t.category);
                     const catName = getCategoryDisplayName(t.category, categories, lang);
+                    // [v7.5.94] Main line = sub-category name when the txn
+                    // has one, else the category name. Detail line = item
+                    // names when present (winning over the note), else
+                    // the note exactly as before.
+                    const detailMainLabel = resolveCalendarDetailMainLabel(t.subCategoryId, cat, catName, lang);
+                    const detailItemsLine = formatCalendarDetailItems(t.items, lang);
                     const catColor = cat?.color || (isInc ? '#10B981' : '#EF4444');
                     const catIcon = cat?.icon || 'Tag';
                     // [v7.5.56] Shared badge on the row's wallet (finding 25).
@@ -612,16 +622,18 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                             </div>
                             <div className="min-w-0">
                               <div className="font-bold text-slate-900 truncate">
-                                {catName}
+                                {detailMainLabel}
                                 {txShared && (
                                   <span className="ml-1.5 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 whitespace-nowrap" title={txOwner ? `${lang === 'my' ? 'ပိုင်ရှင်' : 'Owner'}: ${txOwner}` : undefined}>
                                     🤝 {txOwner || (lang === 'my' ? 'မျှဝေထား' : 'Shared')}
                                   </span>
                                 )}
                               </div>
-                              {t.note && (
+                              {detailItemsLine ? (
+                                <div className="text-[11px] text-slate-500 break-words">{detailItemsLine}</div>
+                              ) : t.note ? (
                                 <div className="text-[11px] text-slate-500 truncate italic">"{t.note}"</div>
-                              )}
+                              ) : null}
                             </div>
                           </div>
                         </td>

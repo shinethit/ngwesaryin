@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.93';
-export const CURRENT_BUILD_NUMBER = 308;
+export const CURRENT_APP_VERSION = 'v7.5.94';
+export const CURRENT_BUILD_NUMBER = 309;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.94',
+    buildNumber: 309,
+    releaseDate: '2026-11-21',
+    releaseTime: '3:21 PM (MMT)',
+    titleMy: 'ယာဉ်မျက်နှာပြင် ဖြတ်ပြတာ ပြင်ဆင်ခြင်း + Calendar အသေးစိတ် + လေချိန် လမ်းကြောင်း တိုခြင်း',
+    titleEn: 'Vehicle screen text fixes, richer calendar rows, and a shorter path to tire pressure',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ယာဉ်ကုန်ကျစရိတ် ပမာဏတွေ ဖြတ်မပြတော့ဘူး၊ ခလုတ်နဲ့ Tab တန်းတွေ မျက်နှာပြင်ထဲ ဆန့်ပြီ၊ Smart Calendar မှာ အမျိုးအစားခွဲနဲ့ ပစ္စည်း အမည်တွေ ပြပြီး လေချိန်ထည့်ဖို့ တစ်ချက်နှိပ်ရုံပဲ။',
+    descriptionEn: 'Vehicle cost amounts are no longer cut off, buttons and tabs fit the screen, Smart Calendar shows sub-category and item names, and tire pressure is one tap away.',
+    changesMy: [
+      'ယာဉ်ကုန်ကျစရိတ် အနှစ်ချုပ်မှာ ဈေးကို ဖြတ်မပြတော့ဘူး — "သိန်း" အပြည့်မြင်ရပြီး Tab တန်းလည်း မျက်နှာပြင်ထဲ ဆန့်ပြီ။',
+      'ယာဉ်ခလုတ် ၃ ခုရဲ့ စာသား ဖြတ်နေသလို မမြင်ရအောင် ခလုတ်ကို ကျယ်ပြီး နှိပ်ရ ပိုလွယ်အောင် ပြင်ထားတယ်။',
+      'Smart Calendar မှာ စာရင်းတစ်ခုချင်းစီရဲ့ အမျိုးအစားခွဲ အမည်နဲ့ ပစ္စည်း အမည်တွေ ပြမယ်။',
+      'လေချိန်ထည့်ဖို့ အမျိုးအစားခွဲ ရွေးပြီးတာနဲ့ ခလုတ် ၄ ခု အမြဲပေါ်နေပြီ — တစ်ချက်နှိပ်ရုံပဲ။',
+    ],
+    changesEn: [
+      'Vehicle cost amounts are no longer cut off, and the tabs row fits the screen.',
+      'The vehicle action buttons have more breathing room and larger tap targets.',
+      'Smart Calendar now shows each entry\'s sub-category name and item names.',
+      'The four vehicle entry-type tiles now stay visible, so tire pressure is one tap away.',
+    ],
+  },
   {
     version: 'v7.5.93',
     buildNumber: 308,

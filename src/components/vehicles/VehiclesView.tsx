@@ -614,21 +614,21 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
               verbs, not bare nouns — "+ ဆီထည့်မည်" says what it does. */}
           <button
             onClick={() => { setEditingFuelLog(null); setIsFuelModalOpen(true); }}
-            className="px-2.5 py-3 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+            className="px-3.5 py-3.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
           >
             <Fuel className="w-3 h-3" />
             <span>{lang === 'my' ? '+ ဆီထည့်မည်' : '+ Add Fuel'}</span>
           </button>
           <button
             onClick={() => { setEditingMaintenance(null); setIsMaintenanceModalOpen(true); }}
-            className="px-2.5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+            className="px-3.5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
           >
             <Wrench className="w-3 h-3" />
             <span>{lang === 'my' ? '+ ဝန်ဆောင်မှု' : '+ Add Service'}</span>
           </button>
           <button
             onClick={() => { setEditingTireLog(null); setIsTireModalOpen(true); }}
-            className="px-2.5 py-3 bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+            className="px-3.5 py-3.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
           >
             <Disc className="w-3 h-3" />
             <span>{lang === 'my' ? '+ လေချိန်မည်' : '+ Log Pressure'}</span>
@@ -636,7 +636,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           <button
             type="button"
             onClick={() => setIsFuelGuideOpen(true)}
-            className="px-2.5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1 text-[11px] font-bold"
+            className="px-3.5 py-3.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1 text-xs font-bold shrink-0"
             title={lang === 'my' ? 'ဆီဖိုး ထည့်နည်း' : 'Fuel Guide'}
           >
             <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
@@ -733,8 +733,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             <div className="flex items-baseline gap-0.5">
               {/* [v7.5.60 D-S1] Lakh display, exact kyat in tooltip.
                   [v7.5.60 D-N12] No logs yet → "--", not a misleading 0. */}
+              {/* [v7.5.94] Amount value never truncates: it wraps like the
+                  cost-summary values (unit stays visible). */}
               <span
-                className="text-base font-black font-mono text-emerald-800 leading-none truncate"
+                className="text-base font-black font-mono text-emerald-800 leading-tight break-words"
                 title={rangedFuelLogs.length > 0 ? `${fuelStats.totalSpent.toLocaleString()} MMK` : undefined}
               >
                 {rangedFuelLogs.length === 0 ? '--' : formatLakhs(fuelStats.totalSpent, lang)}
@@ -777,10 +779,12 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
       />
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit">
+      {/* [v7.5.94] Tabs wrap instead of overflowing the viewport: the
+          row stays inside 390px in both languages. */}
+      <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit">
         <button
           onClick={() => setActiveTab('fuel')}
-          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'fuel'
               ? 'bg-white text-amber-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900'
@@ -795,7 +799,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
         <button
           onClick={() => setActiveTab('maintenance')}
-          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'maintenance'
               ? 'bg-white text-blue-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900'
@@ -812,7 +816,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
         <button
           onClick={() => setActiveTab('tires')}
-          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'tires'
               ? 'bg-white text-teal-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900'

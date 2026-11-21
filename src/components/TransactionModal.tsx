@@ -1684,7 +1684,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <span className="truncate">
                     {entryModel === 'general'
                       ? (lang === 'my' ? '🚗 ယာဉ် မှတ်တမ်း' : '🚗 Vehicle entry')
-                      : entryModel === 'tire_pressure' ? (lang === 'my' ? '🛞 လေချိန်' : '🛞 Tire Pressure') : entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ' : '🛞 Tire') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : (lang === 'my' ? '🚗 ယာဉ် မှတ်တမ်း' : '🚗 Vehicle entry')}
+                      : entryModel === 'tire_pressure' ? (lang === 'my' ? '🛞 လေချိန်' : '🛞 Tire Pressure') : entryModel === 'fuel' ? (lang === 'my' ? '⛽ ဆီဖိုး' : '⛽ Fuel') : entryModel === 'vehicle_service' && maintServiceType === 'tires' ? (lang === 'my' ? '🛞 တာယာ လဲလှယ်' : '🛞 Tire Replacement') : entryModel === 'vehicle_service' ? (lang === 'my' ? '🔧 ဝန်ဆောင်မှု' : '🔧 Service') : (lang === 'my' ? '🚗 ယာဉ် မှတ်တမ်း' : '🚗 Vehicle entry')}
                   </span>
                 </span>
                 {moreOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
@@ -1853,17 +1853,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
 
-            {isVehicleRelatedCategory && entryModel === "general" && (
+            {/* [v7.5.94] Tiles stay visible in CREATE mode even after the
+                sub-category auto-switch moves entryModel off 'general'
+                (e.g. tire sub-category -> tire replacement) — that is
+                what hid the tire-pressure tile. While EDITING an
+                existing transaction the tiles stay hidden: the edit
+                restores its vehicle model via getResolvedModel, and
+                the switcher dropdown above remains the edit path. The
+                current mode's tile renders active and is a no-op. */}
+            {isVehicleRelatedCategory && !isEditing && (
               <div className="px-4 py-3 border-b border-slate-100">
                 <div className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
                   <Car className="w-3.5 h-3.5 text-blue-600" />
                   <span>{lang === 'my' ? 'ယာဉ် မှတ်တမ်း အမျိုးအစား ရွေးပါ:' : 'Select vehicle entry type:'}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  <button type="button" onClick={() => handleSwitchModel("fuel")} className="py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Fuel className="w-4 h-4" /><span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
-                  <button type="button" onClick={() => handleSwitchModel("vehicle_service")} className="py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Wrench className="w-4 h-4" /><span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
-                  <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); }} className="py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာလဲလှယ်' : 'Tire Replace'}</span></button>
-                  <button type="button" onClick={() => handleSwitchModel("tire_pressure")} className="py-2 px-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors"><Gauge className="w-4 h-4" /><span>{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span></button>
+                  <button type="button" onClick={() => { if (entryModel !== "fuel") handleSwitchModel("fuel"); }} className={"py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "fuel" ? " ring-2 ring-emerald-500 bg-emerald-100" : "")}><Fuel className="w-4 h-4" /><span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
+                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType !== "tires")) handleSwitchModel("vehicle_service"); }} className={"py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? " ring-2 ring-blue-500 bg-blue-100" : "")}><Wrench className="w-4 h-4" /><span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
+                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType === "tires")) { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); } }} className={"py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType === "tires" ? " ring-2 ring-amber-500 bg-amber-100" : "")}><Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာလဲလှယ်' : 'Tire Replace'}</span></button>
+                  <button type="button" onClick={() => { if (entryModel !== "tire_pressure") handleSwitchModel("tire_pressure"); }} className={"py-2 px-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "tire_pressure" ? " ring-2 ring-teal-500 bg-teal-100" : "")}><Gauge className="w-4 h-4" /><span>{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span></button>
                 </div>
               </div>
             )}

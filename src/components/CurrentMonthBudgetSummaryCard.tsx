@@ -228,7 +228,7 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
                   >
                     <CategoryIcon name={cat?.icon || 'Tag'} className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-bold text-slate-900 truncate">
+                  <span className="font-bold text-slate-900 break-words">
                     {displayName}
                   </span>
                   {noIncomeBase && (

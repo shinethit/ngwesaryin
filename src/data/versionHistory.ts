@@ -16,10 +16,39 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.94';
-export const CURRENT_BUILD_NUMBER = 309;
+export const CURRENT_APP_VERSION = 'v7.5.95';
+export const CURRENT_BUILD_NUMBER = 310;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.95',
+    buildNumber: 310,
+    releaseDate: '2026-11-21',
+    releaseTime: '5:00 PM (MMT)',
+    titleMy: 'ဖုံးနေတဲ့စာများ အပြည့်အစုံ မြင်ရအောင် + Unit အခြား ရိုက်ထည့်နိုင်အောင် ပြင်ဆင်ခြင်း',
+    titleEn: 'Clipped labels now show in full, and custom units can be typed in',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဖုံးနေတဲ့ စာသားတွေ အပြည့်အစုံ မြင်ရပြီ — ဆီစာရင်း ခေါင်းစဉ်၊ Free Banner၊ ယာဉ်အမည်၊ ဆိုင်ဈေး၊ ဘတ်ဂျက်အမည်၊ Calendar အသားတင်၊ Premium Tab၊ Login ခလုတ်၊ ဆိုင်မီနူး၊ အကြွေးရက်နဲ့ ဈေးဝယ်ဇယား။ Unit မှာ အခြား ရွေးရင် ကိုယ်တိုင် ရိုက်ထည့်နိုင်ပြီး နောက်တခါ ပြန်ပေါ်မယ်။',
+    descriptionEn: 'Clipped text now shows in full — fuel caption, Free banner, vehicle names, shop prices, budget names, calendar net, Premium tabs, login buttons, shop menus, debt dates, and the itemised table. Choosing Other for a unit lets you type your own unit, which reappears next time.',
+    changesMy: [
+      'ယာဉ်မျက်နှာပြင်မှာ ဖုံးနေတဲ့ ဆီစာရင်း ခေါင်းစဉ် + Free Banner စာနှင့် ရပ်ဆိုင်းထားတဲ့ ယာဉ်အမည်များ အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း',
+      'ဈေးနှုန်း နှိုင်းယှဉ်မှာ ဆိုင်အမည် + ဈေးနှုန်း အပြည့်အစုံ မြင်ရအောင် + ဘတ်ဂျက်အမည် အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း',
+      'Calendar အသားတင် အနုတ်လက္ခဏာ ပြသခြင်း + Premium Modal Tab အမည်များ အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း',
+      'Login Modal မှာ ဘာသာစကား + ပိတ်ရန် ခလုတ်များ အမြဲ ရောက်ရှိနိုင်အောင် ပြင်ဆင်ခြင်း',
+      'ဆိုင်မီနူး အမည်များ + အကြွေးစတင်ရက်/ပြန်ဆပ်ရက်များ + ဈေးဝယ်စာရင်း အသေးစိတ် ဇယား အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း',
+      "Unit 'အခြား' ရွေးရင် ကိုယ်တိုင်ရိုက်ထည့်နိုင်ပြီး နောက်တခါ အလိုအလျောက် ပြန်ပေါ်အောင် ထည့်သွင်းခြင်း",
+    ],
+    changesEn: [
+      'Vehicle screen: the fuel caption, Free banner text, and deactivated vehicle names now show in full.',
+      'Price Compare shop lines and multi-category budget names now show in full.',
+      'Calendar net amounts now show the minus sign, and Premium modal tabs show their full labels.',
+      'Login modal language and close buttons are always reachable by scrolling.',
+      'Shop menu names, debt start/repayment dates, and the itemised shopping table now show in full.',
+      "Choosing 'Other' for a unit now lets you type your own unit, which reappears next time.",
+    ],
+  },
   {
     version: 'v7.5.94',
     buildNumber: 309,

@@ -574,8 +574,8 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                             own line below — [v7.5.60 N-15] it was truncated
                             mid-number on a 390px phone). Amounts DISPLAY
                             in lakhs; exact kyat is the title tooltip. */}
-                        <div className="flex items-center justify-between gap-2 min-w-0">
-                          <div className="flex items-center gap-1.5 min-w-0 text-xs text-slate-500 truncate">
+                        <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 min-w-0 text-xs text-slate-500">
                             <span
                               className={`font-mono font-bold text-sm sm:text-base shrink-0 ${
                                 debt.status === 'settled'
@@ -590,7 +590,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                             </span>
                             <span className="text-slate-300">•</span>
                             <span
-                              className="text-slate-600 text-[11px] font-mono shrink-0 flex items-center gap-0.5"
+                              className="text-slate-600 text-[11px] font-mono shrink-0 whitespace-nowrap flex items-center gap-0.5"
                               title={lang === 'my' ? 'အကြွေးစတင်သည့်ရက်စွဲ' : 'Start date'}
                             >
                               📅 {lang === 'my' ? 'စတင်:' : 'Since:'} {formatShortDate(debt.startDate)}
@@ -759,26 +759,33 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                           return (
                             <div
                               key={rep.id}
-                              className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/70 text-xs"
+                              className="flex flex-wrap items-center justify-between gap-y-1 p-2.5 rounded-xl bg-white border border-slate-200/70 text-xs"
                             >
-                              <div className="flex items-center gap-2 min-w-0">
+                              {/* [v7.5.95 W2] flex-auto (base = content) +
+                                  no min-w-0: the row wraps instead of
+                                  squeezing — the shrink-0 date can never be
+                                  overlapped, and the right group drops to a
+                                  second line (ml-auto) instead of being
+                                  pushed off-screen. The note still
+                                  truncates (min-w-0 on the note span). */}
+                              <div className="flex items-center gap-2 flex-auto">
                                 <div className={`w-2 h-2 rounded-full shrink-0 ${isReceivable ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                <div className="min-w-0 truncate">
-                                  <span className="font-semibold text-slate-900">{formatShortDate(rep.date)}</span>
+                                <div className="min-w-0 flex items-center">
+                                  <span className="font-semibold text-slate-900 shrink-0 whitespace-nowrap">{formatShortDate(rep.date)}</span>
                                   {rep.note && (
-                                    <span className="text-slate-500 ml-2 italic">"{rep.note}"</span>
+                                    <span className="text-slate-500 ml-2 italic min-w-0 truncate">"{rep.note}"</span>
                                   )}
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-3 shrink-0">
-                                <span className="text-slate-500 truncate min-w-0 max-w-[120px]">
+                              <div className="flex items-center gap-3 shrink-0 ml-auto">
+                                <span className="text-slate-500 truncate min-w-0 max-w-[90px]">
                                   {repWallet
                                     ? (lang === 'my' ? repWallet.name : repWallet.nameEn)
                                     : (lang === 'my' ? 'ဖျက်လိုက်သော ပိုက်ဆံအိတ်' : 'Deleted wallet')}
                                 </span>
                                 <span
-                                  className={`font-bold ${isReceivable ? 'text-emerald-700' : 'text-rose-700'}`}
+                                  className={`font-bold whitespace-nowrap shrink-0 ${isReceivable ? 'text-emerald-700' : 'text-rose-700'}`}
                                   title={debtCurrency(debt) === 'MMK' ? formatMMK(rep.amount) : undefined}
                                 >
                                   {isReceivable ? '+' : '-'}{debtCurrency(debt) === 'MMK' ? formatLakhs(rep.amount, lang) : formatCurrency(rep.amount, debtCurrency(debt))}

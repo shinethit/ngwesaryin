@@ -927,9 +927,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         <div
                           key={t.id}
                           onClick={() => onEditTransaction(t)}
-                          className="p-3.5 sm:p-4 sm:px-6 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                          className="p-3.5 sm:p-4 sm:px-6 hover:bg-slate-50/80 transition-colors cursor-pointer"
                           title={lang === 'my' ? 'နှိပ်၍ ပြင်ဆင်မည်' : 'Tap to edit'}
                         >
+                          {/* [v7.5.95 T1] Header line only — the expanded
+                              item table is a sibling below (full width),
+                              NOT inside the flex-1 middle column, where
+                              w-full only bought ~131px and names
+                              wrapped per-syllable with price/amount
+                              overlapping. */}
+                          <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div
                               className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-[2px_3px_8px_rgba(0,0,0,0.12),inset_1px_1px_2px_rgba(255,255,255,0.6)]"
@@ -1051,31 +1058,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               </div>
                               )}
 
-                              {/* Expandable Shopping List Table */}
-                              {t.items && t.items.length > 0 && expandedShoppingTxIds[t.id] && (
-                                <div className="mt-2.5 p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 text-xs space-y-1.5 animate-fadeIn">
-                                  <div className="text-[11px] font-bold text-amber-950 pb-1 border-b border-amber-200/80 flex items-center justify-between">
-                                    <span>🛒 {lang === 'my' ? 'ဝယ်ယူခဲ့သည့် ပစ္စည်းအသေးစိတ်:' : 'Itemized Purchases:'}</span>
-                                    <span className="font-mono text-amber-900">{t.items.length} items</span>
-                                  </div>
-                                  <div className="space-y-1">
-                                    {t.items.map((item, idx) => (
-                                      <div key={idx} className="flex items-center justify-between gap-2 font-medium text-slate-800">
-                                        <span className="flex items-center gap-1 min-w-0">
-                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-                                          <span className="truncate">{item.name}</span>
-                                          <span className="text-[11px] text-slate-500 font-mono">
-                                            ({formatMMK(item.price)} × {item.quantity})
-                                          </span>
-                                        </span>
-                                        <span className="font-bold font-mono text-slate-900 shrink-0">
-                                          {formatMMK(item.amount)}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
 
@@ -1158,6 +1140,33 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               );
                             })()}
                           </div>
+                        </div>
+                        {/* [v7.5.95 T1] Expanded table hoisted out of the
+                            flex-1 middle column to full row width. */}
+                        {t.items && t.items.length > 0 && expandedShoppingTxIds[t.id] && (
+                          <div className="mt-2.5 w-full p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 text-xs space-y-1.5 animate-fadeIn">
+                            <div className="text-[11px] font-bold text-amber-950 pb-1 border-b border-amber-200/80 flex items-center justify-between">
+                              <span>🛒 {lang === 'my' ? 'ဝယ်ယူခဲ့သည့် ပစ္စည်းအသေးစိတ်:' : 'Itemized Purchases:'}</span>
+                              <span className="font-mono text-amber-900">{t.items.length} items</span>
+                            </div>
+                            <div className="space-y-1">
+                              {t.items.map((item, idx) => (
+                                <div key={idx} className="flex flex-wrap items-center justify-between gap-2 font-medium text-slate-800">
+                                  <span className="flex flex-1 items-center gap-1 min-w-0">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                    <span className="min-w-0 flex-1 break-words">{item.name}</span>
+                                    <span className="text-[11px] text-slate-500 font-mono shrink-0 whitespace-nowrap">
+                                      ({formatMMK(item.price)} × {item.quantity})
+                                    </span>
+                                  </span>
+                                  <span className="font-bold font-mono text-slate-900 shrink-0 whitespace-nowrap">
+                                    {formatMMK(item.amount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         </div>
                       );
                     })}

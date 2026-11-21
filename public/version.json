@@ -1,17 +1,21 @@
 {
-  "version": "v7.5.94",
-  "buildNumber": 309,
+  "version": "v7.5.95",
+  "buildNumber": 310,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ယာဉ်ကုန်ကျစရိတ် အနှစ်ချုပ်မှာ ဈေးကို ဖြတ်မပြတော့ဘူး — \"သိန်း\" အပြည့်မြင်ရပြီး Tab တန်းလည်း မျက်နှာပြင်ထဲ ဆန့်ပြီ။",
-    "ယာဉ်ခလုတ် ၃ ခုရဲ့ စာသား ဖြတ်နေသလို မမြင်ရအောင် ခလုတ်ကို ကျယ်ပြီး နှိပ်ရ ပိုလွယ်အောင် ပြင်ထားတယ်။",
-    "Smart Calendar မှာ စာရင်းတစ်ခုချင်းစီရဲ့ အမျိုးအစားခွဲ အမည်နဲ့ ပစ္စည်း အမည်တွေ ပြမယ်။",
-    "လေချိန်ထည့်ဖို့ အမျိုးအစားခွဲ ရွေးပြီးတာနဲ့ ခလုတ် ၄ ခု အမြဲပေါ်နေပြီ — တစ်ချက်နှိပ်ရုံပဲ။"
+    "ယာဉ်မျက်နှာပြင်မှာ ဖုံးနေတဲ့ ဆီစာရင်း ခေါင်းစဉ် + Free Banner စာနှင့် ရပ်ဆိုင်းထားတဲ့ ယာဉ်အမည်များ အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
+    "ဈေးနှုန်း နှိုင်းယှဉ်မှာ ဆိုင်အမည် + ဈေးနှုန်း အပြည့်အစုံ မြင်ရအောင် + ဘတ်ဂျက်အမည် အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
+    "Calendar အသားတင် အနုတ်လက္ခဏာ ပြသခြင်း + Premium Modal Tab အမည်များ အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
+    "Login Modal မှာ ဘာသာစကား + ပိတ်ရန် ခလုတ်များ အမြဲ ရောက်ရှိနိုင်အောင် ပြင်ဆင်ခြင်း",
+    "ဆိုင်မီနူး အမည်များ + အကြွေးစတင်ရက်/ပြန်ဆပ်ရက်များ + ဈေးဝယ်စာရင်း အသေးစိတ် ဇယား အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
+    "Unit 'အခြား' ရွေးရင် ကိုယ်တိုင်ရိုက်ထည့်နိုင်ပြီး နောက်တခါ အလိုအလျောက် ပြန်ပေါ်အောင် ထည့်သွင်းခြင်း"
   ],
   "changesEn": [
-    "Vehicle cost amounts are no longer cut off, and the tabs row fits the screen.",
-    "The vehicle action buttons have more breathing room and larger tap targets.",
-    "Smart Calendar now shows each entry's sub-category name and item names.",
-    "The four vehicle entry-type tiles now stay visible, so tire pressure is one tap away."
+    "Vehicle screen: the fuel caption, Free banner text, and deactivated vehicle names now show in full.",
+    "Price Compare shop lines and multi-category budget names now show in full.",
+    "Calendar net amounts now show the minus sign, and Premium modal tabs show their full labels.",
+    "Login modal language and close buttons are always reachable by scrolling.",
+    "Shop menu names, debt start/repayment dates, and the itemised shopping table now show in full.",
+    "Choosing 'Other' for a unit now lets you type your own unit, which reappears next time."
   ]
 }

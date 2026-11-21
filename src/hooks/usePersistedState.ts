@@ -49,9 +49,35 @@ export function usePersistedState<T>(
     }
   }, [key, state]);
 
+  // [v7.5.95 U2] Same-tab sync: useState reads localStorage once at mount,
+  // so a second mounted component sharing this key (e.g. TransactionModal
+  // while AddMaintenanceModal saves a custom unit) would keep a stale
+  // snapshot until reload. The setter broadcasts the new value; every
+  // mounted instance with the same key adopts it. The dispatching
+  // instance receives its own event with the identical reference, so
+  // React bails out — no loop (dispatch happens only in the setter,
+  // never in an effect).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ key: string; value: unknown }>).detail;
+      if (!detail || detail.key !== key) return;
+      if (!validator || validator(detail.value)) {
+        setState(detail.value as T);
+      }
+    };
+    window.addEventListener('ngwe:persisted-state', handler);
+    return () => window.removeEventListener('ngwe:persisted-state', handler);
+  }, [key, validator]);
+
   const setPersistedState = (value: T | ((prev: T) => T)) => {
     const nextValue = value instanceof Function ? value(stateRef.current) : value;
     setState(nextValue);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('ngwe:persisted-state', { detail: { key, value: nextValue } })
+      );
+    }
   };
 
   return [state, setPersistedState];

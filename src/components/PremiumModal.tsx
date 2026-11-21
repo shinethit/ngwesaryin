@@ -419,40 +419,40 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('code')}
-            className={`flex-1 py-3 px-2 text-sm flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
+            className={`flex-1 py-3 px-1 text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'code'
                 ? 'border-amber-600 text-amber-900 bg-white font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
-            <span className="whitespace-nowrap">{lang === 'my' ? 'Code ထည့်မည်' : 'Enter Code'}</span>
+            <KeyRound className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="leading-tight">{lang === 'my' ? 'Code ထည့်မည်' : 'Enter Code'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('payment')}
-            className={`flex-1 py-3 px-2 text-sm flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
+            className={`flex-1 py-3 px-1 text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'payment'
                 ? 'border-amber-600 text-amber-900 bg-white font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="whitespace-nowrap">{lang === 'my' ? 'Code တောင်းရန်' : 'Buy Code'}</span>
+            <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="leading-tight">{lang === 'my' ? 'Code တောင်းရန်' : 'Buy Code'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('features')}
-            className={`flex-1 py-3 px-2 text-sm flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
+            className={`flex-1 py-3 px-1 text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer border-b-2 ${
               activeTab === 'features'
                 ? 'border-amber-600 text-amber-900 bg-white font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <ListCheck className="w-4 h-4 text-slate-600 shrink-0" />
-            <span className="whitespace-nowrap">{lang === 'my' ? 'အင်္ဂါရပ်များ' : 'Features'}</span>
+            <ListCheck className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span className="leading-tight">{lang === 'my' ? 'အင်္ဂါရပ်များ' : 'Features'}</span>
           </button>
         </div>
 

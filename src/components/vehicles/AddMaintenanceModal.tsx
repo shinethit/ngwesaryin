@@ -6,7 +6,8 @@ import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 // [v7.5.93] Multi-row service entries — same row design as
 // TransactionModal (per-row service type, price/qty/amount, unit).
 import { ROW_SERVICE_TYPES } from '../../utils/vehicleServiceRows';
-import { SHOP_MENU_UNITS, DEFAULT_MENU_UNIT, normalizeMenuUnit } from '../../utils/shopMenuUpdate';
+import { DEFAULT_MENU_UNIT, collectNewCustomUnits, customMenuUnitText, menuUnitNeedsCustomInput, menuUnitSelectOptions, resolveMenuUnitSelectValue, resolveSavedMenuUnit } from '../../utils/shopMenuUpdate';
+import { usePersistedState } from '../../hooks/usePersistedState';
 
 interface AddMaintenanceModalProps {
   isOpen: boolean;
@@ -73,6 +74,9 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   // entries always start with rows (one blank row).
   const [useServiceRows, setUseServiceRows] = useState(true);
   const [serviceRows, setServiceRows] = useState<TransactionItem[]>([]);
+  // [v7.5.95 U1/U2] Custom units typed via 'အခြား', shared with
+  // ShopCard / TransactionModal (same storage key).
+  const [customUnits, setCustomUnits] = usePersistedState<string[]>('ngwe_custom_units', []);
   const serviceRowsContainerRef = useRef<HTMLDivElement>(null);
   const newlyAddedRowIdRef = useRef<string | null>(null);
 
@@ -92,7 +96,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
             price: p,
             quantity: q,
             amount: Number((p * q).toFixed(2)),
-            unit: normalizeMenuUnit(r.unit),
+            unit: resolveSavedMenuUnit(r.unit),
             ...(r.serviceType ? { serviceType: r.serviceType } : {}),
           } as TransactionItem;
         }),
@@ -408,6 +412,13 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
     };
     if (rowsActive) payload.items = validServiceRows;
 
+    // [v7.5.95 U2] Save typed custom units so they reappear as select
+    // options next time (same pattern as custom gas stations).
+    if (rowsActive) {
+      const newCustoms = collectNewCustomUnits(validServiceRows.map((r) => r.unit), customUnits);
+      if (newCustoms.length > 0) setCustomUnits((prev) => [...prev, ...newCustoms]);
+    }
+
     onSave(payload);
 
     onClose();
@@ -506,15 +517,27 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
                       <select
-                        value={row.unit || DEFAULT_MENU_UNIT}
+                        value={resolveMenuUnitSelectValue(row.unit, customUnits)}
                         onChange={(e) => updateServiceRow(row.id || '', 'unit', e.target.value)}
                         className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none cursor-pointer"
                       >
-                        {SHOP_MENU_UNITS.map((u) => (
+                        {menuUnitSelectOptions(customUnits).map((u) => (
                           <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
                         ))}
                       </select>
                     </div>
+                    {/* [v7.5.95 U1] 'အခြား' / a custom unit reveals a
+                        free-text input: a stored custom unit shows its
+                        text prefilled; the typed text IS the saved unit. */}
+                    {menuUnitNeedsCustomInput(row.unit, customUnits) && (
+                      <input
+                        type="text"
+                        value={customMenuUnitText(row.unit)}
+                        onChange={(e) => updateServiceRow(row.id || '', 'unit', e.target.value)}
+                        placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                        className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
+                      />
+                    )}
                   </div>
                 ))}
               </div>

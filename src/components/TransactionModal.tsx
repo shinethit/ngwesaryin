@@ -32,7 +32,9 @@ import type { UnifiedItemInfo } from '../utils/itemIntelligence';
 // in the reminder store.
 import { isShopNameNeedingDetails, loadShopDetailDismissedKeys, type ShopDetailsLike } from '../utils/shopDetailsReminders';
 // [v7.5.82] Menu units for the shopping-list rows + unit carry-through.
-import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, normalizeMenuUnit, SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
+// [v7.5.95 U1] 'အခြား' reveals a free-text unit; typed units persist
+// under 'ngwe_custom_units' and reappear as select options.
+import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, OTHER_MENU_UNIT, collectNewCustomUnits, customMenuUnitText, menuUnitNeedsCustomInput, menuUnitSelectOptions, resolveMenuUnitSelectValue, resolveSavedMenuUnit } from '../utils/shopMenuUpdate';
 import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
 // [v7.5.93] Per-row service types for multi-row vehicle service entries.
 import { ROW_SERVICE_TYPES, resolveVehicleServiceSubCategory } from '../utils/vehicleServiceRows';
@@ -230,6 +232,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [customGasStation, setCustomGasStation] = useState<string>('');
   const [fuelIsFullTank, setFuelIsFullTank] = useState<boolean>(true);
   const [customStations, setCustomStations] = usePersistedState<string[]>('ngwe_custom_gas_stations', []);
+  // [v7.5.95 U2] Custom units typed via 'အခြား', shared with
+  // ShopCard / AddMaintenanceModal (same storage key).
+  const [customUnits, setCustomUnits] = usePersistedState<string[]>('ngwe_custom_units', []);
 
   // Maintenance fields
   const [maintServiceType, setMaintServiceType] = useState<VehicleServiceType>('engine_oil');
@@ -1263,7 +1268,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       // rebuilds the object, so a dropped type would collapse every
       // row back onto the visit's main type. (Only stamped when set;
       // an undefined key must never reach Firestore.)
-      return { name: i.name.trim(), price: p, quantity: q, amount: p * q, unit: normalizeMenuUnit(i.unit), ...(i.serviceType ? { serviceType: i.serviceType } : {}) };
+      return { name: i.name.trim(), price: p, quantity: q, amount: p * q, unit: resolveSavedMenuUnit(i.unit), ...(i.serviceType ? { serviceType: i.serviceType } : {}) };
     });
     let finalAmount = numAmount;
     if (isFreeTireCheck && (!finalAmount || finalAmount <= 0)) finalAmount = 0;
@@ -1277,6 +1282,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     } else if (entryMode === 'unit_qty' && parseMyanmarNumber(unitPrice) > 0 && parseMyanmarNumber(quantity) > 0) {
       finalAmount = parseMyanmarNumber(unitPrice) * parseMyanmarNumber(quantity);
     }
+
+    // [v7.5.95 U2] Save typed custom units so they reappear as select
+    // options next time (same pattern as custom gas stations).
+    const newCustomUnits = collectNewCustomUnits(validItems.map((i) => i.unit), customUnits);
+    if (newCustomUnits.length > 0) setCustomUnits((prev) => [...prev, ...newCustomUnits]);
 
     try {
       let vehicleLinkPayload: VehicleLinkData | undefined = undefined;
@@ -2147,15 +2157,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
                                 <select
-                                  value={item.unit || DEFAULT_MENU_UNIT}
+                                  value={resolveMenuUnitSelectValue(item.unit, customUnits)}
                                   onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
                                   className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
                                 >
-                                  {SHOP_MENU_UNITS.map((u) => (
+                                  {menuUnitSelectOptions(customUnits).map((u) => (
                                     <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
                                   ))}
                                 </select>
                               </div>
+                              {/* [v7.5.95 U1] 'အခြား' / a custom unit reveals a
+                                  free-text input: a stored custom unit shows
+                                  its text prefilled; the typed text IS the
+                                  saved unit and reappears next time. */}
+                              {menuUnitNeedsCustomInput(item.unit, customUnits) && (
+                                <input
+                                  type="text"
+                                  value={customMenuUnitText(item.unit)}
+                                  onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
+                                  placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                                  className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
+                                />
+                              )}
                               {pastPurchase && item.price > 0 && (<div className="text-[10px] text-slate-500">{lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})</div>)}
                             </div>
                           );
@@ -2237,15 +2260,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
                           <select
-                            value={item.unit || DEFAULT_MENU_UNIT}
+                            value={resolveMenuUnitSelectValue(item.unit, customUnits)}
                             onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
                             className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
                           >
-                            {SHOP_MENU_UNITS.map((u) => (
+                            {menuUnitSelectOptions(customUnits).map((u) => (
                               <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
                             ))}
                           </select>
                         </div>
+                        {/* [v7.5.95 U1] 'အခြား' / a custom unit reveals a
+                            free-text input: a stored custom unit shows
+                            its text prefilled; the typed text IS the
+                            saved unit and reappears next time. */}
+                        {menuUnitNeedsCustomInput(item.unit, customUnits) && (
+                          <input
+                            type="text"
+                            value={customMenuUnitText(item.unit)}
+                            onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
+                            placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                            className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
+                          />
+                        )}
                         {pastPurchase && item.price > 0 && (<div className="text-[10px] text-slate-500">{lang === 'my' ? 'ယခင်:' : 'Prev:'} {formatMMK(pastPurchase.price)} ({pastPurchase.date})</div>)}
                       </div>
                     );

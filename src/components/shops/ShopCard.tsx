@@ -4,8 +4,9 @@ import { ShopContact, PublicShop } from '../../types';
 import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
 import { parseMyanmarNumber } from '../../utils/myanmarDigits';
-import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS } from '../../utils/shopMenuUpdate';
+import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS, OTHER_MENU_UNIT, collectNewCustomUnits, menuUnitSelectOptions, resolveSavedMenuUnit } from '../../utils/shopMenuUpdate';
 import { filterItemNameSuggestions } from '../../utils/shopItemSearch';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import { normalizeMyanmarPhone } from './ShopModal';
 import { shopHasDetails } from '../../utils/shopDetailsReminders';
 
@@ -51,6 +52,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   const [newItemPrice, setNewItemPrice] = useState('');
   // [v7.5.82] Per-unit basis of the price being added (default တစ်ခု).
   const [newItemUnit, setNewItemUnit] = useState<string>(DEFAULT_MENU_UNIT);
+  // [v7.5.95 U1] 'အခြား' reveals a free-text unit; typed units persist
+  // (ngwe_custom_units, shared with TransactionModal /
+  // AddMaintenanceModal) and reappear as select options.
+  const [newItemCustomUnit, setNewItemCustomUnit] = useState('');
+  const [customUnits, setCustomUnits] = usePersistedState<string[]>('ngwe_custom_units', []);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
 
   // [v7.5.86] Add-price suggestions from the shared menus — the datalist
@@ -164,12 +170,20 @@ export const ShopCard: React.FC<ShopCardProps> = ({
     if (isNaN(priceNum) || priceNum <= 0) return;
 
     setIsSubmittingItem(true);
-    const success = await onAddPricingItem(shop, newItemName.trim(), priceNum, newItemUnit);
+    // [v7.5.95 U1] The typed custom text IS the saved unit; the
+    // 'အခြား' sentinel with nothing typed resolves to the default.
+    const effectiveUnit = resolveSavedMenuUnit(
+      newItemUnit === OTHER_MENU_UNIT ? newItemCustomUnit : newItemUnit,
+    );
+    const newCustoms = collectNewCustomUnits([effectiveUnit], customUnits);
+    if (newCustoms.length > 0) setCustomUnits((prev) => [...prev, ...newCustoms]);
+    const success = await onAddPricingItem(shop, newItemName.trim(), priceNum, effectiveUnit);
     setIsSubmittingItem(false);
     if (success) {
       setNewItemName('');
       setNewItemPrice('');
       setNewItemUnit(DEFAULT_MENU_UNIT);
+      setNewItemCustomUnit('');
     }
   };
 
@@ -474,7 +488,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 {(shop.items || []).map((item, idx) => (
                   <div key={idx} className="p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div className="min-w-0">
-                      <span className="font-bold text-slate-800 text-xs block truncate">{item.name}</span>
+                      <span className="font-bold text-slate-800 text-xs block break-words">{item.name}</span>
                       <span className="text-[10px] text-slate-400 break-all">{item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -539,16 +553,30 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
                 <select
                   value={newItemUnit}
-                  onChange={(e) => setNewItemUnit(e.target.value)}
+                  onChange={(e) => {
+                    setNewItemUnit(e.target.value);
+                    if (e.target.value !== OTHER_MENU_UNIT) setNewItemCustomUnit('');
+                  }}
                   aria-label={lang === 'my' ? 'ယူနစ်' : 'Unit'}
                   className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                 >
-                  {SHOP_MENU_UNITS.map((u) => (
+                  {menuUnitSelectOptions(customUnits).map((u) => (
                     <option key={u.value} value={u.value}>
                       {lang === 'my' ? u.labelMy : u.labelEn}
                     </option>
                   ))}
                 </select>
+                {/* [v7.5.95 U1] 'အခြား' reveals a free-text unit; the
+                    typed text IS the saved unit and reappears next time. */}
+                {newItemUnit === OTHER_MENU_UNIT && (
+                  <input
+                    type="text"
+                    value={newItemCustomUnit}
+                    onChange={(e) => setNewItemCustomUnit(e.target.value)}
+                    placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                    className="w-full px-2.5 py-2.5 min-h-[44px] bg-amber-50 text-base border border-amber-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                  />
+                )}
                 <button
                   type="submit"
                   disabled={isSubmittingItem || !newItemName.trim() || !newItemPrice.trim()}
@@ -831,7 +859,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     className="p-2 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between text-xs"
                   >
                     <div className="min-w-0 pr-2">
-                      <div className="font-bold text-slate-900 truncate">{item.name}</div>
+                      <div className="font-bold text-slate-900 break-words">{item.name}</div>
                       <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
                         <span className="truncate min-w-0">👤 {item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
                         <span>•</span>
@@ -899,16 +927,30 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
                 <select
                   value={newItemUnit}
-                  onChange={(e) => setNewItemUnit(e.target.value)}
+                  onChange={(e) => {
+                    setNewItemUnit(e.target.value);
+                    if (e.target.value !== OTHER_MENU_UNIT) setNewItemCustomUnit('');
+                  }}
                   aria-label={lang === 'my' ? 'ယူနစ်' : 'Unit'}
                   className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                 >
-                  {SHOP_MENU_UNITS.map((u) => (
+                  {menuUnitSelectOptions(customUnits).map((u) => (
                     <option key={u.value} value={u.value}>
                       {lang === 'my' ? u.labelMy : u.labelEn}
                     </option>
                   ))}
                 </select>
+                {/* [v7.5.95 U1] 'အခြား' reveals a free-text unit; the
+                    typed text IS the saved unit and reappears next time. */}
+                {newItemUnit === OTHER_MENU_UNIT && (
+                  <input
+                    type="text"
+                    value={newItemCustomUnit}
+                    onChange={(e) => setNewItemCustomUnit(e.target.value)}
+                    placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                    className="w-full px-2.5 py-2.5 min-h-[44px] bg-amber-50 text-base border border-amber-200 rounded-lg outline-none text-slate-800 focus:bg-white"
+                  />
+                )}
                 <button
                   type="submit"
                   disabled={isSubmittingItem || !newItemName.trim() || !newItemPrice.trim()}

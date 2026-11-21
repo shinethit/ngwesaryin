@@ -1013,7 +1013,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                               e.stopPropagation();
                               handleOpenShopSearch(item);
                             }}
-                            className="mt-0.5 block max-w-full truncate text-left text-[10px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
+                            className="mt-0.5 block max-w-full text-left text-[10px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer break-words"
                           >
                             🏪 {item.menuCheapest.shopName} · {formatLakhs(item.menuCheapest.price, lang)}
                           </button>

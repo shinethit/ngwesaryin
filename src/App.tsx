@@ -3872,9 +3872,14 @@ export default function App() {
         </div>
       )}
 
+      {/* [v7.5.95 E2] The modal child carries m-auto (not wrapper
+          items-center): flex centering of taller-than-viewport
+          content bleeds the top above the scroll origin, putting the
+          language + close bar out of reach. m-auto centers short
+          content and pins tall content to scrollTop 0 instead. */}
             {(isAuthModalOpen || showLoginModal) && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
-          <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg">
+        <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-slate-900/50 backdrop-blur-xs flex justify-center p-0 sm:p-4">
+          <div className="w-full min-h-screen sm:min-h-0 sm:max-w-lg m-auto">
             <LoginScreen
               lang={lang}
               onToggleLang={handleToggleLang}

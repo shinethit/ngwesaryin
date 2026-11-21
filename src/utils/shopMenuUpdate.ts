@@ -35,12 +35,121 @@ export const SHOP_MENU_UNITS: { value: string; labelMy: string; labelEn: string 
   { value: 'အခြား', labelMy: 'အခြား', labelEn: 'other' },
 ];
 
-/** Trim; empty / non-string / unknown values fall back to the default. */
+/** Trim; empty / non-string values fall back to the default.
+ * [v7.5.95 U2] A non-empty string that is NOT one of the six list
+ * values is a CUSTOM unit (e.g. 'တစ်ဗူး') typed via the 'အခြား'
+ * option — it is PRESERVED as-is, never collapsed to the default.
+ * Matching stays exact string equality everywhere (computeMenuDiff /
+ * buildUpdatedMenuItems / shopItemSearch), so a custom unit matches
+ * only the same custom unit. The literal 'အခြား' itself is a list
+ * value, so it is preserved too (old entries stay as-is). */
 export function normalizeMenuUnit(unit: unknown): string {
   if (typeof unit !== 'string') return DEFAULT_MENU_UNIT;
   const trimmed = unit.trim();
   if (!trimmed) return DEFAULT_MENU_UNIT;
-  return SHOP_MENU_UNITS.some((u) => u.value === trimmed) ? trimmed : DEFAULT_MENU_UNIT;
+  return trimmed;
+}
+
+/** The 'other' list value — choosing it reveals a free-text input. */
+export const OTHER_MENU_UNIT = 'အခြား';
+
+/** True when `unit` is a non-empty custom unit (not a list value). */
+export function isCustomMenuUnit(unit: unknown): boolean {
+  if (typeof unit !== 'string') return false;
+  const trimmed = unit.trim();
+  if (!trimmed) return false;
+  return !SHOP_MENU_UNITS.some((u) => u.value === trimmed);
+}
+
+/** [v7.5.95 U1] Options for a unit <select>: the standard units
+ * (except 'အခြား'), then the user's persisted custom units
+ * (trimmed, deduped, never duplicating a list value), then 'အခြား'
+ * last — mirroring the custom-gas-stations select pattern. A custom
+ * unit renders with the same string in both languages (no EN label
+ * is known for a typed unit). */
+export function menuUnitSelectOptions(
+  customUnits: string[],
+): { value: string; labelMy: string; labelEn: string }[] {
+  const seen = new Set<string>();
+  const customs: { value: string; labelMy: string; labelEn: string }[] = [];
+  for (const raw of customUnits || []) {
+    const trimmed = typeof raw === 'string' ? raw.trim() : '';
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    if (SHOP_MENU_UNITS.some((u) => u.value === trimmed)) continue;
+    customs.push({ value: trimmed, labelMy: trimmed, labelEn: trimmed });
+  }
+  const standard = SHOP_MENU_UNITS.filter((u) => u.value !== OTHER_MENU_UNIT);
+  const other = SHOP_MENU_UNITS.find((u) => u.value === OTHER_MENU_UNIT)!;
+  return [...standard, ...customs, other];
+}
+
+/** [v7.5.95 U1] The value a unit <select> must show for a stored
+ * unit: a list value, or a persisted custom unit (an option in this
+ * select), shows itself; any OTHER non-empty string is a custom unit
+ * from elsewhere (e.g. another device) and shows 'အခြား' (its text
+ * goes in the free-text input); missing/undefined shows the default;
+ * an EMPTY string means the user picked 'အခြား' and has typed
+ * nothing yet, so it also shows 'အခြား' with an empty input (never
+ * the default — the input must stay visible until the user picks
+ * something else). */
+export function resolveMenuUnitSelectValue(unit: unknown, customUnits: string[] = []): string {
+  if (unit === undefined || unit === null) return DEFAULT_MENU_UNIT;
+  if (typeof unit !== 'string') return DEFAULT_MENU_UNIT;
+  const trimmed = unit.trim();
+  if (!trimmed) return OTHER_MENU_UNIT;
+  if (SHOP_MENU_UNITS.some((u) => u.value === trimmed)) return trimmed;
+  const customs = (customUnits || []).map((u) => (typeof u === 'string' ? u.trim() : ''));
+  if (customs.includes(trimmed)) return trimmed;
+  return OTHER_MENU_UNIT;
+}
+
+/** [v7.5.95 U1] Whether the free-text custom-unit input must show
+ * for a stored unit: always for a custom unit (so its text stays
+ * visible + editable even when it is also a select option), and for
+ * the 'အခြား' sentinel / any unlisted custom (select shows
+ * 'အခြား'). List values never show it. */
+export function menuUnitNeedsCustomInput(unit: unknown, customUnits: string[] = []): boolean {
+  if (isCustomMenuUnit(unit)) return true;
+  return resolveMenuUnitSelectValue(unit, customUnits) === OTHER_MENU_UNIT;
+}
+
+/** [v7.5.95 U1] The free-text value for a stored unit: the raw custom
+ * string when the unit is custom, '' otherwise (a list value, the
+ * literal 'အခြား', or empty all show an empty input). */
+export function customMenuUnitText(unit: unknown): string {
+  if (typeof unit !== 'string') return '';
+  const trimmed = unit.trim();
+  if (!trimmed) return '';
+  if (SHOP_MENU_UNITS.some((u) => u.value === trimmed)) return '';
+  return trimmed;
+}
+
+/** [v7.5.95 U1] The unit to SAVE for a stored/typed value: the
+ * 'အခြား' sentinel (picked but nothing typed) resolves to the
+ * default — choosing 'အခြား' must never store the literal 'အခြား'.
+ * Every other value goes through normalizeMenuUnit (custom strings
+ * preserved, empty → default). */
+export function resolveSavedMenuUnit(unit: unknown): string {
+  if (typeof unit === 'string' && unit.trim() === OTHER_MENU_UNIT) return DEFAULT_MENU_UNIT;
+  return normalizeMenuUnit(unit);
+}
+
+/** [v7.5.95 U2] Custom units in `units` that are not already in
+ * `existingCustom` — the append-on-save set (deduped, in order). */
+export function collectNewCustomUnits(
+  units: (string | undefined)[],
+  existingCustom: string[],
+): string[] {
+  const known = new Set((existingCustom || []).map((u) => (typeof u === 'string' ? u.trim() : '')));
+  const out: string[] = [];
+  for (const u of units) {
+    if (!isCustomMenuUnit(u)) continue;
+    const trimmed = (u as string).trim();
+    if (known.has(trimmed) || out.includes(trimmed)) continue;
+    out.push(trimmed);
+  }
+  return out;
 }
 
 /** Trim + lowercase — the matching key for menu item names. */

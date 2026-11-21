@@ -122,6 +122,9 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
 
   // [v7.5.60 S19] Phones have no hover for the title tooltips: tapping
   // a lakh amount toggles it to the exact kyat value, and back.
+  // fmtCell / formatShortLakhs return ABSOLUTE values (Math.abs) by
+  // design — every caller supplies its own +/- sign. [v7.5.95 H1]
+  // The Net render sites must use '-' for negatives, never ''.
   const [amountsExact, setAmountsExact] = useState(false);
   const toggleExactAmounts = () => setAmountsExact((v) => !v);
   const fmtCell = (amount: number): string =>
@@ -299,8 +302,8 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             {(monthSharedSummary.income > 0 || monthSharedSummary.expense > 0) && (
               <p className="text-[11px] text-amber-700 font-semibold" title={`🤝 Shared in: ${formatMMK(monthSharedSummary.income)} · out: ${formatMMK(monthSharedSummary.expense)}`}>
                 {lang === 'my'
-                  ? `🤝 ဒီလ မျှဝေထား — ဝင် +${fmtCell(monthSharedSummary.income)} · ထွက် -${fmtCell(monthSharedSummary.expense)} · ကျန် ${monthSharedSummary.net >= 0 ? '+' : ''}${fmtCell(monthSharedSummary.net)}`
-                  : `🤝 Shared this month — in +${fmtCell(monthSharedSummary.income)} · out -${fmtCell(monthSharedSummary.expense)} · net ${monthSharedSummary.net >= 0 ? '+' : ''}${fmtCell(monthSharedSummary.net)}`}
+                  ? `🤝 ဒီလ မျှဝေထား — ဝင် +${fmtCell(monthSharedSummary.income)} · ထွက် -${fmtCell(monthSharedSummary.expense)} · ကျန် ${monthSharedSummary.net < 0 ? '-' : '+'}${fmtCell(monthSharedSummary.net)}`
+                  : `🤝 Shared this month — in +${fmtCell(monthSharedSummary.income)} · out -${fmtCell(monthSharedSummary.expense)} · net ${monthSharedSummary.net < 0 ? '-' : '+'}${fmtCell(monthSharedSummary.net)}`}
               </p>
             )}
           </div>
@@ -561,7 +564,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             </div>
             <div className={`p-2.5 rounded-2xl border text-center shadow-2xs ${selectedDaySummary.net >= 0 ? 'bg-indigo-50 text-indigo-950 border-indigo-200' : 'bg-rose-50 text-rose-950 border-rose-200'}`}>
               <div className="text-[10px] font-sans font-semibold opacity-85">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
-              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net >= 0 ? '+' : ''}{fmtCell(selectedDaySummary.net)}</button>
+              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net < 0 ? '-' : '+'}{fmtCell(selectedDaySummary.net)}</button>
             </div>
           </div>
 
@@ -569,8 +572,8 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           {(selectedDaySharedSummary.income > 0 || selectedDaySharedSummary.expense > 0) && (
             <div className="text-[11px] text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5" title={`🤝 Shared in: ${formatMMK(selectedDaySharedSummary.income)} · out: ${formatMMK(selectedDaySharedSummary.expense)}`}>
               {lang === 'my'
-                ? `🤝 မျှဝေထား — ဝင် +${fmtCell(selectedDaySharedSummary.income)} · ထွက် -${fmtCell(selectedDaySharedSummary.expense)} · ကျန် ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${fmtCell(selectedDaySharedSummary.net)}`
-                : `🤝 Shared — in +${fmtCell(selectedDaySharedSummary.income)} · out -${fmtCell(selectedDaySharedSummary.expense)} · net ${selectedDaySharedSummary.net >= 0 ? '+' : ''}${fmtCell(selectedDaySharedSummary.net)}`}
+                ? `🤝 မျှဝေထား — ဝင် +${fmtCell(selectedDaySharedSummary.income)} · ထွက် -${fmtCell(selectedDaySharedSummary.expense)} · ကျန် ${selectedDaySharedSummary.net < 0 ? '-' : '+'}${fmtCell(selectedDaySharedSummary.net)}`
+                : `🤝 Shared — in +${fmtCell(selectedDaySharedSummary.income)} · out -${fmtCell(selectedDaySharedSummary.expense)} · net ${selectedDaySharedSummary.net < 0 ? '-' : '+'}${fmtCell(selectedDaySharedSummary.net)}`}
             </div>
           )}
 

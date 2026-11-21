@@ -13,10 +13,16 @@ import {
   buildMenuPromptRows,
   buildUpdatedMenuItems,
   buildVehicleMenuCandidate,
+  collectNewCustomUnits,
   computeMenuDiff,
+  customMenuUnitText,
   isLargePriceDifference,
+  menuUnitNeedsCustomInput,
+  menuUnitSelectOptions,
   normalizeMenuItemName,
   normalizeMenuUnit,
+  resolveMenuUnitSelectValue,
+  resolveSavedMenuUnit,
   resolveMenuShop,
   resolveMenuShopById,
   shouldOfferMenuUpdate,
@@ -76,13 +82,97 @@ describe('normalizeMenuUnit', () => {
     expect(normalizeMenuUnit('  တစ်ကီလို ')).toBe('တစ်ကီလို');
   });
 
-  it('empty / unknown / non-string fall back to the default', () => {
+  it('empty / non-string fall back to the default', () => {
     expect(normalizeMenuUnit('')).toBe(DEFAULT_MENU_UNIT);
     expect(normalizeMenuUnit('   ')).toBe(DEFAULT_MENU_UNIT);
-    expect(normalizeMenuUnit('per kilo')).toBe(DEFAULT_MENU_UNIT);
     expect(normalizeMenuUnit(undefined)).toBe(DEFAULT_MENU_UNIT);
     expect(normalizeMenuUnit(null)).toBe(DEFAULT_MENU_UNIT);
     expect(normalizeMenuUnit(42)).toBe(DEFAULT_MENU_UNIT);
+  });
+
+  // [v7.5.95 U2] A non-empty unknown string is a CUSTOM unit typed via
+  // 'အခြား' — preserved as-is, never collapsed to the default (the
+  // old 'per kilo' → default expectation is void).
+  it('preserves a custom unit string as-is', () => {
+    expect(normalizeMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('တစ်ဗူး');
+    expect(normalizeMenuUnit('per kilo')).toBe('per kilo');
+    expect(normalizeMenuUnit('အခြား')).toBe('အခြား');
+  });
+});
+
+describe('custom menu units (v7.5.95 U1/U2)', () => {
+  it('menuUnitSelectOptions puts standards, then customs, then Other last', () => {
+    const opts = menuUnitSelectOptions(['တစ်ဗူး', 'တစ်ခု', 'တစ်ဗူး', '  ']);
+    expect(opts.map((o) => o.value)).toEqual([
+      'တစ်ခု',
+      'တစ်ပါကင်',
+      'တစ်ကီလို',
+      'တစ်လီတာ',
+      'တစ်ထုပ်',
+      'တစ်ဗူး',
+      'အခြား',
+    ]);
+    expect(opts.find((o) => o.value === 'တစ်ဗူး')).toEqual({
+      value: 'တစ်ဗူး',
+      labelMy: 'တစ်ဗူး',
+      labelEn: 'တစ်ဗူး',
+    });
+  });
+
+  it('resolveMenuUnitSelectValue shows list/custom values, Other for the rest', () => {
+    expect(resolveMenuUnitSelectValue('တစ်ကီလို')).toBe('တစ်ကီလို');
+    expect(resolveMenuUnitSelectValue('တစ်ဗူး', ['တစ်ဗူး'])).toBe('တစ်ဗူး');
+    expect(resolveMenuUnitSelectValue('တစ်ဗူး', [])).toBe('အခြား');
+    expect(resolveMenuUnitSelectValue('အခြား')).toBe('အခြား');
+    expect(resolveMenuUnitSelectValue('')).toBe('အခြား');
+    expect(resolveMenuUnitSelectValue(undefined)).toBe(DEFAULT_MENU_UNIT);
+  });
+
+  it('customMenuUnitText returns the raw custom string only', () => {
+    expect(customMenuUnitText('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(customMenuUnitText('တစ်ကီလို')).toBe('');
+    expect(customMenuUnitText('အခြား')).toBe('');
+    expect(customMenuUnitText('')).toBe('');
+    expect(customMenuUnitText(undefined)).toBe('');
+  });
+
+  it('menuUnitNeedsCustomInput is true for customs and the Other sentinel', () => {
+    expect(menuUnitNeedsCustomInput('တစ်ဗူး')).toBe(true);
+    expect(menuUnitNeedsCustomInput('အခြား')).toBe(true);
+    expect(menuUnitNeedsCustomInput('တစ်ကီလို')).toBe(false);
+    expect(menuUnitNeedsCustomInput(undefined)).toBe(false);
+  });
+
+  it('resolveSavedMenuUnit resolves the Other sentinel to the default', () => {
+    expect(resolveSavedMenuUnit('အခြား')).toBe(DEFAULT_MENU_UNIT);
+    expect(resolveSavedMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(resolveSavedMenuUnit('')).toBe(DEFAULT_MENU_UNIT);
+  });
+
+  it('collectNewCustomUnits dedupes against existing + itself', () => {
+    expect(collectNewCustomUnits(['တစ်ဗူး', 'တစ်ကီလို', 'တစ်ဗူး', ''], ['တစ်ဗူး'])).toEqual([]);
+    expect(
+      collectNewCustomUnits(['တစ်ဗူး', 'တစ်ထောင်း', 'တစ်ဗူး'], ['တစ်ပုံး']),
+    ).toEqual(['တစ်ဗူး', 'တစ်ထောင်း']);
+  });
+
+  it('computeMenuDiff keeps a custom unit distinct from the default', () => {
+    const rows = computeMenuDiff(
+      [{ name: 'ဆန်', price: 100, unit: 'တစ်ဗူး' }],
+      [{ name: 'ဆန်', price: 120, quantity: 1, unit: 'တစ်ဗူး' }],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].unit).toBe('တစ်ဗူး');
+    const sameDefault = computeMenuDiff(
+      [{ name: 'ဆန်', price: 100, unit: 'တစ်ဗူး' }],
+      [{ name: 'ဆန်', price: 120, quantity: 1 }],
+    );
+    // No unit on the tx side normalizes to the default — a SEPARATE
+    // menu line, never an overwrite of the custom-unit line.
+    expect(sameDefault).toHaveLength(1);
+    expect(sameDefault[0].unit).toBe(DEFAULT_MENU_UNIT);
+    expect(sameDefault[0].isNew).toBe(true);
   });
 });
 

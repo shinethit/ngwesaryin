@@ -357,7 +357,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           {deactivatedVehicles.map((v) => (
             <div key={v.id} className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
               <div className="min-w-0">
-                <span className="font-bold text-sm text-slate-800 block truncate">{v.name}</span>
+                <span className="font-bold text-sm text-slate-800 block break-words">{v.name}</span>
                 <span className="text-[11px] text-slate-500">
                   {v.plateNumber ? `${v.plateNumber} · ` : ''}
                   {v.currentOdometer?.toLocaleString()} {v.odometerUnit || 'km'}
@@ -504,7 +504,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
               <div className="font-bold text-amber-900">
                 {lang === 'my' ? `Free Tier: ယာဉ် ${vehicleLimit} စီးသာ ထည့်သွင်းစီမံနိုင်ပါသည်` : `Free Tier: ${vehicleLimit} Vehicle Included`}
               </div>
-              <div className="text-[11px] text-amber-800/80 truncate">
+              <div className="text-[11px] text-amber-800/80">
                 {lang === 'my'
                   ? 'ယာဉ်များစွာ အကန့်အသတ်မဲ့ ထည့်သွင်းမှတ်တမ်းတင်ရန် VIP Premium သို့ အဆင့်မြှင့်ပါ'
                   : 'Upgrade to VIP Premium for unlimited fleet tracking & zero restrictions'}
@@ -678,7 +678,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
       {/* [v7.5.60 D-S7] Range caption — these figures follow the same
           range as the cost summary below, never silently all-time. */}
-      <p className="flex items-center gap-1.5 text-[11px] text-slate-500 px-1 -mb-3">
+      <p className="flex items-center gap-1.5 text-[11px] text-slate-500 px-1">
         <Calendar className="w-3 h-3 text-slate-400" />
         <span>{metricRangeCaption}</span>
       </p>

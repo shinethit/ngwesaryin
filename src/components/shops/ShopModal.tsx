@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, Store, Phone, MapPin, Plus, Globe, Lock, AlertTriangle, Check } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
 import { MYANMAR_REGIONS, PRESET_TAGS } from './shopConstants';
@@ -353,6 +353,23 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   };
 
   const currentRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === formStateRegion);
+
+  // [v7.5.95 U3] Custom townships typed before (saved on other shops
+  // in this region) reappear as extra options, additive only — the
+  // static region data is untouched. Derived from `existingShops`,
+  // the same list the duplicate check already consults.
+  const customTownships = useMemo(() => {
+    if (!formStateRegion) return [] as string[];
+    const known = new Set((currentRegionObj?.townships || []).map((t) => t.nameMy));
+    const out: string[] = [];
+    for (const s of existingShops || []) {
+      if (s.stateRegion !== formStateRegion) continue;
+      const ts = (s.township || '').trim();
+      if (!ts || ts === 'custom' || known.has(ts) || out.includes(ts)) continue;
+      out.push(ts);
+    }
+    return out;
+  }, [existingShops, formStateRegion, currentRegionObj]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto overflow-x-hidden animate-fade-in">
@@ -712,6 +729,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   {(currentRegionObj?.townships || []).map((t) => (
                     <option key={t.id} value={t.nameMy}>
                       {lang === 'my' ? t.nameMy : t.nameEn}
+                    </option>
+                  ))}
+                  {customTownships.map((ts) => (
+                    <option key={`custom-${ts}`} value={ts}>
+                      {ts}
                     </option>
                   ))}
                   <option value="custom">{lang === 'my' ? 'အခြား (စိတ်ကြိုက်ရေးရန်)' : 'Other (Custom)'}</option>

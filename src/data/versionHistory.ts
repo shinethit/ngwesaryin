@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.99';
-export const CURRENT_BUILD_NUMBER = 314;
+export const CURRENT_APP_VERSION = 'v7.6.01';
+export const CURRENT_BUILD_NUMBER = 315;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.01',
+    buildNumber: 315,
+    releaseDate: '2026-11-22',
+    releaseTime: '10:30 PM (MMT)',
+    titleMy: 'ဈေး × အရေအတွက်မှာ Unit ရွေးနိုင်အောင် + မှတ်တမ်းအသေးစိတ်မှာ Unit ပြခြင်း',
+    titleEn: 'Unit selection in Unit × Qty entries + units shown in record details',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဈေး × အရေအတွက် ဖြင့် ထည့်သွင်းရာတွင်လည်း Shopping List မှာလို Unit ရွေးနိုင်ပြီ — ပါကင်၊ ကီလို၊ လီတာ စသည်ဖြင့် အမှန်အတိုင်း မှတ်နိုင်သည်။ မှတ်တမ်းအသေးစိတ်မှာလည်း ဈေး × အရေအတွက် ဘေးမှာ Unit ကိုပါ ပြမည် — ဥပမာ (1,000 × 2 ခု)။',
+    descriptionEn: 'Unit × Qty entries now offer the same unit selection as the Shopping List, so a pack, kilo or litre is recorded as bought. Saved item details also show the unit beside price × quantity, e.g. (1,000 × 2 ခု).',
+    changesMy: [
+      'ဈေး × အရေအတွက် ဖြင့် ထည့်သွင်းရာတွင်လည်း Unit ရွေးနိုင်အောင် ထည့်ခြင်း — Shopping List မှာလို ယူနစ် ရွေးစရာ ပါမည်',
+      'မှတ်တမ်းအသေးစိတ်မှာ ဈေး × အရေအတွက် ဘေးမှာ Unit ကိုပါ ပြခြင်း — ဥပမာ (1,000 × 2 ခု)',
+    ],
+    changesEn: [
+      'Unit selection added to the Unit × Qty entry mode, same as the Shopping List',
+      'Saved item details now show the unit beside price × quantity, e.g. (1,000 × 2 ခု).',
+    ],
+  },
   {
     version: 'v7.5.99',
     buildNumber: 314,

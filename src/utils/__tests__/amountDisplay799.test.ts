@@ -251,32 +251,38 @@ const VERSION_JSON = JSON.parse(
   readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
 );
 
-describe('Version bump to v7.5.99 (build 314)', () => {
+describe('Version bump to v7.6.01 (build 315)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.5.99');
-    expect(CURRENT_BUILD_NUMBER).toBe(314);
-    expect(VERSION_JSON.version).toBe('v7.5.99');
-    expect(VERSION_JSON.buildNumber).toBe(314);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.01');
+    expect(CURRENT_BUILD_NUMBER).toBe(315);
+    expect(VERSION_JSON.version).toBe('v7.6.01');
+    expect(VERSION_JSON.buildNumber).toBe(315);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.5.99');
-    expect(entry.buildNumber).toBe(314);
+    expect(entry.version).toBe('v7.6.01');
+    expect(entry.buildNumber).toBe(315);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ပမာဏ ပြပုံ (သိန်း / ကျပ်အပြည့်အစုံ) ရွေးချယ်နိုင်အောင် ထည့်ခြင်း',
+      'ဈေး × အရေအတွက်မှာ Unit ရွေးနိုင်အောင် + မှတ်တမ်းအသေးစိတ်မှာ Unit ပြခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Choose how amounts display (lakhs / full kyat numbers)',
+      'Unit selection in Unit × Qty entries + units shown in record details',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(2);
+    expect(entry.changesEn).toHaveLength(2);
     expect(entry.changesMy[0]).toBe(
-      'ပမာဏ ပြပုံ ရွေးချယ်နိုင်အောင် ထည့်ခြင်း — “သိန်းဂဏန်း ဖြတ်မယ်” (15.07502 သိန်း) သို့မဟုတ် “သိန်းဂဏန်း မဖြတ်ဘူး” (1,507,502 ကျပ်) လို့ Settings မှာ ရွေးနိုင်သည်; မူရင်းအတိုင်း သိန်းပုံစံဖြင့် ပြမည်',
+      'ဈေး × အရေအတွက် ဖြင့် ထည့်သွင်းရာတွင်လည်း Unit ရွေးနိုင်အောင် ထည့်ခြင်း — Shopping List မှာလို ယူနစ် ရွေးစရာ ပါမည်',
+    );
+    expect(entry.changesMy[1]).toBe(
+      'မှတ်တမ်းအသေးစိတ်မှာ ဈေး × အရေအတွက် ဘေးမှာ Unit ကိုပါ ပြခြင်း — ဥပမာ (1,000 × 2 ခု)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Choose how amounts display — in lakhs (15.07502 lakh) or as full kyat numbers (1,507,502 MMK) — in Settings; lakhs remain the default.',
+      'Unit selection added to the Unit × Qty entry mode, same as the Shopping List',
+    );
+    expect(entry.changesEn[1]).toBe(
+      'Saved item details now show the unit beside price × quantity, e.g. (1,000 × 2 ခု).',
     );
   });
 

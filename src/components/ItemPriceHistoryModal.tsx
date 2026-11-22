@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { History, TrendingUp, TrendingDown, Minus, Search, Calendar, Tag, Info, X } from 'lucide-react';
 import { Category, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
+import { displayMenuUnit } from '../utils/shopMenuUpdate';
 import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
@@ -124,7 +125,11 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                 walletId: tx.walletId,
                 categoryId: tx.category,
                 subCategoryId: tx.subCategoryId,
-                note: item.quantity && item.quantity > 1 ? `x${item.quantity} ခု (စုစုပေါင်း ${formatMMK(item.amount || unitPrice * item.quantity)})` : undefined,
+                // [v7.6.01] Display-time note (built in this useMemo
+                // from props, never saved): the item's own normalized
+                // unit, not a hardcoded 'ခု'. A unit-less item still
+                // reads 'ခု' — displayMenuUnit defaults to it.
+                note: item.quantity && item.quantity > 1 ? `x${item.quantity} ${displayMenuUnit(item.unit)} (စုစုပေါင်း ${formatMMK(item.amount || unitPrice * item.quantity)})` : undefined,
                 shopName: tx.shopName,
                 isShoppingItem: true,
               });

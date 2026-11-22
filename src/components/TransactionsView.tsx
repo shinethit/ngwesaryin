@@ -16,6 +16,7 @@ import { syncQueue } from '../lib/syncQueue';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { displayMenuUnit } from '../utils/shopMenuUpdate';
 
 export type TimeFilterType =
   | 'all'
@@ -1038,7 +1039,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     ) : (
                                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
                                         <Package className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                        x {t.items[0]?.quantity || t.quantity || 1}
+                                        x {t.items[0]?.quantity || t.quantity || 1}{t.items[0]?.unit && t.items[0]?.unit.trim() ? ` ${displayMenuUnit(t.items[0]?.unit)}` : ''}
                                       </span>
                                     )}
                                   </div>
@@ -1140,11 +1141,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             <div className="space-y-1">
                               {t.items.map((item, idx) => (
                                 <div key={idx} className="flex flex-wrap items-center justify-between gap-2 font-medium text-slate-800">
-                                  <span className="flex flex-1 items-center gap-1 min-w-0">
+                                  <span className="flex flex-1 flex-wrap items-center gap-1 min-w-0">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
                                     <span className="min-w-0 flex-1 break-words">{item.name}</span>
+                                    {/* [v7.6.01] Unit beside price × quantity, normalized
+                                        ('တစ်ခု' → 'ခု', custom verbatim); no suffix
+                                        when the stored unit is missing/blank.
+                                        [v7.6.01 top-up] Row wraps: a long unit
+                                        drops below the name instead of squeezing
+                                        / overlapping it. */}
                                     <span className="text-[11px] text-slate-500 font-mono shrink-0 whitespace-nowrap">
-                                      ({formatMMK(item.price)} × {item.quantity})
+                                      ({formatMMK(item.price)} × {item.quantity}{item.unit && item.unit.trim() ? ` ${displayMenuUnit(item.unit)}` : ''})
                                     </span>
                                   </span>
                                   <span className="font-bold font-mono text-slate-900 shrink-0 whitespace-nowrap">

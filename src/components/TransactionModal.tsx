@@ -198,6 +198,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     editTransaction?.quantity ? String(editTransaction.quantity) : '1'
   );
 
+  // [v7.6.01] Unit for the unit_qty entry mode — the shopping-list
+  // rows each carry their own unit, but this mode had none (every
+  // save hardcoded DEFAULT_MENU_UNIT). The stored string is kept
+  // raw here, exactly like a shopping row's `item.unit`: the select
+  // helpers normalize old forms ('တစ်ခု' → 'ခု') at render time
+  // and resolveSavedMenuUnit normalizes at save time.
+  const [unitQtyUnit, setUnitQtyUnit] = useState<string>(
+    editTransaction?.unitPrice && editTransaction.items?.[0]?.unit
+      ? String(editTransaction.items[0].unit)
+      : DEFAULT_MENU_UNIT
+  );
+
   const [shoppingItems, setShoppingItems] = useState<TransactionItem[]>(
     editTransaction?.items && editTransaction.items.length > 0
       ? editTransaction.items
@@ -418,6 +430,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             setEntryMode('unit_qty');
             setUnitPrice(String(editTransaction.unitPrice));
             setQuantity(String(editTransaction.quantity || 1));
+            // [v7.6.01] Restore the saved unit from the unit_qty
+            // item — raw, like the shopping rows: an old stored
+            // 'တစ်ခု' opens as preset 'ခု', a custom unit opens as
+            // 'အခြား' with its text prefilled (v7.5.95 U1).
+            setUnitQtyUnit(editTransaction.items?.[0]?.unit || DEFAULT_MENU_UNIT);
           } else if (editTransaction.items && editTransaction.items.length > 0) {
             setEntryMode('shopping_list');
             // [v7.5.93] Saved rows carry no `id` (validItems drops it),
@@ -543,6 +560,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setEntryMode('direct');
         setUnitPrice('');
         setQuantity('1');
+        setUnitQtyUnit(DEFAULT_MENU_UNIT);
         setShoppingItems([{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]);
         setShowQuickAddSub(true);
         setNewSubName('');
@@ -1285,7 +1303,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     // [v7.5.95 U2] Save typed custom units so they reappear as select
     // options next time (same pattern as custom gas stations).
-    const newCustomUnits = collectNewCustomUnits(validItems.map((i) => i.unit), customUnits);
+    // [v7.6.01] A custom unit typed in the unit_qty mode joins the
+    // same persisted list as the shopping rows (only in that mode —
+    // the state is stale in every other mode and must not leak in).
+    const unitQtyCustomUnits = entryMode === 'unit_qty' ? [resolveSavedMenuUnit(unitQtyUnit)] : [];
+    const newCustomUnits = collectNewCustomUnits([...validItems.map((i) => i.unit), ...unitQtyCustomUnits], customUnits);
     if (newCustomUnits.length > 0) setCustomUnits((prev) => [...prev, ...newCustomUnits]);
 
     try {
@@ -1499,9 +1521,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       } else if (entryMode === 'unit_qty') {
         finalNote = extraNote.trim() || undefined;
         if (itemName.trim()) {
-          // [v7.5.82] A unit_qty entry has one item at one unit — the
-          // default per-piece unit, so it can join the menu diff.
-          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseMyanmarNumber(unitPrice) || 0, quantity: parseMyanmarNumber(quantity) || 1, amount: finalAmount, unit: DEFAULT_MENU_UNIT }];
+          // [v7.5.82] A unit_qty entry has one item at one unit, so
+          // it can join the menu diff. [v7.6.01] The unit is the
+          // one picked in the form (normalized like the shopping
+          // rows) — no longer hardcoded to DEFAULT_MENU_UNIT.
+          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseMyanmarNumber(unitPrice) || 0, quantity: parseMyanmarNumber(quantity) || 1, amount: finalAmount, unit: resolveSavedMenuUnit(unitQtyUnit) }];
         }
       } else {
         const cleanItem = itemName.trim();
@@ -2218,6 +2242,32 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "အရေအတွက်" : "Quantity"}</span>
                   <input type="text" inputMode="decimal" value={quantity} onChange={(e) => handleUnitQtyChange("qty", e.target.value)} placeholder="1" className="flex-1 min-w-0 text-base font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
                 </div>
+                {/* [v7.6.01] Unit for the unit_qty mode — mirrors the
+                    shopping-list unit row: the same select helpers
+                    and the same 'အခြား' free-text reveal. */}
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
+                  <select
+                    value={resolveMenuUnitSelectValue(unitQtyUnit, customUnits)}
+                    onChange={(e) => setUnitQtyUnit(e.target.value)}
+                    className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
+                  >
+                    {menuUnitSelectOptions(customUnits).map((u) => (
+                      <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
+                    ))}
+                  </select>
+                </div>
+                {menuUnitNeedsCustomInput(unitQtyUnit, customUnits) && (
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <input
+                      type="text"
+                      value={customMenuUnitText(unitQtyUnit)}
+                      onChange={(e) => setUnitQtyUnit(e.target.value)}
+                      placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                      className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
+                    />
+                  </div>
+                )}
               </>
             )}
 

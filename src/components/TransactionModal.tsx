@@ -16,7 +16,7 @@ import {
   TirePressureLog,
 } from '../types';
 import { ShopContact } from '../types';
-import { formatMMK, formatLakhs } from '../utils/formatters';
+import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
@@ -1820,8 +1820,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </div>
               )}
               {/* [v7.5.60 N1] Live lakh preview while typing the amount
-                  (display-only — the input stays full kyat). */}
-              {(parseMyanmarNumber(amount) || 0) > 0 && (
+                  (display-only — the input stays full kyat).
+                  [v7.5.99] Hidden in kyat mode: the input already
+                  shows full kyats, so the hint would only duplicate it. */}
+              {getAmountDisplayMode() === 'lakh' && (parseMyanmarNumber(amount) || 0) > 0 && (
                 <div className="text-xs text-center text-slate-500 font-semibold mt-1.5" title={formatMMK(parseMyanmarNumber(amount) || 0)}>
                   ≈ {formatLakhs(parseMyanmarNumber(amount) || 0, lang)}
                 </div>

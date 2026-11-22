@@ -22,7 +22,10 @@ import { useAuth, parseExpiryTime } from '../context/AuthContext';
 import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category, PublicShop } from '../types';
 import { INITIAL_CATEGORIES } from '../data/initialData';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
-import { formatLakhs, formatMMK } from '../utils/formatters';
+// [v7.5.99 top-up] Currency-ambiguous admin surface (totals mix all
+// users/currencies): formatLakhs is aliased to the lakh-only form so
+// no foreign-currency amount ever gains a ကျပ် suffix.
+import { formatLakhAmount as formatLakhs, formatMMK } from '../utils/formatters';
 import { fetchContactInfo, saveContactInfo, DEFAULT_CONTACT_INFO } from '../lib/contactInfo';
 import { subscribeVisitors, getVisitorsTotalCount, getCountryFlag, deleteVisitorDoc } from '../lib/analyticsService';
 import { fetchMyRefs, deleteSharedWalletRef } from '../lib/sharedWalletRefs';

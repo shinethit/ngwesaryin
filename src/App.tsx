@@ -30,6 +30,7 @@ import {
   VehicleLinkData,
 } from './types';
 import { DEFAULT_WALLET_PERMISSIONS, getCollaboratorPermissions } from './utils/permissions';
+import { setAmountDisplayMode, type AmountDisplayMode } from './utils/formatters';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -261,6 +262,31 @@ export default function App() {
   // 'zh'/'th' value falls through to English below.
   const [langRaw, setLangRaw] = usePersistedState<Lang>('ngwe_lang', 'my');
   const lang: 'my' | 'en' = langRaw === 'my' ? 'my' : 'en';
+
+  // [v7.5.99] Amount-display preference — the same mechanism as lang:
+  // usePersistedState over localStorage (device-global key, see
+  // storage.ts), default 'lakh' so the display is unchanged until
+  // the user chooses otherwise in Settings (AccountModal).
+  const [amountDisplayModeRaw, setAmountDisplayModeRaw] =
+    usePersistedState<AmountDisplayMode>('ngwe_amount_display', 'lakh',
+      (v): v is AmountDisplayMode => v === 'lakh' || v === 'kyat');
+  const amountDisplayMode: AmountDisplayMode =
+    amountDisplayModeRaw === 'kyat' ? 'kyat' : 'lakh';
+
+  const handleSetAmountDisplayMode = (next: AmountDisplayMode) => {
+    // Formatter first, synchronously: formatLakhs reads the module
+    // variable during render, so it must already hold the new mode
+    // when the state update below re-renders the tree — no reload.
+    setAmountDisplayMode(next);
+    setAmountDisplayModeRaw(next);
+  };
+
+  // Align the formatter module variable with the persisted value on
+  // first mount (e.g. written by another tab before load).
+  useEffect(() => {
+    setAmountDisplayMode(amountDisplayMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // [v7.4.1] Language picker state.
   // firstLaunchPicker: true only when user has never chosen before (device-global flag).
@@ -3693,6 +3719,8 @@ export default function App() {
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
         lang={lang}
+        amountDisplayMode={amountDisplayMode}
+        onSetAmountDisplayMode={handleSetAmountDisplayMode}
         onManualSyncUp={handleManualSyncUp}
         onManualSyncDown={handleManualSyncDown}
         onOpenLoginScreen={() => setIsAuthModalOpen(true)}

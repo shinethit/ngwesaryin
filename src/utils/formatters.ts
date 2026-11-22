@@ -20,12 +20,86 @@ export const formatMMK = (amount: number, useBurmeseNumerals = false): string =>
  * - 7,500,000 -> "75" (or "၇၅")
  * - 750,000 -> "7.5" (or "၇.၅")
  */
+// [v7.5.99] Amount-display mode: how stored MMK values render.
+// 'lakh' (default, unchanged) cuts the number into lakhs
+// ("15.07502 သိန်း"); 'kyat' shows the full kyat number
+// ("1,507,502 ကျပ်"). Display-only: stored amounts, totals,
+// budgets, limits and plan logic are untouched — every call site
+// keeps calling formatLakhs with the same signature, and the mode
+// only changes how that same value renders. The preference is
+// local-only (localStorage, like ngwe_lang): never Firestore, so it
+// works for guests too. It lives in a module variable so formatters
+// stay pure functions of (amount, lang) called during render; App
+// holds the same key in usePersistedState (which re-renders the
+// tree) and calls setAmountDisplayMode synchronously before the
+// state update, so the re-render already reads the new mode.
+export type AmountDisplayMode = 'lakh' | 'kyat';
+
+export const AMOUNT_DISPLAY_KEY = 'ngwe_amount_display';
+
+const isValidAmountDisplayMode = (v: unknown): v is AmountDisplayMode =>
+  v === 'lakh' || v === 'kyat';
+
+const readStoredAmountDisplayMode = (): AmountDisplayMode => {
+  try {
+    if (typeof localStorage === 'undefined') return 'lakh';
+    const raw = localStorage.getItem(AMOUNT_DISPLAY_KEY);
+    if (!raw) return 'lakh';
+    // Accept both the raw string ('kyat') and the JSON-quoted form
+    // ('"kyat"') that usePersistedState writes.
+    let parsed: unknown = raw;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = raw;
+    }
+    return isValidAmountDisplayMode(parsed) ? parsed : 'lakh';
+  } catch {
+    return 'lakh';
+  }
+};
+
+let __amountDisplayMode: AmountDisplayMode = readStoredAmountDisplayMode();
+
+export const getAmountDisplayMode = (): AmountDisplayMode => __amountDisplayMode;
+
+export const setAmountDisplayMode = (mode: AmountDisplayMode): void => {
+  if (!isValidAmountDisplayMode(mode)) return;
+  __amountDisplayMode = mode;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(AMOUNT_DISPLAY_KEY, mode);
+    }
+  } catch {
+    // Storage unavailable (private mode) — the in-memory mode still
+    // applies for this session.
+  }
+};
+
+// Test helper: restores the default ('lakh') and clears the stored
+// preference so formatter tests never leak mode into each other.
+export const resetAmountDisplayMode = (): void => {
+  __amountDisplayMode = 'lakh';
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(AMOUNT_DISPLAY_KEY);
+    }
+  } catch {
+    // ignore
+  }
+};
+
 /**
  * [v7.0.7] Compact Lakhs formatter — English numerals + " သိန်း" suffix.
  * Uses up to 5 decimals (drops trailing zeros). Precision: 1 MMK.
  * Examples: 1110500 → "11.105 သိန်း" | 650000 → "6.5 သိန်း" | 7500000 → "75 သိန်း"
  */
-export const formatLakhs = (amount: number, lang: 'my' | 'en' = 'my'): string => {
+// [v7.5.99] The lakh form, verbatim from the old formatLakhs body.
+// Kept as the explicit lakh-only route for any display that must
+// stay in lakhs regardless of the user's mode (e.g. a non-MMK amount
+// that was already converted to MMK is NOT such a case — only a
+// display whose unit is lakhs by definition belongs here).
+export const formatLakhAmount = (amount: number, lang: 'my' | 'en' = 'my'): string => {
   if (!Number.isFinite(amount)) return '—';
   if (amount === 0) return '0' + (lang === 'my' ? ' သိန်း' : ' L');
   const sign = amount < 0 ? '-' : '';
@@ -33,6 +107,36 @@ export const formatLakhs = (amount: number, lang: 'my' | 'en' = 'my'): string =>
   const str = Number(lakhs.toFixed(5)).toString();
   const unit = lang === 'my' ? ' သိန်း' : ' L';
   return sign + str + unit;
+};
+
+// [v7.5.99] Full-kyat form: thousand-grouped whole kyats with the
+// same sign-first / zero / non-finite conventions as the lakh form.
+// Fractional amounts round to the NEAREST whole kyat, display-only —
+// the stored value is never changed. Examples: 1507502 →
+// "1,507,502 ကျပ်" | -5200 → "-5,200 ကျပ်" | 0 → "0 ကျပ်".
+export const formatKyatAmount = (amount: number, lang: 'my' | 'en' = 'my'): string => {
+  if (!Number.isFinite(amount)) return '—';
+  if (amount === 0) return '0' + (lang === 'my' ? ' ကျပ်' : ' MMK');
+  const sign = amount < 0 ? '-' : '';
+  const grouped = Math.round(Math.abs(amount)).toLocaleString('en-US');
+  const unit = lang === 'my' ? ' ကျပ်' : ' MMK';
+  return sign + grouped + unit;
+};
+
+// [v7.5.99] Absolute grouped whole kyats, no suffix — the calendar
+// cells' short form in kyat mode. Absolute and suffix-less by design:
+// SmartCalendarCard's callers supply their own +/- sign, and the
+// lakh branch is likewise a bare number. The tapped exact view
+// already shows the suffixed formatMMK string in the same cells.
+export const formatAbsoluteKyats = (amount: number): string => {
+  if (!Number.isFinite(amount)) return '0';
+  return Math.round(Math.abs(amount)).toLocaleString('en-US');
+};
+
+export const formatLakhs = (amount: number, lang: 'my' | 'en' = 'my'): string => {
+  return getAmountDisplayMode() === 'kyat'
+    ? formatKyatAmount(amount, lang)
+    : formatLakhAmount(amount, lang);
 };
 
 export const formatDateDisplay = (dateString: string, lang: 'my' | 'en' = 'my'): string => {

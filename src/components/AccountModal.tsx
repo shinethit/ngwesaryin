@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { safeGetItem } from '../utils/storage';
-import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCircle, ArrowDownCircle, FileJson, Download, Upload, Lock, Trash2, Crown, Clock, Calendar, Users, Mail, ShieldCheck, BookOpen, RefreshCw, AlertCircle, History } from 'lucide-react';
+import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCircle, ArrowDownCircle, FileJson, Download, Upload, Lock, Trash2, Crown, Clock, Calendar, Users, Mail, ShieldCheck, BookOpen, RefreshCw, AlertCircle, History, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resetFirestoreConnection } from '../lib/firebase';
 import { PinLockSettings, PlanType } from '../types';
+import type { AmountDisplayMode } from '../utils/formatters';
 // [v7.5.60 G-M8] Version badge reads the live version, never hardcoded.
 import { CURRENT_APP_VERSION } from '../data/versionHistory';
 // [v7.5.60 G-M3] Google sign-in errors go through the same mapper as
@@ -16,6 +17,8 @@ interface AccountModalProps {
   isOpen: boolean;
   onClose: () => void;
   lang: 'my' | 'en';
+  amountDisplayMode?: AmountDisplayMode;
+  onSetAmountDisplayMode?: (mode: AmountDisplayMode) => void;
   onManualSyncUp: () => Promise<void>;
   onManualSyncDown: (overrideWorkspaceId?: string) => Promise<void>;
   onOpenLoginScreen?: () => void;
@@ -36,6 +39,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   isOpen,
   onClose,
   lang,
+  amountDisplayMode = 'lakh',
+  onSetAmountDisplayMode,
   onManualSyncUp,
   onManualSyncDown,
   onOpenLoginScreen,
@@ -878,6 +883,69 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   ? '💡 သတိပေးချက်များကို App စတင်ဖွင့်ချိန်တွင် မတောင်းတော့ပါ။ ဤနေရာမှ ကိုယ်တိုင် ဖွင့်ပါ။'
                   : '💡 Reminders are no longer requested at app startup. Enable them here manually.'}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* [v7.5.99] Amount display — lakh or full kyat numbers.
+            Local-only preference (same mechanism as the language
+            switcher); flipping it re-renders the app at once, no
+            reload. Display-only: stored amounts never change. */}
+        {onSetAmountDisplayMode && (
+          <div className="mt-6 pt-5 border-t border-slate-100">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Eye className="w-4 h-4 text-slate-500" />
+              <h3 className="text-xs font-bold text-slate-700">
+                {lang === 'my' ? 'ပမာဏ ပြပုံ' : 'Amount display'}
+              </h3>
+            </div>
+            <div className="space-y-2" role="radiogroup" aria-label={lang === 'my' ? 'ပမာဏ ပြပုံ' : 'Amount display'}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={amountDisplayMode === 'lakh'}
+                onClick={() => onSetAmountDisplayMode('lakh')}
+                className={`w-full min-h-11 p-3 rounded-xl border-2 text-left transition-all cursor-pointer active:scale-98 flex items-start gap-3 ${
+                  amountDisplayMode === 'lakh'
+                    ? 'border-emerald-500 bg-emerald-50/60 shadow-sm'
+                    : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
+                }`}
+              >
+                <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${amountDisplayMode === 'lakh' ? 'border-emerald-600' : 'border-slate-300'}`}>
+                  {amountDisplayMode === 'lakh' && <span className="w-2 h-2 rounded-full bg-emerald-600" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-sm text-slate-900">
+                    {lang === 'my' ? 'သိန်းဂဏန်း ဖြတ်မယ်' : 'Show amounts in lakhs'}
+                  </span>
+                  <span className="block text-[11px] text-slate-500 mt-0.5">
+                    {lang === 'my' ? 'ဥပမာ: 15.07502 သိန်း' : 'e.g. 15.07502 lakh'}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={amountDisplayMode === 'kyat'}
+                onClick={() => onSetAmountDisplayMode('kyat')}
+                className={`w-full min-h-11 p-3 rounded-xl border-2 text-left transition-all cursor-pointer active:scale-98 flex items-start gap-3 ${
+                  amountDisplayMode === 'kyat'
+                    ? 'border-emerald-500 bg-emerald-50/60 shadow-sm'
+                    : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
+                }`}
+              >
+                <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${amountDisplayMode === 'kyat' ? 'border-emerald-600' : 'border-slate-300'}`}>
+                  {amountDisplayMode === 'kyat' && <span className="w-2 h-2 rounded-full bg-emerald-600" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-sm text-slate-900">
+                    {lang === 'my' ? 'သိန်းဂဏန်း မဖြတ်ဘူး' : 'Show full kyat amounts'}
+                  </span>
+                  <span className="block text-[11px] text-slate-500 mt-0.5">
+                    {lang === 'my' ? 'ဥပမာ: 1,507,502 ကျပ်' : 'e.g. 1,507,502 MMK'}
+                  </span>
+                </span>
+              </button>
             </div>
           </div>
         )}

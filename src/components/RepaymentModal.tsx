@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CreditCard } from 'lucide-react';
 import { Debt, Wallet as WalletType } from '../types';
-import { formatMMK, formatLakhs } from '../utils/formatters';
+import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -197,7 +197,7 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
             {/* [v7.5.60 S-41] Live lakh preview + lakh buttons (DebtModal
                 parity). Preview is MMK-only; the buttons work in the
                 debt's currency units like DebtModal's. */}
-            {debtCurrency === 'MMK' && !isNaN(parsedAmount) && parsedAmount > 0 && (
+            {debtCurrency === 'MMK' && getAmountDisplayMode() === 'lakh' && !isNaN(parsedAmount) && parsedAmount > 0 && (
               <p className="text-[11px] font-bold text-emerald-700 mt-1">
                 ≈ {formatLakhs(parsedAmount, lang)}
               </p>

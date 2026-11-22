@@ -4,7 +4,7 @@ import { db, safeSetDoc } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { Target, TrendingUp, AlertTriangle, CheckCircle2, Edit3, Calendar, X, Power, Lock } from 'lucide-react';
-import { formatMMK, formatLakhs } from '../utils/formatters';
+import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { PlanType } from '../types';
 
@@ -532,7 +532,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
               </div>
               {/* [v7.5.60] Live lakh preview (display-only helper — the
                   input itself stays full kyat numbers). */}
-              {!Number.isNaN(parseMyanmarNumber(inputVal)) && parseMyanmarNumber(inputVal) > 0 && (
+              {!Number.isNaN(parseMyanmarNumber(inputVal)) && parseMyanmarNumber(inputVal) > 0 && getAmountDisplayMode() === 'lakh' && (
                 <p className="text-[11px] font-semibold text-emerald-400">
                   ≈ {formatLakhs(parseMyanmarNumber(inputVal), lang)}
                 </p>

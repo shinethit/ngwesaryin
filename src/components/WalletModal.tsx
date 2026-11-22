@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getAmountDisplayMode } from '../utils/formatters';
 import {
   WalletCards,
   CreditCard,
@@ -497,7 +498,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               >
                 {lang === 'my' ? '၁၀ သိန်း' : '10 Lakhs'}
               </button>
-              {parsedBalance > 0 && currency === 'MMK' && (
+              {parsedBalance > 0 && currency === 'MMK' && getAmountDisplayMode() === 'lakh' && (
                 <span className="text-[11px] font-bold text-emerald-700 font-mono ml-auto">
                   ≈ {(parsedBalance / 100000).toLocaleString(undefined, { maximumFractionDigits: 4 })} {lang === 'my' ? 'သိန်း' : 'Lakhs'}
                 </span>

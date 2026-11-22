@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.98';
-export const CURRENT_BUILD_NUMBER = 313;
+export const CURRENT_APP_VERSION = 'v7.5.99';
+export const CURRENT_BUILD_NUMBER = 314;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.99',
+    buildNumber: 314,
+    releaseDate: '2026-11-22',
+    releaseTime: '9:45 PM (MMT)',
+    titleMy: 'ပမာဏ ပြပုံ (သိန်း / ကျပ်အပြည့်အစုံ) ရွေးချယ်နိုင်အောင် ထည့်ခြင်း',
+    titleEn: 'Choose how amounts display (lakhs / full kyat numbers)',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ပမာဏတွေကို ဘယ်လိုပြမလဲ ကိုယ်တိုင် ရွေးနိုင်ပြီ — Settings မှာ “သိန်းဂဏန်း ဖြတ်မယ်” (15.07502 သိန်း) သို့မဟုတ် “သိန်းဂဏန်း မဖြတ်ဘူး” (1,507,502 ကျပ်) လို့ ရွေးနိုင်သည်။ မရွေးရသေးရင် မူရင်းအတိုင်း သိန်းပုံစံဖြင့် ပြမည်။ သိမ်းထားတဲ့ ပမာဏတွေ ဘာမှ မပြောင်းလဲပါ။',
+    descriptionEn: 'You can now choose how amounts display — in Settings, pick lakhs (15.07502 lakh) or full kyat numbers (1,507,502 MMK). Lakhs remain the default until you choose. Stored amounts never change.',
+    changesMy: [
+      'ပမာဏ ပြပုံ ရွေးချယ်နိုင်အောင် ထည့်ခြင်း — “သိန်းဂဏန်း ဖြတ်မယ်” (15.07502 သိန်း) သို့မဟုတ် “သိန်းဂဏန်း မဖြတ်ဘူး” (1,507,502 ကျပ်) လို့ Settings မှာ ရွေးနိုင်သည်; မူရင်းအတိုင်း သိန်းပုံစံဖြင့် ပြမည်',
+    ],
+    changesEn: [
+      'Choose how amounts display — in lakhs (15.07502 lakh) or as full kyat numbers (1,507,502 MMK) — in Settings; lakhs remain the default.',
+    ],
+  },
   {
     version: 'v7.5.98',
     buildNumber: 313,

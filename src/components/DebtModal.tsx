@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { HandCoins, ArrowDownLeft, ArrowUpRight, Phone, Wallet } from 'lucide-react';
 import { Debt, DebtType, Wallet as WalletType } from '../types';
 import { formatCurrency } from '../utils/currency';
-import { formatLakhs } from '../utils/formatters';
+import { formatLakhs, getAmountDisplayMode } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { getLocalDateString } from '../utils/dateUtils';
 
@@ -253,7 +253,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
             {/* [v7.5.60 S-41] Live lakh preview — what the typed kyat
                 amount is in lakhs (display-only; input stays full kyat).
                 Shown for MMK only; foreign currencies have no lakh unit. */}
-            {currencyCode === 'MMK' && (() => {
+            {currencyCode === 'MMK' && getAmountDisplayMode() === 'lakh' && (() => {
               const v = parseMyanmarNumber(totalAmount);
               return v > 0 ? (
                 <p className="text-[11px] font-bold text-emerald-700 mt-1">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, X, ArrowUpRight, ArrowDownRight, Check, Wallet as WalletIcon, Calculator } from 'lucide-react';
 import { Wallet, Transaction } from '../types';
-import { formatMMK } from '../utils/formatters';
+import { formatMMK, getAmountDisplayMode } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { isWalletMatch } from '../utils/walletBalance';
 
@@ -280,7 +280,7 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
                 >
                   {lang === 'my' ? '၁၀ သိန်း' : '10 Lakhs'}
                 </button>
-                {actualBalance > 0 && (
+                {actualBalance > 0 && getAmountDisplayMode() === 'lakh' && (
                   <span className="text-[11px] font-bold text-emerald-700 font-mono ml-auto">
                     ≈ {(actualBalance / 100000).toLocaleString(undefined, { maximumFractionDigits: 4 })} {lang === 'my' ? 'သိန်း' : 'Lakhs'}
                   </span>

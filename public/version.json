@@ -1,11 +1,11 @@
 {
-  "version": "v7.5.98",
-  "buildNumber": 313,
+  "version": "v7.5.99",
+  "buildNumber": 314,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အကောင့်သစ်များ Premium ၃ လ အခမဲ့ ရနိုင်ကြောင်း ထိပ်ဆုံးမှာ သေချာမြင်ရအောင် ပြင်ဆင်ခြင်း — ပင်မမျက်နှာပြင် ထိပ်မှာ လက်ဆောင်တန်း ထည့်ခြင်း + Premium Modal ဖွင့်တာနဲ့ လက်ဆောင်ကို အရင်မြင်ရအောင် စီစဉ်ခြင်း"
+    "ပမာဏ ပြပုံ ရွေးချယ်နိုင်အောင် ထည့်ခြင်း — “သိန်းဂဏန်း ဖြတ်မယ်” (15.07502 သိန်း) သို့မဟုတ် “သိန်းဂဏန်း မဖြတ်ဘူး” (1,507,502 ကျပ်) လို့ Settings မှာ ရွေးနိုင်သည်; မူရင်းအတိုင်း သိန်းပုံစံဖြင့် ပြမည်"
   ],
   "changesEn": [
-    "New visitors now clearly see the 3-month free Premium offer — a gift strip at the top of Home, and the offer leads inside the Premium modal."
+    "Choose how amounts display — in lakhs (15.07502 lakh) or as full kyat numbers (1,507,502 MMK) — in Settings; lakhs remain the default."
   ]
 }

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, RefreshCw, Trash2, X, ShieldAlert, CheckCircle2, Layers } from 'lucide-react';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
-import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
+// [v7.5.99 top-up] Pending sync items carry any wallet currency:
+// formatLakhs is aliased to the lakh-only form so no foreign-currency
+// amount ever gains a ကျပ် suffix.
+import { formatMMK, formatLakhAmount as formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { Transaction, Category } from '../types';
 

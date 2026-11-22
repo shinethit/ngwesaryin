@@ -5,7 +5,7 @@ import {
   Wallet, Scale, Crown, MessageCircle, GraduationCap, BarChart3,
 } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
-import { formatMMK, formatLakhs, formatShortDate, isOverdue } from '../utils/formatters';
+import { formatMMK, formatLakhs, formatShortDate, isOverdue, getAmountDisplayMode } from '../utils/formatters';
 import { convertToMMK, getCurrencyInfo } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { MultiWalletSelector } from './MultiWalletSelector';
@@ -831,7 +831,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700">
-                    {lang === 'my' ? 'စုစုပေါင်း (သိန်းဖြင့်)' : 'Total (lakh)'}
+                    {lang === 'my' ? (getAmountDisplayMode() === 'kyat' ? 'စုစုပေါင်း (ကျပ်ဖြင့်)' : 'စုစုပေါင်း (သိန်းဖြင့်)') : (getAmountDisplayMode() === 'kyat' ? 'Total (kyat)' : 'Total (lakh)')}
                   </span>
                   <span className="font-mono font-black text-base text-emerald-700" title={formatMMK(totalWalletBalance)}>
                     {formatLakhs(totalWalletBalance, lang)}

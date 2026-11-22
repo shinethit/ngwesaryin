@@ -125,12 +125,12 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.5.98 — history entry and version.json in sync', () => {
-  it('current version is v7.5.98 / build 313', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.5.98');
-    expect(CURRENT_BUILD_NUMBER).toBe(313);
-    expect(VERSION_JSON.version).toBe('v7.5.98');
-    expect(VERSION_JSON.buildNumber).toBe(313);
+describe('Version v7.5.99 — history entry and version.json in sync', () => {
+  it('current version is v7.5.99 / build 314', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.5.99');
+    expect(CURRENT_BUILD_NUMBER).toBe(314);
+    expect(VERSION_JSON.version).toBe('v7.5.99');
+    expect(VERSION_JSON.buildNumber).toBe(314);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -139,16 +139,16 @@ describe('Version v7.5.98 — history entry and version.json in sync', () => {
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.5.98 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.5.99 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.5.98');
-    expect(entry.buildNumber).toBe(313);
+    expect(entry.version).toBe('v7.5.99');
+    expect(entry.buildNumber).toBe(314);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('Free Premium ၃ လ လက်ဆောင် သေချာမြင်ရအောင် ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Making the 3-month free Premium gift clearly visible');
+    expect(entry.titleMy).toBe('ပမာဏ ပြပုံ (သိန်း / ကျပ်အပြည့်အစုံ) ရွေးချယ်နိုင်အောင် ထည့်ခြင်း');
+    expect(entry.titleEn).toBe('Choose how amounts display (lakhs / full kyat numbers)');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

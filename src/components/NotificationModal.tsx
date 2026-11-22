@@ -12,7 +12,11 @@ import {
   AdminSystemMessage,
   getBudgetCategoryIds,
 } from '../types';
-import { formatMMK, formatLakhs } from '../utils/formatters';
+// [v7.5.99 top-up] Generated messages follow the app-wide lakh-display
+// rule ([v7.5.60 G-M5]) and their amounts carry unchecked currencies
+// (debt/budget/recurring): formatLakhs is aliased to the lakh-only form
+// so no foreign-currency amount ever gains a ကျပ် suffix.
+import { formatMMK, formatLakhAmount as formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 import { getMaintenanceAlerts } from '../utils/vehicleAnalytics';

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tag, Wallet as WalletIcon, Check, Filter } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
-import { formatMMK, getCategoryDisplayName } from '../utils/formatters';
+import { formatMMK, getAmountDisplayMode, formatAbsoluteKyats, getCategoryDisplayName } from '../utils/formatters';
 import {
   resolveCalendarDetailMainLabel,
   formatCalendarDetailItems,
@@ -31,6 +31,10 @@ const getLocalDateString = (d: Date = new Date()): string => {
 //           72300 → "0.723" | 72350 → "0.7235" | 85015 → "0.8502"
 const formatShortLakhs = (amount: number): string => {
   if (!Number.isFinite(amount) || amount === 0) return '0';
+  // [v7.5.99] Kyat mode: the full grouped kyat number, no
+  // abbreviation and no digit truncation (absolute, no suffix —
+  // fmtCell's callers supply their own +/- sign, as in lakh mode).
+  if (getAmountDisplayMode() === 'kyat') return formatAbsoluteKyats(amount);
   const lakhs = Math.abs(amount) / 100000;
   return lakhs.toFixed(4).replace(/\.?0+$/, '');
 };
@@ -44,6 +48,11 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   const todayStr = getLocalDateString(new Date());
   const [viewDate, setViewDate] = useState(() => new Date());
   const [selectedDayStr, setSelectedDayStr] = useState<string | null>(todayStr);
+
+  // [v7.5.99 top-up] Kyat mode: day-cell/tile figures wrap instead of
+  // truncating (full kyat numbers must stay legible); lakh mode keeps
+  // the existing truncate rendering byte-identical.
+  const isKyatMode = getAmountDisplayMode() === 'kyat';
 
   // [v6.1.8] Multi-select wallet filter
   const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
@@ -296,7 +305,9 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
               {lang === 'my' ? 'စမတ်ပြက္ခဒိန် ဝင်/ထွက်/ကျန် (Smart Calendar Summary)' : 'Smart Calendar Daily Summary'}
             </h3>
             <p className="text-[11px] text-slate-500 font-medium">
-              {lang === 'my' ? 'ရက်စွဲအလိုက် ဝင်၊ ထွက်၊ ကျန် — သိန်းဂဏန်းဖြင့် (×100,000) · ပမာဏကို နှိပ်ရင် ကျပ်အတိအကျ ကြည့်နိုင်ပါသည်' : 'Daily In, Out, Net — in lakhs (×100,000) · tap an amount to see the exact kyat value'}
+              {isKyatMode
+                ? (lang === 'my' ? 'ရက်စွဲအလိုက် ဝင်၊ ထွက်၊ ကျန် — ကျပ်ဂဏန်း အပြည့်အစုံ · ပမာဏကို နှိပ်ရင် ကျပ်အတိအကျ ကြည့်နိုင်ပါသည်' : 'Daily In, Out, Net — full kyat numbers · tap an amount to see the exact kyat value')
+                : (lang === 'my' ? 'ရက်စွဲအလိုက် ဝင်၊ ထွက်၊ ကျန် — သိန်းဂဏန်းဖြင့် (×100,000) · ပမာဏကို နှိပ်ရင် ကျပ်အတိအကျ ကြည့်နိုင်ပါသည်' : 'Daily In, Out, Net — in lakhs (×100,000) · tap an amount to see the exact kyat value')}
             </p>
             {/* [v7.5.56] Month shared split (finding 24). */}
             {(monthSharedSummary.income > 0 || monthSharedSummary.expense > 0) && (
@@ -502,19 +513,19 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                 {metrics ? (
                   <div className="space-y-0.5 text-[9px] font-mono">
                     {metrics.income > 0 && (
-                      <div className="text-emerald-700 font-bold truncate" title={`In: +${formatMMK(metrics.income)}`}>
+                      <div className={`text-emerald-700 font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`In: +${formatMMK(metrics.income)}`}>
                         <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">+{fmtCell(metrics.income)}</span>
                       </div>
                     )}
                     {metrics.expense > 0 && (
-                      <div className="text-rose-600 font-bold truncate" title={`Out: -${formatMMK(metrics.expense)}`}>
+                      <div className={`text-rose-600 font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`Out: -${formatMMK(metrics.expense)}`}>
                         <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">-{fmtCell(metrics.expense)}</span>
                       </div>
                     )}
                     {/* [v7.5.55] Net row: the header promises ဝင်/ထွက်/ကျန်
                         but cells only showed income/expense. */}
                     {(metrics.income > 0 || metrics.expense > 0) && (
-                      <div className="text-indigo-700 font-bold truncate" title={`Net: ${metrics.net >= 0 ? '+' : ''}${formatMMK(metrics.net)}`}>
+                      <div className={`text-indigo-700 font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`Net: ${metrics.net >= 0 ? '+' : ''}${formatMMK(metrics.net)}`}>
                         <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">{metrics.net >= 0 ? '+' : '-'}{fmtCell(metrics.net)}</span>
                       </div>
                     )}
@@ -556,15 +567,15 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
           <div className="grid grid-cols-3 gap-2.5 text-xs font-mono font-bold">
             <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-emerald-700">{lang === 'my' ? 'ဝင်ငွေ' : 'Income'}</div>
-              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`+${formatMMK(selectedDaySummary.income)}`}>+{fmtCell(selectedDaySummary.income)}</button>
+              <button type="button" onClick={toggleExactAmounts} className={`inline-block max-w-full ${isKyatMode ? 'break-all leading-tight' : 'truncate'} text-xs sm:text-sm font-black cursor-pointer`} title={`+${formatMMK(selectedDaySummary.income)}`}>+{fmtCell(selectedDaySummary.income)}</button>
             </div>
             <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-900 border border-rose-200 text-center shadow-2xs">
               <div className="text-[10px] font-sans font-semibold text-rose-700">{lang === 'my' ? 'ထွက်ငွေ' : 'Expense'}</div>
-              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`-${formatMMK(selectedDaySummary.expense)}`}>-{fmtCell(selectedDaySummary.expense)}</button>
+              <button type="button" onClick={toggleExactAmounts} className={`inline-block max-w-full ${isKyatMode ? 'break-all leading-tight' : 'truncate'} text-xs sm:text-sm font-black cursor-pointer`} title={`-${formatMMK(selectedDaySummary.expense)}`}>-{fmtCell(selectedDaySummary.expense)}</button>
             </div>
             <div className={`p-2.5 rounded-2xl border text-center shadow-2xs ${selectedDaySummary.net >= 0 ? 'bg-indigo-50 text-indigo-950 border-indigo-200' : 'bg-rose-50 text-rose-950 border-rose-200'}`}>
               <div className="text-[10px] font-sans font-semibold opacity-85">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
-              <button type="button" onClick={toggleExactAmounts} className="inline-block max-w-full truncate text-xs sm:text-sm font-black cursor-pointer" title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net < 0 ? '-' : '+'}{fmtCell(selectedDaySummary.net)}</button>
+              <button type="button" onClick={toggleExactAmounts} className={`inline-block max-w-full ${isKyatMode ? 'break-all leading-tight' : 'truncate'} text-xs sm:text-sm font-black cursor-pointer`} title={`${selectedDaySummary.net >= 0 ? '+' : ''}${formatMMK(selectedDaySummary.net)}`}>{selectedDaySummary.net < 0 ? '-' : '+'}{fmtCell(selectedDaySummary.net)}</button>
             </div>
           </div>
 
@@ -592,7 +603,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
                     <th className="py-2.5 px-3">{lang === 'my' ? 'အမျိုးအစားခွဲ / အသေးစိတ်' : 'Sub-category / Details'}</th>
-                    <th className="py-2.5 px-3 text-right w-24">{lang === 'my' ? 'ပမာဏ (သိန်း)' : 'Amount (lakh)'}</th>
+                    <th className="py-2.5 px-3 text-right w-24">{lang === 'my' ? (isKyatMode ? 'ပမာဏ (ကျပ်)' : 'ပမာဏ (သိန်း)') : (isKyatMode ? 'Amount (kyat)' : 'Amount (lakh)')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">

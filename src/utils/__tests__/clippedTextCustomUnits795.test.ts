@@ -63,10 +63,10 @@ const HOOK_SRC = readFileSync(
   'utf8',
 );
 
-describe('Vehicle caption / banner / deactivated names show in full (P0, V2, V3)', () => {
-  it('range caption has no -mb-3 pulling it over the cards below', () => {
+describe('Range caption removed; banner / deactivated names show in full (P0, V2, V3)', () => {
+  it('range caption line is gone entirely (v7.5.96) — no -mb-3, no caption const', () => {
     expect(VEHICLES_SRC).not.toContain('-mb-3');
-    expect(VEHICLES_SRC).toContain('metricRangeCaption');
+    expect(VEHICLES_SRC).not.toContain('metricRangeCaption');
   });
 
   it('Free banner sub-text wraps instead of truncating', () => {

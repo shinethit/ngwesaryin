@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart, Plus } from 'lucide-react';
+import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart } from 'lucide-react';
 import { Category, PlanType, Transaction, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
@@ -566,18 +566,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       {/* [v7.5.73] Title card REMOVED — actions only, one slim row,
           no card background. The record count moved to the summary line. */}
       <div className="flex items-center gap-2 flex-wrap py-0.5">
-          {/* [v7.5.60 M4] Small add button on this page itself — the
-              onAddTransaction prop was accepted but never used, so this
-              page had no way to add a record. Opens the modal (expense
-              by default); the income/expense switch lives in the modal. */}
-          <button
-            type="button"
-            onClick={() => onAddTransaction('expense')}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{lang === 'my' ? 'ထည့်မည်' : 'Add'}</span>
-          </button>
           {/* [v7.5.55] C10: opens the price-history / comparison modal. */}
           <button
             type="button"

@@ -125,12 +125,12 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.5.95 — history entry and version.json in sync', () => {
-  it('current version is v7.5.95 / build 310', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.5.95');
-    expect(CURRENT_BUILD_NUMBER).toBe(310);
-    expect(VERSION_JSON.version).toBe('v7.5.95');
-    expect(VERSION_JSON.buildNumber).toBe(310);
+describe('Version v7.5.96 — history entry and version.json in sync', () => {
+  it('current version is v7.5.96 / build 311', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.5.96');
+    expect(CURRENT_BUILD_NUMBER).toBe(311);
+    expect(VERSION_JSON.version).toBe('v7.5.96');
+    expect(VERSION_JSON.buildNumber).toBe(311);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -139,21 +139,21 @@ describe('Version v7.5.95 — history entry and version.json in sync', () => {
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.5.95 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.5.96 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.5.95');
-    expect(entry.buildNumber).toBe(310);
-    expect(entry.releaseDate).toBe('2026-11-21');
+    expect(entry.version).toBe('v7.5.96');
+    expect(entry.buildNumber).toBe(311);
+    expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('ဖုံးနေတဲ့စာများ အပြည့်အစုံ မြင်ရအောင် + Unit အခြား ရိုက်ထည့်နိုင်အောင် ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Clipped labels now show in full, and custom units can be typed in');
+    expect(entry.titleMy).toBe('ထပ်နေတဲ့ ခလုတ်များ + မလိုတဲ့ ခေါင်းစဉ် ဖြုတ်ခြင်း');
+    expect(entry.titleEn).toBe('Removing duplicated buttons and an unneeded caption');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(6);
-    expect(entry.changesEn).toHaveLength(6);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
   });
 });

@@ -1,21 +1,15 @@
 {
-  "version": "v7.5.95",
-  "buildNumber": 310,
+  "version": "v7.5.96",
+  "buildNumber": 311,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ယာဉ်မျက်နှာပြင်မှာ ဖုံးနေတဲ့ ဆီစာရင်း ခေါင်းစဉ် + Free Banner စာနှင့် ရပ်ဆိုင်းထားတဲ့ ယာဉ်အမည်များ အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
-    "ဈေးနှုန်း နှိုင်းယှဉ်မှာ ဆိုင်အမည် + ဈေးနှုန်း အပြည့်အစုံ မြင်ရအောင် + ဘတ်ဂျက်အမည် အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
-    "Calendar အသားတင် အနုတ်လက္ခဏာ ပြသခြင်း + Premium Modal Tab အမည်များ အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
-    "Login Modal မှာ ဘာသာစကား + ပိတ်ရန် ခလုတ်များ အမြဲ ရောက်ရှိနိုင်အောင် ပြင်ဆင်ခြင်း",
-    "ဆိုင်မီနူး အမည်များ + အကြွေးစတင်ရက်/ပြန်ဆပ်ရက်များ + ဈေးဝယ်စာရင်း အသေးစိတ် ဇယား အပြည့်အစုံ မြင်ရအောင် ပြင်ဆင်ခြင်း",
-    "Unit 'အခြား' ရွေးရင် ကိုယ်တိုင်ရိုက်ထည့်နိုင်ပြီး နောက်တခါ အလိုအလျောက် ပြန်ပေါ်အောင် ထည့်သွင်းခြင်း"
+    "ယာဉ်စာရင်းထပ်နေတာ ဖြုတ်ခြင်း — အပေါ်က ရွေးတဲ့နေရာပဲ ထားပြီး လမ်းညွှန်တန်းထဲက ယာဉ်စာရင်း pill များ ဖြုတ်ခြင်း (ယာဉ်အသစ် ထည့်တာက အပေါ် ရွေးတဲ့နေရာကနေပဲ ရသည်)",
+    "ဆီစာရင်း ခေါင်းစဉ် စာကြောင်း ဖြုတ်ခြင်း — အချိန်ရွေးတဲ့နေရာက အောက်မှာ ပါနေပြီးသား ဖြစ်သောကြောင့်",
+    "စာရင်းမျက်နှာပြင်မှာ ထည့်တဲ့ ခလုတ် ၂ ခု ထပ်နေတာ ဖြုတ်ခြင်း — အပေါ်က ခလုတ်ကို ဖြုတ်ပြီး အောက် floating + ပဲ ထားခြင်း"
   ],
   "changesEn": [
-    "Vehicle screen: the fuel caption, Free banner text, and deactivated vehicle names now show in full.",
-    "Price Compare shop lines and multi-category budget names now show in full.",
-    "Calendar net amounts now show the minus sign, and Premium modal tabs show their full labels.",
-    "Login modal language and close buttons are always reachable by scrolling.",
-    "Shop menu names, debt start/repayment dates, and the itemised shopping table now show in full.",
-    "Choosing 'Other' for a unit now lets you type your own unit, which reappears next time."
+    "Removed the duplicated vehicle list — only the top selector remains, and the vehicle pills are gone from the actions row (add a new vehicle from the top selector).",
+    "Removed the fuel figures caption line — the selected range is already shown by the range picker below.",
+    "Records screen: removed the duplicated Add button — only the floating + remains."
   ]
 }

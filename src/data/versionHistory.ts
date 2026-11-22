@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.95';
-export const CURRENT_BUILD_NUMBER = 310;
+export const CURRENT_APP_VERSION = 'v7.5.96';
+export const CURRENT_BUILD_NUMBER = 311;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.96',
+    buildNumber: 311,
+    releaseDate: '2026-11-22',
+    releaseTime: '3:40 PM (MMT)',
+    titleMy: 'ထပ်နေတဲ့ ခလုတ်များ + မလိုတဲ့ ခေါင်းစဉ် ဖြုတ်ခြင်း',
+    titleEn: 'Removing duplicated buttons and an unneeded caption',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ယာဉ်စာရင်း pill တွေ ထပ်နေတာ၊ ဆီစာရင်း ခေါင်းစဉ်စာကြောင်း၊ စာရင်းမျက်နှာပြင်က ထည့်တဲ့ ခလုတ် ထပ်နေတာတွေ ဖြုတ်လိုက်ပြီ — ယာဉ်ရွေးတာ အပေါ်က ရွေးတဲ့နေရာကနေ၊ စာရင်းထည့်တာ အောက် floating + ကနေပဲ လုပ်လို့ရတယ်။',
+    descriptionEn: 'Removed the duplicated vehicle pills, the fuel range caption, and the duplicated Add button on the Records screen — pick a vehicle from the top selector, and add a record from the floating + below.',
+    changesMy: [
+      'ယာဉ်စာရင်းထပ်နေတာ ဖြုတ်ခြင်း — အပေါ်က ရွေးတဲ့နေရာပဲ ထားပြီး လမ်းညွှန်တန်းထဲက ယာဉ်စာရင်း pill များ ဖြုတ်ခြင်း (ယာဉ်အသစ် ထည့်တာက အပေါ် ရွေးတဲ့နေရာကနေပဲ ရသည်)',
+      'ဆီစာရင်း ခေါင်းစဉ် စာကြောင်း ဖြုတ်ခြင်း — အချိန်ရွေးတဲ့နေရာက အောက်မှာ ပါနေပြီးသား ဖြစ်သောကြောင့်',
+      'စာရင်းမျက်နှာပြင်မှာ ထည့်တဲ့ ခလုတ် ၂ ခု ထပ်နေတာ ဖြုတ်ခြင်း — အပေါ်က ခလုတ်ကို ဖြုတ်ပြီး အောက် floating + ပဲ ထားခြင်း',
+    ],
+    changesEn: [
+      'Removed the duplicated vehicle list — only the top selector remains, and the vehicle pills are gone from the actions row (add a new vehicle from the top selector).',
+      'Removed the fuel figures caption line — the selected range is already shown by the range picker below.',
+      'Records screen: removed the duplicated Add button — only the floating + remains.',
+    ],
+  },
   {
     version: 'v7.5.95',
     buildNumber: 310,

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle, EyeOff, RotateCcw, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { Car, Fuel, Wrench, Disc, Plus, Gauge, DollarSign, ShieldAlert, ShieldCheck, Edit, Trash2, Clock, Crown, HelpCircle, EyeOff, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Vehicle, FuelLog, VehicleMaintenance, TirePressureLog, Wallet, PlanType, Transaction, TransactionItem } from '../../types';
 import { DEFAULT_PLAN_LIMITS } from '../../data/initialData';
 import { formatLakhs, formatShortDate } from '../../utils/formatters';
@@ -248,16 +248,6 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
     );
   }, [vehicleFuelLogs, costRange, isCustomRangeEmpty]);
   const fuelStats = useMemo(() => calculateFuelStats(rangedFuelLogs), [rangedFuelLogs]);
-  // [v7.5.60 D-S7] Caption so the reader always knows which range the
-  // metric cards cover.
-  const metricRangeCaption =
-    costRangePreset === 'all' || isCustomRangeEmpty
-      ? lang === 'my'
-        ? 'ဆီစာရင်း — အချိန်အားလုံး'
-        : 'Fuel figures — all time'
-      : lang === 'my'
-      ? `ဆီစာရင်း — ${formatShortDate(costRange.start)} → ${formatShortDate(costRange.end)}`
-      : `Fuel figures — ${formatShortDate(costRange.start)} → ${formatShortDate(costRange.end)}`;
   const maintenanceLifespans = useMemo(
     () => calculateMaintenanceLifespans(vehicleMaintenanceLogs),
     [vehicleMaintenanceLogs]
@@ -608,7 +598,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           )}
         </div>
 
-        {/* Row 2: Actions + Fleet pills (combined) */}
+        {/* Row 2: Actions */}
         <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-100">
           {/* [v7.5.60 D-S5] Quick actions ≥40px tall. [v7.5.60 D-N6] Action
               verbs, not bare nouns — "+ ဆီထည့်မည်" says what it does. */}
@@ -643,45 +633,12 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             <span>{lang === 'my' ? 'လမ်းညွှန်' : 'Guide'}</span>
           </button>
 
-          <span className="text-slate-200 mx-0.5 shrink-0">|</span>
-
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
-            {lang === 'my' ? 'ယာဉ်စာရင်း:' : 'Fleet:'}
-          </span>
-          {activeVehicles.map((v) => {
-            const isSelected = currentVehicle?.id === v.id;
-            return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setSelectedVehicleId(v.id)}
-                className={'px-2.5 py-3 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ' + (isSelected ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200/80')}
-              >
-                <span>{v.name}</span>
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={handleOpenAddVehicle}
-            className="px-2.5 py-3 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-all flex items-center gap-0.5 shrink-0 cursor-pointer active:scale-95"
-            title={lang === 'my' ? 'ယာဉ်အသစ်' : 'Add Vehicle'}
-          >
-            <Plus className="w-3 h-3 text-amber-700 stroke-[3]" />
-            <span>{lang === 'my' ? 'သစ်' : 'New'}</span>
-          </button>
         </div>
       </div>
 
       {/* [v7.5.55 C6] Deactivated vehicles (if any) with Reactivate */}
       {deactivatedSection}
 
-      {/* [v7.5.60 D-S7] Range caption — these figures follow the same
-          range as the cost summary below, never silently all-time. */}
-      <p className="flex items-center gap-1.5 text-[11px] text-slate-500 px-1">
-        <Calendar className="w-3 h-3 text-slate-400" />
-        <span>{metricRangeCaption}</span>
-      </p>
 
       {/* [v7.3.0] Key metrics — ultra-compact single-row cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">

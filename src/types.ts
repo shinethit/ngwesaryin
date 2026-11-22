@@ -17,8 +17,8 @@ export interface TransactionItem {
   // several services separately. Optional: old items lack it and fall
   // back to the visit's main service type.
   serviceType?: VehicleServiceType;
-  // [v7.5.82] Per-unit basis of `price` (e.g. 'တစ်ခု' / 'တစ်ပါကင်' /
-  // 'တစ်ကီလို') — the shopping-list entry form stamps it; a plain /
+  // [v7.5.82] Per-unit basis of `price` (e.g. 'ခု' / 'ပါကင်' /
+  // 'ကီလို') — the shopping-list entry form stamps it; a plain /
   // direct entry has no unit. Used to match the shop menu line when a
   // shopping-list entry auto-updates the menu.
   unit?: string;

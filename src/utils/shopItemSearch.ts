@@ -37,7 +37,7 @@ export interface ShopItemSearchResult {
   /** Display name as stored in the menu (trimmed, original casing). */
   itemName: string;
   price: number;
-  /** Normalized unit (falls back to 'တစ်ခု' — see normalizeMenuUnit). */
+  /** Normalized unit (falls back to 'ခု' — see normalizeMenuUnit). */
   unit: string;
 }
 
@@ -150,7 +150,7 @@ export function getMenuItemNameSuggestions(
 // the menu normalizer): search is forgiving discovery, comparison
 // needs same-item identity.
 //
-// Units are NOT required to match: menu units ('တစ်ကီလို' etc.) and
+// Units are NOT required to match: menu units ('ကီလို' etc.) and
 // own parsed units ('ပြည်' etc.) use different vocabularies and are
 // not reliably comparable. The cheapest row overall wins, and its
 // menu unit is always carried so the UI can show it next to the price

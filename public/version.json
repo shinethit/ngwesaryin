@@ -1,15 +1,11 @@
 {
-  "version": "v7.5.96",
-  "buildNumber": 311,
+  "version": "v7.5.97",
+  "buildNumber": 312,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ယာဉ်စာရင်းထပ်နေတာ ဖြုတ်ခြင်း — အပေါ်က ရွေးတဲ့နေရာပဲ ထားပြီး လမ်းညွှန်တန်းထဲက ယာဉ်စာရင်း pill များ ဖြုတ်ခြင်း (ယာဉ်အသစ် ထည့်တာက အပေါ် ရွေးတဲ့နေရာကနေပဲ ရသည်)",
-    "ဆီစာရင်း ခေါင်းစဉ် စာကြောင်း ဖြုတ်ခြင်း — အချိန်ရွေးတဲ့နေရာက အောက်မှာ ပါနေပြီးသား ဖြစ်သောကြောင့်",
-    "စာရင်းမျက်နှာပြင်မှာ ထည့်တဲ့ ခလုတ် ၂ ခု ထပ်နေတာ ဖြုတ်ခြင်း — အပေါ်က ခလုတ်ကို ဖြုတ်ပြီး အောက် floating + ပဲ ထားခြင်း"
+    "Unit အမည်များ ပြင်ဆင်ခြင်း — “တစ်ခု” အစား “ခု”, “တစ်ပါကင်” အစား “ပါကင်” စသဖြင့် ဖြစ်အောင် ပြင်ဆင်ခြင်း (၂ ခု ဝယ်ရင် “၂ တစ်ခု” လို့ မဖတ်ရတော့ဘဲ “၂ ခု” လို့ ဖတ်ရမည်); အရင်သိမ်းထားတဲ့ စာရင်းတွေလည်း အလိုအလျောက် အမှန်ပြမည်"
   ],
   "changesEn": [
-    "Removed the duplicated vehicle list — only the top selector remains, and the vehicle pills are gone from the actions row (add a new vehicle from the top selector).",
-    "Removed the fuel figures caption line — the selected range is already shown by the range picker below.",
-    "Records screen: removed the duplicated Add button — only the floating + remains."
+    "Unit names shortened — \"တစ်ခု\" becomes \"ခု\" and so on, so buying 2 reads as \"၂ ခု\"; previously saved entries display correctly too."
   ]
 }

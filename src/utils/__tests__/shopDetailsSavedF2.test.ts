@@ -36,7 +36,7 @@ import {
   type StashedMenuCandidate,
 } from '../shopMenuUpdate';
 
-const ITEMS = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'တစ်ကီလို' }];
+const ITEMS = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'ကီလို' }];
 
 function stash(overrides: Partial<StashedMenuCandidate> = {}): StashedMenuCandidate {
   return { shopName: 'Shop X', items: ITEMS, ...overrides };

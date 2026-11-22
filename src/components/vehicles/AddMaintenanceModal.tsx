@@ -534,7 +534,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                         type="text"
                         value={customMenuUnitText(row.unit)}
                         onChange={(e) => updateServiceRow(row.id || '', 'unit', e.target.value)}
-                        placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                        placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)' : 'Type a unit (e.g. per bottle)'}
                         className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
                       />
                     )}

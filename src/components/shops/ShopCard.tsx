@@ -4,7 +4,7 @@ import { ShopContact, PublicShop } from '../../types';
 import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
 import { parseMyanmarNumber } from '../../utils/myanmarDigits';
-import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS, OTHER_MENU_UNIT, collectNewCustomUnits, menuUnitSelectOptions, resolveSavedMenuUnit } from '../../utils/shopMenuUpdate';
+import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS, OTHER_MENU_UNIT, collectNewCustomUnits, menuUnitSelectOptions, normalizeMenuUnit, resolveSavedMenuUnit } from '../../utils/shopMenuUpdate';
 import { filterItemNameSuggestions } from '../../utils/shopItemSearch';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { normalizeMyanmarPhone } from './ShopModal';
@@ -50,7 +50,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   const [showAllPhones, setShowAllPhones] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
-  // [v7.5.82] Per-unit basis of the price being added (default တစ်ခု).
+  // [v7.5.82] Per-unit basis of the price being added (default ခု).
   const [newItemUnit, setNewItemUnit] = useState<string>(DEFAULT_MENU_UNIT);
   // [v7.5.95 U1] 'အခြား' reveals a free-text unit; typed units persist
   // (ngwe_custom_units, shared with TransactionModal /
@@ -70,10 +70,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
   // [v7.5.82] Display label for a stored menu unit (stored value is the
   // Myanmar string). Unit-less items have no label at all.
+  // [v7.5.97] Normalize first: an old stored 'တစ်ခု' renders as 'ခု'
+  // (labelEn 'per piece' in EN mode); a custom unit renders as-is.
   const menuUnitLabel = (unit?: string): string | null => {
     if (!unit) return null;
-    const found = SHOP_MENU_UNITS.find((u) => u.value === unit);
-    if (!found) return unit;
+    const normalized = normalizeMenuUnit(unit);
+    const found = SHOP_MENU_UNITS.find((u) => u.value === normalized);
+    if (!found) return normalized;
     return lang === 'my' ? found.labelMy : found.labelEn;
   };
 
@@ -550,7 +553,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     ))}
                   </datalist>
                 </div>
-                {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
+                {/* [v7.5.82] Per-unit basis of the price (default ခု). */}
                 <select
                   value={newItemUnit}
                   onChange={(e) => {
@@ -573,7 +576,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     type="text"
                     value={newItemCustomUnit}
                     onChange={(e) => setNewItemCustomUnit(e.target.value)}
-                    placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                    placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)' : 'Type a unit (e.g. per bottle)'}
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-amber-50 text-base border border-amber-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
                 )}
@@ -924,7 +927,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     ))}
                   </datalist>
                 </div>
-                {/* [v7.5.82] Per-unit basis of the price (default တစ်ခု). */}
+                {/* [v7.5.82] Per-unit basis of the price (default ခု). */}
                 <select
                   value={newItemUnit}
                   onChange={(e) => {
@@ -947,7 +950,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                     type="text"
                     value={newItemCustomUnit}
                     onChange={(e) => setNewItemCustomUnit(e.target.value)}
-                    placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                    placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)' : 'Type a unit (e.g. per bottle)'}
                     className="w-full px-2.5 py-2.5 min-h-[44px] bg-amber-50 text-base border border-amber-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                   />
                 )}

@@ -10,6 +10,8 @@
 
 export const SHOP_PRICE_ALERTS_COLLECTION = 'shop_price_alerts';
 
+import { normalizeMenuUnit } from './shopMenuUpdate';
+
 export type ShopPriceAlertStatus = 'pending' | 'resolved' | 'dismissed';
 
 export interface ShopPriceAlert {
@@ -47,7 +49,9 @@ function normalizeAlertSegment(value: string): string {
  */
 export function buildShopPriceAlertId(shopId: string, itemName: string, unit: string): string {
   const item = encodeURIComponent(normalizeAlertSegment(itemName)).slice(0, 100);
-  const u = encodeURIComponent(normalizeAlertSegment(unit)).slice(0, 100);
+  // [v7.5.97] Canonicalize the unit first: an old 'တစ်ခု' alert and a
+  // new 'ခု' alert for the same shop + item share ONE dedupe id.
+  const u = encodeURIComponent(normalizeAlertSegment(normalizeMenuUnit(unit))).slice(0, 100);
   return `${shopId}_${item}_${u}`;
 }
 
@@ -67,7 +71,7 @@ export function buildShopPriceAlertDoc(input: {
     shopId: input.shopId,
     shopName: input.shopName.trim(),
     itemName: input.itemName.trim(),
-    unit: input.unit.trim(),
+    unit: normalizeMenuUnit(input.unit),
     oldPrice: input.oldPrice,
     newPrice: input.newPrice,
     reportedByUid: input.reportedByUid,

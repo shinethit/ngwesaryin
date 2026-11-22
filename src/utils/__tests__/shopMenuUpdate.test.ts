@@ -58,20 +58,20 @@ function stubStore(overrides: Partial<ShopMenuStore> = {}): ShopMenuStore & {
 }
 
 describe('constants', () => {
-  it('default unit is တစ်ခု', () => {
-    expect(DEFAULT_MENU_UNIT).toBe('တစ်ခု');
+  it('default unit is ခု', () => {
+    expect(DEFAULT_MENU_UNIT).toBe('ခု');
   });
 
   it('has exactly the six units with Myanmar stored values', () => {
     expect(SHOP_MENU_UNITS.map((u) => u.value)).toEqual([
-      'တစ်ခု',
-      'တစ်ပါကင်',
-      'တစ်ကီလို',
-      'တစ်လီတာ',
-      'တစ်ထုပ်',
+      'ခု',
+      'ပါကင်',
+      'ကီလို',
+      'လီတာ',
+      'ထုပ်',
       'အခြား',
     ]);
-    expect(SHOP_MENU_UNITS[0]).toEqual({ value: 'တစ်ခု', labelMy: 'တစ်ခု', labelEn: 'per piece' });
+    expect(SHOP_MENU_UNITS[0]).toEqual({ value: 'ခု', labelMy: 'ခု', labelEn: 'per piece' });
     expect(SHOP_MENU_UNITS[2].labelEn).toBe('per kg');
     expect(SHOP_MENU_UNITS[3].labelEn).toBe('per litre');
   });
@@ -79,7 +79,7 @@ describe('constants', () => {
 
 describe('normalizeMenuUnit', () => {
   it('trims and keeps a known unit', () => {
-    expect(normalizeMenuUnit('  တစ်ကီလို ')).toBe('တစ်ကီလို');
+    expect(normalizeMenuUnit('  ကီလို ')).toBe('ကီလို');
   });
 
   it('empty / non-string fall back to the default', () => {
@@ -105,11 +105,11 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
   it('menuUnitSelectOptions puts standards, then customs, then Other last', () => {
     const opts = menuUnitSelectOptions(['တစ်ဗူး', 'တစ်ခု', 'တစ်ဗူး', '  ']);
     expect(opts.map((o) => o.value)).toEqual([
-      'တစ်ခု',
-      'တစ်ပါကင်',
-      'တစ်ကီလို',
-      'တစ်လီတာ',
-      'တစ်ထုပ်',
+      'ခု',
+      'ပါကင်',
+      'ကီလို',
+      'လီတာ',
+      'ထုပ်',
       'တစ်ဗူး',
       'အခြား',
     ]);
@@ -121,7 +121,7 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
   });
 
   it('resolveMenuUnitSelectValue shows list/custom values, Other for the rest', () => {
-    expect(resolveMenuUnitSelectValue('တစ်ကီလို')).toBe('တစ်ကီလို');
+    expect(resolveMenuUnitSelectValue('ကီလို')).toBe('ကီလို');
     expect(resolveMenuUnitSelectValue('တစ်ဗူး', ['တစ်ဗူး'])).toBe('တစ်ဗူး');
     expect(resolveMenuUnitSelectValue('တစ်ဗူး', [])).toBe('အခြား');
     expect(resolveMenuUnitSelectValue('အခြား')).toBe('အခြား');
@@ -131,7 +131,7 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
 
   it('customMenuUnitText returns the raw custom string only', () => {
     expect(customMenuUnitText('တစ်ဗူး')).toBe('တစ်ဗူး');
-    expect(customMenuUnitText('တစ်ကီလို')).toBe('');
+    expect(customMenuUnitText('ကီလို')).toBe('');
     expect(customMenuUnitText('အခြား')).toBe('');
     expect(customMenuUnitText('')).toBe('');
     expect(customMenuUnitText(undefined)).toBe('');
@@ -140,7 +140,7 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
   it('menuUnitNeedsCustomInput is true for customs and the Other sentinel', () => {
     expect(menuUnitNeedsCustomInput('တစ်ဗူး')).toBe(true);
     expect(menuUnitNeedsCustomInput('အခြား')).toBe(true);
-    expect(menuUnitNeedsCustomInput('တစ်ကီလို')).toBe(false);
+    expect(menuUnitNeedsCustomInput('ကီလို')).toBe(false);
     expect(menuUnitNeedsCustomInput(undefined)).toBe(false);
   });
 
@@ -220,18 +220,18 @@ describe('isLargePriceDifference', () => {
 
 describe('computeMenuDiff', () => {
   const menu = [
-    { name: 'Rice', price: 1000, unit: 'တစ်ကီလို', updatedAt: 111, addedBy: 'a@x.com' },
+    { name: 'Rice', price: 1000, unit: 'ကီလို', updatedAt: 111, addedBy: 'a@x.com' },
     { name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'a@x.com' },
   ];
 
   it('same name+unit, different price → update row', () => {
     const rows = computeMenuDiff(menu, [
-      { name: 'Rice', price: 1200, quantity: 2, unit: 'တစ်ကီလို' },
+      { name: 'Rice', price: 1200, quantity: 2, unit: 'ကီလို' },
     ]);
     expect(rows).toEqual([
       {
         itemName: 'Rice',
-        unit: 'တစ်ကီလို',
+        unit: 'ကီလို',
         oldPrice: 1000,
         newPrice: 1200,
         isNew: false,
@@ -242,16 +242,16 @@ describe('computeMenuDiff', () => {
 
   it('same name+unit, same price → no row', () => {
     expect(
-      computeMenuDiff(menu, [{ name: 'Rice', price: 1000, quantity: 1, unit: 'တစ်ကီလို' }]),
+      computeMenuDiff(menu, [{ name: 'Rice', price: 1000, quantity: 1, unit: 'ကီလို' }]),
     ).toEqual([]);
   });
 
   it('different name → new row with oldPrice null', () => {
-    const rows = computeMenuDiff(menu, [{ name: 'Tea', price: 500, quantity: 1, unit: 'တစ်ထုပ်' }]);
+    const rows = computeMenuDiff(menu, [{ name: 'Tea', price: 500, quantity: 1, unit: 'ထုပ်' }]);
     expect(rows).toEqual([
       {
         itemName: 'Tea',
-        unit: 'တစ်ထုပ်',
+        unit: 'ထုပ်',
         oldPrice: null,
         newPrice: 500,
         isNew: true,
@@ -262,18 +262,18 @@ describe('computeMenuDiff', () => {
 
   it('same name, different unit → separate new row', () => {
     const rows = computeMenuDiff(menu, [
-      { name: 'Rice', price: 25000, quantity: 1, unit: 'တစ်ထုပ်' },
+      { name: 'Rice', price: 25000, quantity: 1, unit: 'ထုပ်' },
     ]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ itemName: 'Rice', unit: 'တစ်ထုပ်', oldPrice: null, isNew: true });
+    expect(rows[0]).toMatchObject({ itemName: 'Rice', unit: 'ထုပ်', oldPrice: null, isNew: true });
   });
 
-  it('unit-less menu item matches a တစ်ခု tx item', () => {
+  it('unit-less menu item matches a ခု tx item', () => {
     const rows = computeMenuDiff(menu, [
-      { name: 'Sugar', price: 2500, quantity: 1, unit: 'တစ်ခု' },
+      { name: 'Sugar', price: 2500, quantity: 1, unit: 'ခု' },
     ]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ itemName: 'Sugar', unit: 'တစ်ခု', oldPrice: 2000, isNew: false });
+    expect(rows[0]).toMatchObject({ itemName: 'Sugar', unit: 'ခု', oldPrice: 2000, isNew: false });
   });
 
   it('unit-less menu item matches a tx item with no unit at all', () => {
@@ -284,32 +284,32 @@ describe('computeMenuDiff', () => {
 
   it('name matching is case-insensitive and trimmed', () => {
     const rows = computeMenuDiff(menu, [
-      { name: '  RICE ', price: 1300, quantity: 1, unit: 'တစ်ကီလို' },
+      { name: '  RICE ', price: 1300, quantity: 1, unit: 'ကီလို' },
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].oldPrice).toBe(1000);
   });
 
   it('menu price is the per-unit price — quantity is NOT divided out', () => {
-    const rows = computeMenuDiff([], [{ name: 'Egg', price: 400, quantity: 10, unit: 'တစ်ခု' }]);
+    const rows = computeMenuDiff([], [{ name: 'Egg', price: 400, quantity: 10, unit: 'ခု' }]);
     expect(rows[0].newPrice).toBe(400);
   });
 
   it('large-diff flag is set on update rows', () => {
     const rows = computeMenuDiff(menu, [
-      { name: 'Rice', price: 3500, quantity: 1, unit: 'တစ်ကီလို' },
+      { name: 'Rice', price: 3500, quantity: 1, unit: 'ကီလို' },
     ]);
     expect(rows[0].isLargeDiff).toBe(true);
     const small = computeMenuDiff(menu, [
-      { name: 'Rice', price: 1100, quantity: 1, unit: 'တစ်ကီလို' },
+      { name: 'Rice', price: 1100, quantity: 1, unit: 'ကီလို' },
     ]);
     expect(small[0].isLargeDiff).toBe(false);
   });
 
   it('duplicate tx item (same name+unit) keeps the LAST one', () => {
     const rows = computeMenuDiff(menu, [
-      { name: 'Rice', price: 1200, quantity: 1, unit: 'တစ်ကီလို' },
-      { name: 'Rice', price: 1500, quantity: 1, unit: 'တစ်ကီလို' },
+      { name: 'Rice', price: 1200, quantity: 1, unit: 'ကီလို' },
+      { name: 'Rice', price: 1500, quantity: 1, unit: 'ကီလို' },
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].newPrice).toBe(1500);
@@ -317,10 +317,10 @@ describe('computeMenuDiff', () => {
 
   it('empty name / quantity 0 / negative quantity / negative price are skipped', () => {
     const rows = computeMenuDiff(menu, [
-      { name: '   ', price: 100, quantity: 1, unit: 'တစ်ခု' },
-      { name: 'NoQty', price: 100, quantity: 0, unit: 'တစ်ခု' },
-      { name: 'NegQty', price: 100, quantity: -1, unit: 'တစ်ခု' },
-      { name: 'NegPrice', price: -50, quantity: 1, unit: 'တစ်ခု' },
+      { name: '   ', price: 100, quantity: 1, unit: 'ခု' },
+      { name: 'NoQty', price: 100, quantity: 0, unit: 'ခု' },
+      { name: 'NegQty', price: 100, quantity: -1, unit: 'ခု' },
+      { name: 'NegPrice', price: -50, quantity: 1, unit: 'ခု' },
     ]);
     expect(rows).toEqual([]);
   });
@@ -332,17 +332,17 @@ describe('computeMenuDiff', () => {
 
 describe('buildUpdatedMenuItems', () => {
   const menu = [
-    { name: 'Rice', price: 1000, unit: 'တစ်ကီလို', updatedAt: 111, addedBy: 'old@x.com' },
+    { name: 'Rice', price: 1000, unit: 'ကီလို', updatedAt: 111, addedBy: 'old@x.com' },
     { name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'old@x.com' },
   ];
 
   it('updates in place, preserves untouched items exactly', () => {
     const rows: MenuUpdateRow[] = [
-      { itemName: 'Rice', unit: 'တစ်ကီလို', oldPrice: 1000, newPrice: 1200, isNew: false, isLargeDiff: false },
+      { itemName: 'Rice', unit: 'ကီလို', oldPrice: 1000, newPrice: 1200, isNew: false, isLargeDiff: false },
     ];
     const out = buildUpdatedMenuItems(menu, rows, 'new@x.com');
     expect(out).toHaveLength(2);
-    expect(out[0]).toMatchObject({ name: 'Rice', price: 1200, unit: 'တစ်ကီလို', addedBy: 'new@x.com' });
+    expect(out[0]).toMatchObject({ name: 'Rice', price: 1200, unit: 'ကီလို', addedBy: 'new@x.com' });
     expect(out[0].updatedAt).toBeGreaterThan(111);
     // Untouched item: original unit/addedBy/updatedAt preserved.
     expect(out[1]).toEqual({ name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'old@x.com' });
@@ -353,38 +353,38 @@ describe('buildUpdatedMenuItems', () => {
 
   it('unit-less matched item gains an explicit unit when updated', () => {
     const rows: MenuUpdateRow[] = [
-      { itemName: 'Sugar', unit: 'တစ်ခု', oldPrice: 2000, newPrice: 2500, isNew: false, isLargeDiff: false },
+      { itemName: 'Sugar', unit: 'ခု', oldPrice: 2000, newPrice: 2500, isNew: false, isLargeDiff: false },
     ];
     const out = buildUpdatedMenuItems(menu, rows, 'new@x.com');
-    expect(out[1]).toMatchObject({ name: 'Sugar', price: 2500, unit: 'တစ်ခု', addedBy: 'new@x.com' });
+    expect(out[1]).toMatchObject({ name: 'Sugar', price: 2500, unit: 'ခု', addedBy: 'new@x.com' });
   });
 
   it('new rows are prepended, newest first', () => {
     const rows: MenuUpdateRow[] = [
-      { itemName: 'Tea', unit: 'တစ်ထုပ်', oldPrice: null, newPrice: 500, isNew: true, isLargeDiff: false },
-      { itemName: 'Coffee', unit: 'တစ်ထုပ်', oldPrice: null, newPrice: 800, isNew: true, isLargeDiff: false },
+      { itemName: 'Tea', unit: 'ထုပ်', oldPrice: null, newPrice: 500, isNew: true, isLargeDiff: false },
+      { itemName: 'Coffee', unit: 'ထုပ်', oldPrice: null, newPrice: 800, isNew: true, isLargeDiff: false },
     ];
     const out = buildUpdatedMenuItems(menu, rows, 'new@x.com');
     expect(out.map((i) => i.name)).toEqual(['Coffee', 'Tea', 'Rice', 'Sugar']);
-    expect(out[0]).toMatchObject({ price: 800, unit: 'တစ်ထုပ်', addedBy: 'new@x.com' });
+    expect(out[0]).toMatchObject({ price: 800, unit: 'ထုပ်', addedBy: 'new@x.com' });
     expect(typeof out[0].updatedAt).toBe('number');
   });
 
   it('same name + different unit leaves the old line untouched', () => {
     const rows: MenuUpdateRow[] = [
-      { itemName: 'Rice', unit: 'တစ်ထုပ်', oldPrice: null, newPrice: 25000, isNew: true, isLargeDiff: false },
+      { itemName: 'Rice', unit: 'ထုပ်', oldPrice: null, newPrice: 25000, isNew: true, isLargeDiff: false },
     ];
     const out = buildUpdatedMenuItems(menu, rows, 'new@x.com');
     expect(out).toHaveLength(3);
-    expect(out[0]).toMatchObject({ name: 'Rice', price: 25000, unit: 'တစ်ထုပ်' });
-    const oldLine = out.find((i) => i.unit === 'တစ်ကီလို');
-    expect(oldLine).toEqual({ name: 'Rice', price: 1000, unit: 'တစ်ကီလို', updatedAt: 111, addedBy: 'old@x.com' });
+    expect(out[0]).toMatchObject({ name: 'Rice', price: 25000, unit: 'ထုပ်' });
+    const oldLine = out.find((i) => i.unit === 'ကီလို');
+    expect(oldLine).toEqual({ name: 'Rice', price: 1000, unit: 'ကီလို', updatedAt: 111, addedBy: 'old@x.com' });
   });
 
   it('no rows → identical copy', () => {
     const out = buildUpdatedMenuItems(menu, [], 'new@x.com');
     expect(out).toEqual([
-      { name: 'Rice', price: 1000, unit: 'တစ်ကီလို', updatedAt: 111, addedBy: 'old@x.com' },
+      { name: 'Rice', price: 1000, unit: 'ကီလို', updatedAt: 111, addedBy: 'old@x.com' },
       { name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'old@x.com' },
     ]);
   });
@@ -392,7 +392,7 @@ describe('buildUpdatedMenuItems', () => {
 
 describe('applyShopMenuItems with a stub store', () => {
   const shop = { id: 'shop-1', items: [] };
-  const items = [{ name: 'Rice', price: 1200, unit: 'တစ်ကီလို', updatedAt: 1, addedBy: 'a@x.com' }];
+  const items = [{ name: 'Rice', price: 1200, unit: 'ကီလို', updatedAt: 1, addedBy: 'a@x.com' }];
 
   it('public success → true and calls updatePublicShopItems with id + items', async () => {
     const store = stubStore();
@@ -431,7 +431,7 @@ describe('applyShopMenuItems with a stub store', () => {
 
 describe('applyShopMenuItems with the DEFAULT store (mocked firebase)', () => {
   const shop = { id: 'shop-9', items: [] };
-  const items = [{ name: 'Rice', price: 1200, unit: 'တစ်ကီလို', updatedAt: 1, addedBy: 'a@x.com' }];
+  const items = [{ name: 'Rice', price: 1200, unit: 'ကီလို', updatedAt: 1, addedBy: 'a@x.com' }];
 
   it('public path writes public_shops/<id> via safeUpdateDoc', async () => {
     vi.mocked(safeUpdateDoc).mockResolvedValue(true);
@@ -488,11 +488,11 @@ describe('buildVehicleMenuCandidate (v7.5.83)', () => {
     fuelPricePerLiter: 3100,
   };
 
-  it('fuel builds Octane 92 / တစ်လီတာ / price-per-litre, amount = price × litres', () => {
+  it('fuel builds Octane 92 / လီတာ / price-per-litre, amount = price × litres', () => {
     const c = buildVehicleMenuCandidate(fuelBase);
     expect(c).toEqual({
       shopName: 'Denko',
-      items: [{ name: 'Octane 92', price: 3100, quantity: 10, amount: 31000, unit: 'တစ်လီတာ' }],
+      items: [{ name: 'Octane 92', price: 3100, quantity: 10, amount: 31000, unit: 'လီတာ' }],
     });
   });
 
@@ -515,22 +515,22 @@ describe('buildVehicleMenuCandidate (v7.5.83)', () => {
   it('fuel item flows through computeMenuDiff: 3000 → 3100 is an update row (not large)', () => {
     const c = buildVehicleMenuCandidate(fuelBase)!;
     const rows = computeMenuDiff(
-      [{ name: 'Octane 92', price: 3000, unit: 'တစ်လီတာ' }],
+      [{ name: 'Octane 92', price: 3000, unit: 'လီတာ' }],
       c.items,
     );
     expect(rows).toEqual([
-      { itemName: 'Octane 92', unit: 'တစ်လီတာ', oldPrice: 3000, newPrice: 3100, isNew: false, isLargeDiff: false },
+      { itemName: 'Octane 92', unit: 'လီတာ', oldPrice: 3000, newPrice: 3100, isNew: false, isLargeDiff: false },
     ]);
   });
 
   it('fuel item flows through computeMenuDiff: a 3x jump flags a large diff', () => {
     const c = buildVehicleMenuCandidate({ ...fuelBase, fuelPricePerLiter: 9500 })!;
     const rows = computeMenuDiff(
-      [{ name: 'Octane 92', price: 3000, unit: 'တစ်လီတာ' }],
+      [{ name: 'Octane 92', price: 3000, unit: 'လီတာ' }],
       c.items,
     );
     expect(rows).toEqual([
-      { itemName: 'Octane 92', unit: 'တစ်လီတာ', oldPrice: 3000, newPrice: 9500, isNew: false, isLargeDiff: true },
+      { itemName: 'Octane 92', unit: 'လီတာ', oldPrice: 3000, newPrice: 9500, isNew: false, isLargeDiff: true },
     ]);
   });
 
@@ -544,11 +544,11 @@ describe('buildVehicleMenuCandidate (v7.5.83)', () => {
     finalAmount: 45000,
   };
 
-  it('maintenance builds title / တစ်ခု / total, quantity 1', () => {
+  it('maintenance builds title / ခု / total, quantity 1', () => {
     const c = buildVehicleMenuCandidate(maintBase);
     expect(c).toEqual({
       shopName: 'ဝပ်ရှော့ A',
-      items: [{ name: 'အင်ဂျင်ဝိုင် လဲလှယ်ခြင်း', price: 45000, quantity: 1, amount: 45000, unit: 'တစ်ခု' }],
+      items: [{ name: 'အင်ဂျင်ဝိုင် လဲလှယ်ခြင်း', price: 45000, quantity: 1, amount: 45000, unit: 'ခု' }],
     });
   });
 
@@ -583,11 +583,11 @@ describe('buildVehicleMenuCandidate (v7.5.83)', () => {
 });
 
 describe('resolveMenuShop (v7.5.85 FIX 2 — stash / retry resolution)', () => {
-  const txItems = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'တစ်ကီလို' }];
+  const txItems = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'ကီလို' }];
   const fetchPublic = async (id: string) => ({
     id,
     name: 'Denko',
-    items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'တစ်ကီလို' }],
+    items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'ကီလို' }],
   });
 
   it('unknown shop (neither list) → null — the candidate is STASHED, not dropped', async () => {
@@ -605,7 +605,7 @@ describe('resolveMenuShop (v7.5.85 FIX 2 — stash / retry resolution)', () => {
     // And the stashed items now diff against its (empty) menu → a prompt row.
     const rows = buildMenuPromptRows(txItems, resolved, false);
     expect(rows).toEqual([
-      { itemName: 'Rice', unit: 'တစ်ကီလို', oldPrice: null, newPrice: 1200, isNew: true, isLargeDiff: false },
+      { itemName: 'Rice', unit: 'ကီလို', oldPrice: null, newPrice: 1200, isNew: true, isLargeDiff: false },
     ]);
   });
 
@@ -622,7 +622,7 @@ describe('resolveMenuShop (v7.5.85 FIX 2 — stash / retry resolution)', () => {
     const resolved = await resolveMenuShop('Denko', [{ id: 'pub-9', name: 'Denko' }], privateShops, fetch);
     expect(fetch).toHaveBeenCalledWith('pub-9');
     expect(resolved).toEqual({
-      shop: { id: 'pub-9', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'တစ်ကီလို' }] },
+      shop: { id: 'pub-9', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'ကီလို' }] },
       isPublic: true,
     });
   });
@@ -653,7 +653,7 @@ describe('resolveMenuShop (v7.5.85 FIX 2 — stash / retry resolution)', () => {
     const fetch = vi.fn(async (id: string) =>
       id === 'pub-empty'
         ? { id, name: 'Denko', items: [] }
-        : { id, name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 1, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+        : { id, name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 1, addedBy: 'a', unit: 'ကီလို' }] },
     );
     const resolved = await resolveMenuShop(
       'Denko',
@@ -715,7 +715,7 @@ describe('resolveMenuShopById (v7.5.89 A5 — re-resolve by id after rename)', (
 });
 
 describe('buildMenuPromptRows (v7.5.85 FIX 2 — retry gating)', () => {
-  const txItems = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'တစ်ကီလို' }];
+  const txItems = [{ name: 'Rice', price: 1200, quantity: 1, amount: 1200, unit: 'ကီလို' }];
 
   it('unresolved shop → null', () => {
     expect(buildMenuPromptRows(txItems, null, true)).toBeNull();
@@ -723,7 +723,7 @@ describe('buildMenuPromptRows (v7.5.85 FIX 2 — retry gating)', () => {
 
   it('same price as the fresh menu → null (nothing would change)', () => {
     const resolved = {
-      shop: { id: 'priv-1', name: 'Denko', items: [{ name: 'Rice', price: 1200, updatedAt: 1, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+      shop: { id: 'priv-1', name: 'Denko', items: [{ name: 'Rice', price: 1200, updatedAt: 1, addedBy: 'a', unit: 'ကီလို' }] },
       isPublic: false,
     };
     expect(buildMenuPromptRows(txItems, resolved, false)).toBeNull();
@@ -731,7 +731,7 @@ describe('buildMenuPromptRows (v7.5.85 FIX 2 — retry gating)', () => {
 
   it('guest + public shop → null (gate refuses, as before)', () => {
     const resolved = {
-      shop: { id: 'pub-9', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 1, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+      shop: { id: 'pub-9', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 1, addedBy: 'a', unit: 'ကီလို' }] },
       isPublic: true,
     };
     expect(buildMenuPromptRows(txItems, resolved, false)).toBeNull();
@@ -741,7 +741,7 @@ describe('buildMenuPromptRows (v7.5.85 FIX 2 — retry gating)', () => {
 
 describe('applyResolvedMenuUpdate (v7.5.85 FIX 2 — re-resolve at apply)', () => {
   const rows: MenuUpdateRow[] = [
-    { itemName: 'Rice', unit: 'တစ်ကီလို', oldPrice: 1000, newPrice: 1200, isNew: false, isLargeDiff: false },
+    { itemName: 'Rice', unit: 'ကီလို', oldPrice: 1000, newPrice: 1200, isNew: false, isLargeDiff: false },
   ];
 
   it('shop deleted (resolved null) → "not-found" and the store is NEVER called', async () => {
@@ -761,7 +761,7 @@ describe('applyResolvedMenuUpdate (v7.5.85 FIX 2 — re-resolve at apply)', () =
       id,
       name: 'Denko',
       items: [
-        { name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'တစ်ကီလို' },
+        { name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a@x.com', unit: 'ကီလို' },
         { name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'a@x.com' },
       ],
     });
@@ -771,7 +771,7 @@ describe('applyResolvedMenuUpdate (v7.5.85 FIX 2 — re-resolve at apply)', () =
     const result = await applyResolvedMenuUpdate(fresh, rows, 'a@x.com', store);
     expect(result).toBe('applied');
     expect(store.updatePublicShopItems).toHaveBeenCalledWith('pub-9', [
-      { name: 'Rice', price: 1200, unit: 'တစ်ကီလို', updatedAt: expect.any(Number), addedBy: 'a@x.com' },
+      { name: 'Rice', price: 1200, unit: 'ကီလို', updatedAt: expect.any(Number), addedBy: 'a@x.com' },
       { name: 'Sugar', price: 2000, updatedAt: 222, addedBy: 'a@x.com' },
     ]);
     expect(store.updatePrivateShopItems).not.toHaveBeenCalled();
@@ -779,7 +779,7 @@ describe('applyResolvedMenuUpdate (v7.5.85 FIX 2 — re-resolve at apply)', () =
 
   it('private shop still private → private store, store failure → "failed"', async () => {
     const resolved = {
-      shop: { id: 'priv-1', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a', unit: 'တစ်ကီလို' }] },
+      shop: { id: 'priv-1', name: 'Denko', items: [{ name: 'Rice', price: 1000, updatedAt: 111, addedBy: 'a', unit: 'ကီလို' }] },
       isPublic: false,
     };
     const failing = stubStore({ updatePrivateShopItems: vi.fn(async () => false) });

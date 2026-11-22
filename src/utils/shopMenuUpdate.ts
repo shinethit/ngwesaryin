@@ -1,8 +1,8 @@
 // [v7.5.82] Shop menu auto-update from shopping-list entries — pure
 // diff / build logic + an injectable store for the Firestore write.
 //
-// A shopping-list entry carries a per-unit price and a unit (တစ်ခု /
-// တစ်ပါကင် / တစ်ကီလို / ...). When the user saves such an entry for a
+// A shopping-list entry carries a per-unit price and a unit (ခု /
+// ပါကင် / ကီလို / ...). When the user saves such an entry for a
 // shop, the shop's menu gains (or updates) the matching name+unit line.
 // The menu price IS the entry's per-unit price — quantity is how many
 // were bought, so the price is never divided.
@@ -24,41 +24,67 @@ import type { TransactionItem } from '../types';
 import { normalizeShopName } from './shopDetailsReminders';
 
 /** Default unit — one piece. Stored value is the Myanmar string. */
-export const DEFAULT_MENU_UNIT = 'တစ်ခု';
+export const DEFAULT_MENU_UNIT = 'ခု';
 
 export const SHOP_MENU_UNITS: { value: string; labelMy: string; labelEn: string }[] = [
-  { value: 'တစ်ခု', labelMy: 'တစ်ခု', labelEn: 'per piece' },
-  { value: 'တစ်ပါကင်', labelMy: 'တစ်ပါကင်', labelEn: 'per pack' },
-  { value: 'တစ်ကီလို', labelMy: 'တစ်ကီလို', labelEn: 'per kg' },
-  { value: 'တစ်လီတာ', labelMy: 'တစ်လီတာ', labelEn: 'per litre' },
-  { value: 'တစ်ထုပ်', labelMy: 'တစ်ထုပ်', labelEn: 'per bag' },
+  { value: 'ခု', labelMy: 'ခု', labelEn: 'per piece' },
+  { value: 'ပါကင်', labelMy: 'ပါကင်', labelEn: 'per pack' },
+  { value: 'ကီလို', labelMy: 'ကီလို', labelEn: 'per kg' },
+  { value: 'လီတာ', labelMy: 'လီတာ', labelEn: 'per litre' },
+  { value: 'ထုပ်', labelMy: 'ထုပ်', labelEn: 'per bag' },
   { value: 'အခြား', labelMy: 'အခြား', labelEn: 'other' },
 ];
 
+/** [v7.5.97] The five old preset spellings, canonicalized by
+ * normalizeMenuUnit to the bare forms above. Only these exact
+ * strings map — a custom string is never stripped (see below). */
+const LEGACY_MENU_UNITS: Record<string, string> = {
+  'တစ်ခု': 'ခု',
+  'တစ်ပါကင်': 'ပါကင်',
+  'တစ်ကီလို': 'ကီလို',
+  'တစ်လီတာ': 'လီတာ',
+  'တစ်ထုပ်': 'ထုပ်',
+};
+
 /** Trim; empty / non-string values fall back to the default.
- * [v7.5.95 U2] A non-empty string that is NOT one of the six list
- * values is a CUSTOM unit (e.g. 'တစ်ဗူး') typed via the 'အခြား'
- * option — it is PRESERVED as-is, never collapsed to the default.
- * Matching stays exact string equality everywhere (computeMenuDiff /
- * buildUpdatedMenuItems / shopItemSearch), so a custom unit matches
- * only the same custom unit. The literal 'အခြား' itself is a list
- * value, so it is preserved too (old entries stay as-is). */
+ * [v7.5.97] The five OLD preset forms ('တစ်ခု' etc., stored before
+ * this version) canonicalize to the bare forms ('ခု' etc.), so an
+ * old stored line and a new entry MATCH and DISPLAY the same.
+ * [v7.5.95 U2] A non-empty string that is NOT one of the five old
+ * forms or the six list values is a CUSTOM unit (e.g. 'တစ်ဗူး')
+ * typed via the 'အခြား' option — it is PRESERVED as-is, never
+ * collapsed to the default and never stripped of its leading
+ * 'တစ်'. Matching stays exact string equality on the NORMALIZED
+ * form everywhere (computeMenuDiff / buildUpdatedMenuItems /
+ * shopItemSearch), so a custom unit matches only the same custom
+ * unit. The literal 'အခြား' itself is a list value, so it is
+ * preserved too (old entries stay as-is). */
 export function normalizeMenuUnit(unit: unknown): string {
   if (typeof unit !== 'string') return DEFAULT_MENU_UNIT;
   const trimmed = unit.trim();
   if (!trimmed) return DEFAULT_MENU_UNIT;
-  return trimmed;
+  return LEGACY_MENU_UNITS[trimmed] ?? trimmed;
+}
+
+/** [v7.5.97] The unit to DISPLAY for a stored unit string: the
+ * normalized form, so an old 'တစ်ခု' line renders as 'ခု' while a
+ * custom unit renders exactly as typed. */
+export function displayMenuUnit(unit: unknown): string {
+  return normalizeMenuUnit(unit);
 }
 
 /** The 'other' list value — choosing it reveals a free-text input. */
 export const OTHER_MENU_UNIT = 'အခြား';
 
-/** True when `unit` is a non-empty custom unit (not a list value). */
+/** True when `unit` is a non-empty custom unit (not a list value).
+ * [v7.5.97] Normalize first, then check list membership — the five
+ * old preset forms canonicalize to list values, so they are NOT
+ * custom. */
 export function isCustomMenuUnit(unit: unknown): boolean {
   if (typeof unit !== 'string') return false;
   const trimmed = unit.trim();
   if (!trimmed) return false;
-  return !SHOP_MENU_UNITS.some((u) => u.value === trimmed);
+  return !SHOP_MENU_UNITS.some((u) => u.value === normalizeMenuUnit(trimmed));
 }
 
 /** [v7.5.95 U1] Options for a unit <select>: the standard units
@@ -73,8 +99,12 @@ export function menuUnitSelectOptions(
   const seen = new Set<string>();
   const customs: { value: string; labelMy: string; labelEn: string }[] = [];
   for (const raw of customUnits || []) {
-    const trimmed = typeof raw === 'string' ? raw.trim() : '';
-    if (!trimmed || seen.has(trimmed)) continue;
+    const rawTrimmed = typeof raw === 'string' ? raw.trim() : '';
+    if (!rawTrimmed) continue;
+    // [v7.5.97] Normalize before deduping: a persisted old preset
+    // form ('တစ်ခု') is a list value, never a custom option.
+    const trimmed = normalizeMenuUnit(rawTrimmed);
+    if (seen.has(trimmed)) continue;
     seen.add(trimmed);
     if (SHOP_MENU_UNITS.some((u) => u.value === trimmed)) continue;
     customs.push({ value: trimmed, labelMy: trimmed, labelEn: trimmed });
@@ -98,9 +128,14 @@ export function resolveMenuUnitSelectValue(unit: unknown, customUnits: string[] 
   if (typeof unit !== 'string') return DEFAULT_MENU_UNIT;
   const trimmed = unit.trim();
   if (!trimmed) return OTHER_MENU_UNIT;
-  if (SHOP_MENU_UNITS.some((u) => u.value === trimmed)) return trimmed;
-  const customs = (customUnits || []).map((u) => (typeof u === 'string' ? u.trim() : ''));
-  if (customs.includes(trimmed)) return trimmed;
+  // [v7.5.97] Normalize first: an old stored 'တစ်ခု' selects the
+  // bare preset 'ခု' — never 'အခြား' with a prefilled custom input.
+  const normalized = normalizeMenuUnit(trimmed);
+  if (SHOP_MENU_UNITS.some((u) => u.value === normalized)) return normalized;
+  const customs = (customUnits || []).map((u) =>
+    typeof u === 'string' && u.trim() ? normalizeMenuUnit(u.trim()) : '',
+  );
+  if (customs.includes(normalized)) return normalized;
   return OTHER_MENU_UNIT;
 }
 
@@ -121,8 +156,11 @@ export function customMenuUnitText(unit: unknown): string {
   if (typeof unit !== 'string') return '';
   const trimmed = unit.trim();
   if (!trimmed) return '';
-  if (SHOP_MENU_UNITS.some((u) => u.value === trimmed)) return '';
-  return trimmed;
+  // [v7.5.97] Normalize first: an old preset form is a list value,
+  // so it shows an empty input (its select shows the bare preset).
+  const normalized = normalizeMenuUnit(trimmed);
+  if (SHOP_MENU_UNITS.some((u) => u.value === normalized)) return '';
+  return normalized;
 }
 
 /** [v7.5.95 U1] The unit to SAVE for a stored/typed value: the
@@ -199,7 +237,7 @@ export interface MenuDiffTxItem {
  * that would change something; an empty array means no prompt.
  *
  * - Match is by normalized name AND normalized unit. An existing menu
- *   item with NO unit is treated as unit 'တစ်ခု'.
+ *   item with NO unit is treated as unit 'ခု'.
  * - Same name+unit, different price → update row.
  * - Same name+unit, same price → NO row (nothing would change).
  * - Different name → new row. Same name + DIFFERENT unit → a SEPARATE
@@ -306,7 +344,7 @@ export interface ShopMenuUpdateCandidate {
  * Build the menu-update candidate for a fuel / maintenance entry, or
  * null when there is nothing to offer. Pure — no Firestore, no UI.
  *
- * - Fuel: one item, name = fuel type, unit 'တစ်လီတာ', price = price
+ * - Fuel: one item, name = fuel type, unit 'လီတာ', price = price
  *   per litre, quantity = litres, amount = price × quantity. Fires
  *   only when a station name, a fuel type, a price > 0 and litres > 0
  *   are all present. No station at all → auto-skip, like a general
@@ -333,7 +371,7 @@ export function buildVehicleMenuCandidate(
     }
     return {
       shopName: shop,
-      items: [{ name, price, quantity: qty, amount: price * qty, unit: 'တစ်လီတာ' }],
+      items: [{ name, price, quantity: qty, amount: price * qty, unit: 'လီတာ' }],
     };
   }
   if (input.entryModel === 'vehicle_service') {
@@ -365,7 +403,7 @@ export function buildVehicleMenuCandidate(
       'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု';
     return {
       shopName: shop,
-      items: [{ name, price: amount, quantity: 1, amount, unit: 'တစ်ခု' }],
+      items: [{ name, price: amount, quantity: 1, amount, unit: DEFAULT_MENU_UNIT }],
     };
   }
   return null;

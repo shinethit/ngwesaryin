@@ -20,9 +20,9 @@ const publicShopA = {
   addedBy: 'someone@example.com',
   addedByUid: 'uid-other',
   items: [
-    { name: 'ဆန်', price: 3000, unit: 'တစ်ကီလို', updatedAt: 1 },
-    { name: 'ဆန်', price: 2800, unit: 'တစ်ခု', updatedAt: 1 },
-    { name: 'ဆီ', price: 5000, unit: 'တစ်လီတာ', updatedAt: 1 },
+    { name: 'ဆန်', price: 3000, unit: 'ကီလို', updatedAt: 1 },
+    { name: 'ဆန်', price: 2800, unit: 'ခု', updatedAt: 1 },
+    { name: 'ဆီ', price: 5000, unit: 'လီတာ', updatedAt: 1 },
   ],
 } as const;
 
@@ -32,8 +32,8 @@ const publicShopB = {
   addedBy: 'other@example.com',
   addedByUid: 'uid-other-2',
   items: [
-    { name: 'ဆန်', price: 2500, unit: 'တစ်ကီလို', updatedAt: 1 },
-    { name: 'Panfor', price: 1200, unit: 'တစ်ခု', updatedAt: 1 },
+    { name: 'ဆန်', price: 2500, unit: 'ကီလို', updatedAt: 1 },
+    { name: 'Panfor', price: 1200, unit: 'ခု', updatedAt: 1 },
   ],
 } as const;
 
@@ -42,8 +42,8 @@ const myPrivateShop = {
   name: 'ကိုယ့်ဆိုင်',
   userId: 'uid-me',
   items: [
-    { name: 'ဆန်', price: 2600, unit: 'တစ်ကီလို', updatedAt: 1 },
-    { name: 'ဆား', price: 800, unit: 'တစ်ထုပ်', updatedAt: 1 },
+    { name: 'ဆန်', price: 2600, unit: 'ကီလို', updatedAt: 1 },
+    { name: 'ဆား', price: 800, unit: 'ထုပ်', updatedAt: 1 },
   ],
 } as const;
 
@@ -51,7 +51,7 @@ const otherPrivateShop = {
   id: 'priv-other',
   name: 'သူများဆိုင်',
   userId: 'uid-other',
-  items: [{ name: 'ဆန်', price: 100, unit: 'တစ်ကီလို', updatedAt: 1 }],
+  items: [{ name: 'ဆန်', price: 100, unit: 'ကီလို', updatedAt: 1 }],
 } as const;
 
 const PUBLIC_ONLY: ShopItemSearchSource = [publicShopA as any, publicShopB as any];
@@ -90,16 +90,16 @@ describe('searchShopMenus', () => {
   it('same name + different unit = separate rows', () => {
     const rows = searchShopMenus(PUBLIC_ONLY, 'ဆန်');
     const units = rows.map((r) => r.unit);
-    expect(units).toContain('တစ်ကီလို');
-    expect(units).toContain('တစ်ခု');
+    expect(units).toContain('ကီလို');
+    expect(units).toContain('ခု');
     expect(rows.length).toBe(3);
   });
 
-  it('unit falls back to တစ်ခု when missing', () => {
+  it('unit falls back to ခု when missing', () => {
     const shops = [
       { id: 'x', name: 'X', addedBy: 'a', addedByUid: 'u', items: [{ name: 'ဆန်', price: 100, updatedAt: 1 }] },
     ] as unknown as ShopItemSearchSource;
-    expect(searchShopMenus(shops, 'ဆန်')[0].unit).toBe('တစ်ခု');
+    expect(searchShopMenus(shops, 'ဆန်')[0].unit).toBe('ခု');
   });
 
   it('skips items with no name or a non-finite price', () => {
@@ -220,8 +220,8 @@ const publicShopC = {
   addedBy: 'third@example.com',
   addedByUid: 'uid-other-3',
   items: [
-    { name: 'ဆန်ချော', price: 100, unit: 'တစ်ကီလို', updatedAt: 1 },
-    { name: 'ဆန် ၁ပြည်', price: 2400, unit: 'တစ်ကီလို', updatedAt: 1 },
+    { name: 'ဆန်ချော', price: 100, unit: 'ကီလို', updatedAt: 1 },
+    { name: 'ဆန် ၁ပြည်', price: 2400, unit: 'ကီလို', updatedAt: 1 },
   ],
 } as const;
 
@@ -232,7 +232,7 @@ describe('getCheapestMenuPrice', () => {
     expect(best!.price).toBe(2500);
     expect(best!.shopName).toBe('ဆိုင်ဘီ');
     expect(best!.isPublic).toBe(true);
-    expect(best!.unit).toBe('တစ်ကီလို');
+    expect(best!.unit).toBe('ကီလို');
     expect(best!.itemName).toBe('ဆန်');
   });
 
@@ -246,7 +246,7 @@ describe('getCheapestMenuPrice', () => {
   it('exact-key match: ဆန် must NOT match ဆန်ချော', () => {
     // A shop carrying ONLY ဆန်ချော (no genuine ဆန် row at all).
     const onlyNearMiss = [
-      { id: 'nm', name: 'Near Miss', addedBy: 'a', addedByUid: 'u', items: [{ name: 'ဆန်ချော', price: 100, unit: 'တစ်ကီလို', updatedAt: 1 }] },
+      { id: 'nm', name: 'Near Miss', addedBy: 'a', addedByUid: 'u', items: [{ name: 'ဆန်ချော', price: 100, unit: 'ကီလို', updatedAt: 1 }] },
     ] as unknown as ShopItemSearchSource;
     expect(getCheapestMenuPrice(onlyNearMiss, 'ဆန်')).toBeNull();
     expect(getCheapestMenuPrice(onlyNearMiss, 'ဆန်ချော')!.price).toBe(100);
@@ -264,7 +264,7 @@ describe('getCheapestMenuPrice', () => {
     expect(best!.shopName).toBe('ဆိုင်စီ');
     // The row carries its MENU display name + menu unit, not the own name.
     expect(best!.itemName).toBe('ဆန် ၁ပြည်');
-    expect(best!.unit).toBe('တစ်ကီလို');
+    expect(best!.unit).toBe('ကီလို');
   });
 
   it('own name with quantity matches the same menu item', () => {
@@ -277,8 +277,8 @@ describe('getCheapestMenuPrice', () => {
 
   it('ties break deterministically by shop name', () => {
     const tied = [
-      { id: 't1', name: 'Shop Zeta', addedBy: 'a', addedByUid: 'u1', items: [{ name: 'ဆန်', price: 2000, unit: 'တစ်ကီလို', updatedAt: 1 }] },
-      { id: 't2', name: 'Shop Alpha', addedBy: 'a', addedByUid: 'u2', items: [{ name: 'ဆန်', price: 2000, unit: 'တစ်ကီလို', updatedAt: 1 }] },
+      { id: 't1', name: 'Shop Zeta', addedBy: 'a', addedByUid: 'u1', items: [{ name: 'ဆန်', price: 2000, unit: 'ကီလို', updatedAt: 1 }] },
+      { id: 't2', name: 'Shop Alpha', addedBy: 'a', addedByUid: 'u2', items: [{ name: 'ဆန်', price: 2000, unit: 'ကီလို', updatedAt: 1 }] },
     ] as unknown as ShopItemSearchSource;
     expect(getCheapestMenuPrice(tied, 'ဆန်')!.shopName).toBe('Shop Alpha');
     // Order-independent: same result regardless of input order.

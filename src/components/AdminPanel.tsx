@@ -16,6 +16,7 @@ import {
 import { db, defaultDb, safeSetDoc, safeUpdateDoc, safeDeleteDoc, trackFirestoreReads } from '../lib/firebase';
 import { ShopReport, ShopReportStatus, shopReportReasonLabel } from '../utils/shopReports';
 import { ShopPriceAlert, ShopPriceAlertStatus, SHOP_PRICE_ALERTS_COLLECTION } from '../utils/shopPriceAlerts';
+import { displayMenuUnit } from '../utils/shopMenuUpdate';
 import { resolveShopDetailReminder } from '../utils/shopDetailsReminders';
 import { useAuth, parseExpiryTime } from '../context/AuthContext';
 import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category, PublicShop } from '../types';
@@ -3767,7 +3768,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <div className="font-bold text-sm text-slate-800 break-words">{priceAlert.shopName}</div>
                         <div className="text-xs text-slate-600 mt-0.5 break-words">
                           {priceAlert.itemName}
-                          {priceAlert.unit ? ` (${priceAlert.unit})` : ''}
+                          {priceAlert.unit ? ` (${displayMenuUnit(priceAlert.unit)})` : ''}
                           {' · '}
                           {formatMMK(priceAlert.oldPrice)}
                           {' → '}

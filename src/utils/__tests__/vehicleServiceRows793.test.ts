@@ -143,9 +143,9 @@ describe('buildVehicleMenuCandidate with rows (v7.5.93)', () => {
     finalAmount: 62000,
   };
   const rows = [
-    row({ name: 'Engine Oil 4L', serviceType: 'engine_oil', price: 30000, quantity: 1, amount: 30000, unit: 'တစ်ခု' }),
-    row({ name: 'Air Filter', serviceType: 'air_filter', price: 15000, quantity: 1, amount: 15000, unit: 'တစ်ခု' }),
-    row({ name: 'Wiper', serviceType: 'general_repair', price: 5000, quantity: 2, amount: 10000, unit: 'တစ်ပါကင်' }),
+    row({ name: 'Engine Oil 4L', serviceType: 'engine_oil', price: 30000, quantity: 1, amount: 30000, unit: 'ခု' }),
+    row({ name: 'Air Filter', serviceType: 'air_filter', price: 15000, quantity: 1, amount: 15000, unit: 'ခု' }),
+    row({ name: 'Wiper', serviceType: 'general_repair', price: 5000, quantity: 2, amount: 10000, unit: 'ပါကင်' }),
   ];
 
   it('emits one item per row with its own name / price / qty / amount / unit', () => {
@@ -153,9 +153,9 @@ describe('buildVehicleMenuCandidate with rows (v7.5.93)', () => {
     expect(c).toEqual({
       shopName: 'ဝပ်ရှော့ A',
       items: [
-        { name: 'Engine Oil 4L', price: 30000, quantity: 1, amount: 30000, unit: 'တစ်ခု' },
-        { name: 'Air Filter', price: 15000, quantity: 1, amount: 15000, unit: 'တစ်ခု' },
-        { name: 'Wiper', price: 5000, quantity: 2, amount: 10000, unit: 'တစ်ပါကင်' },
+        { name: 'Engine Oil 4L', price: 30000, quantity: 1, amount: 30000, unit: 'ခု' },
+        { name: 'Air Filter', price: 15000, quantity: 1, amount: 15000, unit: 'ခု' },
+        { name: 'Wiper', price: 5000, quantity: 2, amount: 10000, unit: 'ပါကင်' },
       ],
     });
   });
@@ -164,7 +164,7 @@ describe('buildVehicleMenuCandidate with rows (v7.5.93)', () => {
     const c = buildVehicleMenuCandidate({ ...base, rows: [] });
     expect(c).toEqual({
       shopName: 'ဝပ်ရှော့ A',
-      items: [{ name: 'အင်ဂျင်ဝိုင် လဲလှယ်ခြင်း', price: 62000, quantity: 1, amount: 62000, unit: 'တစ်ခု' }],
+      items: [{ name: 'အင်ဂျင်ဝိုင် လဲလှယ်ခြင်း', price: 62000, quantity: 1, amount: 62000, unit: 'ခု' }],
     });
     expect(buildVehicleMenuCandidate(base)).toEqual(c);
   });
@@ -193,7 +193,7 @@ describe('buildVehicleMenuCandidate with rows (v7.5.93)', () => {
     });
     expect(c).toEqual({
       shopName: 'Denko',
-      items: [{ name: 'Octane 92', price: 3100, quantity: 10, amount: 31000, unit: 'တစ်လီတာ' }],
+      items: [{ name: 'Octane 92', price: 3100, quantity: 10, amount: 31000, unit: 'လီတာ' }],
     });
   });
 });

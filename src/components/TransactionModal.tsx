@@ -1260,7 +1260,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     // [v7.5.55] Price-0 items are kept (free items); only quantity must be > 0.
     // [v7.5.82] Carry the per-item unit through (unknown / missing →
-    // default 'တစ်ခု') so the menu diff can match by name AND unit.
+    // default 'ခု') so the menu diff can match by name AND unit.
     const validItems = shoppingItems.filter((i) => i.name.trim() && parseMyanmarNumber(i.quantity as any) > 0).map((i) => {
       const p = parseMyanmarNumber(i.price as any) || 0;
       const q = parseMyanmarNumber(i.quantity as any) || 0;
@@ -2175,7 +2175,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                                   type="text"
                                   value={customMenuUnitText(item.unit)}
                                   onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
-                                  placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                                  placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)' : 'Type a unit (e.g. per bottle)'}
                                   className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
                                 />
                               )}
@@ -2254,7 +2254,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                           <input type="text" inputMode="decimal" value={item.amount || ""} onChange={(e) => updateShoppingItem(item.id || "", "amount", e.target.value)} placeholder="Total" className="min-w-0 w-full text-base font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 focus:outline-none font-mono text-right" />
                         </div>
                         {/* [v7.5.82] Per-item unit — the basis of `price`
-                            (တစ်ခု / တစ်ပါကင် / တစ်ကီလို …). The menu diff
+                            (ခု / ပါကင် / ကီလို …). The menu diff
                             matches by name AND unit, so the same item at
                             a different unit becomes a separate menu line. */}
                         <div className="flex items-center gap-2">
@@ -2278,7 +2278,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                             type="text"
                             value={customMenuUnitText(item.unit)}
                             onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
-                            placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - တစ်ဗူး)' : 'Type a unit (e.g. per bottle)'}
+                            placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)' : 'Type a unit (e.g. per bottle)'}
                             className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
                           />
                         )}

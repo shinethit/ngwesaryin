@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.96';
-export const CURRENT_BUILD_NUMBER = 311;
+export const CURRENT_APP_VERSION = 'v7.5.97';
+export const CURRENT_BUILD_NUMBER = 312;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.97',
+    buildNumber: 312,
+    releaseDate: '2026-11-22',
+    releaseTime: '4:45 PM (MMT)',
+    titleMy: 'Unit အမည်များ တိုအောင် ပြင်ဆင်ခြင်း',
+    titleEn: 'Shortening unit names',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Unit အမည်တွေကို တိုအောင် ပြင်လိုက်ပြီ — “တစ်ခု” အစား “ခု”, “တစ်ပါကင်” အစား “ပါကင်” စသဖြစ်။ ၂ ခု ဝယ်ရင် “၂ တစ်ခု” လို့ မဖတ်ရတော့ဘဲ “၂ ခု” လို့ ဖတ်ရမယ်။ အရင်သိမ်းထားတဲ့ စာရင်းတွေလည်း အလိုအလျောက် အမှန်ပြမယ်။',
+    descriptionEn: 'Unit names are shortened — "တစ်ခု" becomes "ခု", "တစ်ပါကင်" becomes "ပါကင်", and so on — so buying 2 reads as "၂ ခု", and previously saved entries display correctly too.',
+    changesMy: [
+      'Unit အမည်များ ပြင်ဆင်ခြင်း — “တစ်ခု” အစား “ခု”, “တစ်ပါကင်” အစား “ပါကင်” စသဖြင့် ဖြစ်အောင် ပြင်ဆင်ခြင်း (၂ ခု ဝယ်ရင် “၂ တစ်ခု” လို့ မဖတ်ရတော့ဘဲ “၂ ခု” လို့ ဖတ်ရမည်); အရင်သိမ်းထားတဲ့ စာရင်းတွေလည်း အလိုအလျောက် အမှန်ပြမည်',
+    ],
+    changesEn: [
+      'Unit names shortened — "တစ်ခု" becomes "ခု" and so on, so buying 2 reads as "၂ ခု"; previously saved entries display correctly too.',
+    ],
+  },
   {
     version: 'v7.5.96',
     buildNumber: 311,

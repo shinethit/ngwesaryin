@@ -18,7 +18,7 @@ import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
 import { getCheapestMenuPrice, describeOwnVsShopDiff, type CheapestMenuPrice } from '../utils/shopItemSearch';
 import { buildAllMenuShopsList } from '../utils/myShops';
-import { SHOP_MENU_UNITS } from '../utils/shopMenuUpdate';
+import { SHOP_MENU_UNITS, normalizeMenuUnit } from '../utils/shopMenuUpdate';
 
 // [v7.5.55 C19] Vehicle sub-categories are costs, not purchasable items —
 // whole fuel bills must never appear as "items" in Compare Price.
@@ -117,9 +117,12 @@ const ITEM_COLORS = [
 
 // [v7.5.87] Menu unit as a readable label (same mapping ShopCard uses
 // for its menu lines — the stored value is the Myanmar string).
+// [v7.5.97] Normalize first: an old stored 'တစ်ခု' renders as 'ခု'
+// (labelEn 'per piece' in EN mode); a custom unit renders as-is.
 const menuUnitDisplay = (unit: string, lang: 'my' | 'en'): string => {
-  const found = SHOP_MENU_UNITS.find((u) => u.value === unit);
-  if (!found) return unit;
+  const normalized = normalizeMenuUnit(unit);
+  const found = SHOP_MENU_UNITS.find((u) => u.value === normalized);
+  if (!found) return normalized;
   return lang === 'my' ? found.labelMy : found.labelEn;
 };
 

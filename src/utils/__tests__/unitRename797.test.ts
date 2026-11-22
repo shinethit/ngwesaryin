@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.5.97 (build 312)', () => {
+describe('Version bump to v7.5.98 (build 313)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.5.97');
-    expect(CURRENT_BUILD_NUMBER).toBe(312);
-    expect(VERSION_JSON.version).toBe('v7.5.97');
-    expect(VERSION_JSON.buildNumber).toBe(312);
+    expect(CURRENT_APP_VERSION).toBe('v7.5.98');
+    expect(CURRENT_BUILD_NUMBER).toBe(313);
+    expect(VERSION_JSON.version).toBe('v7.5.98');
+    expect(VERSION_JSON.buildNumber).toBe(313);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.5.97');
-    expect(entry.buildNumber).toBe(312);
+    expect(entry.version).toBe('v7.5.98');
+    expect(entry.buildNumber).toBe(313);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Unit အမည်များ တိုအောင် ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Shortening unit names');
+    expect(entry.titleMy).toBe('Free Premium ၃ လ လက်ဆောင် သေချာမြင်ရအောင် ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('Making the 3-month free Premium gift clearly visible');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

@@ -1,11 +1,11 @@
 {
-  "version": "v7.5.97",
-  "buildNumber": 312,
+  "version": "v7.5.98",
+  "buildNumber": 313,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Unit အမည်များ ပြင်ဆင်ခြင်း — “တစ်ခု” အစား “ခု”, “တစ်ပါကင်” အစား “ပါကင်” စသဖြင့် ဖြစ်အောင် ပြင်ဆင်ခြင်း (၂ ခု ဝယ်ရင် “၂ တစ်ခု” လို့ မဖတ်ရတော့ဘဲ “၂ ခု” လို့ ဖတ်ရမည်); အရင်သိမ်းထားတဲ့ စာရင်းတွေလည်း အလိုအလျောက် အမှန်ပြမည်"
+    "အကောင့်သစ်များ Premium ၃ လ အခမဲ့ ရနိုင်ကြောင်း ထိပ်ဆုံးမှာ သေချာမြင်ရအောင် ပြင်ဆင်ခြင်း — ပင်မမျက်နှာပြင် ထိပ်မှာ လက်ဆောင်တန်း ထည့်ခြင်း + Premium Modal ဖွင့်တာနဲ့ လက်ဆောင်ကို အရင်မြင်ရအောင် စီစဉ်ခြင်း"
   ],
   "changesEn": [
-    "Unit names shortened — \"တစ်ခု\" becomes \"ခု\" and so on, so buying 2 reads as \"၂ ခု\"; previously saved entries display correctly too."
+    "New visitors now clearly see the 3-month free Premium offer — a gift strip at the top of Home, and the offer leads inside the Premium modal."
   ]
 }

@@ -187,6 +187,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 ? 'ဝင်ငွေ၊ ထွက်ငွေနှင့် အကြွေးစာရင်းများကို စိတ်ချလုံခြုံစွာ စီမံခန့်ခွဲပါ'
                 : 'Manage your income, expenses, and debts securely'}
             </p>
+            {/* [v7.5.98] One trial line on the hero: static text only
+                (this screen IS sign-in; claiming happens after sign-in
+                via the Home strip / Premium modal). */}
+            <p className="mt-2 text-[11px] sm:text-xs font-semibold text-amber-700 leading-relaxed">
+              {lang === 'my'
+                ? '🎁 အကောင့်သစ်များ — Premium ၃ လ အခမဲ့ စမ်းသုံးနိုင်ပါသည်'
+                : '🎁 New accounts get 3 months of Premium free'}
+            </p>
           </div>
 
           {/* Official Web App URL info box */}

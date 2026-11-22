@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.5.97';
-export const CURRENT_BUILD_NUMBER = 312;
+export const CURRENT_APP_VERSION = 'v7.5.98';
+export const CURRENT_BUILD_NUMBER = 313;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.5.98',
+    buildNumber: 313,
+    releaseDate: '2026-11-22',
+    releaseTime: '9:00 PM (MMT)',
+    titleMy: 'Free Premium ၃ လ လက်ဆောင် သေချာမြင်ရအောင် ပြင်ဆင်ခြင်း',
+    titleEn: 'Making the 3-month free Premium gift clearly visible',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ပင်မမျက်နှာပြင် ထိပ်မှာ လက်ဆောင်တန်း ပေါ်လာပြီ — အကောင့်သစ်များ Premium ၃ လ အခမဲ့ ရနိုင်ကြောင်း ချက်ချင်း မြင်ရပြီး တစ်ချက်နှိပ်ရုံနဲ့ ရယူနိုင်မယ့်နေရာကို ရောက်မယ်။ Premium Modal ဖွင့်တာနဲ့လည်း လက်ဆောင်ကို အရင်ဆုံး မြင်ရမယ်။',
+    descriptionEn: 'A gift strip now sits at the top of Home, so new visitors immediately see the 3-month free Premium offer and reach the claim in one tap. The offer also leads inside the Premium modal.',
+    changesMy: [
+      'အကောင့်သစ်များ Premium ၃ လ အခမဲ့ ရနိုင်ကြောင်း ထိပ်ဆုံးမှာ သေချာမြင်ရအောင် ပြင်ဆင်ခြင်း — ပင်မမျက်နှာပြင် ထိပ်မှာ လက်ဆောင်တန်း ထည့်ခြင်း + Premium Modal ဖွင့်တာနဲ့ လက်ဆောင်ကို အရင်မြင်ရအောင် စီစဉ်ခြင်း',
+    ],
+    changesEn: [
+      'New visitors now clearly see the 3-month free Premium offer — a gift strip at the top of Home, and the offer leads inside the Premium modal.',
+    ],
+  },
   {
     version: 'v7.5.97',
     buildNumber: 312,

@@ -51,6 +51,55 @@ export interface TrialProfileUpdate {
 const TRIAL_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// ---------------------------------------------------------------------------
+// F0 — 3-month free-trial eligibility (v7.5.98)
+// ---------------------------------------------------------------------------
+
+export interface TrialEligibilityInput {
+  /** `user.metadata.creationTime` — preferred source, as in PremiumModal. */
+  creationTime?: string | null;
+  /** `userProfile.accountCreatedAt` — fallback when creationTime is absent. */
+  accountCreatedAt?: string | null;
+  /** Whether the account already claimed the free trial. */
+  trialClaimed?: boolean;
+}
+
+export interface TrialEligibility {
+  /** Whole days since account creation (0 when no creation time known). */
+  accountAgeDays: number;
+  /** Whole days left of the 30-day claim window (never below 0). */
+  trialDaysLeft: number;
+  /** True when the trial is unclaimed and the account is at most 30 days old. */
+  isEligible: boolean;
+}
+
+/**
+ * The EXACT eligibility formula from PremiumModal (v7.5.92 logic):
+ * creationTime ?? accountCreatedAt, null -> age 0; eligible =
+ * !claimed && age <= 30; daysLeft = max(0, 30 - age). Kept pure so
+ * the TrialStrip and the tests pin the same decision matrix the
+ * modal already uses. PremiumModal itself is deliberately NOT
+ * refactored to call this (risk); the matrix is pinned by tests.
+ */
+export function getTrialEligibility(
+  input: TrialEligibilityInput,
+): TrialEligibility {
+  const userCreatedTime = input.creationTime
+    ? new Date(input.creationTime).getTime()
+    : input.accountCreatedAt
+      ? new Date(input.accountCreatedAt).getTime()
+      : null;
+  const accountAgeDays = userCreatedTime
+    ? Math.floor((Date.now() - userCreatedTime) / DAY_MS)
+    : 0;
+  const trialDaysLeft = Math.max(0, 30 - accountAgeDays);
+  return {
+    accountAgeDays,
+    trialDaysLeft,
+    isEligible: !input.trialClaimed && accountAgeDays <= 30,
+  };
+}
+
 export function buildTrialProfileUpdate(input: TrialProfileUpdateInput): TrialProfileUpdate {
   const { plan, premiumExpiresAt, premiumMonths, nowIso, nowMs, rawCreatedAt } = input;
   // Verbatim logic from AuthContext.claimFreeTrial (v7.5.91): a still-valid

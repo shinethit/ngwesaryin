@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 import { calculateFinancialHealth, type FinancialHealthTier } from '../utils/financialHealth';
 import { FinancialHealthModal } from './FinancialHealthModal';
+import { TrialStrip } from './TrialStrip';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -48,7 +49,7 @@ type TimeFilterOption = 'all' | 'this_month' | 'last_month' | 'this_week' | 'las
 export const Dashboard: React.FC<DashboardProps> = ({
   transactions, debts, wallets, categories, plan,
   lang,
-  onAddTransaction, onAddDebt, onSelectTab, onOpenSearch,
+  onAddTransaction, onAddDebt, onSelectTab, onOpenUpgrade, onOpenSearch,
   sharedWalletScopeOverrides,
 }) => {
   const { user, isSyncing, syncDataToCloud, invitedWorkspaces, sharedWalletScopeOverrides: ctxScopeOverrides } = useAuth();
@@ -416,6 +417,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     // [v7.5.75] Tighter vertical rhythm (space-y-2.5, was 3.5) so more
     // of Home is visible without scrolling; no content removed.
     <div className="space-y-2.5">
+      {/* [v7.5.98] Trial strip FIRST, before HEADER: the 3-month free
+          Premium offer is visible the moment Home loads. Renders null
+          for Premium / claimed / over-30-day accounts. */}
+      <TrialStrip plan={plan} lang={lang} onOpenUpgrade={onOpenUpgrade} />
       {/* HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-1.5">
         <div className="min-w-0">

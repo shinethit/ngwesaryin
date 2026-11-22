@@ -537,50 +537,6 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                 </div>
               ) : (
                 <>
-                  {!user ? (
-                    <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
-                          <LogIn className="w-5 h-5" />
-                        </div>
-                        <div className="space-y-1 min-w-0">
-                          <h4 className="font-bold text-sm text-amber-950">
-                            {lang === 'my' ? 'အကောင့်ဝင်ရန် လိုအပ်ပါသည်' : 'Sign In Required'}
-                          </h4>
-                          <p className="text-xs text-amber-800 leading-relaxed">
-                            {lang === 'my'
-                              ? 'Activation Code အား သင့် Google သို့မဟုတ် Email အကောင့်နှင့် ချိတ်ဆက်ကာ လုံခြုံစွာ သိမ်းဆည်းရန် ဦးစွာ အကောင့်ဝင်ပေးရန် လိုအပ်ပါသည်။'
-                              : 'To link and securely save your premium license to your account, please sign in first.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {onOpenLogin && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onClose();
-                            onOpenLogin();
-                          }}
-                          className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                        >
-                          <LogIn className="w-4 h-4" />
-                          <span>{lang === 'my' ? 'Google / Email ဖြင့် အကောင့်ဝင်မည်' : 'Sign In with Google / Email'}</span>
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className="text-slate-500">{lang === 'my' ? 'ချိတ်ဆက်ထားသော အကောင့်:' : 'Signed in as:'}</span>{' '}
-                        <span className="font-bold text-slate-800 truncate inline-block max-w-full align-middle">{user.email || user.displayName || 'User'}</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 shrink-0">
-                        Ready
-                      </span>
-                    </div>
-                  )}
-
                   {/* SPECIAL WELCOME OFFER: 3 MONTHS FREE TRIAL FOR NEW ACCOUNTS (Within 1 Month) */}
                   <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-amber-500/15 via-emerald-500/10 to-teal-500/15 border-2 border-amber-400/80 shadow-md relative overflow-hidden space-y-3">
                     <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
@@ -696,6 +652,50 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {!user ? (
+                    <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
+                          <LogIn className="w-5 h-5" />
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                          <h4 className="font-bold text-sm text-amber-950">
+                            {lang === 'my' ? 'အကောင့်ဝင်ရန် လိုအပ်ပါသည်' : 'Sign In Required'}
+                          </h4>
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            {lang === 'my'
+                              ? 'Activation Code အား သင့် Google သို့မဟုတ် Email အကောင့်နှင့် ချိတ်ဆက်ကာ လုံခြုံစွာ သိမ်းဆည်းရန် ဦးစွာ အကောင့်ဝင်ပေးရန် လိုအပ်ပါသည်။'
+                              : 'To link and securely save your premium license to your account, please sign in first.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {onOpenLogin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onOpenLogin();
+                          }}
+                          className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                        >
+                          <LogIn className="w-4 h-4" />
+                          <span>{lang === 'my' ? 'Google / Email ဖြင့် အကောင့်ဝင်မည်' : 'Sign In with Google / Email'}</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="text-slate-500">{lang === 'my' ? 'ချိတ်ဆက်ထားသော အကောင့်:' : 'Signed in as:'}</span>{' '}
+                        <span className="font-bold text-slate-800 truncate inline-block max-w-full align-middle">{user.email || user.displayName || 'User'}</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 shrink-0">
+                        Ready
+                      </span>
+                    </div>
+                  )}
 
                   <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
                     <div>

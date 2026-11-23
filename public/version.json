@@ -1,13 +1,11 @@
 {
-  "version": "v7.6.01",
-  "buildNumber": 315,
+  "version": "v7.6.02",
+  "buildNumber": 316,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဈေး × အရေအတွက် ဖြင့် ထည့်သွင်းရာတွင်လည်း Unit ရွေးနိုင်အောင် ထည့်ခြင်း — Shopping List မှာလို ယူနစ် ရွေးစရာ ပါမည်",
-    "မှတ်တမ်းအသေးစိတ်မှာ ဈေး × အရေအတွက် ဘေးမှာ Unit ကိုပါ ပြခြင်း — ဥပမာ (1,000 × 2 ခု)"
+    "မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည်ကိုပါ ပြခြင်း — ဈေး × အရေအတွက် ဖြင့် ထည့်ထားသော မှတ်တမ်းများတွင် ပစ္စည်းအမည်ကို မှတ်ချက်ဘေးမှာ ပြမည် (မှတ်ချက်နဲ့ အမည်တူရင် တစ်ခါပဲ ပြမည်)"
   ],
   "changesEn": [
-    "Unit selection added to the Unit × Qty entry mode, same as the Shopping List",
-    "Saved item details now show the unit beside price × quantity, e.g. (1,000 × 2 ခု)."
+    "Transaction list now shows the item name beside the note for Unit × Qty entries (shown once when the note matches the name)."
   ]
 }

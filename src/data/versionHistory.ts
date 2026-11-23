@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.01';
-export const CURRENT_BUILD_NUMBER = 315;
+export const CURRENT_APP_VERSION = 'v7.6.02';
+export const CURRENT_BUILD_NUMBER = 316;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.02',
+    buildNumber: 316,
+    releaseDate: '2026-11-22',
+    releaseTime: '11:35 PM (MMT)',
+    titleMy: 'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည် ပြခြင်း',
+    titleEn: 'Item name shown in the transaction list',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'မှတ်တမ်းစာရင်းမှာ ဈေး × အရေအတွက် ဖြင့် ထည့်ထားသော မှတ်တမ်းတွေရဲ့ ပစ္စည်းအမည်ကို မှတ်ချက်ဘေးမှာ ပါ ပြမည် — အရင်က မှတ်ချက်ပဲ ပြပြီး ပစ္စည်းအမည် မပြခဲ့ပါ။ မှတ်ချက်နဲ့ ပစ္စည်းအမည် တူညီနေရင် တစ်ခါပဲ ပြမည်။',
+    descriptionEn: 'The transaction list now shows the item name beside the note for Unit × Qty entries — previously only the note showed and the name stayed hidden until the record was opened for editing. When the note matches the name, it is shown once.',
+    changesMy: [
+      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည်ကိုပါ ပြခြင်း — ဈေး × အရေအတွက် ဖြင့် ထည့်ထားသော မှတ်တမ်းများတွင် ပစ္စည်းအမည်ကို မှတ်ချက်ဘေးမှာ ပြမည် (မှတ်ချက်နဲ့ အမည်တူရင် တစ်ခါပဲ ပြမည်)',
+    ],
+    changesEn: [
+      'Transaction list now shows the item name beside the note for Unit × Qty entries (shown once when the note matches the name).',
+    ],
+  },
   {
     version: 'v7.6.01',
     buildNumber: 315,

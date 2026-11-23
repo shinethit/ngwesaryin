@@ -261,24 +261,24 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
   });
 });
 
-describe('Version bump to v7.6.01 (build 315)', () => {
+describe('Version bump to v7.6.02 (build 316)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.01');
-    expect(CURRENT_BUILD_NUMBER).toBe(315);
-    expect(VERSION_JSON.version).toBe('v7.6.01');
-    expect(VERSION_JSON.buildNumber).toBe(315);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
+    expect(CURRENT_BUILD_NUMBER).toBe(316);
+    expect(VERSION_JSON.version).toBe('v7.6.02');
+    expect(VERSION_JSON.buildNumber).toBe(316);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.01');
-    expect(entry.buildNumber).toBe(315);
+    expect(entry.version).toBe('v7.6.02');
+    expect(entry.buildNumber).toBe(316);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ဈေး × အရေအတွက်မှာ Unit ရွေးနိုင်အောင် + မှတ်တမ်းအသေးစိတ်မှာ Unit ပြခြင်း',
+      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည် ပြခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(2);
-    expect(entry.changesEn).toHaveLength(2);
+    expect(entry.changesMy).toHaveLength(1);
+    expect(entry.changesEn).toHaveLength(1);
   });
 
   it('change log has no Admin content and releasedAt is present-only', () => {

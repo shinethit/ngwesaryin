@@ -251,38 +251,32 @@ const VERSION_JSON = JSON.parse(
   readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
 );
 
-describe('Version bump to v7.6.01 (build 315)', () => {
+describe('Version bump to v7.6.02 (build 316)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.01');
-    expect(CURRENT_BUILD_NUMBER).toBe(315);
-    expect(VERSION_JSON.version).toBe('v7.6.01');
-    expect(VERSION_JSON.buildNumber).toBe(315);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
+    expect(CURRENT_BUILD_NUMBER).toBe(316);
+    expect(VERSION_JSON.version).toBe('v7.6.02');
+    expect(VERSION_JSON.buildNumber).toBe(316);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.01');
-    expect(entry.buildNumber).toBe(315);
+    expect(entry.version).toBe('v7.6.02');
+    expect(entry.buildNumber).toBe(316);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ဈေး × အရေအတွက်မှာ Unit ရွေးနိုင်အောင် + မှတ်တမ်းအသေးစိတ်မှာ Unit ပြခြင်း',
+      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည် ပြခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Unit selection in Unit × Qty entries + units shown in record details',
+      'Item name shown in the transaction list',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(2);
-    expect(entry.changesEn).toHaveLength(2);
+    expect(entry.changesMy).toHaveLength(1);
+    expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ဈေး × အရေအတွက် ဖြင့် ထည့်သွင်းရာတွင်လည်း Unit ရွေးနိုင်အောင် ထည့်ခြင်း — Shopping List မှာလို ယူနစ် ရွေးစရာ ပါမည်',
-    );
-    expect(entry.changesMy[1]).toBe(
-      'မှတ်တမ်းအသေးစိတ်မှာ ဈေး × အရေအတွက် ဘေးမှာ Unit ကိုပါ ပြခြင်း — ဥပမာ (1,000 × 2 ခု)',
+      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည်ကိုပါ ပြခြင်း — ဈေး × အရေအတွက် ဖြင့် ထည့်ထားသော မှတ်တမ်းများတွင် ပစ္စည်းအမည်ကို မှတ်ချက်ဘေးမှာ ပြမည် (မှတ်ချက်နဲ့ အမည်တူရင် တစ်ခါပဲ ပြမည်)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Unit selection added to the Unit × Qty entry mode, same as the Shopping List',
-    );
-    expect(entry.changesEn[1]).toBe(
-      'Saved item details now show the unit beside price × quantity, e.g. (1,000 × 2 ခု).',
+      'Transaction list now shows the item name beside the note for Unit × Qty entries (shown once when the note matches the name).',
     );
   });
 

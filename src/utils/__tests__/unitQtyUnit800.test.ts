@@ -294,13 +294,13 @@ describe('sweep — every sibling quantity display, dispositioned (v7.6.01)', ()
   });
 });
 
-describe('version identity 7.6.01 — fix-script guard is raw string equality (renumber)', () => {
+describe('version identity 7.6.02 — fix-script guard is raw string equality (renumber)', () => {
   // Mirrors the generated fix script's guard in shape:
   //   pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION → fail.
   // FROM_VERSION / TO_VERSION are plain strings read from package.json;
   // no parseInt / tuple / semver normalization anywhere in the guard.
-  const FROM_VERSION = '7.5.99';
-  const TO_VERSION = '7.6.01';
+  const FROM_VERSION = '7.6.01';
+  const TO_VERSION = '7.6.02';
   const guardFails = (pkgVersion: string): boolean =>
     pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
   // The mangled form a numeric normalizer would produce — built from
@@ -308,14 +308,14 @@ describe('version identity 7.6.01 — fix-script guard is raw string equality (r
   // never be confused with it by a grep or by the guard.
   const mangled = TO_VERSION.split('.').map(Number).join('.');
 
-  it('numeric normalization would mangle the 01 segment, so it must never be used', () => {
+  it('numeric normalization would mangle the 02 segment, so it must never be used', () => {
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.01');
+    expect(TO_VERSION).toBe('7.6.02');
   });
 
-  it('accepts exactly 7.5.99 (fresh run) and exactly 7.6.01 (re-run)', () => {
-    expect(guardFails('7.5.99')).toBe(false);
+  it('accepts exactly 7.6.01 (fresh run) and exactly 7.6.02 (re-run)', () => {
     expect(guardFails('7.6.01')).toBe(false);
+    expect(guardFails('7.6.02')).toBe(false);
   });
 
   it('rejects the mangled form and anything else', () => {
@@ -324,11 +324,11 @@ describe('version identity 7.6.01 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.01 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.01');
-    expect(CURRENT_BUILD_NUMBER).toBe(315);
-    expect(VERSION_JSON.version).toBe('v7.6.01');
-    expect(VERSION_JSON.buildNumber).toBe(315);
+  it('the shipped identity is 7.6.02 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
+    expect(CURRENT_BUILD_NUMBER).toBe(316);
+    expect(VERSION_JSON.version).toBe('v7.6.02');
+    expect(VERSION_JSON.buildNumber).toBe(316);
   });
 });
 
@@ -364,38 +364,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.01 (build 315)', () => {
+describe('Version bump to v7.6.02 (build 316)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.01');
-    expect(CURRENT_BUILD_NUMBER).toBe(315);
-    expect(VERSION_JSON.version).toBe('v7.6.01');
-    expect(VERSION_JSON.buildNumber).toBe(315);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
+    expect(CURRENT_BUILD_NUMBER).toBe(316);
+    expect(VERSION_JSON.version).toBe('v7.6.02');
+    expect(VERSION_JSON.buildNumber).toBe(316);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.01');
-    expect(entry.buildNumber).toBe(315);
+    expect(entry.version).toBe('v7.6.02');
+    expect(entry.buildNumber).toBe(316);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ဈေး × အရေအတွက်မှာ Unit ရွေးနိုင်အောင် + မှတ်တမ်းအသေးစိတ်မှာ Unit ပြခြင်း',
+      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည် ပြခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Unit selection in Unit × Qty entries + units shown in record details',
+      'Item name shown in the transaction list',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(2);
-    expect(entry.changesEn).toHaveLength(2);
+    expect(entry.changesMy).toHaveLength(1);
+    expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ဈေး × အရေအတွက် ဖြင့် ထည့်သွင်းရာတွင်လည်း Unit ရွေးနိုင်အောင် ထည့်ခြင်း — Shopping List မှာလို ယူနစ် ရွေးစရာ ပါမည်',
-    );
-    expect(entry.changesMy[1]).toBe(
-      'မှတ်တမ်းအသေးစိတ်မှာ ဈေး × အရေအတွက် ဘေးမှာ Unit ကိုပါ ပြခြင်း — ဥပမာ (1,000 × 2 ခု)',
+      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည်ကိုပါ ပြခြင်း — ဈေး × အရေအတွက် ဖြင့် ထည့်ထားသော မှတ်တမ်းများတွင် ပစ္စည်းအမည်ကို မှတ်ချက်ဘေးမှာ ပြမည် (မှတ်ချက်နဲ့ အမည်တူရင် တစ်ခါပဲ ပြမည်)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Unit selection added to the Unit × Qty entry mode, same as the Shopping List',
-    );
-    expect(entry.changesEn[1]).toBe(
-      'Saved item details now show the unit beside price × quantity, e.g. (1,000 × 2 ခု).',
+      'Transaction list now shows the item name beside the note for Unit × Qty entries (shown once when the note matches the name).',
     );
   });
 

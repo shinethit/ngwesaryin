@@ -911,6 +911,32 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         (t.items && t.items.length > 0) ||
                         (isSharedWallet(wallet) &&
                           !!(t.createdByName || (t.createdBy && t.createdBy === user?.uid)));
+                      // [v7.6.02] Collapsed unit_qty rows: the item name
+                      // lives only in t.items[0].name while t.note is
+                      // only the typed note, so the name was unreachable
+                      // anywhere in the list. Show the first named item
+                      // (plus a +N count, the v7.5.94 calendar
+                      // convention) first in Line 3 — unitPrice rows
+                      // only; shopping rows keep their buttons and
+                      // direct rows already carry the name in the note.
+                      // When the note merely repeats the single name
+                      // (trim + case-insensitive), show it once: the
+                      // quoted note span is suppressed.
+                      const unitQtyItemNames = t.unitPrice
+                        ? (t.items || [])
+                            .map((it) => (it.name || '').trim())
+                            .filter((n) => n.length > 0)
+                        : [];
+                      const unitQtyItemLabel =
+                        unitQtyItemNames.length === 0
+                          ? ''
+                          : unitQtyItemNames.length === 1
+                            ? unitQtyItemNames[0]
+                            : `${unitQtyItemNames[0]} +${unitQtyItemNames.length - 1} မျိုး`;
+                      const noteRepeatsItemName =
+                        unitQtyItemNames.length === 1 &&
+                        !!t.note &&
+                        t.note.trim().toLowerCase() === unitQtyItemNames[0].toLowerCase();
 
                       return (
                         <div
@@ -1007,7 +1033,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     👤 {t.createdByName || (lang === 'my' ? 'ကိုယ်တိုင်' : 'You')}
                                   </span>
                                 )}
-                                {t.note && (
+                                {unitQtyItemLabel && (
+                                  <span className="text-slate-700 font-semibold text-[11px] min-w-0 break-words">
+                                    {unitQtyItemLabel}
+                                  </span>
+                                )}
+                                {t.note && !noteRepeatsItemName && (
                                   <span className="text-slate-600 italic text-[11px]">
                                     "{t.note}"
                                   </span>

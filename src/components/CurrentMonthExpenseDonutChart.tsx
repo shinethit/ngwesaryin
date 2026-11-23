@@ -4,6 +4,7 @@ import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 import { useAuth } from '../context/AuthContext';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -28,11 +29,13 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
   lang,
 }) => {
   // [v7.5.55 D18] Convert amounts to MMK via each transaction's wallet.
+  // [v7.6.07] The optional amount converts one split slice instead of
+  // the whole record (same wallet lookup either way).
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
-  const convertTxToMMK = (t: Transaction) => {
+  const convertTxToMMK = (t: Transaction, amount: number = t.amount) => {
     let w = walletMap.get(t.walletId);
     if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+    return convertToMMK(amount, w?.currency, w?.exchangeRate);
   };
   const currentYearMonth = useMemo(() => getLocalDateString(new Date()).slice(0, 7), []);
   // [v7.5.60 A-S19] Phone has no hover — tapping an amount toggles it
@@ -67,11 +70,15 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
     const map = new Map<string, { categoryId: string; amount: number; count: number }>();
 
     currentMonthExpenses.forEach((t) => {
-      const catId = t.category || 'other';
-      const existing = map.get(catId) || { categoryId: catId, amount: 0, count: 0 };
-      existing.amount += convertTxToMMK(t);
-      existing.count += 1;
-      map.set(catId, existing);
+      // [v7.6.07] Split-aware: each slice counts under its own
+      // category. The record count stays ONE per record, counted
+      // under the first (primary) slice.
+      getSplitAttribution(t).forEach((slice, sliceIdx) => {
+        const existing = map.get(slice.categoryId) || { categoryId: slice.categoryId, amount: 0, count: 0 };
+        existing.amount += convertTxToMMK(t, slice.amount);
+        if (sliceIdx === 0) existing.count += 1;
+        map.set(slice.categoryId, existing);
+      });
     });
 
     return Array.from(map.values())

@@ -261,19 +261,19 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
   });
 });
 
-describe('Version bump to v7.6.06 (build 320)', () => {
+describe('Version bump to v7.6.07 (build 321)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.06');
-    expect(CURRENT_BUILD_NUMBER).toBe(320);
-    expect(VERSION_JSON.version).toBe('v7.6.06');
-    expect(VERSION_JSON.buildNumber).toBe(320);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.07');
+    expect(CURRENT_BUILD_NUMBER).toBe(321);
+    expect(VERSION_JSON.version).toBe('v7.6.07');
+    expect(VERSION_JSON.buildNumber).toBe(321);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.06');
-    expect(entry.buildNumber).toBe(320);
+    expect(entry.version).toBe('v7.6.07');
+    expect(entry.buildNumber).toBe(321);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'သက်တမ်းကုန်ရက် အသိပေးချက်',
+      'မှတ်တမ်း အမျိုးအစားခွဲရေးခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);

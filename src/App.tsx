@@ -90,6 +90,8 @@ import { syncWalletsWithTransactions, isWalletMatch, repairOrphanedTransactions,
 import { convertToMMK } from './utils/currency';
 import { getMaintenanceAlerts } from './utils/vehicleAnalytics';
 import { getExpiryReminders } from './utils/expiryReminders';
+// [v7.6.07] Split-aware budget badge math (same as NotificationModal).
+import { getSplitAttribution, splitAmountMatching } from './utils/transactionSplits';
 import { getLocalDateString } from './utils/dateUtils';
 import { mergeAndCleanCategories } from './utils/categoryCleanUp';
 import {
@@ -750,9 +752,9 @@ export default function App() {
     // never trigger the General budget — so the badge and the modal
     // disagreed).
     const badgeWalletMap = buildWalletMap(wallets as any);
-    const badgeConvertTx = (t: (typeof transactions)[number]) => {
+    const badgeConvertTx = (t: (typeof transactions)[number], amount: number = t.amount) => {
       const w = badgeWalletMap.get(t.walletId);
-      return convertToMMK(t.amount, (w as any)?.currency, (w as any)?.exchangeRate);
+      return convertToMMK(amount, (w as any)?.currency, (w as any)?.exchangeRate);
     };
     const currentMonthTx = transactions.filter(
       (t) => t.type === 'expense' && !isTransferTransaction(t) && t.date && t.date.startsWith(currentMonthStr)
@@ -762,11 +764,12 @@ export default function App() {
     );
     const spendingByCategory: Record<string, number> = {};
     currentMonthTx.forEach((t) => {
-      spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + badgeConvertTx(t);
+      getSplitAttribution(t).forEach((slice) => {
+        spendingByCategory[slice.categoryId] = (spendingByCategory[slice.categoryId] || 0) + badgeConvertTx(t, slice.amount);
+      });
     });
     const generalPoolSpent = currentMonthTx
-      .filter((t) => !explicitBudgetedCatIds.has(t.category))
-      .reduce((sum, t) => sum + badgeConvertTx(t), 0);
+      .reduce((sum, t) => sum + badgeConvertTx(t, splitAmountMatching(t, (a) => !explicitBudgetedCatIds.has(a.categoryId))), 0);
 
     const monthlyIncome = transactions
       .filter((t) => t.type === 'income' && t.date && t.date.startsWith(currentMonthStr) && !isTransferTransaction(t))

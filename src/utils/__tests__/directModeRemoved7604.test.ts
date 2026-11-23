@@ -241,12 +241,12 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.06 (build 320)', () => {
+describe('version pins rolled forward to v7.6.07 (build 321)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.06');
-    expect(CURRENT_BUILD_NUMBER).toBe(320);
-    expect(VERSION_JSON.version).toBe('v7.6.06');
-    expect(VERSION_JSON.buildNumber).toBe(320);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.07');
+    expect(CURRENT_BUILD_NUMBER).toBe(321);
+    expect(VERSION_JSON.version).toBe('v7.6.07');
+    expect(VERSION_JSON.buildNumber).toBe(321);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -255,14 +255,14 @@ describe('version pins rolled forward to v7.6.06 (build 320)', () => {
 
   it('the top history entry carries the expiry reminders, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.06');
-    expect(top.buildNumber).toBe(320);
+    expect(top.version).toBe('v7.6.07');
+    expect(top.buildNumber).toBe(321);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
+      'မှတ်တမ်းတစ်ခုကို အမျိုးအစားများစွာ ခွဲရေးနိုင်ခြင်း — ဥပမာ စူပါမားကတ်တစ်ခေါက် အစားအသောက် + အိမ်သုံးပစ္စည်း ခွဲရေးခြင်း (ဘတ်ဂျက်/အစီရင်ခံစာမှာ ခွဲအလိုက် တွက်မည်)',
     ]);
     expect(top.changesEn).toEqual([
-      'Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge.',
+      'Split transactions — one receipt can be split across categories (e.g. supermarket: food + household), with budgets and reports counting each split under its own category.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

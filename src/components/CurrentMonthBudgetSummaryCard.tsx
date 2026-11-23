@@ -5,6 +5,7 @@ import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 
 interface CurrentMonthBudgetSummaryCardProps {
   budgets: Budget[];
@@ -51,10 +52,10 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
     return transactions.filter((t) => t.date && t.date.startsWith(currentYearMonth));
   }, [transactions, currentYearMonth]);
 
-  const convertTxToMMK = React.useCallback((t: Transaction) => {
+  const convertTxToMMK = React.useCallback((t: Transaction, amount: number = t.amount) => {
     let w = walletMap.get(t.walletId);
     if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+    return convertToMMK(amount, w?.currency, w?.exchangeRate);
   }, [walletMap, wallets]);
 
   // [v7.5.74] A multi-category budget covers every category in its
@@ -79,12 +80,18 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
           !b.walletId || b.walletId === 'all' ||
           (targetW ? isWalletMatch(targetW, t.walletId) : t.walletId === b.walletId);
         if (!matchesWallet) return;
-        const amtMMK = convertTxToMMK(t);
-        if (isGeneral) {
-          if (!explicitBudgetedCatIds.has(t.category)) spent += amtMMK;
-        } else if (budgetCatIds.includes(t.category)) {
-          spent += amtMMK;
-        }
+        // [v7.6.07] Split-aware: each slice counts under its own
+        // category — a slice in a budgeted category counts toward
+        // that budget, a slice outside every explicit budget counts
+        // toward the General pool.
+        getSplitAttribution(t).forEach((slice) => {
+          const amtMMK = convertTxToMMK(t, slice.amount);
+          if (isGeneral) {
+            if (!explicitBudgetedCatIds.has(slice.categoryId)) spent += amtMMK;
+          } else if (budgetCatIds.includes(slice.categoryId)) {
+            spent += amtMMK;
+          }
+        });
       });
     // [v7.5.74] Same per-budget wallet-scoped income base as the detail
     // view: income of the budget's own wallet(s) only (unscoped).

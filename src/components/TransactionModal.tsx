@@ -6,6 +6,7 @@ import {
   SubCategory,
   Transaction,
   TransactionItem,
+  TransactionSplit,
   TransactionType,
   Wallet as WalletType,
   Vehicle,
@@ -40,6 +41,17 @@ import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
 import { ROW_SERVICE_TYPES, resolveVehicleServiceSubCategory } from '../utils/vehicleServiceRows';
 // [v7.6.03] Most-used vehicle entry type for the one-time auto-select.
 import { resolveMostUsedVehicleEntry } from '../utils/vehicleMostUsed';
+// [v7.6.07] Split transactions — category slices of one record.
+import {
+  defaultSplitRows,
+  fillRemainderAmount,
+  rowsToSplits,
+  splitRemainder,
+  splitRowsFromTransaction,
+  syncSplitRowToPrimary,
+  validateSplits,
+  type SplitFormRow,
+} from '../utils/transactionSplits';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
@@ -233,6 +245,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const unitQtyAmountTimerRef = useRef<NodeJS.Timeout | null>(null);
   const shoppingAmountTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
+  // [v7.6.07] Split transactions (unit_qty / general only): when
+  // on, the record's total is divided across these rows. Row 1 is
+  // kept in sync with the primary category picker (two-way, one
+  // source of truth). Restored from editTransaction.splits in the
+  // edit effect below; cleared on a fresh open.
+  const [splitEnabled, setSplitEnabled] = useState(false);
+  const [splitRows, setSplitRows] = useState<SplitFormRow[]>([]);
+  // Which split row the category picker is currently choosing for
+  // (null = the picker is choosing the primary category).
+  const [splitPickerRow, setSplitPickerRow] = useState<number | null>(null);
+
   const [newSubName, setNewSubName] = useState('');
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -340,6 +363,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setAmount(String(editTransaction.amount));
           setCategoryId(editTransaction.category || '');
           setSubCategoryId(editTransaction.subCategoryId || '');
+          // [v7.6.07] A split record restores its rows (section on);
+          // an unsplit record restores exactly as today (section off).
+          const restoredSplits = splitRowsFromTransaction(editTransaction);
+          setSplitEnabled(restoredSplits !== null);
+          setSplitRows(restoredSplits || []);
           setWalletId(editTransaction.walletId || wallets[0]?.id || 'cash');
           setDate(getLocalDateString(editTransaction.date));
           const fullNote = editTransaction.note || '';
@@ -613,6 +641,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setQuantity('1');
         setUnitQtyUnit(DEFAULT_MENU_UNIT);
         setShoppingItems([{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]);
+        setSplitEnabled(false);
+        setSplitRows([]);
         setNewSubName('');
         setVehicleOdometer('');
         // [v7.5.55] PSI resets to the 32 defaults on a new entry instead
@@ -1387,6 +1417,62 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
+  // [v7.6.07] Split-section helpers. The section is offered only
+  // for general unit_qty entries — never for shopping-list or
+  // vehicle entries, and never for transfers (a transfer's
+  // category is the transfer category itself).
+  const splitSectionVisible = entryModel === 'general' && entryMode === 'unit_qty' && !isTransferCategory;
+  // Live total for the remaining indicator: in unit_qty mode the
+  // shared amount input is driven by price × qty.
+  const splitTotalAmount = parseMyanmarNumber(amount) || 0;
+  const splitRowsTotal = rowsToSplits(splitRows).reduce((sum, s) => sum + s.amount, 0);
+  const splitRemaining = splitSectionVisible && splitEnabled ? splitRemainder(splitTotalAmount, rowsToSplits(splitRows)) : 0;
+
+  const toggleSplitSection = (on: boolean) => {
+    setSplitEnabled(on);
+    if (on) {
+      setSplitRows(defaultSplitRows(categoryId, subCategoryId));
+    }
+  };
+
+  const updateSplitRow = (index: number, patch: Partial<SplitFormRow>) => {
+    setSplitRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+    // Row 1 IS the primary category: a row-1 category pick updates
+    // the primary picker state too (one source of truth).
+    if (index === 0 && (patch.categoryId !== undefined || patch.subCategoryId !== undefined)) {
+      if (patch.categoryId !== undefined) setCategoryId(patch.categoryId);
+      if (patch.subCategoryId !== undefined) setSubCategoryId(patch.subCategoryId);
+    }
+  };
+
+  const handleSplitRowCategorySelect = (index: number, catId: string, subId?: string) => {
+    updateSplitRow(index, { categoryId: catId, subCategoryId: subId || '' });
+    setSplitPickerRow(null);
+  };
+
+  const handlePrimaryCategorySelect = (catId: string, subId?: string) => {
+    setCategoryId(catId);
+    setSubCategoryId(subId || '');
+    setIsCategoryPickerOpen(false);
+    // Two-way sync: the primary pick moves split row 1 with it.
+    if (splitEnabled) {
+      setSplitRows((prev) => syncSplitRowToPrimary(prev, catId, subId || ''));
+    }
+  };
+
+  const addSplitRow = () => {
+    setSplitRows((prev) => [...prev, { categoryId: '', subCategoryId: '', amount: '', note: '' }]);
+  };
+
+  const removeSplitRow = (index: number) => {
+    setSplitRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const fillSplitRowRemainder = (index: number) => {
+    const filled = fillRemainderAmount(splitTotalAmount, splitRows, index);
+    if (filled !== '') updateSplitRow(index, { amount: filled });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || !isActionAllowed) return;
@@ -1659,6 +1745,39 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
       const isTransferTx = isTransferCategory || targetSubCategory === 'sub_tf_out' || targetSubCategory === 'sub_tf_in';
 
+      // [v7.6.07] Split slices: only for general unit_qty entries
+      // (never shopping-list / vehicle / transfer). When the section
+      // is on, the slices must sum EXACTLY to the saved total —
+      // otherwise the save is blocked with an inline error. When the
+      // section is off (or every row was deleted) the `splits` key is
+      // omitted entirely; the edit handler then writes `splits: []`
+      // for a record that had splits, because a merge write would
+      // otherwise keep the old slices (see shouldClearSplits).
+      let validSplits: TransactionSplit[] | undefined = undefined;
+      if (entryModel === 'general' && entryMode === 'unit_qty' && splitEnabled && !isTransferTx && splitRows.length > 0) {
+        const built = rowsToSplits(splitRows);
+        const splitError = validateSplits(built, finalAmount);
+        if (splitError) {
+          setFormError(
+            splitError === 'missing-category'
+              ? (lang === 'my' ? 'ခွဲရေးတန်းတိုင်းတွင် ကဏ္ဍ ရွေးချယ်ပေးပါ (မခွဲလိုလျှင် အမျိုးအစားခွဲရေးခြင်းကို ပိတ်ပါ)' : 'Please select a category for every split row (or switch splits off to save unsplit)')
+              : splitError === 'non-positive-amount'
+              ? (lang === 'my' ? 'ခွဲရေးပမာဏတိုင်းသည် ၀ ထက် ကြီးရပါမည်' : 'Every split amount must be greater than 0')
+              : (lang === 'my' ? `ခွဲရေးပမာဏ စုစုပေါင်းသည် စုစုပေါင်းပမာဏ (${formatMMK(finalAmount)}) နှင့် အတိအကျ တူရပါမည်` : `Split amounts must add up exactly to the total (${formatMMK(finalAmount)})`)
+          );
+          setIsSubmitting(false);
+          return;
+        }
+        validSplits = built;
+        // The primary category is the FIRST split's category — also
+        // when row 1 was deleted and the old row 2 moved up. A
+        // vehicle-linked entry keeps its forced vehicle category.
+        if (!vehicleLinkPayload) {
+          targetCategory = built[0].categoryId;
+          targetSubCategory = built[0].subCategoryId || undefined;
+        }
+      }
+
       // [v7.5.55] A transfer with no destination wallet would leave a
       // one-legged transfer_out and the money would vanish from totals.
       if (isTransferTx && (!transferToWalletId || transferToWalletId === walletId)) {
@@ -1784,6 +1903,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         transferType: isTransferTx ? (type === 'expense' ? 'transfer_out' : 'transfer_in') : undefined,
         transferToWalletId: isTransferTx && transferToWalletId && transferToWalletId !== walletId ? transferToWalletId : undefined,
         items: txItems,
+        // [v7.6.07] Splits are written only when the section produced
+        // valid slices; the key is absent otherwise (never undefined).
+        ...(validSplits ? { splits: validSplits } : {}),
         unitPrice: entryModel === 'general' && entryMode === 'unit_qty' && parseMyanmarNumber(unitPrice) > 0 ? parseMyanmarNumber(unitPrice) : undefined,
         quantity: entryModel === 'general' && entryMode === 'unit_qty' && parseMyanmarNumber(quantity) > 0 ? parseMyanmarNumber(quantity) : undefined,
       }, vehicleLinkPayload);
@@ -2006,6 +2128,108 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
+
+            {/* [v7.6.07] Split across categories — general unit_qty
+                entries only. The toggle starts two rows (row 1 mirrors
+                the primary category); each row picks its own category
+                + amount, and the slices must sum exactly to the total
+                before saving. */}
+            {splitSectionVisible && (
+              <div className="px-4 py-3 border-b border-slate-100 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => toggleSplitSection(!splitEnabled)}
+                  aria-pressed={splitEnabled}
+                  className="w-full flex items-center justify-between gap-2 min-h-[44px] text-left"
+                >
+                  <span className="text-xs font-bold text-slate-700">{lang === 'my' ? 'အမျိုးအစားခွဲရေးခြင်း' : 'Split across categories'}</span>
+                  <span className={'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ' + (splitEnabled ? 'bg-emerald-600' : 'bg-slate-300')}>
+                    <span className={'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ' + (splitEnabled ? 'translate-x-5' : 'translate-x-0.5')} />
+                  </span>
+                </button>
+                {splitEnabled && (
+                  <>
+                    <div className="space-y-2">
+                      {splitRows.map((row, idx) => {
+                        const rowCat = categories.find((c) => c.id === row.categoryId);
+                        const rowSub = rowCat?.subCategories?.find((s) => s.id === row.subCategoryId);
+                        return (
+                          <div key={idx} className="bg-slate-50 rounded-xl p-2.5 space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSplitPickerRow(idx)}
+                                className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-left min-h-[44px]"
+                              >
+                                <span className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0" style={{ backgroundColor: rowCat?.color || '#94A3B8' }}>
+                                  <CategoryIcon name={rowCat?.icon || 'Tag'} className="w-3.5 h-3.5" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  {row.categoryId ? (
+                                    <>
+                                      <span className="block text-xs font-bold text-slate-900 truncate">{lang === 'my' ? rowCat?.name : rowCat?.nameEn || row.categoryId}</span>
+                                      {rowSub && <span className="block text-[11px] text-emerald-700 truncate">↳ {lang === 'my' ? rowSub.name : rowSub.nameEn}</span>}
+                                    </>
+                                  ) : (
+                                    <span className="block text-xs font-bold text-slate-400">{lang === 'my' ? 'ကဏ္ဍ ရွေးရန်' : 'Select category'}</span>
+                                  )}
+                                </span>
+                                <span className="text-slate-300 shrink-0">›</span>
+                              </button>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={row.amount}
+                                onChange={(e) => updateSplitRow(idx, { amount: e.target.value })}
+                                placeholder="0"
+                                aria-label={lang === 'my' ? `ခွဲရေးပမာဏ ${idx + 1}` : `Split amount ${idx + 1}`}
+                                className="w-24 sm:w-28 shrink-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none font-mono text-right"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => fillSplitRowRemainder(idx)}
+                                title={lang === 'my' ? 'ကျန်ငွေကို ဤတန်းတွင် ထည့်မည်' : 'Fill this row with the remaining amount'}
+                                className="shrink-0 min-h-[44px] px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 text-[11px] font-bold"
+                              >
+                                {lang === 'my' ? 'ကျန်' : 'Rest'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeSplitRow(idx)}
+                                aria-label={lang === 'my' ? `တန်း ${idx + 1} ဖျက်မည်` : `Remove row ${idx + 1}`}
+                                className="shrink-0 p-2 text-slate-400 hover:text-rose-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={row.note}
+                              onChange={(e) => updateSplitRow(idx, { note: e.target.value })}
+                              placeholder={lang === 'my' ? 'မှတ်ချက် (ရွေးချယ်နိုင်)' : 'Note (optional)'}
+                              className="w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-2 focus:outline-none"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs font-bold flex-wrap">
+                      <span className="text-slate-500">
+                        {lang === 'my' ? 'ခွဲပြီး' : 'Split'}: {formatMMK(splitRowsTotal)} · {lang === 'my' ? 'ကျန်' : 'Remaining'}: <span className={splitRemaining === 0 ? 'text-emerald-700' : 'text-rose-600'}>{formatMMK(splitRemaining)}</span>
+                      </span>
+                      <button type="button" onClick={addSplitRow} className="px-2.5 py-1.5 rounded-lg border-2 border-dashed border-emerald-300 text-emerald-800 hover:bg-emerald-50">
+                        + {lang === 'my' ? 'တန်းထပ်ထည့်' : 'Add row'}
+                      </button>
+                    </div>
+                    {splitRemaining !== 0 && splitTotalAmount > 0 && (
+                      <div className="text-[11px] font-bold text-rose-600">
+                        {lang === 'my' ? 'ခွဲရေးပမာဏ စုစုပေါင်းသည် စုစုပေါင်းပမာဏနှင့် အတိအကျ တူရပါမည်' : 'Split amounts must add up exactly to the total amount.'}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* [v7.6.03] Tiles render in ONE row and ONLY once a
                 vehicle entry path is chosen (entryModel off
@@ -2587,7 +2811,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         <ItemPriceHistoryModal isOpen={isShoppingPriceHistoryOpen} onClose={() => setIsShoppingPriceHistoryOpen(false)} transactions={allTransactions} categories={categories} wallets={wallets} lang={lang} />
       )}
 
-      <CategoryPickerModal isOpen={isCategoryPickerOpen} onClose={() => setIsCategoryPickerOpen(false)} categories={categories} selectedCategoryId={categoryId} selectedSubCategoryId={subCategoryId} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { setCategoryId(catId); setSubCategoryId(subId || ""); setIsCategoryPickerOpen(false); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} />
+      <CategoryPickerModal isOpen={isCategoryPickerOpen} onClose={() => setIsCategoryPickerOpen(false)} categories={categories} selectedCategoryId={categoryId} selectedSubCategoryId={subCategoryId} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { handlePrimaryCategorySelect(catId, subId); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} />
+      {/* [v7.6.07] Per-row picker for the split section. */}
+      <CategoryPickerModal isOpen={splitPickerRow !== null} onClose={() => setSplitPickerRow(null)} categories={categories} selectedCategoryId={splitPickerRow !== null ? (splitRows[splitPickerRow]?.categoryId || '') : ''} selectedSubCategoryId={splitPickerRow !== null ? (splitRows[splitPickerRow]?.subCategoryId || '') : ''} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { if (splitPickerRow !== null) handleSplitRowCategorySelect(splitPickerRow, catId, subId); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} />
 
       <FuelExpenseGuideModal isOpen={showFuelGuideModal} onClose={() => setShowFuelGuideModal(false)} lang={lang} />
     </div>

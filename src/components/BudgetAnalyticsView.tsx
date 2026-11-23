@@ -10,6 +10,7 @@ import { SpendingComparisonView } from './SpendingComparisonView';
 import { FinancialHealthModal } from './FinancialHealthModal';
 import { calculateFinancialHealth } from '../utils/financialHealth';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 
 interface BudgetAnalyticsViewProps {
   transactions: Transaction[];
@@ -92,12 +93,12 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   const catMap = React.useMemo(() => new Map<string, Category>(categories.map((c) => [c.id, c])), [categories]);
 
   const convertTxToMMK = React.useCallback(
-    (t: Transaction) => {
+    (t: Transaction, amount: number = t.amount) => {
       let w = walletMap.get(t.walletId);
       if (!w) {
         w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
       }
-      return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+      return convertToMMK(amount, w?.currency, w?.exchangeRate);
     },
     [walletMap, wallets]
   );
@@ -156,20 +157,23 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
           (targetW ? isWalletMatch(targetW, t.walletId) : t.walletId === b.walletId);
         if (!matchesWallet) return;
 
-        const amtMMK = convertTxToMMK(t);
-        if (isGeneral) {
-          if (!explicitBudgetedCatIds.has(t.category)) {
+        // [v7.6.07] Split-aware: each slice counts under its own category.
+        getSplitAttribution(t).forEach((slice) => {
+          const amtMMK = convertTxToMMK(t, slice.amount);
+          if (isGeneral) {
+            if (!explicitBudgetedCatIds.has(slice.categoryId)) {
             spent += amtMMK;
-            breakdown[t.category] = (breakdown[t.category] || 0) + amtMMK;
+            breakdown[slice.categoryId] = (breakdown[slice.categoryId] || 0) + amtMMK;
           }
-        } else if (budgetCatIds.includes(t.category)) {
+          } else if (budgetCatIds.includes(slice.categoryId)) {
           spent += amtMMK;
           // [v7.5.74] Per-category breakdown for multi-category budgets,
           // shown in the card's expandable list (like the General pool).
           if (isMulti) {
-            breakdown[t.category] = (breakdown[t.category] || 0) + amtMMK;
+            breakdown[slice.categoryId] = (breakdown[slice.categoryId] || 0) + amtMMK;
           }
         }
+        });
       });
 
     // [v7.5.60 M-13] A % budget's income base is the income of ITS OWN
@@ -239,9 +243,9 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
     ? monthTransactionsAll
         .filter(
           (t) =>
-            t.type === 'expense' && !isTransferTransaction(t) && !explicitBudgetedCatIds.has(t.category)
+            t.type === 'expense' && !isTransferTransaction(t) && getSplitAttribution(t).some((a) => !explicitBudgetedCatIds.has(a.categoryId))
         )
-        .reduce((sum, t) => sum + convertTxToMMK(t), 0)
+        .reduce((sum, t) => sum + convertTxToMMK(t, splitAmountMatching(t, (a) => !explicitBudgetedCatIds.has(a.categoryId))), 0)
     : 0;
 
   // [v7.5.55] maxBudgetCategories comes from DEFAULT_PLAN_LIMITS (free 5,

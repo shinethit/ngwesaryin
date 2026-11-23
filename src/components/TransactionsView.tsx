@@ -17,6 +17,8 @@ import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
+// [v7.6.07] Split badge on collapsed rows.
+import { hasSplits } from '../utils/transactionSplits';
 
 export type TimeFilterType =
   | 'all'
@@ -909,6 +911,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       const hasLine3Content =
                         !!t.note ||
                         (t.items && t.items.length > 0) ||
+                        hasSplits(t) ||
                         (isSharedWallet(wallet) &&
                           !!(t.createdByName || (t.createdBy && t.createdBy === user?.uid)));
                       // [v7.6.02] Collapsed unit_qty rows: the item name
@@ -1041,6 +1044,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                 {t.note && !noteRepeatsItemName && (
                                   <span className="text-slate-600 italic text-[11px]">
                                     "{t.note}"
+                                  </span>
+                                )}
+
+                                {/* [v7.6.07] Split badge: how many
+                                    categories this one record is split
+                                    across (primary category + amount stay
+                                    in Lines 1–2, as today). */}
+                                {hasSplits(t) && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-900 border border-violet-300 shadow-2xs shrink-0">
+                                    {lang === 'my' ? `${t.splits!.length} မျိုး ခွဲ` : `Split ×${t.splits!.length}`}
                                   </span>
                                 )}
 

@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.06",
-  "buildNumber": 320,
+  "version": "v7.6.07",
+  "buildNumber": 321,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်"
+    "မှတ်တမ်းတစ်ခုကို အမျိုးအစားများစွာ ခွဲရေးနိုင်ခြင်း — ဥပမာ စူပါမားကတ်တစ်ခေါက် အစားအသောက် + အိမ်သုံးပစ္စည်း ခွဲရေးခြင်း (ဘတ်ဂျက်/အစီရင်ခံစာမှာ ခွဲအလိုက် တွက်မည်)"
   ],
   "changesEn": [
-    "Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge."
+    "Split transactions — one receipt can be split across categories (e.g. supermarket: food + household), with budgets and reports counting each split under its own category."
   ]
 }

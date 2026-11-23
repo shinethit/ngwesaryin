@@ -24,6 +24,20 @@ export interface TransactionItem {
   unit?: string;
 }
 
+// [v7.6.07] One slice of a split transaction: part of the record's
+// total amount attributed to a single category (and optionally a
+// sub-category). `categoryId` is the category's id — the record's
+// own category field is named `category`, but a split row is a
+// category assignment, so the row field is `categoryId` to match
+// the picker's onSelect vocabulary. Amounts are in the record's
+// wallet currency, exactly like `Transaction.amount`.
+export interface TransactionSplit {
+  categoryId: string;
+  subCategoryId?: string;
+  amount: number;
+  note?: string;
+}
+
 export interface Transaction {
   id: string;
   type: TransactionType;
@@ -35,6 +49,20 @@ export interface Transaction {
   note?: string;
   shopName?: string; // [v7.5.54] Shop where the item was bought (for shop price comparison)
   items?: TransactionItem[]; // Shopping list items breakdown
+  // [v7.6.07] Category splits: when present and non-empty, the
+  // record's total `amount` is divided across these categories
+  // (budgets / reports count each slice under its own category).
+  // `category` stays the FIRST split's category (the primary), so
+  // every whole-amount reader keeps working unchanged. Absent or
+  // empty = unsplit: the whole amount belongs to `category`.
+  // Omitted entirely (never `splits: undefined`) when a record has
+  // no splits — cleanForFirestore drops undefined anyway, but the
+  // save path never writes the key at all. EXCEPTION (D1): an edit
+  // that REMOVES splits writes `splits: []` (see shouldClearSplits
+  // in utils/transactionSplits) — a merge write leaves an omitted
+  // field untouched, so only the explicit empty array clears the
+  // stored slices in Firestore. Absent and empty mean the same.
+  splits?: TransactionSplit[];
   unitPrice?: number;
   quantity?: number;
   receiptUrl?: string; // Premium feature

@@ -16,6 +16,10 @@ import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+// [v7.6.07] Split-aware average-cost-per-category: only the slices in
+// the selected category count (a record counts once; 'all' keeps
+// the whole amount, as before).
+import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 import { useAuth } from '../context/AuthContext';
 
 
@@ -44,10 +48,10 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
   // [v7.5.55 D18] Convert every amount to MMK via its wallet (raw sums mixed
   // USD/THB/etc. with MMK before).
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
-  const convertTxToMMK = (tx: Transaction) => {
+  const convertTxToMMK = (tx: Transaction, amount: number = tx.amount) => {
     let w = walletMap.get(tx.walletId);
     if (!w) w = wallets.find((wall) => isWalletMatch(wall, tx.walletId));
-    return convertToMMK(tx.amount, w?.currency, w?.exchangeRate);
+    return convertToMMK(amount, w?.currency, w?.exchangeRate);
   };
   // [v7.5.68] Per-viewer shared-wallet scope overrides.
   const { sharedWalletScopeOverrides } = useAuth();
@@ -170,10 +174,17 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
       const monthKey = tx.date.slice(0, 7);
       if (!monthCatMap[monthKey]) return;
 
-      const isCatMatch = selectedCategoryId === 'all' || tx.category === selectedCategoryId;
+      const isCatMatch = selectedCategoryId === 'all' || getSplitAttribution(tx).some((a) => a.categoryId === selectedCategoryId);
       if (!isCatMatch) return;
 
-      monthCatMap[monthKey].totalSpent += convertTxToMMK(tx);
+      // [v7.6.07] A selected category counts only its own slices;
+      // 'all' counts the whole record (unchanged). The record itself
+      // counts once either way.
+      const matchedAmount =
+        selectedCategoryId === 'all'
+          ? tx.amount
+          : splitAmountMatching(tx, (a) => a.categoryId === selectedCategoryId);
+      monthCatMap[monthKey].totalSpent += convertTxToMMK(tx, matchedAmount);
       monthCatMap[monthKey].txCount += 1;
 
       if (tx.items && tx.items.length > 0) {

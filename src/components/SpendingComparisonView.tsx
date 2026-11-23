@@ -6,6 +6,9 @@ import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
 import { convertToMMK } from '../utils/currency';
+// [v7.6.07] Split-aware category/sub-category comparisons: each slice
+// counts under its own category (period totals stay whole-amount).
+import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 
 interface SpendingComparisonViewProps {
   transactions: Transaction[];
@@ -117,7 +120,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   // could contain income categories like cat_salary.
   const [randomFreeCatIds, setRandomFreeCatIds] = useState<string[]>(() => {
     const activeExpenseCatIds = Array.from(
-      new Set(transactions.filter((t) => t.type === 'expense').map((t) => t.category))
+      new Set(transactions.filter((t) => t.type === 'expense').flatMap((t) => getSplitAttribution(t).map((a) => a.categoryId)))
     );
     const expenseCatIds = categories.filter((c) => c.type === 'expense').map((c) => c.id);
     const pool = activeExpenseCatIds.length >= 2 ? activeExpenseCatIds : expenseCatIds;
@@ -128,7 +131,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   // The expense-only pool, recomputed when transactions/categories arrive.
   const expenseCategoryPool = useMemo(() => {
     const activeExpenseCatIds = Array.from(
-      new Set(transactions.filter((t) => t.type === 'expense').map((t) => t.category))
+      new Set(transactions.filter((t) => t.type === 'expense').flatMap((t) => getSplitAttribution(t).map((a) => a.categoryId)))
     );
     const expenseCatIds = categories.filter((c) => c.type === 'expense').map((c) => c.id);
     if (activeExpenseCatIds.length >= 2) return activeExpenseCatIds;
@@ -280,9 +283,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   const stats = useMemo(() => {
     // [v7.5.60 E15/S-75] Convert every amount to MMK via its wallet —
     // raw sums mixed foreign-currency amounts with MMK.
-    const convertTx = (t: Transaction) => {
+    const convertTx = (t: Transaction, amount: number = t.amount) => {
       const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
-      return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+      return convertToMMK(amount, w?.currency, w?.exchangeRate);
     };
     let incomeA = 0;
     let expenseA = 0;
@@ -295,7 +298,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         incomeA += amt;
       } else if (t.type === 'expense') {
         expenseA += amt;
-        catExpensesA[t.category] = (catExpensesA[t.category] || 0) + amt;
+        getSplitAttribution(t).forEach((slice) => {
+          catExpensesA[slice.categoryId] = (catExpensesA[slice.categoryId] || 0) + convertTx(t, slice.amount);
+        });
       }
     });
 
@@ -310,7 +315,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         incomeB += amt;
       } else if (t.type === 'expense') {
         expenseB += amt;
-        catExpensesB[t.category] = (catExpensesB[t.category] || 0) + amt;
+        getSplitAttribution(t).forEach((slice) => {
+          catExpensesB[slice.categoryId] = (catExpensesB[slice.categoryId] || 0) + convertTx(t, slice.amount);
+        });
       }
     });
 
@@ -374,38 +381,44 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
 
     txA.forEach((t) => {
       if (isTransferTransaction(t) || t.type !== 'expense') return;
-      const subId = t.subCategoryId || 'general';
-      const key = `${t.category}:::${subId}`;
-      const cat = categoryMap.get(t.category);
-      const subObj = cat?.subCategories?.find((s) => s.id === subId);
-      const subName = subObj
-        ? (lang === 'my' ? subObj.name : subObj.nameEn || subObj.name)
-        : t.subCategoryId
-        ? t.note || 'General'
-        : (lang === 'my' ? 'အထွေထွေ' : 'General');
+      // [v7.6.07] Split-aware: each slice under its own category /
+      // sub-category (a slice without a sub-category is 'general').
+      getSplitAttribution(t).forEach((slice) => {
+        const subId = slice.subCategoryId || 'general';
+        const key = `${slice.categoryId}:::${subId}`;
+        const cat = categoryMap.get(slice.categoryId);
+        const subObj = cat?.subCategories?.find((s) => s.id === subId);
+        const subName = subObj
+          ? (lang === 'my' ? subObj.name : subObj.nameEn || subObj.name)
+          : slice.subCategoryId
+          ? t.note || 'General'
+          : (lang === 'my' ? 'အထွေထွေ' : 'General');
 
-      if (!subExpensesA[key]) {
-        subExpensesA[key] = { catId: t.category, subId, name: subName, amount: 0 };
-      }
-      subExpensesA[key].amount += convertTx(t);
+        if (!subExpensesA[key]) {
+          subExpensesA[key] = { catId: slice.categoryId, subId, name: subName, amount: 0 };
+        }
+        subExpensesA[key].amount += convertTx(t, slice.amount);
+      });
     });
 
     txB.forEach((t) => {
       if (isTransferTransaction(t) || t.type !== 'expense') return;
-      const subId = t.subCategoryId || 'general';
-      const key = `${t.category}:::${subId}`;
-      const cat = categoryMap.get(t.category);
-      const subObj = cat?.subCategories?.find((s) => s.id === subId);
-      const subName = subObj
-        ? (lang === 'my' ? subObj.name : subObj.nameEn || subObj.name)
-        : t.subCategoryId
-        ? t.note || 'General'
-        : (lang === 'my' ? 'အထွေထွေ' : 'General');
+      getSplitAttribution(t).forEach((slice) => {
+        const subId = slice.subCategoryId || 'general';
+        const key = `${slice.categoryId}:::${subId}`;
+        const cat = categoryMap.get(slice.categoryId);
+        const subObj = cat?.subCategories?.find((s) => s.id === subId);
+        const subName = subObj
+          ? (lang === 'my' ? subObj.name : subObj.nameEn || subObj.name)
+          : slice.subCategoryId
+          ? t.note || 'General'
+          : (lang === 'my' ? 'အထွေထွေ' : 'General');
 
-      if (!subExpensesB[key]) {
-        subExpensesB[key] = { catId: t.category, subId, name: subName, amount: 0 };
-      }
-      subExpensesB[key].amount += convertTx(t);
+        if (!subExpensesB[key]) {
+          subExpensesB[key] = { catId: slice.categoryId, subId, name: subName, amount: 0 };
+        }
+        subExpensesB[key].amount += convertTx(t, slice.amount);
+      });
     });
 
     const allSubKeys = Array.from(new Set([...Object.keys(subExpensesA), ...Object.keys(subExpensesB)]));

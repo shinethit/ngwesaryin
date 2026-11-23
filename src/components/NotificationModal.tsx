@@ -23,6 +23,9 @@ import { getMaintenanceAlerts, SERVICE_TYPE_CONFIG } from '../utils/vehicleAnaly
 // [v7.6.06] Expiry reminders — overdue + due-within-30-days license /
 // insurance expiries and debt due dates, computed at render time.
 import { getExpiryReminders, type ExpiryReminder } from '../utils/expiryReminders';
+// [v7.6.07] Split-aware budget spending: each slice counts under its
+// own category (same math as BudgetAnalyticsView / App badge).
+import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 // [v7.5.78 C] Shop-details "fill later" reminders (one per shop name).
 // [v7.5.91 D3] dismissShopDetailReminder — the per-reminder "Not now".
 import { dispatchOpenShopForm, dismissShopDetailReminder, useShopDetailReminders } from '../utils/shopDetailsReminders';
@@ -203,9 +206,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   // NOTE: App passes `wallets` (computedWallets) to this modal, so
   // amounts convert to MMK per wallet currency.
   const notifWalletMap = buildWalletMap((wallets as any) || []);
-  const notifConvertTx = (t: Transaction) => {
+  const notifConvertTx = (t: Transaction, amount: number = t.amount) => {
     const w = notifWalletMap.get(t.walletId);
-    return convertToMMK(t.amount, (w as any)?.currency, (w as any)?.exchangeRate);
+    return convertToMMK(amount, (w as any)?.currency, (w as any)?.exchangeRate);
   };
   const currentMonthTx = transactions.filter(
     (t) => t.type === 'expense' && !isTransferTransaction(t) && t.date && t.date.startsWith(currentMonthStr)
@@ -220,11 +223,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   );
   const spendingByCategory: Record<string, number> = {};
   currentMonthTx.forEach((t) => {
-    spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + notifConvertTx(t);
+    getSplitAttribution(t).forEach((slice) => {
+      spendingByCategory[slice.categoryId] = (spendingByCategory[slice.categoryId] || 0) + notifConvertTx(t, slice.amount);
+    });
   });
   const generalPoolSpent = currentMonthTx
-    .filter((t) => !explicitBudgetedCatIds.has(t.category))
-    .reduce((sum, t) => sum + notifConvertTx(t), 0);
+    .reduce((sum, t) => sum + notifConvertTx(t, splitAmountMatching(t, (a) => !explicitBudgetedCatIds.has(a.categoryId))), 0);
 
   budgets.forEach((budget) => {
     const category = categories.find((c) => c.id === budget.categoryId);

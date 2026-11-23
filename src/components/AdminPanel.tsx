@@ -22,6 +22,9 @@ import { useAuth, parseExpiryTime } from '../context/AuthContext';
 import { AdminSystemMessage, AdminMessageType, ContactInfo, VisitorDoc, Transaction, Wallet, Category, PublicShop } from '../types';
 import { INITIAL_CATEGORIES } from '../data/initialData';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
+// [v7.6.07] Admin benchmarks count each split slice under its own
+// category / sub-category (raw amounts, as before — no conversion).
+import { getSplitAttribution } from '../utils/transactionSplits';
 // [v7.5.99 top-up] Currency-ambiguous admin surface (totals mix all
 // users/currencies): formatLakhs is aliased to the lakh-only form so
 // no foreign-currency amount ever gains a ကျပ် suffix.
@@ -1098,10 +1101,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
     const catSums: { [catId: string]: number } = {};
     expenseTxs.forEach((t) => {
-      const rawCat = t.category || (t as any).categoryId || 'other';
-      const matchedCat = allMergedCategories.find((c) => c.id === rawCat || c.name === rawCat || c.nameEn === rawCat);
-      const groupKey = matchedCat ? matchedCat.id : rawCat;
-      catSums[groupKey] = (catSums[groupKey] || 0) + (Number(t.amount) || 0);
+      // [v7.6.07] Split-aware: each slice under its own category.
+      getSplitAttribution(t).forEach((slice) => {
+        const rawCat = slice.categoryId || 'other';
+        const matchedCat = allMergedCategories.find((c) => c.id === rawCat || c.name === rawCat || c.nameEn === rawCat);
+        const groupKey = matchedCat ? matchedCat.id : rawCat;
+        catSums[groupKey] = (catSums[groupKey] || 0) + (Number(slice.amount) || 0);
+      });
     });
 
     const sortedCats = Object.entries(catSums).sort((a, b) => b[1] - a[1]);
@@ -1154,24 +1160,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }>();
 
     expenseTxs.forEach((t) => {
-      const rawCat = t.category || (t as any).categoryId || 'other';
+      // [v7.6.07] Split-aware: each slice under its own category /
+      // sub-category.
+      getSplitAttribution(t).forEach((slice) => {
+      const rawCat = slice.categoryId || 'other';
       const catObj = allMergedCategories.find((c) => c.id === rawCat || c.name === rawCat || c.nameEn === rawCat);
       const catKey = catObj ? catObj.id : rawCat;
       const catName = catObj ? (lang === 'my' ? catObj.name : (catObj.nameEn || catObj.name)) : rawCat;
-      
+
       let subName = lang === 'my' ? 'အထွေထွေ အသုံး' : 'General';
-      if (t.subCategoryId) {
+      if (slice.subCategoryId) {
         if (catObj?.subCategories) {
           const foundSub = catObj.subCategories.find(
-            (s) => s.id === t.subCategoryId || s.name === t.subCategoryId || s.nameEn === t.subCategoryId
+            (s) => s.id === slice.subCategoryId || s.name === slice.subCategoryId || s.nameEn === slice.subCategoryId
           );
           if (foundSub) {
             subName = lang === 'my' ? foundSub.name : (foundSub.nameEn || foundSub.name);
           } else {
-            subName = t.subCategoryId;
+            subName = slice.subCategoryId;
           }
         } else {
-          subName = t.subCategoryId;
+          subName = slice.subCategoryId;
         }
       }
       // [v7.5.64 A-13] No sub-category -> stays under the 'အထွေထွေ /
@@ -1188,9 +1197,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       }
 
       const entry = catMap.get(catKey)!;
-      const amt = Number(t.amount) || 0;
+      const amt = Number(slice.amount) || 0;
       entry.totalAmount += amt;
       entry.subcatMap.set(subName, (entry.subcatMap.get(subName) || 0) + amt);
+      });
     });
 
     return Array.from(catMap.values())

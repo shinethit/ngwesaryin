@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.06';
-export const CURRENT_BUILD_NUMBER = 320;
+export const CURRENT_APP_VERSION = 'v7.6.07';
+export const CURRENT_BUILD_NUMBER = 321;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.07',
+    buildNumber: 321,
+    releaseDate: '2026-11-22',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'မှတ်တမ်း အမျိုးအစားခွဲရေးခြင်း',
+    titleEn: 'Split transactions across categories',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'မှတ်တမ်းတစ်ခုကို အမျိုးအစားများစွာ ခွဲရေးနိုင်ပြီ — ဥပမာ စူပါမားကတ်တစ်ခေါက် အစားအသောက် + အိမ်သုံးပစ္စည်း ခွဲရေးနိုင်ပြီး ဘတ်ဂျက်နှင့် အစီရင်ခံစာများမှာ ခွဲအလိုက် တွက်ပေးမည်။ ခွဲရေးပမာဏ စုစုပေါင်းသည် စုစုပေါင်းပမာဏနှင့် အတိအကျ တူရပါမည်။',
+    descriptionEn: 'Split transactions — one receipt can be split across categories (e.g. supermarket: food + household), with budgets and reports counting each split under its own category. Split amounts must add up exactly to the total.',
+    changesMy: [
+      'မှတ်တမ်းတစ်ခုကို အမျိုးအစားများစွာ ခွဲရေးနိုင်ခြင်း — ဥပမာ စူပါမားကတ်တစ်ခေါက် အစားအသောက် + အိမ်သုံးပစ္စည်း ခွဲရေးခြင်း (ဘတ်ဂျက်/အစီရင်ခံစာမှာ ခွဲအလိုက် တွက်မည်)',
+    ],
+    changesEn: [
+      'Split transactions — one receipt can be split across categories (e.g. supermarket: food + household), with budgets and reports counting each split under its own category.',
+    ],
+  },
   {
     version: 'v7.6.06',
     buildNumber: 320,

@@ -10,6 +10,10 @@ import { getLocalDateString } from '../utils/dateUtils';
 // per distinct row service type, each with its own cost + title.
 import { groupServiceRowsByType, resolvePerTypeTitle } from '../utils/vehicleServiceRows';
 import { isWalletMatch } from '../utils/walletBalance';
+// [v7.6.07 D1] Clearing splits on edit: a merge write keeps an
+// omitted `splits` field, so had-splits → now-none edits write
+// `splits: []` (see shouldClearSplits) instead of omitting the key.
+import { shouldClearSplits } from '../utils/transactionSplits';
 import {
   saveSharedWalletTransaction,
   deleteSharedWalletTransaction,
@@ -372,7 +376,14 @@ export function useTransactionHandlers({
 
       // [v7.5.56 A1] createdBy/createdByName are stamped on add and NEVER
       // overwritten on edit (a legacy tx with no author stays authorless).
-      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt, createdBy: editingTransaction.createdBy, createdByName: editingTransaction.createdByName, updatedAt: Date.now(), version: (editingTransaction.version || 0) + 1, lastEditedBy: user?.uid || 'guest' } as Transaction;
+      const updatedTx = { ...sanitizedTx, id: editingTransaction.id, createdAt: editingTransaction.createdAt, createdBy: editingTransaction.createdBy, createdByName: editingTransaction.createdByName, updatedAt: Date.now(), version: (editingTransaction.version || 0) + 1, lastEditedBy: user?.uid || 'guest',
+        // [v7.6.07 D1] Had splits → now none: write `splits: []` so the
+        // merge writes below (owner doc + shared-wallet doc, including
+        // their retry-queue replays) overwrite the stored slices
+        // instead of leaving them to resurrect on the next pull.
+        // Still-split edits and new records never reach this spread.
+        ...(shouldClearSplits(editingTransaction.splits, sanitizedTx.splits) ? { splits: [] } : {}),
+      } as Transaction;
       setTransactions((prev) => {
         const next = prev.map((t) => (t.id === editingTransaction.id ? updatedTx : t));
         safeSetItem('ngwe_transactions', JSON.stringify(next));

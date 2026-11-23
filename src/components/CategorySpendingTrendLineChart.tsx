@@ -13,6 +13,7 @@ import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 import { useAuth } from '../context/AuthContext';
 
 interface CategorySpendingTrendLineChartProps {
@@ -47,10 +48,10 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
 
   // [v7.5.55 D18] Convert amounts to MMK via each transaction's wallet.
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
-  const convertTxToMMK = (t: Transaction) => {
+  const convertTxToMMK = (t: Transaction, amount: number = t.amount) => {
     let w = walletMap.get(t.walletId);
     if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
+    return convertToMMK(amount, w?.currency, w?.exchangeRate);
   };
 
   // [v7.5.68] Per-viewer shared-wallet scope overrides.
@@ -88,8 +89,11 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
       const isInLast6 = lastSixMonths.some((m) => m.key === monthKey);
       if (!isInLast6) return;
 
-      const catId = t.category || 'other';
-      categoryTotals[catId] = (categoryTotals[catId] || 0) + convertTxToMMK(t);
+      // [v7.6.07] Split-aware: each slice counts under its own
+      // category when ranking the top categories.
+      getSplitAttribution(t).forEach((slice) => {
+        categoryTotals[slice.categoryId] = (categoryTotals[slice.categoryId] || 0) + convertTxToMMK(t, slice.amount);
+      });
     });
 
     const sorted = Object.entries(categoryTotals)
@@ -111,9 +115,11 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
         // not in the user category list.
         const catName = getCategoryDisplayName(catId, categories, lang);
 
+        // [v7.6.07] Split-aware: only the slices in this category
+        // count toward the category's monthly line.
         const sum = transactions
-          .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && isScopedTx(t) && t.date?.startsWith(m.key) && (t.category === catId))
-          .reduce((acc, t) => acc + convertTxToMMK(t), 0);
+          .filter((t) => t.type === 'expense' && !isTransferTransaction(t) && isScopedTx(t) && t.date?.startsWith(m.key) && getSplitAttribution(t).some((a) => a.categoryId === catId))
+          .reduce((acc, t) => acc + convertTxToMMK(t, splitAmountMatching(t, (a) => a.categoryId === catId)), 0);
 
         row[catName] = sum;
       });

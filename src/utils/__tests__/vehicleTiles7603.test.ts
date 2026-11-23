@@ -339,34 +339,34 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.06 (build 320)', () => {
-  it('current version is v7.6.06 / build 320 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.06');
-    expect(CURRENT_BUILD_NUMBER).toBe(320);
-    expect(VERSION_JSON.version).toBe('v7.6.06');
-    expect(VERSION_JSON.buildNumber).toBe(320);
+describe('Version bump to v7.6.07 (build 321)', () => {
+  it('current version is v7.6.07 / build 321 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.07');
+    expect(CURRENT_BUILD_NUMBER).toBe(321);
+    expect(VERSION_JSON.version).toBe('v7.6.07');
+    expect(VERSION_JSON.buildNumber).toBe(321);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.06 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.07 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.06');
-    expect(entry.buildNumber).toBe(320);
+    expect(entry.version).toBe('v7.6.07');
+    expect(entry.buildNumber).toBe(321);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('သက်တမ်းကုန်ရက် အသိပေးချက်');
+    expect(entry.titleMy).toBe('မှတ်တမ်း အမျိုးအစားခွဲရေးခြင်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
+      'မှတ်တမ်းတစ်ခုကို အမျိုးအစားများစွာ ခွဲရေးနိုင်ခြင်း — ဥပမာ စူပါမားကတ်တစ်ခေါက် အစားအသောက် + အိမ်သုံးပစ္စည်း ခွဲရေးခြင်း (ဘတ်ဂျက်/အစီရင်ခံစာမှာ ခွဲအလိုက် တွက်မည်)',
     ]);
     expect(entry.changesEn).toEqual([
-      'Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge.',
+      'Split transactions — one receipt can be split across categories (e.g. supermarket: food + household), with budgets and reports counting each split under its own category.',
     ]);
   });
 });

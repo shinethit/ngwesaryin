@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart } from 'lucide-react';
-import { Category, PlanType, Transaction, Wallet, DataScope } from '../types';
+import { Category, FuelLog, PlanType, Transaction, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { safeSetItem } from '../utils/storage';
@@ -20,6 +20,9 @@ import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransact
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 // [v7.6.07] Split badge on collapsed rows.
 import { hasSplits } from '../utils/transactionSplits';
+// [v7.6.15] Fuel line on Records rows (fuel type / litres / station
+// from the linked FuelLog).
+import { findFuelLogForTransaction, formatFuelRowLine } from '../utils/fuelRowLine';
 
 export type TimeFilterType =
   | 'all'
@@ -45,6 +48,10 @@ interface TransactionsViewProps {
   onEditTransaction: (tx: Transaction) => void;
   onOpenUpgradeModal: () => void;
   cloudTxIds?: Set<string>;
+  // [v7.6.15] Fuel logs for the fuel line on Records rows: a row
+  // reaches its linked FuelLog via FuelLog.transactionId (see
+  // utils/fuelRowLine). Optional: without it no fuel line renders.
+  fuelLogs?: FuelLog[];
   onOpenDatabaseTracker?: () => void;
   // [v7.5.55] Full cloud refresh for the sync-detail modal (e.g. App's
   // manual sync). Optional: without it the modal retries via syncQueue.
@@ -102,6 +109,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   onEditTransaction,
   onOpenUpgradeModal,
   cloudTxIds,
+  fuelLogs = [],
   onOpenDatabaseTracker,
   onRefreshSync,
 }) => {
@@ -910,6 +918,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       // wallets keep their own currency format.
                       const amountMMK = convertToMMK(t.amount, wallet?.currency, wallet?.exchangeRate);
                       const isMMK = !wallet?.currency || wallet.currency === 'MMK';
+                      // [v7.6.15] Fuel line: the linked FuelLog's type /
+                      // litres / station, joined by transactionId only.
+                      // Shown regardless of the note text — it is data,
+                      // not a note, so no note comparison is made. A
+                      // record with no linked log gets '' and renders
+                      // exactly as before.
+                      const linkedFuelLog = findFuelLogForTransaction(fuelLogs, t.id);
+                      const fuelLine = formatFuelRowLine(linkedFuelLog);
                       // [v7.5.62] Line 3 only exists when it has content —
                       // an empty div still costs pt-0.5 + space-y-1 on
                       // every row.
@@ -917,6 +933,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         !!t.note ||
                         (t.items && t.items.length > 0) ||
                         hasSplits(t) ||
+                        !!fuelLine ||
                         (isSharedWallet(wallet) &&
                           !!(t.createdByName || (t.createdBy && t.createdBy === user?.uid)));
                       // [v7.6.02] Collapsed unit_qty rows: the item name
@@ -1039,6 +1056,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                 {isSharedWallet(wallet) && (t.createdByName || (t.createdBy && t.createdBy === user?.uid)) && (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 text-[10px] font-bold border border-amber-200 shrink-0">
                                     👤 {t.createdByName || (lang === 'my' ? 'ကိုယ်တိုင်' : 'You')}
+                                  </span>
+                                )}
+                                {/* [v7.6.15] Fuel line (linked FuelLog only):
+                                    fuel type · litres · station. First
+                                    in Line 3, ahead of the item name /
+                                    note, and shown even when the note is
+                                    empty — fuel records otherwise showed
+                                    nothing here at all. */}
+                                {fuelLine && (
+                                  <span className="text-slate-700 font-semibold text-[11px] min-w-0 break-words">
+                                    {fuelLine}
                                   </span>
                                 )}
                                 {unitQtyItemLabel && (
@@ -1307,6 +1335,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         categories={categories}
         wallets={wallets}
         lang={lang}
+        fuelLog={viewingTx ? findFuelLogForTransaction(fuelLogs, viewingTx.id) : undefined}
         canEdit={(() => {
           if (!viewingTx) return true;
           const w = walletMap.get(viewingTx.walletId);

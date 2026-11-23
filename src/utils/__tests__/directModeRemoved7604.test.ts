@@ -241,12 +241,12 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.14 (build 328)', () => {
+describe('version pins rolled forward to v7.6.15 (build 329)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.14');
-    expect(CURRENT_BUILD_NUMBER).toBe(328);
-    expect(VERSION_JSON.version).toBe('v7.6.14');
-    expect(VERSION_JSON.buildNumber).toBe(328);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
+    expect(CURRENT_BUILD_NUMBER).toBe(329);
+    expect(VERSION_JSON.version).toBe('v7.6.15');
+    expect(VERSION_JSON.buildNumber).toBe(329);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -255,14 +255,18 @@ describe('version pins rolled forward to v7.6.14 (build 328)', () => {
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.14');
-    expect(top.buildNumber).toBe(328);
+    expect(top.version).toBe('v7.6.15');
+    expect(top.buildNumber).toBe(329);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'စာရင်းအသစ် ထည့်တဲ့အခါ ဘာမှ မရွေးထားတဲ့ ပုံမှန်ပုံစံက စပြီး ယာဉ်အမျိုးအစား ရွေးမှ ယာဉ်ပုံစံ ပေါ်မည် — ယာဉ်ပုံစံထဲမှာ ခလုတ် ၄ ခုကသာ ရွေးချယ်စရာ ဖြစ်ပြီး အပေါ် Bar ကို ဖျောက်ထားသည်',
+      'ဆီဖိုးစာရင်းတန်းမှာ ဆီအမျိုးအစား၊ လီတာနဲ့ ဆိုင် ပြမည်',
+      'ဆီလမ်းညွှန် ပိတ်တဲ့အခါ စာရင်းပုံစံ မပိတ်တော့ပါ',
+      'အမျိုးအစား မရွေးရသေးချိန် အမျိုးအစား အိုင်ကွန်နှင့် အရောင် မှန်ကန်စွာ ပြမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'New entries now open neutral with nothing pre-selected; vehicle mode appears only after choosing a vehicle category, and the four tiles are the only vehicle-type selector (the top bar is hidden in vehicle mode).',
+      'Fuel rows now show the fuel type, litres and station on the record row',
+      'Closing the fuel guide no longer closes the whole entry form',
+      'Category icon and color now show the neutral state until a category is picked in a new entry',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

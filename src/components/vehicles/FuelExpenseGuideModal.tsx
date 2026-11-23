@@ -15,7 +15,15 @@ export const FuelExpenseGuideModal: React.FC<FuelExpenseGuideModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+    // [v7.6.15] stopPropagation: this guide is rendered INSIDE the
+    // TransactionModal backdrop div (onClick={onClose}), as a sibling
+    // of the form card. Without it, tapping the guide's X / footer
+    // button bubbles to the backdrop and closes the WHOLE entry
+    // form. The guide's own X / footer onClose still fires (its
+    // handler runs first); only the bubble to the form is stopped.
+    // In VehiclesView the guide has no backdrop-click ancestor, so
+    // this is a harmless no-op there.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
       <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white">

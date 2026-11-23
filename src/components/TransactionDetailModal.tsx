@@ -1,18 +1,25 @@
 import React from 'react';
 import { X, Edit2, Lock } from 'lucide-react';
-import { Category, Transaction, Wallet } from '../types';
+import { Category, FuelLog, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 import { hasSplits, getSplitAttribution } from '../utils/transactionSplits';
 import { isWalletMatch } from '../utils/walletBalance';
+// [v7.6.15] Same one-line fuel summary as the Records row, from the
+// linked FuelLog (joined by transactionId by the caller).
+import { formatFuelRowLine } from '../utils/fuelRowLine';
 
 interface TransactionDetailModalProps {
   transaction: Transaction | null;
   categories: Category[];
   wallets: Wallet[];
   lang: 'my' | 'en';
+  /** [v7.6.15] The FuelLog linked to this record (transactionId
+      join, resolved by the caller). Optional: without it the view
+      renders exactly as before, including the bare litres row. */
+  fuelLog?: FuelLog | null;
   /** Same edit permission the list row's pencil uses. When false the
       Edit button is replaced by the lock note — the permission gate
       in the edit handler still applies when the button is shown. */
@@ -59,6 +66,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   categories,
   wallets,
   lang,
+  fuelLog,
   canEdit = true,
   onClose,
   onEdit,
@@ -83,6 +91,9 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
       wallets.find((w) => isWalletMatch(w, tx.transferToWalletId))
     : undefined;
   const splitRows = hasSplits(tx) ? getSplitAttribution(tx) : [];
+  // [v7.6.15] One-line fuel summary for fuel records; '' when no log
+  // is linked, so non-fuel records render byte-identically.
+  const fuelLine = formatFuelRowLine(fuelLog);
 
   const handleEdit = () => {
     onClose();
@@ -209,7 +220,18 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             </div>
           )}
 
-          {tx.fuelLiters != null && (
+          {/* [v7.6.15] Fuel summary (linked log only): type · litres ·
+              station. It replaces the bare litres row below while a
+              log is linked, so the litre count never shows twice;
+              records with no linked log keep the bare row as before. */}
+          {fuelLine && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-slate-500 text-xs">{lang === 'my' ? 'ဆီ:' : 'Fuel:'}</span>
+              <span className="font-semibold text-slate-900 text-right break-words">{fuelLine}</span>
+            </div>
+          )}
+
+          {!fuelLine && tx.fuelLiters != null && (
             <div className="flex items-center justify-between gap-3">
               <span className="text-slate-500 text-xs">{lang === 'my' ? 'ဆီ (လီတာ):' : 'Fuel (litres):'}</span>
               <span className="font-mono font-semibold text-slate-900">{tx.fuelLiters}</span>

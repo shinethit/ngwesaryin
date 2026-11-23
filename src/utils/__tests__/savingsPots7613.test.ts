@@ -413,28 +413,28 @@ describe('no rules change is needed (v7.6.13)', () => {
   });
 });
 
-describe('Version bump to v7.6.14 (build 328)', () => {
+describe('Version bump to v7.6.15 (build 329)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.14');
-    expect(CURRENT_BUILD_NUMBER).toBe(328);
-    expect(VERSION_JSON.version).toBe('v7.6.14');
-    expect(VERSION_JSON.buildNumber).toBe(328);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
+    expect(CURRENT_BUILD_NUMBER).toBe(329);
+    expect(VERSION_JSON.version).toBe('v7.6.15');
+    expect(VERSION_JSON.buildNumber).toBe(329);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.14');
-    expect(entry.buildNumber).toBe(328);
+    expect(entry.version).toBe('v7.6.15');
+    expect(entry.buildNumber).toBe(329);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('စာရင်းအသစ် ပုံမှန်ပုံစံ + ယာဉ်ရွေးချယ်မှု တစ်ခုတည်း');
-    expect(entry.titleEn).toBe('Neutral new entry + a single vehicle selector');
+    expect(entry.titleMy).toBe('ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း');
+    expect(entry.titleEn).toBe('Fuel details shown on the record row');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'စာရင်းအသစ် ထည့်တဲ့အခါ ဘာမှ မရွေးထားတဲ့ ပုံမှန်ပုံစံက စပြီး ယာဉ်အမျိုးအစား ရွေးမှ ယာဉ်ပုံစံ ပေါ်မည် — ယာဉ်ပုံစံထဲမှာ ခလုတ် ၄ ခုကသာ ရွေးချယ်စရာ ဖြစ်ပြီး အပေါ် Bar ကို ဖျောက်ထားသည်',
+      'ဆီဖိုးစာရင်းတန်းမှာ ဆီအမျိုးအစား၊ လီတာနဲ့ ဆိုင် ပြမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'New entries now open neutral with nothing pre-selected; vehicle mode appears only after choosing a vehicle category, and the four tiles are the only vehicle-type selector (the top bar is hidden in vehicle mode).',
+      'Fuel rows now show the fuel type, litres and station on the record row',
     );
   });
 
@@ -449,23 +449,23 @@ describe('Version bump to v7.6.14 (build 328)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.14'.replace(/4$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.14'.replace(/4$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.15'.replace(/5$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.15'.replace(/5$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.13/7.6.14, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.13';
-    const TO_VERSION = '7.6.14';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.14/7.6.15, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.14';
+    const TO_VERSION = '7.6.15';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/4$/, '');
+    const mangled = TO_VERSION.replace(/5$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.14');
-    expect(guardFails('7.6.13')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.15');
     expect(guardFails('7.6.14')).toBe(false);
+    expect(guardFails('7.6.15')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

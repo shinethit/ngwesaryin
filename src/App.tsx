@@ -95,6 +95,8 @@ import { getExpiryReminders } from './utils/expiryReminders';
 import { getAnomalyAlerts } from './utils/anomalyAlerts';
 // [v7.6.07] Split-aware budget badge math (same as NotificationModal).
 import { getSplitAttribution, splitAmountMatching } from './utils/transactionSplits';
+// [v7.6.15] Fuel-log join for the Records rows + search-hit detail view.
+import { findFuelLogForTransaction } from './utils/fuelRowLine';
 import { getLocalDateString } from './utils/dateUtils';
 import { mergeAndCleanCategories } from './utils/categoryCleanUp';
 import {
@@ -2889,6 +2891,7 @@ export default function App() {
               onEditTransaction={handleOpenEditTx}
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
                     cloudTxIds={cloudTxIds}
+                    fuelLogs={fuelLogs}
                     onRefreshSync={handleFullManualSync}
             />
             <AdBanner
@@ -3591,6 +3594,7 @@ export default function App() {
         categories={categories}
         wallets={computedWallets}
         lang={lang}
+        fuelLog={viewingTransaction ? findFuelLogForTransaction(fuelLogs, viewingTransaction.id) : undefined}
         onClose={() => setViewingTransaction(null)}
         onEdit={(tx) => handleOpenEditTx(tx)}
       />

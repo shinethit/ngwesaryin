@@ -261,24 +261,24 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
   });
 });
 
-describe('Version bump to v7.6.14 (build 328)', () => {
+describe('Version bump to v7.6.15 (build 329)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.14');
-    expect(CURRENT_BUILD_NUMBER).toBe(328);
-    expect(VERSION_JSON.version).toBe('v7.6.14');
-    expect(VERSION_JSON.buildNumber).toBe(328);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
+    expect(CURRENT_BUILD_NUMBER).toBe(329);
+    expect(VERSION_JSON.version).toBe('v7.6.15');
+    expect(VERSION_JSON.buildNumber).toBe(329);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.14');
-    expect(entry.buildNumber).toBe(328);
+    expect(entry.version).toBe('v7.6.15');
+    expect(entry.buildNumber).toBe(329);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'စာရင်းအသစ် ပုံမှန်ပုံစံ + ယာဉ်ရွေးချယ်မှု တစ်ခုတည်း',
+      'ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
   });
 
   it('change log has no Admin content and releasedAt is present-only', () => {

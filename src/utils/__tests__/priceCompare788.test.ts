@@ -125,12 +125,12 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.6.14 — history entry and version.json in sync', () => {
-  it('current version is v7.6.14 / build 328', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.14');
-    expect(CURRENT_BUILD_NUMBER).toBe(328);
-    expect(VERSION_JSON.version).toBe('v7.6.14');
-    expect(VERSION_JSON.buildNumber).toBe(328);
+describe('Version v7.6.15 — history entry and version.json in sync', () => {
+  it('current version is v7.6.15 / build 329', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
+    expect(CURRENT_BUILD_NUMBER).toBe(329);
+    expect(VERSION_JSON.version).toBe('v7.6.15');
+    expect(VERSION_JSON.buildNumber).toBe(329);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -139,21 +139,21 @@ describe('Version v7.6.14 — history entry and version.json in sync', () => {
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.14 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.15 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.14');
-    expect(entry.buildNumber).toBe(328);
+    expect(entry.version).toBe('v7.6.15');
+    expect(entry.buildNumber).toBe(329);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('စာရင်းအသစ် ပုံမှန်ပုံစံ + ယာဉ်ရွေးချယ်မှု တစ်ခုတည်း');
-    expect(entry.titleEn).toBe('Neutral new entry + a single vehicle selector');
+    expect(entry.titleMy).toBe('ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း');
+    expect(entry.titleEn).toBe('Fuel details shown on the record row');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
   });
 });

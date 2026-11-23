@@ -2156,8 +2156,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             )}
 
             <button type="button" onClick={() => setIsCategoryPickerOpen(true)} className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: selectedCatObj?.color || "#94A3B8" }}>
-                <CategoryIcon name={selectedCatObj?.icon || "Tag"} className="w-5 h-5" />
+              {/* [v7.6.15] Icon/color from the EXPLICITLY picked category
+                  only. selectedCatObj falls back to the first /
+                  most-used category, so on a neutral fresh open (no
+                  category picked yet) this tile used to wear the
+                  fallback category's icon/color while the text
+                  showed the empty placeholder. explicitCatObj is the
+                  same object whenever a category IS picked, so
+                  picked-state rendering is unchanged; unpicked
+                  state shows the neutral slate + Tag icon. */}
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: explicitCatObj?.color || "#94A3B8" }}>
+                <CategoryIcon name={explicitCatObj?.icon || "Tag"} className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
                 {categoryId ? (

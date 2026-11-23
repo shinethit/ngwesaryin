@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.14';
-export const CURRENT_BUILD_NUMBER = 328;
+export const CURRENT_APP_VERSION = 'v7.6.15';
+export const CURRENT_BUILD_NUMBER = 329;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.15',
+    buildNumber: 329,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း',
+    titleEn: 'Fuel details shown on the record row',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆီဖိုးစာရင်းတန်းမှာ ဆီအမျိုးအစား၊ လီတာနဲ့ ဆိုင် ပြမည်။ ဆီလမ်းညွှန် ပိတ်တဲ့အခါ စာရင်းပုံစံ မပိတ်တော့ပါ။ အမျိုးအစား မရွေးရသေးချိန် အမျိုးအစား အိုင်ကွန်နှင့် အရောင် မှန်ကန်စွာ ပြမည်။',
+    descriptionEn: 'Fuel rows now show the fuel type, litres and station on the record row. Closing the fuel guide no longer closes the whole entry form. Category icon and color now show the neutral state until a category is picked in a new entry.',
+    changesMy: [
+      'ဆီဖိုးစာရင်းတန်းမှာ ဆီအမျိုးအစား၊ လီတာနဲ့ ဆိုင် ပြမည်',
+      'ဆီလမ်းညွှန် ပိတ်တဲ့အခါ စာရင်းပုံစံ မပိတ်တော့ပါ',
+      'အမျိုးအစား မရွေးရသေးချိန် အမျိုးအစား အိုင်ကွန်နှင့် အရောင် မှန်ကန်စွာ ပြမည်',
+    ],
+    changesEn: [
+      'Fuel rows now show the fuel type, litres and station on the record row',
+      'Closing the fuel guide no longer closes the whole entry form',
+      'Category icon and color now show the neutral state until a category is picked in a new entry',
+    ],
+  },
   {
     version: 'v7.6.14',
     buildNumber: 328,

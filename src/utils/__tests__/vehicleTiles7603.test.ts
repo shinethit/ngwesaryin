@@ -339,34 +339,34 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.07 (build 321)', () => {
-  it('current version is v7.6.07 / build 321 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.07');
-    expect(CURRENT_BUILD_NUMBER).toBe(321);
-    expect(VERSION_JSON.version).toBe('v7.6.07');
-    expect(VERSION_JSON.buildNumber).toBe(321);
+describe('Version bump to v7.6.08 (build 322)', () => {
+  it('current version is v7.6.08 / build 322 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.08');
+    expect(CURRENT_BUILD_NUMBER).toBe(322);
+    expect(VERSION_JSON.version).toBe('v7.6.08');
+    expect(VERSION_JSON.buildNumber).toBe(322);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.07 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.08 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.07');
-    expect(entry.buildNumber).toBe(321);
+    expect(entry.version).toBe('v7.6.08');
+    expect(entry.buildNumber).toBe(322);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('မှတ်တမ်း အမျိုးအစားခွဲရေးခြင်း');
+    expect(entry.titleMy).toBe('ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက်');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'မှတ်တမ်းတစ်ခုကို အမျိုးအစားများစွာ ခွဲရေးနိုင်ခြင်း — ဥပမာ စူပါမားကတ်တစ်ခေါက် အစားအသောက် + အိမ်သုံးပစ္စည်း ခွဲရေးခြင်း (ဘတ်ဂျက်/အစီရင်ခံစာမှာ ခွဲအလိုက် တွက်မည်)',
+      'ပုံမှန်ထက် အသုံးများရင် သတိပေးခြင်း — အမျိုးအစားအလိုက် ဒီအပတ် သုံးငွေ ပြီးခဲ့တဲ့ ၄ ပတ်ပျမ်းမျှထက် ၂ ဆများရင် အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Split transactions — one receipt can be split across categories (e.g. supermarket: food + household), with budgets and reports counting each split under its own category.',
+      'Anomaly alerts — when this week\'s spend in a category is at least twice its 4-week weekly average, it appears in Notifications and counts on the bell badge.',
     ]);
   });
 });

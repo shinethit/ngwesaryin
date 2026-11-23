@@ -259,45 +259,45 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.07 (build 321)', () => {
+describe('version pins rolled forward to v7.6.08 (build 322)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.07');
-    expect(CURRENT_BUILD_NUMBER).toBe(321);
-    expect(VERSION_JSON.version).toBe('v7.6.07');
-    expect(VERSION_JSON.buildNumber).toBe(321);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.08');
+    expect(CURRENT_BUILD_NUMBER).toBe(322);
+    expect(VERSION_JSON.version).toBe('v7.6.08');
+    expect(VERSION_JSON.buildNumber).toBe(322);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the expiry reminders, no Admin strings', () => {
+  it('the top history entry carries the anomaly alerts, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.07');
-    expect(top.buildNumber).toBe(321);
+    expect(top.version).toBe('v7.6.08');
+    expect(top.buildNumber).toBe(322);
     expect(top.releaseDate).toBe('2026-11-22');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('မှတ်တမ်း အမျိုးအစားခွဲရေးခြင်း');
-    expect(top.titleEn).toBe('Split transactions across categories');
+    expect(top.titleMy).toBe('ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက်');
+    expect(top.titleEn).toBe('Unusually high spending alert');
     expect(top.changesMy).toEqual([
-      'မှတ်တမ်းတစ်ခုကို အမျိုးအစားများစွာ ခွဲရေးနိုင်ခြင်း — ဥပမာ စူပါမားကတ်တစ်ခေါက် အစားအသောက် + အိမ်သုံးပစ္စည်း ခွဲရေးခြင်း (ဘတ်ဂျက်/အစီရင်ခံစာမှာ ခွဲအလိုက် တွက်မည်)',
+      'ပုံမှန်ထက် အသုံးများရင် သတိပေးခြင်း — အမျိုးအစားအလိုက် ဒီအပတ် သုံးငွေ ပြီးခဲ့တဲ့ ၄ ပတ်ပျမ်းမျှထက် ၂ ဆများရင် အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Split transactions — one receipt can be split across categories (e.g. supermarket: food + household), with budgets and reports counting each split under its own category.',
+      'Anomaly alerts — when this week\'s spend in a category is at least twice its 4-week weekly average, it appears in Notifications and counts on the bell badge.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.06/7.6.07, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.06';
-    const TO_VERSION = '7.6.07';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.08/7.6.08, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.08';
+    const TO_VERSION = '7.6.08';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     const mangled = TO_VERSION.split('.').map(Number).join('.');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.07');
-    expect(guardFails('7.6.06')).toBe(false);
-    expect(guardFails('7.6.07')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.08');
+    expect(guardFails('7.6.08')).toBe(false);
+    expect(guardFails('7.6.08')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

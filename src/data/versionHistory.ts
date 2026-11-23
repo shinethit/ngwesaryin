@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.07';
-export const CURRENT_BUILD_NUMBER = 321;
+export const CURRENT_APP_VERSION = 'v7.6.08';
+export const CURRENT_BUILD_NUMBER = 322;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.08',
+    buildNumber: 322,
+    releaseDate: '2026-11-22',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက်',
+    titleEn: 'Unusually high spending alert',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အမျိုးအစားအလိုက် ဒီအပတ် သုံးငွေက ပြီးခဲ့တဲ့ ၄ ပတ်ရဲ့ အပတ်စဉ် ပျမ်းမျှထက် ၂ ဆများရင် အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်ပေးမည် — ပြီးခဲ့တဲ့ ၄ ပတ်မှာ လုံးဝမသုံးခဲ့တဲ့ အမျိုးအစားကို ဒီအပတ် သုံးခဲ့ရင်လည်း ပြမည်။',
+    descriptionEn: 'When this week\'s spend in a category reaches at least twice its 4-week weekly average, it appears in Notifications and counts on the bell badge — and a category with no spending at all in the past 4 weeks shows up too when it is spent on this week.',
+    changesMy: [
+      'ပုံမှန်ထက် အသုံးများရင် သတိပေးခြင်း — အမျိုးအစားအလိုက် ဒီအပတ် သုံးငွေ ပြီးခဲ့တဲ့ ၄ ပတ်ပျမ်းမျှထက် ၂ ဆများရင် အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
+    ],
+    changesEn: [
+      'Anomaly alerts — when this week\'s spend in a category is at least twice its 4-week weekly average, it appears in Notifications and counts on the bell badge.',
+    ],
+  },
   {
     version: 'v7.6.07',
     buildNumber: 321,

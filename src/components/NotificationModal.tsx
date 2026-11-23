@@ -16,13 +16,16 @@ import {
 // rule ([v7.5.60 G-M5]) and their amounts carry unchecked currencies
 // (debt/budget/recurring): formatLakhs is aliased to the lakh-only form
 // so no foreign-currency amount ever gains a ကျပ် suffix.
-import { formatMMK, formatLakhAmount as formatLakhs } from '../utils/formatters';
+import { formatMMK, formatLakhAmount as formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
 import { getMaintenanceAlerts, SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
 // [v7.6.06] Expiry reminders — overdue + due-within-30-days license /
 // insurance expiries and debt due dates, computed at render time.
 import { getExpiryReminders, type ExpiryReminder } from '../utils/expiryReminders';
+// [v7.6.08] Anomaly alerts — this week's spend above the usual
+// weekly average per category, computed at render time.
+import { getAnomalyAlerts, type AnomalyAlert } from '../utils/anomalyAlerts';
 // [v7.6.07] Split-aware budget spending: each slice counts under its
 // own category (same math as BudgetAnalyticsView / App badge).
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
@@ -32,12 +35,15 @@ import { dispatchOpenShopForm, dismissShopDetailReminder, useShopDetailReminders
 
 export interface NotificationItem {
   id: string;
-  type: 'debt' | 'budget' | 'vehicle' | 'recurring' | 'system' | 'shop' | 'expiry';
+  type: 'debt' | 'budget' | 'vehicle' | 'recurring' | 'system' | 'shop' | 'expiry' | 'anomaly';
   title: string;
   message: string;
   // [v7.6.06] The computed expiry reminder behind an 'expiry' item —
   // the grouped section renders from this (band, days, record).
   expiry?: ExpiryReminder;
+  // [v7.6.08] The computed anomaly alert behind an 'anomaly' item —
+  // the grouped section renders from this (kind, amounts, multiple).
+  anomaly?: AnomalyAlert;
   // [v7.5.78 C] Shop name for 'shop' reminders — the action opens the
   // ShopModal pre-filled with this name.
   shopName?: string;
@@ -98,7 +104,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   onMarkAllAsRead,
   onOpenShopReminder,
 }) => {
-  const [filterTab, setFilterTab] = useState<'all' | 'debt' | 'budget' | 'vehicle' | 'system' | 'shop' | 'expiry'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'debt' | 'budget' | 'vehicle' | 'system' | 'shop' | 'expiry' | 'anomaly'>('all');
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission>('default');
   const [isTestSending, setIsTestSending] = useState(false);
   // [v7.5.78 C] Live "fill in shop details later" reminders (one per
@@ -501,6 +507,68 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     });
   });
 
+  // 8. [v7.6.08] Anomaly alerts — this week's spend at least
+  // twice the 4-week weekly average per category (or new spending
+  // after 4 spend-free weeks), computed at render time from local
+  // data, so guests see them too; read-only v1: no defer/dismiss
+  // controls, no mark-done. Amounts convert to MMK per wallet
+  // (notifConvertTx, same as the budget section) and render with
+  // formatLakhs, so the v7.5.99 lakh/kyat display option applies;
+  // the helper returns raw numbers and never formats. They join
+  // generatedNotifications (same ids the bell badge counts in App)
+  // and render as their own grouped section below; the existing
+  // sections above are untouched. NAVIGATION: tapping a row lands
+  // on the Analytics/Reports tab ('analytics'). The Transactions
+  // list has NO plumbing to preset its category filter — its
+  // selectedCategory is internal state with no prop — so a
+  // category-filtered Transactions landing would need new
+  // App + TransactionsView state; Reports is the existing
+  // destination that already shows per-category spending.
+  const anomalyAlerts = getAnomalyAlerts(transactions, todayStr, notifConvertTx);
+  anomalyAlerts.forEach((a) => {
+    const categoryName = getCategoryDisplayName(a.categoryId, categories, lang);
+    const currentFormatted = formatLakhs(a.currentWeekSpend, lang);
+    let title = '';
+    let message = '';
+    if (a.kind === 'multiple') {
+      const multipleText = (a.multiple ?? 0).toFixed(1);
+      const baselineFormatted = formatLakhs(a.baselineWeeklyAverage, lang);
+      title =
+        lang === 'my'
+          ? `⚠️ ${categoryName} အသုံးများနေသည်`
+          : `⚠️ Unusually high spending on ${categoryName}`;
+      // Honest wording only: the multiple is rounded to 1 decimal,
+      // with no percentage or score attached.
+      message =
+        lang === 'my'
+          ? `ဒီအပတ် ${categoryName} ${currentFormatted} — ပုံမှန်အပတ်စဉ် ပျမ်းမျှ ${baselineFormatted} ထက် ${multipleText} ဆ`
+          : `This week ${categoryName} ${currentFormatted} — ${multipleText}× the usual weekly average of ${baselineFormatted}`;
+    } else {
+      title =
+        lang === 'my'
+          ? `⚠️ ${categoryName} အသုံးများနေသည်`
+          : `⚠️ Unusually high spending on ${categoryName}`;
+      // Baseline-zero: honest "new/unusual" wording, NO multiplier
+      // (there is no baseline to multiply).
+      message =
+        lang === 'my'
+          ? `ပြီးခဲ့တဲ့ ၄ ပတ်မှာ ${categoryName} မသုံးခဲ့ဘဲ ဒီအပတ် ${currentFormatted} သုံးခဲ့သည်`
+          : `No ${categoryName} spending in the past 4 weeks, but ${currentFormatted} spent this week`;
+    }
+    generatedNotifications.push({
+      id: a.id,
+      type: 'anomaly',
+      anomaly: a,
+      title,
+      message,
+      exactAmount: formatMMK(a.currentWeekSpend),
+      severity: 'warning',
+      actionTab: 'analytics',
+      actionText: lang === 'my' ? 'အစီရင်ခံစာ ကြည့်မည်' : 'View Reports',
+      createdAt: Date.now(),
+    });
+  });
+
   // Filter based on selected tab
   const filteredNotifications = generatedNotifications.filter((n) => {
     if (filterTab === 'all') return true;
@@ -528,9 +596,17 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   // expiryItems list is empty under the other tabs.
   const expiryTotalCount = generatedNotifications.filter((n) => n.type === 'expiry').length;
   const expiryItems = filteredNotifications.filter((n) => n.type === 'expiry');
-  const nonExpiryNotifications = filteredNotifications.filter((n) => n.type !== 'expiry');
+  const nonExpiryNotifications = filteredNotifications.filter((n) => n.type !== 'expiry' && n.type !== 'anomaly');
   const expiryOverdueItems = expiryItems.filter((n) => n.expiry?.band === 'overdue');
   const expirySoonItems = expiryItems.filter((n) => n.expiry?.band === 'expiring_soon');
+
+  // [v7.6.08] Same dead-UI rule as the Expiry tab: the Anomaly tab
+  // shows only when at least one anomaly alert exists. The section
+  // itself renders from the 'anomaly' items in the filtered list,
+  // in helper order (highest multiple first, baseline-zero last).
+  const hasAnomalyNotifications = generatedNotifications.some((n) => n.type === 'anomaly');
+  const anomalyTotalCount = generatedNotifications.filter((n) => n.type === 'anomaly').length;
+  const anomalyItems = filteredNotifications.filter((n) => n.type === 'anomaly');
 
   // Count unread
   const unreadCount = generatedNotifications.filter((n) => !readNotificationIds.includes(n.id)).length;
@@ -628,6 +704,85 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 <Car className="w-5 h-5" />
               </div>
             )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
+                {notif.title}
+              </h4>
+              {!isRead && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+              )}
+            </div>
+            <p
+              className="text-xs text-slate-600 mt-0.5 leading-relaxed break-words"
+              title={
+                notif.exactAmount
+                  ? (lang === 'my' ? 'အတိအကျ: ' : 'Exact: ') + notif.exactAmount
+                  : undefined
+              }
+            >
+              {notif.message}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60">
+          {notif.actionTab && (
+            <button
+              type="button"
+              onClick={() => {
+                onMarkAsRead(notif.id);
+                onNavigateTab(notif.actionTab!);
+                onClose();
+              }}
+              className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+            >
+              <span>{notif.actionText || (lang === 'my' ? 'ကြည့်မည်' : 'View')}</span>
+              <ChevronRight className="w-3.5 h-3.5 text-white" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onMarkAsRead(notif.id)}
+            className={`p-2.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
+              isRead
+                ? 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200'
+                : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+            }`}
+            title={isRead ? (lang === 'my' ? 'ဖတ်ပြီးပါပြီ' : 'Read') : (lang === 'my' ? 'ဖတ်ပြီးကြောင်း မှတ်မည်' : 'Mark as read')}
+          >
+            <CheckCircle2 className={`w-4 h-4 ${isRead ? 'text-emerald-500' : 'text-slate-400'}`} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // [v7.6.08] One anomaly-alert row — mirrors the expiry row
+  // above (same severity colours, same View + mark-as-read
+  // actions) but grouped under its own section heading. Read-only
+  // v1: deliberately NO dismiss button here; tapping View
+  // navigates to the Analytics/Reports tab via the existing
+  // navigation paths (see section 8 for why not the Transactions
+  // list). Amounts render with formatLakhs already in the message;
+  // the exact kyat value rides in the tooltip via exactAmount.
+  const renderAnomalyRow = (notif: NotificationItem) => {
+    const isRead = readNotificationIds.includes(notif.id);
+    const bgColor = isRead
+      ? 'bg-amber-50/40 border-amber-200'
+      : 'bg-amber-50 border-amber-300 shadow-2xs';
+    return (
+      <div
+        key={notif.id}
+        className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${bgColor} ${
+          isRead ? 'opacity-70' : 'opacity-100 font-medium'
+        }`}
+      >
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="mt-0.5 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -847,6 +1002,20 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 ⏰ {lang === 'my' ? 'သက်တမ်းကုန်' : 'Expiring'} ({expiryTotalCount})
               </button>
             )}
+
+            {hasAnomalyNotifications && (
+              <button
+                type="button"
+                onClick={() => setFilterTab('anomaly')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  filterTab === 'anomaly'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                ⚠️ {lang === 'my' ? 'အသုံးများခြင်း' : 'High Spending'} ({anomalyTotalCount})
+              </button>
+            )}
           </div>
 
           {unreadCount > 0 && (
@@ -906,7 +1075,31 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               </div>
             </div>
           )}
-          {nonExpiryNotifications.length === 0 && expiryItems.length === 0 ? (
+          {/* [v7.6.08] Anomaly-alert section — one row per
+              category, highest multiple first (helper order),
+              baseline-zero alerts last. Shown on the All tab and
+              the Anomaly tab; hidden under the other tabs, like
+              every other section. Absent entirely when no alert
+              exists. */}
+          {anomalyItems.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 min-w-0">
+                  <span className="shrink-0">⚠️</span>
+                  <span className="truncate">
+                    {lang === 'my'
+                      ? 'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက်များ'
+                      : 'Unusually High Spending Alerts'}
+                  </span>
+                </h4>
+                <span className="px-2 py-0.5 text-xs font-black bg-amber-500 text-white rounded-full shadow-xs shrink-0">
+                  {anomalyItems.length}
+                </span>
+              </div>
+              <div className="p-3 space-y-3">{anomalyItems.map(renderAnomalyRow)}</div>
+            </div>
+          )}
+          {nonExpiryNotifications.length === 0 && expiryItems.length === 0 && anomalyItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
               <div className="w-16 h-16 rounded-3xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-3">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />

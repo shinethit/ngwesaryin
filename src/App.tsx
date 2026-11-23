@@ -90,6 +90,8 @@ import { syncWalletsWithTransactions, isWalletMatch, repairOrphanedTransactions,
 import { convertToMMK } from './utils/currency';
 import { getMaintenanceAlerts } from './utils/vehicleAnalytics';
 import { getExpiryReminders } from './utils/expiryReminders';
+// [v7.6.08] Anomaly alerts — same helper and ids as NotificationModal.
+import { getAnomalyAlerts } from './utils/anomalyAlerts';
 // [v7.6.07] Split-aware budget badge math (same as NotificationModal).
 import { getSplitAttribution, splitAmountMatching } from './utils/transactionSplits';
 import { getLocalDateString } from './utils/dateUtils';
@@ -719,6 +721,18 @@ export default function App() {
     // so "mark all read" clears the bell badge for them as well.
     getExpiryReminders(vehicleMaintenance, debts, todayStr).forEach((r) => ids.push(r.id));
 
+    // [v7.6.08] Anomaly alerts too — same helper, same ids AND the
+    // same per-wallet MMK converter the badge count uses, so "mark
+    // all read" clears exactly the alerts the badge counted (a
+    // raw-amount call here could name a different set for foreign-
+    // currency wallets).
+    const markAllWalletMap = buildWalletMap(wallets as any);
+    const markAllConvertTx = (t: (typeof transactions)[number], amount: number = t.amount) => {
+      const w = markAllWalletMap.get(t.walletId);
+      return convertToMMK(amount, (w as any)?.currency, (w as any)?.exchangeRate);
+    };
+    getAnomalyAlerts(transactions, todayStr, markAllConvertTx).forEach((a) => ids.push(a.id));
+
     setReadNotificationIds(ids);
     safeSetItem('ngwe_read_notifications', JSON.stringify(ids));
   };
@@ -823,6 +837,15 @@ export default function App() {
     // badge system). Computed from local data: guests included.
     getExpiryReminders(vehicleMaintenance, debts, todayStr).forEach((r) => {
       if (!readNotificationIds.includes(r.id)) count++;
+    });
+
+    // [v7.6.08] Anomaly alerts — the same helper, ids and MMK
+    // converter the NotificationModal renders, so the bell badge
+    // and the modal agree. Computed from local data: guests
+    // included. (badgeConvertTx is in scope above, built the same
+    // way as the modal's converter.)
+    getAnomalyAlerts(transactions, todayStr, badgeConvertTx).forEach((a) => {
+      if (!readNotificationIds.includes(a.id)) count++;
     });
 
     return count;

@@ -241,12 +241,12 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.16 (build 330)', () => {
+describe('version pins rolled forward to v7.6.17 (build 331)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
-    expect(CURRENT_BUILD_NUMBER).toBe(330);
-    expect(VERSION_JSON.version).toBe('v7.6.16');
-    expect(VERSION_JSON.buildNumber).toBe(330);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.17');
+    expect(CURRENT_BUILD_NUMBER).toBe(331);
+    expect(VERSION_JSON.version).toBe('v7.6.17');
+    expect(VERSION_JSON.buildNumber).toBe(331);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -255,14 +255,14 @@ describe('version pins rolled forward to v7.6.16 (build 330)', () => {
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.16');
-    expect(top.buildNumber).toBe(330);
+    expect(top.version).toBe('v7.6.17');
+    expect(top.buildNumber).toBe(331);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်',
+      'Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်',
     ]);
     expect(top.changesEn).toEqual([
-      'The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active.',
+      'The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

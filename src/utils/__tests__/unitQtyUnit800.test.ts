@@ -332,11 +332,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.16 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
-    expect(CURRENT_BUILD_NUMBER).toBe(330);
-    expect(VERSION_JSON.version).toBe('v7.6.16');
-    expect(VERSION_JSON.buildNumber).toBe(330);
+  it('the shipped identity is 7.6.17 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.17');
+    expect(CURRENT_BUILD_NUMBER).toBe(331);
+    expect(VERSION_JSON.version).toBe('v7.6.17');
+    expect(VERSION_JSON.buildNumber).toBe(331);
   });
 });
 
@@ -372,32 +372,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.16 (build 330)', () => {
+describe('Version bump to v7.6.17 (build 331)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
-    expect(CURRENT_BUILD_NUMBER).toBe(330);
-    expect(VERSION_JSON.version).toBe('v7.6.16');
-    expect(VERSION_JSON.buildNumber).toBe(330);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.17');
+    expect(CURRENT_BUILD_NUMBER).toBe(331);
+    expect(VERSION_JSON.version).toBe('v7.6.17');
+    expect(VERSION_JSON.buildNumber).toBe(331);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.16');
-    expect(entry.buildNumber).toBe(330);
+    expect(entry.version).toBe('v7.6.17');
+    expect(entry.buildNumber).toBe(331);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'Wallet ရွေးထားချိန် Filter စာတန်း ဖျောက်ခြင်း',
+      'Entry Form Category များ အသုံးအများဆုံးအစဉ် ပြခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Filter notice hidden for wallet-only selection',
+      'Most-used categories first in the entry form',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်',
+      'Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active.',
+      'The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom.',
     );
   });
 

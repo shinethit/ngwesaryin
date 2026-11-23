@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.16",
-  "buildNumber": 330,
+  "version": "v7.6.17",
+  "buildNumber": 331,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်"
+    "Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်"
   ],
   "changesEn": [
-    "The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active."
+    "The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom."
   ]
 }

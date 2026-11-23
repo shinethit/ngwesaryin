@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.16';
-export const CURRENT_BUILD_NUMBER = 330;
+export const CURRENT_APP_VERSION = 'v7.6.17';
+export const CURRENT_BUILD_NUMBER = 331;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.17',
+    buildNumber: 331,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'Entry Form Category များ အသုံးအများဆုံးအစဉ် ပြခြင်း',
+    titleEn: 'Most-used categories first in the entry form',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်။',
+    descriptionEn: 'The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom.',
+    changesMy: [
+      'Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်',
+    ],
+    changesEn: [
+      'The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom.',
+    ],
+  },
   {
     version: 'v7.6.16',
     buildNumber: 330,

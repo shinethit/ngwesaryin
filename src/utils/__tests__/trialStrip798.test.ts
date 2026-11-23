@@ -261,19 +261,19 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
   });
 });
 
-describe('Version bump to v7.6.16 (build 330)', () => {
+describe('Version bump to v7.6.17 (build 331)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
-    expect(CURRENT_BUILD_NUMBER).toBe(330);
-    expect(VERSION_JSON.version).toBe('v7.6.16');
-    expect(VERSION_JSON.buildNumber).toBe(330);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.17');
+    expect(CURRENT_BUILD_NUMBER).toBe(331);
+    expect(VERSION_JSON.version).toBe('v7.6.17');
+    expect(VERSION_JSON.buildNumber).toBe(331);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.16');
-    expect(entry.buildNumber).toBe(330);
+    expect(entry.version).toBe('v7.6.17');
+    expect(entry.buildNumber).toBe(331);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'Wallet ရွေးထားချိန် Filter စာတန်း ဖျောက်ခြင်း',
+      'Entry Form Category များ အသုံးအများဆုံးအစဉ် ပြခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);

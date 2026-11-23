@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, Plus, Lock, Check, ChevronRight } from 'lucide-react';
 import { Category, PlanType, SubCategory, Transaction, TransactionType } from '../types';
 import { CategoryIcon } from './CategoryIcon';
+import { sortCategoriesByFrequency, sortSubCategoriesByFrequency } from '../utils/categoryFrequency';
 
 interface Props {
   isOpen: boolean;
@@ -48,23 +49,12 @@ export const CategoryPickerModal: React.FC<Props> = ({
 
   const isSearching = searchQuery.trim().length > 0;
 
-  // Frequency sort — most-used category first
+  // Frequency sort — most-used category first. Counts are scoped
+  // to the active type tab (transfer counts on both tabs); see
+  // utils/categoryFrequency. Switching tabs re-sorts.
   const sortedCategories = useMemo(() => {
-    const countMap = new Map<string, number>();
-    if (allTransactions && allTransactions.length > 0) {
-      allTransactions.forEach((t) => {
-        if (t.category) countMap.set(t.category, (countMap.get(t.category) || 0) + 1);
-      });
-    }
-    return [...categories].sort((a, b) => {
-      const cA = countMap.get(a.id) || 0;
-      const cB = countMap.get(b.id) || 0;
-      if (cB !== cA) return cB - cA;
-      return (lang === 'my' ? a.name : a.nameEn).localeCompare(
-        lang === 'my' ? b.name : b.nameEn
-      );
-    });
-  }, [categories, allTransactions, lang]);
+    return sortCategoriesByFrequency(categories, allTransactions, activeTypeTab, lang);
+  }, [categories, allTransactions, activeTypeTab, lang]);
 
   const filteredCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -252,7 +242,7 @@ export const CategoryPickerModal: React.FC<Props> = ({
 
                     {((cat.id === 'cat_transfer'
                       ? FALLBACK_TRANSFER_SUBS.map((s) => ({ ...s, isCustom: false } as any))
-                      : (cat.subCategories || [])
+                      : sortSubCategoriesByFrequency(cat.subCategories || [], allTransactions, cat.id, activeTypeTab, lang)
                     ) as typeof cat.subCategories || []).filter((sub) => {
                       if (cat.id !== 'cat_transfer') return true;
                       // [v7.0.2] ID-only — Burmese Unicode combining marks make name.includes unreliable

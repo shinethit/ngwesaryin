@@ -232,8 +232,8 @@ describe('the name renders only in the unitPrice branch (v7.6.02)', () => {
     expect(CAL_SRC).toContain('formatCalendarDetailItems(t.items, lang)');
     expect(HISTORY_SRC).toContain('displayMenuUnit(item.unit)');
     expect(HISTORY_SRC).not.toContain('x${item.quantity} ခု');
-    // The saved-note generator is untouched: it still writes the
-    // free-text summary without units (separate approval needed).
+    // The saved-note generator now includes each item's unit (v7.6.05);
+    // its name x quantity shape is unchanged.
     expect(MODAL_SRC).toContain('autoGenerateShoppingNote');
     expect(MODAL_SRC).toContain('x${i.quantity}');
   });
@@ -269,11 +269,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.04 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
-    expect(CURRENT_BUILD_NUMBER).toBe(318);
-    expect(VERSION_JSON.version).toBe('v7.6.04');
-    expect(VERSION_JSON.buildNumber).toBe(318);
+  it('the shipped identity is 7.6.05 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
+    expect(CURRENT_BUILD_NUMBER).toBe(319);
+    expect(VERSION_JSON.version).toBe('v7.6.05');
+    expect(VERSION_JSON.buildNumber).toBe(319);
   });
 });
 
@@ -301,28 +301,28 @@ describe('app update check detects 7.6.02 over 7.6.01 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.04 (build 318)', () => {
+describe('Version bump to v7.6.05 (build 319)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
-    expect(CURRENT_BUILD_NUMBER).toBe(318);
-    expect(VERSION_JSON.version).toBe('v7.6.04');
-    expect(VERSION_JSON.buildNumber).toBe(318);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
+    expect(CURRENT_BUILD_NUMBER).toBe(319);
+    expect(VERSION_JSON.version).toBe('v7.6.05');
+    expect(VERSION_JSON.buildNumber).toBe(319);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.04');
-    expect(entry.buildNumber).toBe(318);
+    expect(entry.version).toBe('v7.6.05');
+    expect(entry.buildNumber).toBe(319);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ထည့်နည်း ၂ ခုပဲ ထားခြင်း (တိုက်ရိုက် ဖယ်ရှား)');
-    expect(entry.titleEn).toBe('Two entry modes only (direct mode removed)');
+    expect(entry.titleMy).toBe('အသေးစားပြင်ဆင်ချက် ၃ ခု');
+    expect(entry.titleEn).toBe('Three small fixes');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည် (အရင်တိုက်ရိုက်မှတ်တမ်းများ ဈေး × အရေအတွက်အဖြစ် ပြင်နိုင်သည်)',
+      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
     );
     expect(entry.changesEn[0]).toBe(
-      'Two entry modes only — the direct item-name mode is removed, keeping Unit × Qty and Shopping List (old direct entries now open for editing as Unit × Qty).',
+      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
     );
   });
 

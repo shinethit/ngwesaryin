@@ -18,7 +18,7 @@ import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
 import { getCheapestMenuPrice, describeOwnVsShopDiff, type CheapestMenuPrice } from '../utils/shopItemSearch';
 import { buildAllMenuShopsList } from '../utils/myShops';
-import { SHOP_MENU_UNITS, normalizeMenuUnit } from '../utils/shopMenuUpdate';
+import { SHOP_MENU_UNITS, displayMenuUnit, normalizeMenuUnit } from '../utils/shopMenuUpdate';
 
 // [v7.5.55 C19] Vehicle sub-categories are costs, not purchasable items —
 // whole fuel bills must never appear as "items" in Compare Price.
@@ -64,6 +64,11 @@ interface ItemPurchaseRecord {
   note?: string;
   shopName?: string; // [v7.5.54] Shop where this purchase was made
   isShoppingList?: boolean;
+  // [v7.6.05] The source item's unit, carried at ingestion (raw, as
+  // stored — display canonicalizes via displayMenuUnit). Absent for
+  // trip-total records with no unit and for old records: those rows
+  // render exactly as before, with no unit badge.
+  unit?: string;
   // [v7.5.55 C9] True for sub-category / note records: unitPrice here is
   // the WHOLE TRIP total, not a per-unit price — never average it with
   // true per-unit prices.
@@ -323,6 +328,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             note: tx.note,
             shopName: tx.shopName,
             isShoppingList: true,
+            // [v7.6.05] The item's own unit, as stored on the transaction.
+            unit: item.unit,
           });
         });
       }
@@ -365,6 +372,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
               note: tx.note,
               shopName: tx.shopName,
               isTripTotal: true,
+              // [v7.6.05] No source item: only the unit parsed from the
+              // name, if any — '' stays unit-less, as today.
+              unit: norm.unit || undefined,
             });
           }
         }
@@ -403,6 +413,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             note: tx.note,
             shopName: tx.shopName,
             isTripTotal: true,
+            // [v7.6.05] No source item: only the unit parsed from the
+            // note, if any — '' stays unit-less, as today.
+            unit: norm.unit || undefined,
           });
         }
       }
@@ -1478,6 +1491,14 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                             {log.quantity > 1 && (
                               <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-bold">
                                 x{log.quantity}
+                              </span>
+                            )}
+                            {/* [v7.6.05] Per-row unit from the record,
+                                canonicalized at display; unit-less
+                                records render exactly as before. */}
+                            {log.unit && log.unit.trim() && (
+                              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-bold">
+                                {displayMenuUnit(log.unit)}
                               </span>
                             )}
                             {log.isShoppingList && (

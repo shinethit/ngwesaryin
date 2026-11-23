@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.04",
-  "buildNumber": 318,
+  "version": "v7.6.05",
+  "buildNumber": 319,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ထည့်နည်း ၂ ခုပဲ ထားခြင်း — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည် (အရင်တိုက်ရိုက်မှတ်တမ်းများ ဈေး × အရေအတွက်အဖြစ် ပြင်နိုင်သည်)"
+    "အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း"
   ],
   "changesEn": [
-    "Two entry modes only — the direct item-name mode is removed, keeping Unit × Qty and Shopping List (old direct entries now open for editing as Unit × Qty)."
+    "Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison."
   ]
 }

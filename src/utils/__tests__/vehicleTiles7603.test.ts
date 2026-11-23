@@ -339,34 +339,34 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.04 (build 318)', () => {
-  it('current version is v7.6.04 / build 318 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
-    expect(CURRENT_BUILD_NUMBER).toBe(318);
-    expect(VERSION_JSON.version).toBe('v7.6.04');
-    expect(VERSION_JSON.buildNumber).toBe(318);
+describe('Version bump to v7.6.05 (build 319)', () => {
+  it('current version is v7.6.05 / build 319 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
+    expect(CURRENT_BUILD_NUMBER).toBe(319);
+    expect(VERSION_JSON.version).toBe('v7.6.05');
+    expect(VERSION_JSON.buildNumber).toBe(319);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.04 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.05 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.04');
-    expect(entry.buildNumber).toBe(318);
+    expect(entry.version).toBe('v7.6.05');
+    expect(entry.buildNumber).toBe(319);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ထည့်နည်း ၂ ခုပဲ ထားခြင်း (တိုက်ရိုက် ဖယ်ရှား)');
+    expect(entry.titleMy).toBe('အသေးစားပြင်ဆင်ချက် ၃ ခု');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည် (အရင်တိုက်ရိုက်မှတ်တမ်းများ ဈေး × အရေအတွက်အဖြစ် ပြင်နိုင်သည်)',
+      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
     ]);
     expect(entry.changesEn).toEqual([
-      'Two entry modes only — the direct item-name mode is removed, keeping Unit × Qty and Shopping List (old direct entries now open for editing as Unit × Qty).',
+      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
     ]);
   });
 });

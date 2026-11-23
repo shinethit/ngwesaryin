@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.04';
-export const CURRENT_BUILD_NUMBER = 318;
+export const CURRENT_APP_VERSION = 'v7.6.05';
+export const CURRENT_BUILD_NUMBER = 319;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.05',
+    buildNumber: 319,
+    releaseDate: '2026-11-22',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'အသေးစားပြင်ဆင်ချက် ၃ ခု',
+    titleEn: 'Three small fixes',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အသေးစား ပြင်ဆင်ချက် ၃ ခု ပါဝင်သည် — လိုင်စင်သက်တမ်းတိုးမှတ်တမ်းကို ပြင်တဲ့အခါ ကုန်ဆုံးမည့်ရက်စွဲ ပြန်ပေါ်လာမည်၊ ဈေးဝယ်မှတ်ချက်အလိုအလျောက်ရေးရာမှာ Unit ပါလာမည်၊ ဈေးနှုန်းနှိုင်းယှဉ်မှာ မှတ်တမ်းတစ်ခုချင်းစီရဲ့ Unit ကို ပြပေးမည်။',
+    descriptionEn: 'Three small fixes — the license expiry date is restored when editing a license renewal, generated shopping notes now include the unit, and price comparison shows the unit on each purchase record.',
+    changesMy: [
+      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
+    ],
+    changesEn: [
+      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
+    ],
+  },
   {
     version: 'v7.6.04',
     buildNumber: 318,

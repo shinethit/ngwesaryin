@@ -34,7 +34,7 @@ import { isShopNameNeedingDetails, loadShopDetailDismissedKeys, type ShopDetails
 // [v7.5.82] Menu units for the shopping-list rows + unit carry-through.
 // [v7.5.95 U1] 'အခြား' reveals a free-text unit; typed units persist
 // under 'ngwe_custom_units' and reappear as select options.
-import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, OTHER_MENU_UNIT, collectNewCustomUnits, customMenuUnitText, menuUnitNeedsCustomInput, menuUnitSelectOptions, resolveMenuUnitSelectValue, resolveSavedMenuUnit } from '../utils/shopMenuUpdate';
+import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, OTHER_MENU_UNIT, collectNewCustomUnits, customMenuUnitText, displayMenuUnit, menuUnitNeedsCustomInput, menuUnitSelectOptions, resolveMenuUnitSelectValue, resolveSavedMenuUnit } from '../utils/shopMenuUpdate';
 import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
 // [v7.5.93] Per-row service types for multi-row vehicle service entries.
 import { ROW_SERVICE_TYPES, resolveVehicleServiceSubCategory } from '../utils/vehicleServiceRows';
@@ -424,6 +424,34 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             setMaintSparePartBrand(linkedMaint.sparePartBrand || '');
             setMaintLifespanKm(String(linkedMaint.expectedLifespanKm || 5000));
             setMaintLifespanDays(String(linkedMaint.expectedLifespanDays || 180));
+            // [v7.6.05] Restore the expiry date on edit. VehicleMaintenance
+            // stores no expiry field — it is derived from date +
+            // expectedLifespanDays (the same rule AddMaintenanceModal
+            // already uses). Without this the license-renewal date
+            // input opened empty and the required-date validation
+            // blocked every re-save. Derived in LOCAL time from the
+            // transaction date the form shows, so the expiry->days
+            // effect round-trips to the stored days exactly. No
+            // stored days -> '' (never invent an expiry).
+            const maintDays = linkedMaint.expectedLifespanDays;
+            if (typeof maintDays === 'number' && Number.isFinite(maintDays) && maintDays > 0) {
+              const dateParts = getLocalDateString(editTransaction.date).split('-').map(Number);
+              if (dateParts.length === 3 && dateParts.every((p) => !Number.isNaN(p))) {
+                const expiry = new Date(dateParts[0], dateParts[1] - 1, dateParts[2] + maintDays);
+                const ey = expiry.getFullYear();
+                const em = String(expiry.getMonth() + 1).padStart(2, '0');
+                const ed = String(expiry.getDate()).padStart(2, '0');
+                setMaintExpiryDate(`${ey}-${em}-${ed}`);
+              } else {
+                setMaintExpiryDate('');
+              }
+            } else {
+              setMaintExpiryDate('');
+            }
+          } else if (resolvedModel === 'vehicle_service') {
+            // [v7.6.05] No linked maintenance record: clear any expiry
+            // left over from a previous open instead of reusing it.
+            setMaintExpiryDate('');
           }
           if (linkedTire) {
             // [v7.5.55] A motorcycle log stores frontPsi/rearPsi (not the
@@ -599,6 +627,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setCustomGasStation('');
         setMaintTitle('');
         setMaintWorkshopName('');
+        // [v7.6.05] Clear the expiry date on a new entry — never reuse
+        // the previous entry's date (same rule as AddMaintenanceModal).
+        setMaintExpiryDate('');
       }
       setFormError('');
       setIsSubmitting(false);
@@ -772,7 +803,21 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const autoGenerateShoppingNote = () => {
     const validItems = shoppingItems.filter((i) => i.name.trim());
     if (validItems.length === 0) return;
-    const summary = validItems.map((i) => `${i.name.trim()}${i.quantity > 1 ? ` x${i.quantity}` : ''} (${formatMMK(i.amount)})`).join(' + ');
+    // [v7.6.05] The generated note carries each item's unit, in the
+    // same position as the quantity: `name x2 ခု (amount)`, or
+    // `name ခု (amount)` at qty 1 (the x1 is omitted, as before).
+    // displayMenuUnit canonicalizes old forms ('တစ်ခု' -> 'ခု')
+    // and keeps custom units verbatim; a missing/blank unit — or
+    // the bare 'အခြား' sentinel (Other picked, nothing typed yet) —
+    // contributes nothing, never an invented default. The shape is
+    // otherwise unchanged, and only NEW notes are generated here:
+    // saved notes are never rewritten.
+    const summary = validItems.map((i) => {
+      const rawUnit = typeof i.unit === 'string' ? i.unit.trim() : '';
+      const unitSuffix = rawUnit && rawUnit !== OTHER_MENU_UNIT ? ` ${displayMenuUnit(rawUnit)}` : '';
+      const qtyPart = i.quantity > 1 ? ` x${i.quantity}` : '';
+      return `${i.name.trim()}${qtyPart}${unitSuffix} (${formatMMK(i.amount)})`;
+    }).join(' + ');
     setExtraNote(summary);
   };
 

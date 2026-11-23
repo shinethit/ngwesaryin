@@ -250,17 +250,17 @@ describe('saved item details show the normalized unit (v7.6.01)', () => {
 });
 
 describe('sweep — every sibling quantity display, dispositioned (v7.6.01)', () => {
-  it('ItemPriceAnalyticsView badge stays x{quantity}: no per-log unit is in scope', () => {
+  it('ItemPriceAnalyticsView log rows now show the per-record unit (v7.6.05 supersedes the v7.6.01 no-unit scope)', () => {
     expect(ANALYTICS_SRC).toContain('x{log.quantity}');
-    expect(ANALYTICS_SRC).not.toContain('displayMenuUnit');
+    expect(ANALYTICS_SRC).toContain('displayMenuUnit(log.unit)');
+    expect(ANALYTICS_SRC).toContain('log.unit && log.unit.trim()');
     const start = ANALYTICS_SRC.indexOf('interface ItemPurchaseRecord');
     const end = ANALYTICS_SRC.indexOf('interface ItemSummary', start);
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     const record = ANALYTICS_SRC.slice(start, end);
-    expect(record).not.toContain('unit?: string');
-    expect(record).not.toContain('unit: string');
-    // The group header already shows the name-derived unit.
+    expect(record).toContain('unit?: string');
+    // The group header still shows the name-derived unit.
     expect(ANALYTICS_SRC).toContain("it.unit ? it.name + ' · ' + it.unit");
   });
 
@@ -291,9 +291,14 @@ describe('sweep — every sibling quantity display, dispositioned (v7.6.01)', ()
     );
   });
 
-  it('the auto-generated note draft stays a free-text summary without units', () => {
+  it('the auto-generated note draft now includes each item unit (v7.6.05 supersedes the v7.6.01 unit-less note)', () => {
     expect(MODAL_SRC).toContain('autoGenerateShoppingNote');
     expect(MODAL_SRC).toContain('x${i.quantity}');
+    const start = MODAL_SRC.indexOf('const autoGenerateShoppingNote');
+    expect(start).toBeGreaterThan(-1);
+    const block = MODAL_SRC.slice(start, MODAL_SRC.indexOf('};', start) + 2);
+    expect(block).toContain('displayMenuUnit(');
+    expect(block).toContain('OTHER_MENU_UNIT');
   });
 });
 
@@ -327,11 +332,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.04 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
-    expect(CURRENT_BUILD_NUMBER).toBe(318);
-    expect(VERSION_JSON.version).toBe('v7.6.04');
-    expect(VERSION_JSON.buildNumber).toBe(318);
+  it('the shipped identity is 7.6.05 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
+    expect(CURRENT_BUILD_NUMBER).toBe(319);
+    expect(VERSION_JSON.version).toBe('v7.6.05');
+    expect(VERSION_JSON.buildNumber).toBe(319);
   });
 });
 
@@ -367,32 +372,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.04 (build 318)', () => {
+describe('Version bump to v7.6.05 (build 319)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
-    expect(CURRENT_BUILD_NUMBER).toBe(318);
-    expect(VERSION_JSON.version).toBe('v7.6.04');
-    expect(VERSION_JSON.buildNumber).toBe(318);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
+    expect(CURRENT_BUILD_NUMBER).toBe(319);
+    expect(VERSION_JSON.version).toBe('v7.6.05');
+    expect(VERSION_JSON.buildNumber).toBe(319);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.04');
-    expect(entry.buildNumber).toBe(318);
+    expect(entry.version).toBe('v7.6.05');
+    expect(entry.buildNumber).toBe(319);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း (တိုက်ရိုက် ဖယ်ရှား)',
+      'အသေးစားပြင်ဆင်ချက် ၃ ခု',
     );
     expect(entry.titleEn).toBe(
-      'Two entry modes only (direct mode removed)',
+      'Three small fixes',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည် (အရင်တိုက်ရိုက်မှတ်တမ်းများ ဈေး × အရေအတွက်အဖြစ် ပြင်နိုင်သည်)',
+      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
     );
     expect(entry.changesEn[0]).toBe(
-      'Two entry modes only — the direct item-name mode is removed, keeping Unit × Qty and Shopping List (old direct entries now open for editing as Unit × Qty).',
+      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
     );
   });
 

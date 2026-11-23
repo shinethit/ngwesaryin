@@ -241,28 +241,28 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.04 (build 318)', () => {
+describe('version pins rolled forward to v7.6.05 (build 319)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
-    expect(CURRENT_BUILD_NUMBER).toBe(318);
-    expect(VERSION_JSON.version).toBe('v7.6.04');
-    expect(VERSION_JSON.buildNumber).toBe(318);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
+    expect(CURRENT_BUILD_NUMBER).toBe(319);
+    expect(VERSION_JSON.version).toBe('v7.6.05');
+    expect(VERSION_JSON.buildNumber).toBe(319);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the two-mode change, no Admin strings', () => {
+  it('the top history entry carries the three small fixes, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.04');
-    expect(top.buildNumber).toBe(318);
+    expect(top.version).toBe('v7.6.05');
+    expect(top.buildNumber).toBe(319);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည် (အရင်တိုက်ရိုက်မှတ်တမ်းများ ဈေး × အရေအတွက်အဖြစ် ပြင်နိုင်သည်)',
+      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
     ]);
     expect(top.changesEn).toEqual([
-      'Two entry modes only — the direct item-name mode is removed, keeping Unit × Qty and Shopping List (old direct entries now open for editing as Unit × Qty).',
+      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -85,7 +85,7 @@ interface TransactionModalProps {
   // when the saved entry carries items (shopping_list or unit_qty) and a
   // typed shop name. App resolves the shop, diffs its menu and shows
   // the ShopMenuUpdatePromptModal when something would actually change.
-  // A plain/direct entry (no items) never produces a candidate.
+  // An entry with no items never produces a candidate.
   onShopMenuUpdateCandidate?: (candidate: { shopName: string; items: TransactionItem[] }) => void;
   fuelLogs?: FuelLog[];
   vehicleMaintenance?: VehicleMaintenance[];
@@ -195,12 +195,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const autoSelectedRef = React.useRef(false);
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const [entryMode, setEntryMode] = useState<'direct' | 'unit_qty' | 'shopping_list'>(
+  const [entryMode, setEntryMode] = useState<'unit_qty' | 'shopping_list'>(
     editTransaction?.unitPrice
       ? 'unit_qty'
       : editTransaction?.items && editTransaction.items.length > 0
       ? 'shopping_list'
-      : 'direct'
+      : 'unit_qty'
   );
 
   const [unitPrice, setUnitPrice] = useState<string>(
@@ -233,7 +233,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const unitQtyAmountTimerRef = useRef<NodeJS.Timeout | null>(null);
   const shoppingAmountTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
-  const [showQuickAddSub, setShowQuickAddSub] = useState(true);
   const [newSubName, setNewSubName] = useState('');
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -461,9 +460,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             // one falls back to the visit's main type at save time.
             setShoppingItems(editTransaction.items.map((it, i) => ({ ...it, id: it.id || `item_${Date.now()}_${i}` })));
           } else {
-            setEntryMode('direct');
+            // [v7.6.04] An old direct entry (no items, no unitPrice,
+            // name folded into the note) opens as unit_qty: the name
+            // and extra text come from the shared note parse above,
+            // the amount becomes the unit price at qty 1, and the
+            // unit is the default (the note carries no unit).
+            setEntryMode('unit_qty');
+            setUnitPrice(String(editTransaction.amount));
+            setQuantity('1');
+            setUnitQtyUnit(DEFAULT_MENU_UNIT);
           }
-          setShowQuickAddSub(false);
           setNewSubName('');
         }
       } else if (isNewlyOpened) {
@@ -574,12 +580,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setShopName('');
         setShopInput('');
         setPublishShopOptIn(false);
-        setEntryMode('direct');
+        setEntryMode('unit_qty');
         setUnitPrice('');
         setQuantity('1');
         setUnitQtyUnit(DEFAULT_MENU_UNIT);
         setShoppingItems([{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]);
-        setShowQuickAddSub(true);
         setNewSubName('');
         setVehicleOdometer('');
         // [v7.5.55] PSI resets to the 32 defaults on a new entry instead
@@ -1334,7 +1339,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (onAddSubCategory && effectiveCategoryId) {
       onAddSubCategory(effectiveCategoryId, { name: newSubName.trim(), nameEn: newSubName.trim(), isCustom: true });
       setNewSubName('');
-      setShowQuickAddSub(false);
     }
   };
 
@@ -1606,13 +1610,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           // rows) — no longer hardcoded to DEFAULT_MENU_UNIT.
           txItems = [{ id: 'item_1', name: itemName.trim(), price: parseMyanmarNumber(unitPrice) || 0, quantity: parseMyanmarNumber(quantity) || 1, amount: finalAmount, unit: resolveSavedMenuUnit(unitQtyUnit) }];
         }
-      } else {
-        const cleanItem = itemName.trim();
-        const cleanExtra = extraNote.trim();
-        if (cleanItem && cleanExtra) finalNote = `${cleanItem} (${cleanExtra})`;
-        else if (cleanItem) finalNote = cleanItem;
-        else if (cleanExtra) finalNote = cleanExtra;
-        else finalNote = undefined;
       }
 
       const isTransferTx = isTransferCategory || targetSubCategory === 'sub_tf_out' || targetSubCategory === 'sub_tf_in';
@@ -1704,7 +1701,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       // maintenance entries now build a ONE-item candidate too (fuel
       // type per litre at the selected station; service / part per
       // service at the workshop) — the station / workshop name IS the
-      // shop for them. A plain/direct entry has txItems undefined and
+      // shop for them. An entry with no items has txItems undefined and
       // produces no candidate; license renewal and the free tire check
       // never do either.
       const menuUpdateCandidate =
@@ -1939,14 +1936,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             {entryModel === "general" && (
               <div className="px-4 py-2 border-b border-slate-100">
                 <div className="text-[11px] font-bold text-slate-500 mb-1.5">{lang === 'my' ? 'ထည့်သွင်းပုံစံ:' : 'Entry mode:'}</div>
-                <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
-                  <button type="button" onClick={() => { setShowQuickAddSub(true); setEntryMode("direct"); setEntryModel("general"); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "direct" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900")}>
-                    <FileText className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</span>
-                  </button>
-                  <button type="button" onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); setShowQuickAddSub(false); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "unit_qty" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
+                <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
+                  <button type="button" onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "unit_qty" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
                     <Boxes className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ဈေး × အရေအတွက်' : 'Unit × Qty'}</span>
                   </button>
-                  <button type="button" onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); setShowQuickAddSub(false); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "shopping_list" ? "bg-amber-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
+                  <button type="button" onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "shopping_list" ? "bg-amber-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
                     <ShoppingCart className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>
                   </button>
                 </div>
@@ -2421,13 +2415,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   })}
                 </div>
                 <button type="button" onClick={() => addShoppingItemRow()} className="w-full mt-2 py-1.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50">+ {lang === 'my' ? 'ပစ္စည်းထပ်ထည့်' : 'Add item'}</button>
-              </div>
-            )}
-
-            {showQuickAddSub && entryModel === "general" && entryMode === "direct" && (
-              <div className="px-4 py-3 border-b border-slate-100">
-                <div className="text-xs font-bold text-slate-500 mb-1">{lang === 'my' ? 'ပစ္စည်းအမည်' : 'Item Name'}</div>
-                <input type="text" list="db-item-suggestions" autoComplete="off" value={itemName} onChange={(e) => { setItemName(e.target.value); setItemInput(e.target.value); }} placeholder={lang === 'my' ? 'ဥပမာ - ဆန် / ဆီ' : 'e.g. Rice'} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none" />
               </div>
             )}
 

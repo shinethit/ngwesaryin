@@ -251,32 +251,32 @@ const VERSION_JSON = JSON.parse(
   readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
 );
 
-describe('Version bump to v7.6.03 (build 317)', () => {
+describe('Version bump to v7.6.04 (build 318)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.03');
-    expect(CURRENT_BUILD_NUMBER).toBe(317);
-    expect(VERSION_JSON.version).toBe('v7.6.03');
-    expect(VERSION_JSON.buildNumber).toBe(317);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
+    expect(CURRENT_BUILD_NUMBER).toBe(318);
+    expect(VERSION_JSON.version).toBe('v7.6.04');
+    expect(VERSION_JSON.buildNumber).toBe(318);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.03');
-    expect(entry.buildNumber).toBe(317);
+    expect(entry.version).toBe('v7.6.04');
+    expect(entry.buildNumber).toBe(318);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ယာဉ်မှတ်တမ်း ရွေးစရာများ တစ်တန်းထဲ + အများဆုံးသုံးတာ အလိုရွေး',
+      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း (တိုက်ရိုက် ဖယ်ရှား)',
     );
     expect(entry.titleEn).toBe(
-      'Vehicle entry choices in one row + most-used type auto-selected',
+      'Two entry modes only (direct mode removed)',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ယာဉ်မှတ်တမ်း ရွေးစရာ ၄ ခုကို တစ်တန်းထဲ ထားခြင်း + အများဆုံးသုံးတဲ့ အမျိုးအစားကို အလိုအလျောက် ရွေးပေးခြင်း (ယာဉ်မှတ်တမ်း ရွေးမှသာ ရွေးစရာများ ပေါ်မည်)',
+      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည် (အရင်တိုက်ရိုက်မှတ်တမ်းများ ဈေး × အရေအတွက်အဖြစ် ပြင်နိုင်သည်)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Vehicle entry choices in a single row, with the most-used type auto-selected (choices appear only once a vehicle entry is chosen).',
+      'Two entry modes only — the direct item-name mode is removed, keeping Unit × Qty and Shopping List (old direct entries now open for editing as Unit × Qty).',
     );
   });
 

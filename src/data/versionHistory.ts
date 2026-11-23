@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.03';
-export const CURRENT_BUILD_NUMBER = 317;
+export const CURRENT_APP_VERSION = 'v7.6.04';
+export const CURRENT_BUILD_NUMBER = 318;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.04',
+    buildNumber: 318,
+    releaseDate: '2026-11-22',
+    releaseTime: '12:30 AM (MMT)',
+    titleMy: 'ထည့်နည်း ၂ ခုပဲ ထားခြင်း (တိုက်ရိုက် ဖယ်ရှား)',
+    titleEn: 'Two entry modes only (direct mode removed)',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ထည့်သွင်းပုံစံ ၂ ခုပဲ ထားလိုက်ပြီ — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည်။ အရင်တိုက်ရိုက်ထည့်ထားတဲ့ မှတ်တမ်းတွေကိုလည်း ဈေး × အရေအတွက်အဖြစ် ဖွင့်ပြီး ပြင်နိုင်သည် — သိမ်းထားတဲ့ ပမာဏတွေ ဘာမှ မပြောင်းလဲပါ။',
+    descriptionEn: 'Only two entry modes remain — the direct item-name mode is removed, keeping Unit × Qty and Shopping List. Old direct entries open for editing as Unit × Qty, so nothing already saved changes.',
+    changesMy: [
+      'ထည့်နည်း ၂ ခုပဲ ထားခြင်း — ပစ္စည်းအမည်တိုက်ရိုက်ထည့်နည်းကို ဖယ်ရှားပြီး ဈေး × အရေအတွက်နဲ့ ဈေးဝယ်စာရင်း ပဲ ထားသည် (အရင်တိုက်ရိုက်မှတ်တမ်းများ ဈေး × အရေအတွက်အဖြစ် ပြင်နိုင်သည်)',
+    ],
+    changesEn: [
+      'Two entry modes only — the direct item-name mode is removed, keeping Unit × Qty and Shopping List (old direct entries now open for editing as Unit × Qty).',
+    ],
+  },
   {
     version: 'v7.6.03',
     buildNumber: 317,

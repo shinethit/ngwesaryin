@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.03 (build 317)', () => {
+describe('Version bump to v7.6.04 (build 318)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.03');
-    expect(CURRENT_BUILD_NUMBER).toBe(317);
-    expect(VERSION_JSON.version).toBe('v7.6.03');
-    expect(VERSION_JSON.buildNumber).toBe(317);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.04');
+    expect(CURRENT_BUILD_NUMBER).toBe(318);
+    expect(VERSION_JSON.version).toBe('v7.6.04');
+    expect(VERSION_JSON.buildNumber).toBe(318);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.03');
-    expect(entry.buildNumber).toBe(317);
+    expect(entry.version).toBe('v7.6.04');
+    expect(entry.buildNumber).toBe(318);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ယာဉ်မှတ်တမ်း ရွေးစရာများ တစ်တန်းထဲ + အများဆုံးသုံးတာ အလိုရွေး');
-    expect(entry.titleEn).toBe('Vehicle entry choices in one row + most-used type auto-selected');
+    expect(entry.titleMy).toBe('ထည့်နည်း ၂ ခုပဲ ထားခြင်း (တိုက်ရိုက် ဖယ်ရှား)');
+    expect(entry.titleEn).toBe('Two entry modes only (direct mode removed)');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

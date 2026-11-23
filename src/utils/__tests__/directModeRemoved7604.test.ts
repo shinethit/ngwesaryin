@@ -241,12 +241,12 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.18 (build 332)', () => {
+describe('version pins rolled forward to v7.6.19 (build 333)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.18');
-    expect(CURRENT_BUILD_NUMBER).toBe(332);
-    expect(VERSION_JSON.version).toBe('v7.6.18');
-    expect(VERSION_JSON.buildNumber).toBe(332);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
+    expect(CURRENT_BUILD_NUMBER).toBe(333);
+    expect(VERSION_JSON.version).toBe('v7.6.19');
+    expect(VERSION_JSON.buildNumber).toBe(333);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -255,14 +255,14 @@ describe('version pins rolled forward to v7.6.18 (build 332)', () => {
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.18');
-    expect(top.buildNumber).toBe(332);
+    expect(top.version).toBe('v7.6.19');
+    expect(top.buildNumber).toBe(333);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
+      'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Removed unused code, unwired props, and dead helpers — no visible or behavioral changes.',
+      'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

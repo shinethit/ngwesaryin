@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.18';
-export const CURRENT_BUILD_NUMBER = 332;
+export const CURRENT_APP_VERSION = 'v7.6.19';
+export const CURRENT_BUILD_NUMBER = 333;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.19',
+    buildNumber: 333,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'Filter စာတန်းပြင်ဆင်ခြင်းနှင့် ရွေးထားတဲ့ Wallet ပြခြင်း',
+    titleEn: 'Filter notice fix and selected-wallet display',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်။',
+    descriptionEn: 'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
+    changesMy: [
+      'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်',
+    ],
+    changesEn: [
+      'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
+    ],
+  },
   {
     version: 'v7.6.18',
     buildNumber: 332,

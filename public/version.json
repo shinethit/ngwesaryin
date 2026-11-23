@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.18",
-  "buildNumber": 332,
+  "version": "v7.6.19",
+  "buildNumber": 333,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ"
+    "Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်"
   ],
   "changesEn": [
-    "Removed unused code, unwired props, and dead helpers — no visible or behavioral changes."
+    "The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list."
   ]
 }

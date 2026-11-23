@@ -251,32 +251,32 @@ const VERSION_JSON = JSON.parse(
   readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
 );
 
-describe('Version bump to v7.6.18 (build 332)', () => {
+describe('Version bump to v7.6.19 (build 333)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.18');
-    expect(CURRENT_BUILD_NUMBER).toBe(332);
-    expect(VERSION_JSON.version).toBe('v7.6.18');
-    expect(VERSION_JSON.buildNumber).toBe(332);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
+    expect(CURRENT_BUILD_NUMBER).toBe(333);
+    expect(VERSION_JSON.version).toBe('v7.6.19');
+    expect(VERSION_JSON.buildNumber).toBe(333);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.18');
-    expect(entry.buildNumber).toBe(332);
+    expect(entry.version).toBe('v7.6.19');
+    expect(entry.buildNumber).toBe(333);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'အသုံးမပြုတဲ့ code များ ရှင်းလင်းခြင်း',
+      'Filter စာတန်းပြင်ဆင်ခြင်းနှင့် ရွေးထားတဲ့ Wallet ပြခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Removing unused code',
+      'Filter notice fix and selected-wallet display',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
+      'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Removed unused code, unwired props, and dead helpers — no visible or behavioral changes.',
+      'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
     );
   });
 

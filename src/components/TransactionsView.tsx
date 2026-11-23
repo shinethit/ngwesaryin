@@ -27,6 +27,8 @@ import { findFuelLogForTransaction, formatFuelRowLine } from '../utils/fuelRowLi
 // non-wallet filter is active (a wallet-only pick is a scope
 // choice, not a "missing records" warning).
 import { shouldShowFilterNotice } from '../utils/filterNotice';
+// [v7.6.19] Selected-wallet label for the Records header chip.
+import { getWalletSelectionLabel } from '../utils/walletSelectionLabel';
 
 export type TimeFilterType =
   | 'all'
@@ -235,6 +237,15 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     if (effectiveDataScope === 'shared') return sharedWallets;
     return wallets;
   }, [wallets, effectiveDataScope, personalWallets, sharedWallets]);
+
+  // [v7.6.19] Header chip label: which wallet the list is scoped to,
+  // in the same wording as the filter panel's wallet selector.
+  const walletSelectionLabel = getWalletSelectionLabel(
+    visibleWalletsInFilter,
+    selectedWalletIds,
+    selectedWallet,
+    lang,
+  );
 
   // Reset pagination when filters change
   React.useEffect(() => {
@@ -601,6 +612,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <span>{lang === 'my' ? '⬇️ CSV ထုတ်ယူမည်' : '⬇️ Export CSV'}</span>
             </button>
           )}
+          {/* [v7.6.19] Selected-wallet chip (display only): shows which
+              wallet the list is scoped to, in the empty space beside
+              the Price Compare / CSV buttons. Same wording as the
+              filter panel's wallet selector; scope is not shown. */}
+          <span
+            title={walletSelectionLabel}
+            className="ml-auto inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+          >
+            <span className="truncate">{walletSelectionLabel}</span>
+          </span>
       </div>
 
       {/* Free tier limit banner warning if reached or close */}
@@ -764,7 +785,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       </div>
 
             {/* Active Filter Notice Bar if filtered is less than total */}
-      {shouldShowFilterNotice(transactions.length, filtered.length, { typeFilter, effectiveDataScope, timeFilter, selectedCategory, searchTerm }) && (
+      {shouldShowFilterNotice(transactions.length, filtered.length, { typeFilter, timeFilter, selectedCategory, searchTerm }) && (
         <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2 font-medium min-w-0">
             <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />

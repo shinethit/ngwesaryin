@@ -3,9 +3,13 @@
 // active. A wallet pick is a scope choice (like the Dashboard
 // wallet filter, which shows no such banner), not a "you are
 // missing records" warning — so wallet-only filtering hides the
-// banner. The Filter-button badge count is untouched (the user
-// did not complain about it), and the banner's text, counts and
-// "Show All Records" reset behavior are byte-identical.
+// banner. [v7.6.19] The data-scope pills (All / Personal /
+// Shared) are part of that same wallet-scope choice, so scope
+// alone never shows the banner either — only a content filter
+// (type, time, category, search) does. The Filter-button badge
+// count is untouched (the user did not complain about it), and
+// the banner's text, counts and "Show All Records" reset
+// behavior are byte-identical.
 // Source-text assertions (same pattern as fuelRowLine7615.test.ts)
 // — the components have no test renderer in this repo (vitest
 // node env, no testing-library). NO path comparisons in this
@@ -33,7 +37,6 @@ const VERSION_JSON = JSON.parse(
 
 const NO_FILTERS = {
   typeFilter: 'all',
-  effectiveDataScope: 'all',
   timeFilter: 'all',
   selectedCategory: 'all',
   searchTerm: '',
@@ -78,19 +81,12 @@ describe('filter notice predicate (v7.6.16)', () => {
     ).toBe(true);
   });
 
-  it('scope (personal/shared) + wallet shows the banner', () => {
-    expect(
-      shouldShowFilterNotice(TOTAL, WALLET_ONLY_SHOWN, {
-        ...NO_FILTERS,
-        effectiveDataScope: 'personal',
-      }),
-    ).toBe(true);
-    expect(
-      shouldShowFilterNotice(TOTAL, WALLET_ONLY_SHOWN, {
-        ...NO_FILTERS,
-        effectiveDataScope: 'shared',
-      }),
-    ).toBe(true);
+  it('scope (personal/shared) is not an input: a scope-only pick hides the banner', () => {
+    // v7.6.19: scope is wallet-scoping, like the wallet pick
+    // itself — the predicate takes no scope argument at all, so
+    // a scope-only pick is exactly "no content filter active".
+    // (Source-text proof lives in the purity describe below.)
+    expect(shouldShowFilterNotice(TOTAL, WALLET_ONLY_SHOWN, NO_FILTERS)).toBe(false);
   });
 
   it('a type filter on its own shows the banner', () => {
@@ -143,9 +139,8 @@ describe('filter notice predicate (v7.6.16)', () => {
 });
 
 describe('filter notice helper purity (v7.6.16)', () => {
-  it('the predicate checks exactly the five non-wallet filters', () => {
+  it('the predicate checks exactly the four content filters', () => {
     expect(HELPER_SRC).toContain("typeFilter !== 'all'");
-    expect(HELPER_SRC).toContain("effectiveDataScope !== 'all'");
     expect(HELPER_SRC).toContain("timeFilter !== 'all'");
     expect(HELPER_SRC).toContain("selectedCategory !== 'all'");
     expect(HELPER_SRC).toContain("searchTerm.trim() !== ''");
@@ -153,9 +148,10 @@ describe('filter notice helper purity (v7.6.16)', () => {
     expect(HELPER_SRC).toContain('totalCount > 0');
   });
 
-  it('wallet state and financialSystem are not part of the predicate', () => {
+  it('wallet state, scope and financialSystem are not part of the predicate', () => {
     expect(HELPER_SRC).not.toContain('selectedWallet');
     expect(HELPER_SRC).not.toContain('selectedWalletIds');
+    expect(HELPER_SRC).not.toContain('effectiveDataScope');
     expect(HELPER_SRC).not.toContain('financialSystem');
   });
 });
@@ -166,7 +162,7 @@ describe('Records list wires the banner gate to the helper (v7.6.16)', () => {
       "import { shouldShowFilterNotice } from '../utils/filterNotice';",
     );
     expect(TX_VIEW_SRC).toContain(
-      'shouldShowFilterNotice(transactions.length, filtered.length, { typeFilter, effectiveDataScope, timeFilter, selectedCategory, searchTerm })',
+      'shouldShowFilterNotice(transactions.length, filtered.length, { typeFilter, timeFilter, selectedCategory, searchTerm })',
     );
   });
 
@@ -220,28 +216,28 @@ describe('Records list wires the banner gate to the helper (v7.6.16)', () => {
   });
 });
 
-describe('Version bump to v7.6.18 (build 332)', () => {
+describe('Version bump to v7.6.19 (build 333)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.18');
-    expect(CURRENT_BUILD_NUMBER).toBe(332);
-    expect(VERSION_JSON.version).toBe('v7.6.18');
-    expect(VERSION_JSON.buildNumber).toBe(332);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
+    expect(CURRENT_BUILD_NUMBER).toBe(333);
+    expect(VERSION_JSON.version).toBe('v7.6.19');
+    expect(VERSION_JSON.buildNumber).toBe(333);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.18');
-    expect(entry.buildNumber).toBe(332);
+    expect(entry.version).toBe('v7.6.19');
+    expect(entry.buildNumber).toBe(333);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('အသုံးမပြုတဲ့ code များ ရှင်းလင်းခြင်း');
-    expect(entry.titleEn).toBe('Removing unused code');
+    expect(entry.titleMy).toBe('Filter စာတန်းပြင်ဆင်ခြင်းနှင့် ရွေးထားတဲ့ Wallet ပြခြင်း');
+    expect(entry.titleEn).toBe('Filter notice fix and selected-wallet display');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
+      'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Removed unused code, unwired props, and dead helpers — no visible or behavioral changes.',
+      'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
     );
   });
 
@@ -256,23 +252,23 @@ describe('Version bump to v7.6.18 (build 332)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.18'.replace(/8$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.18'.replace(/8$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.19'.replace(/9$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.19'.replace(/9$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.17/7.6.18, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.17';
-    const TO_VERSION = '7.6.18';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.18/7.6.19, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.18';
+    const TO_VERSION = '7.6.19';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/8$/, '');
+    const mangled = TO_VERSION.replace(/9$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.18');
-    expect(guardFails('7.6.17')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.19');
     expect(guardFails('7.6.18')).toBe(false);
+    expect(guardFails('7.6.19')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

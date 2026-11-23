@@ -73,6 +73,13 @@ export interface Transaction {
   transferType?: 'transfer_in' | 'transfer_out';
   transferPairId?: string;
   transferToWalletId?: string;
+  // [v7.6.13] Savings-pot transfer link: a transaction created by a
+  // pot entry (wallet ↔ pot) names the pot it belongs to. The pot
+  // entry carries the matching walletId + transactionId, so the two
+  // records stay findable from either side. Absent on every other
+  // transaction; never written by the edit path (an edit keeps the
+  // pot link only if the saved payload still carries it).
+  savingsPotId?: string;
   createdAt: number;
   updatedAt?: number;
   version?: number;

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.12';
-export const CURRENT_BUILD_NUMBER = 326;
+export const CURRENT_APP_VERSION = 'v7.6.13';
+export const CURRENT_BUILD_NUMBER = 327;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.13',
+    buildNumber: 327,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'စုငွေအိုးနှင့် ပိုက်ဆံအိတ် အရွှေ့',
+    titleEn: 'Savings-pot transfers to and from a wallet',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်။ ပိုက်ဆံအိတ် မရွေးထားရင် အရင်အတိုင်း ခြေရာခံခြင်းသာ ဖြစ်သည်။',
+    descriptionEn: 'Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only.',
+    changesMy: [
+      'စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်',
+    ],
+    changesEn: [
+      'Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only.',
+    ],
+  },
   {
     version: 'v7.6.12',
     buildNumber: 326,

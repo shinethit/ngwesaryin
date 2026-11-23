@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.12",
-  "buildNumber": 326,
+  "version": "v7.6.13",
+  "buildNumber": 327,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက် စာသား ပြင်ဆင်ခြင်း — ၂ ဆ တိတိကနေ စပြီး သတိပေးသည် (၂ ဆ၊ ၃ ဆ၊ ၄ ဆ အားလုံး ပါဝင်သည်)"
+    "စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်"
   ],
   "changesEn": [
-    "Anomaly alert wording clarified — alerts start at exactly twice the 4-week weekly average and continue above it (2×, 3×, 4× all alert). The threshold itself is unchanged."
+    "Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only."
   ]
 }

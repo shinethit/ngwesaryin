@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.12 (build 326)', () => {
+describe('Version bump to v7.6.13 (build 327)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.12');
-    expect(CURRENT_BUILD_NUMBER).toBe(326);
-    expect(VERSION_JSON.version).toBe('v7.6.12');
-    expect(VERSION_JSON.buildNumber).toBe(326);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
+    expect(CURRENT_BUILD_NUMBER).toBe(327);
+    expect(VERSION_JSON.version).toBe('v7.6.13');
+    expect(VERSION_JSON.buildNumber).toBe(327);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.12');
-    expect(entry.buildNumber).toBe(326);
+    expect(entry.version).toBe('v7.6.13');
+    expect(entry.buildNumber).toBe(327);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('သတိပေးချက် စာသား ရှင်းလင်းခြင်း (၂ ဆ တိတိကနေ စပြီး)');
-    expect(entry.titleEn).toBe('Anomaly alert wording clarified (alerts start at exactly twice)');
+    expect(entry.titleMy).toBe('စုငွေအိုးနှင့် ပိုက်ဆံအိတ် အရွှေ့');
+    expect(entry.titleEn).toBe('Savings-pot transfers to and from a wallet');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

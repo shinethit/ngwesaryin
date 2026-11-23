@@ -2434,6 +2434,27 @@ export default function App() {
     handleSaveVehicle,
   });
 
+  // [v7.6.13] Savings-pot wallet transfers: one callback for BOTH
+  // pots render paths (the guest branch below the lock card, and
+  // AnalyticsView's Budget sub-tab). It runs the payload through
+  // the EXISTING transaction creation path — plan limits,
+  // validation, sync and shared-wallet rules all apply — and
+  // returns the created transaction's id, or null when the
+  // creation was blocked (the pot entry is then not saved, so the
+  // pot and the wallet can never diverge). Refused outright while
+  // an edit is open: the creation path would otherwise edit that
+  // record instead of creating one.
+  const handleCreatePotTransfer = (
+    tx: Omit<Transaction, 'id' | 'createdAt'>,
+  ): string | null => {
+    if (editingTransaction) return null;
+    let createdId: string | null = null;
+    const ok = handleAddTransaction(tx, undefined, (created) => {
+      createdId = created.id;
+    });
+    return ok ? createdId : null;
+  };
+
   const {
     handleAddDebt,
     handleUpdateDebt,
@@ -3061,7 +3082,7 @@ export default function App() {
                   {lang === 'my' ? 'Google Account ဖြင့် ဝင်ရောက်မည်' : 'Sign In with Google'}
                 </button>
               </div>
-              <SavingsPots lang={lang} />
+              <SavingsPots lang={lang} wallets={computedWallets} categories={categories} onCreatePotTransfer={handleCreatePotTransfer} />
               </>
             ) : (
               <AnalyticsView
@@ -3080,6 +3101,7 @@ export default function App() {
                         onSelectTab={setActiveTab}
                         menuPublicShops={publicShopsFull}
                         menuPrivateShops={shops}
+                        onCreatePotTransfer={handleCreatePotTransfer}
                         // [v7.5.75] Deep-link: which of the three split
                         // sections to show. 'budget' → Budget,
                         // 'compare' → Compare Price, everything else

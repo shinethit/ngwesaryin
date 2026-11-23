@@ -125,12 +125,12 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.6.12 — history entry and version.json in sync', () => {
-  it('current version is v7.6.12 / build 326', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.12');
-    expect(CURRENT_BUILD_NUMBER).toBe(326);
-    expect(VERSION_JSON.version).toBe('v7.6.12');
-    expect(VERSION_JSON.buildNumber).toBe(326);
+describe('Version v7.6.13 — history entry and version.json in sync', () => {
+  it('current version is v7.6.13 / build 327', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
+    expect(CURRENT_BUILD_NUMBER).toBe(327);
+    expect(VERSION_JSON.version).toBe('v7.6.13');
+    expect(VERSION_JSON.buildNumber).toBe(327);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -139,16 +139,16 @@ describe('Version v7.6.12 — history entry and version.json in sync', () => {
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.12 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.13 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.12');
-    expect(entry.buildNumber).toBe(326);
+    expect(entry.version).toBe('v7.6.13');
+    expect(entry.buildNumber).toBe(327);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('သတိပေးချက် စာသား ရှင်းလင်းခြင်း (၂ ဆ တိတိကနေ စပြီး)');
-    expect(entry.titleEn).toBe('Anomaly alert wording clarified (alerts start at exactly twice)');
+    expect(entry.titleMy).toBe('စုငွေအိုးနှင့် ပိုက်ဆံအိတ် အရွှေ့');
+    expect(entry.titleEn).toBe('Savings-pot transfers to and from a wallet');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

@@ -44,6 +44,11 @@ interface AnalyticsViewProps {
   // tabs now. App passes which section to show; the old 'analytics'
   // id maps to 'reports' (the default).
   initialSubTab?: SubTab;
+  // [v7.6.13] Savings-pot wallet transfers: App threads the same
+  // wallet list this view already receives plus the transaction
+  // creation callback down to SavingsPots. Optional so the Budget
+  // sub-tab keeps working if a caller passes neither.
+  onCreatePotTransfer?: (tx: Omit<Transaction, 'id' | 'createdAt'>) => string | null;
 }
 
 type SubTab = 'reports' | 'budget' | 'compare';
@@ -53,7 +58,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   plan, lang, maxBudgetCategories,
   onAddBudget, onUpdateBudget, onDeleteBudget,
   onOpenUpgradeModal, onSelectTab, initialSubTab,
-  menuPublicShops, menuPrivateShops,
+  menuPublicShops, menuPrivateShops, onCreatePotTransfer,
 }) => {
   const [subTab, setSubTab] = useState<SubTab>(initialSubTab ?? 'reports');
   // [v7.5.75] The single mounted instance follows the top-level tab:
@@ -372,8 +377,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           {/* [v7.6.09] Named savings pots — BELOW the monthly target.
               For guests the whole view is replaced by App's lock
               card, with the same section rendered below it there —
-              so pots stay reachable for everyone. */}
-          <SavingsPots lang={lang} />
+              so pots stay reachable for everyone. [v7.6.13] The
+              wallet list + categories + creation callback come from
+              App, so a picked wallet really moves money here too. */}
+          <SavingsPots lang={lang} wallets={wallets} categories={categories} onCreatePotTransfer={onCreatePotTransfer} />
 
           {/* [v7.5.60 M-01] Daily limit must use the same scoped
               transactions as the rest of Analytics — raw `transactions`

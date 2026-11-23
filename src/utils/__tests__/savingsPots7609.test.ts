@@ -328,17 +328,20 @@ describe('guest availability — no gate on the pots path (v7.6.09)', () => {
     expect(COMPONENT_SRC).not.toContain('<MonthlySavingsTarget');
   });
 
-  it('AnalyticsView renders pots without a plan prop', () => {
-    expect(ANALYTICS_SRC).toContain('<SavingsPots lang={lang} />');
+  it('AnalyticsView renders pots with the wallet-transfer props and no plan prop', () => {
+    expect(ANALYTICS_SRC).toContain('<SavingsPots lang={lang} wallets={wallets} categories={categories} onCreatePotTransfer={onCreatePotTransfer} />');
     expect(ANALYTICS_SRC).not.toContain('<SavingsPots lang={lang} plan=');
   });
 
   it('App renders the same pots section below the whole-view lock card', () => {
     // The gate itself is untouched — the lock card still replaces
     // AnalyticsView for guests; pots sit OUTSIDE it, below the card.
+    // [v7.6.13] The guest-branch pots get the same wallet-transfer
+    // props as the Budget-tab instance, so a picked wallet really
+    // moves money for guests too.
     expect(APP_SRC).toContain("plan === 'guest' || !limits.hasBudgets");
     expect(APP_SRC).toContain('const SavingsPots = lazyWithRetry(');
-    expect(APP_SRC).toContain('<SavingsPots lang={lang} />');
+    expect(APP_SRC).toContain('<SavingsPots lang={lang} wallets={computedWallets} categories={categories} onCreatePotTransfer={handleCreatePotTransfer} />');
     const lockAt = APP_SRC.indexOf('Guest Mode တွင် မရရှိနိုင်ပါ');
     const potsAt = APP_SRC.indexOf('<SavingsPots');
     expect(lockAt).toBeGreaterThan(-1);
@@ -382,31 +385,35 @@ describe('placement and UI wiring (v7.6.09)', () => {
     expect(COMPONENT_SRC).toContain('parseMyanmarNumber');
   });
 
-  it('component creates no transaction and touches no wallet state', () => {
+  it('component writes no transaction itself — creation goes only through the injected callback (v7.6.13)', () => {
     expect(COMPONENT_SRC).not.toContain('setTransactions');
     expect(COMPONENT_SRC).not.toContain('setWallets');
     expect(COMPONENT_SRC).not.toContain('TransactionModal');
     expect(COMPONENT_SRC).not.toContain("doc(db, 'transactions'");
+    // [v7.6.13] A wallet-picked entry DOES create a real
+    // transaction, but only inside the caller-supplied callback —
+    // the component holds no transaction or wallet state of its own.
+    expect(COMPONENT_SRC).toContain('onCreatePotTransfer');
   });
 });
 
-describe('version pins rolled forward to v7.6.12 (build 326)', () => {
+describe('version pins rolled forward to v7.6.13 (build 327)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.12');
-    expect(CURRENT_BUILD_NUMBER).toBe(326);
-    expect(VERSION_JSON.version).toBe('v7.6.12');
-    expect(VERSION_JSON.buildNumber).toBe(326);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
+    expect(CURRENT_BUILD_NUMBER).toBe(327);
+    expect(VERSION_JSON.version).toBe('v7.6.13');
+    expect(VERSION_JSON.buildNumber).toBe(327);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.12');
-    expect(entry.buildNumber).toBe(326);
+    expect(entry.version).toBe('v7.6.13');
+    expect(entry.buildNumber).toBe(327);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('သတိပေးချက် စာသား ရှင်းလင်းခြင်း (၂ ဆ တိတိကနေ စပြီး)');
+    expect(entry.titleMy).toBe('စုငွေအိုးနှင့် ပိုက်ဆံအိတ် အရွှေ့');
     expect(entry.changesMy).toEqual([
-      'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက် စာသား ပြင်ဆင်ခြင်း — ၂ ဆ တိတိကနေ စပြီး သတိပေးသည် (၂ ဆ၊ ၃ ဆ၊ ၄ ဆ အားလုံး ပါဝင်သည်)',
+      'စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Anomaly alert wording clarified — alerts start at exactly twice the 4-week weekly average and continue above it (2×, 3×, 4× all alert). The threshold itself is unchanged.',
+      'Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only.',
     ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

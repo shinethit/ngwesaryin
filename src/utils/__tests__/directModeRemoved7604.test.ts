@@ -241,28 +241,28 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.12 (build 326)', () => {
+describe('version pins rolled forward to v7.6.13 (build 327)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.12');
-    expect(CURRENT_BUILD_NUMBER).toBe(326);
-    expect(VERSION_JSON.version).toBe('v7.6.12');
-    expect(VERSION_JSON.buildNumber).toBe(326);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
+    expect(CURRENT_BUILD_NUMBER).toBe(327);
+    expect(VERSION_JSON.version).toBe('v7.6.13');
+    expect(VERSION_JSON.buildNumber).toBe(327);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the anomaly-wording entry, no Admin strings', () => {
+  it('the top history entry carries the pot-transfer entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.12');
-    expect(top.buildNumber).toBe(326);
+    expect(top.version).toBe('v7.6.13');
+    expect(top.buildNumber).toBe(327);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက် စာသား ပြင်ဆင်ခြင်း — ၂ ဆ တိတိကနေ စပြီး သတိပေးသည် (၂ ဆ၊ ၃ ဆ၊ ၄ ဆ အားလုံး ပါဝင်သည်)',
+      'စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Anomaly alert wording clarified — alerts start at exactly twice the 4-week weekly average and continue above it (2×, 3×, 4× all alert). The threshold itself is unchanged.',
+      'Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

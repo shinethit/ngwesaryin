@@ -344,9 +344,17 @@ export function useTransactionHandlers({
   // plan limit) so the modal stays open and the typed entry
   // is not lost; returns true on success. The modal is closed ONLY
   // after all validation passes — never up-front.
+  // [v7.6.13] onCreated (optional): fired with the created
+  // transaction in the plain single-transaction create branch ONLY
+  // (never on edit, never for a paired transfer, never for the
+  // free tire check) so a caller that needs the new id — a
+  // savings-pot entry linking to its transaction — can capture it
+  // synchronously. TransactionModal does not pass it: its behavior
+  // is unchanged.
   const handleAddTransaction = (
     newTx: Omit<Transaction, 'id' | 'createdAt'>,
-    vehicleLinkData?: VehicleLinkData
+    vehicleLinkData?: VehicleLinkData,
+    onCreated?: (tx: Transaction) => void
   ): boolean => {
     const cleanAmount = Math.abs(Number(newTx.amount) || 0);
     const sanitizedTx = { ...newTx, amount: cleanAmount };
@@ -893,6 +901,10 @@ export function useTransactionHandlers({
       createdBy: user?.uid || undefined,
       createdByName: creatorName || undefined,
     };
+    // [v7.6.13] Hand the created record to the caller before any
+    // state/cloud write: the id is final here, and the caller (a
+    // pot entry) must link to exactly this transaction.
+    onCreated?.(transaction);
 
     setTransactions((prev) => {
       const next = [transaction, ...prev.filter((t) => t.id !== id)];

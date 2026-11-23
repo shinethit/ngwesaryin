@@ -7,7 +7,9 @@ import {
   SAVINGS_POTS_STORAGE_KEY,
   SAVINGS_POTS_CLOUD_FIELD,
   SavingsPot,
+  SavingsPotContribution,
   SavingsPotValidationError,
+  buildPotTransferTransaction,
   getPotProgress,
   getSavedAmount,
   isValidSavingsPots,
@@ -19,18 +21,36 @@ import {
   validateSavingsPotEntry,
   validateSavingsPotInput,
 } from '../utils/savingsPots';
+import type { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { PiggyBank, Plus, Pencil, Trash2, Archive, ChevronDown, ChevronUp, X, CheckCircle2 } from 'lucide-react';
 
 interface SavingsPotsProps {
   lang: 'my' | 'en';
+  // [v7.6.13] Wallet-transfer wiring (ALL optional): when the
+  // caller passes the same wallet list the record-entry form uses plus
+  // the creation callback, an entry form gains a wallet picker —
+  // picking a wallet ALSO creates the matching real transaction
+  // through the existing creation path. When any of the three is
+  // missing, the picker is hidden and entries stay exactly as in
+  // v7.6.09 (tracking-only). The component itself never writes a
+  // transaction or a wallet: creation happens only inside the
+  // callback, which returns the created transaction's id (or null
+  // when the creation was blocked, in which case the entry is not
+  // saved at all).
+  wallets?: Wallet[];
+  categories?: Category[];
+  onCreatePotTransfer?: (tx: Omit<Transaction, 'id' | 'createdAt'>) => string | null;
 }
 
-// [v7.6.09] Named savings pots — tracking ONLY. Pots are open to
-// everyone on local data: unlike MonthlySavingsTarget there is NO
-// lock here, because a pot never touches real money — it only
-// records progress toward a named goal. Persistence mirrors
+// [v7.6.09] Named savings pots — tracking ONLY by default. Pots are
+// open to everyone on local data: unlike MonthlySavingsTarget there
+// is NO lock here, because a pot with no wallet picked never
+// touches real money — it only records progress toward a named
+// goal. [v7.6.13] Picking a wallet on an entry is the one exception:
+// the entry ALSO creates a real transaction (see the props above),
+// so that wallet's balance really changes. Persistence mirrors
 // MonthlySavingsTarget: local storage for everyone + the `savingsPots`
 // field on the user document (merge:true) for signed-in users. No
 // rules change is needed (see savingsPots.ts).
@@ -45,8 +65,12 @@ function loadLocalPots(): SavingsPot[] {
   }
 }
 
-export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang }) => {
+export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang, wallets, categories, onCreatePotTransfer }) => {
   const { user } = useAuth();
+  // [v7.6.13] The wallet picker exists only when the caller wired
+  // all three transfer props; otherwise this section is exactly
+  // the v7.6.09 tracking-only UI.
+  const canTransfer = wallets !== undefined && wallets.length > 0 && onCreatePotTransfer !== undefined;
   const [pots, setPots] = useState<SavingsPot[]>(loadLocalPots);
   // Whether a local value was already stored when this component
   // mounted (a stored local value wins over the cloud value, exactly
@@ -70,7 +94,16 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang }) => {
   const [entryAmount, setEntryAmount] = useState('');
   const [entryNote, setEntryNote] = useState('');
   const [entryDate, setEntryDate] = useState(todayLocalDateString());
+  // [v7.6.13] '' = no wallet picked = tracking-only entry, exactly
+  // as in v7.6.09. A picked wallet id ALSO creates the transaction.
+  const [entryWalletId, setEntryWalletId] = useState('');
   const [entryError, setEntryError] = useState<SavingsPotValidationError | null>(null);
+
+  const walletNameFor = (walletId: string): string | undefined => {
+    const w = wallets?.find((x) => x.id === walletId);
+    if (!w) return undefined;
+    return lang === 'my' ? w.name : w.nameEn || w.name;
+  };
 
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
   const [showArchived, setShowArchived] = useState(false);
@@ -85,6 +118,7 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang }) => {
     if (code === 'name-required') return lang === 'my' ? 'အိုးအမည်ကို ရိုက်ထည့်ပါ' : 'Enter a pot name';
     if (code === 'target-invalid') return lang === 'my' ? 'ပန်းတိုင်ပမာဏသည် ၀ ထက် ကြီးရပါမည်' : 'Target must be greater than 0';
     if (code === 'amount-invalid') return lang === 'my' ? 'ပမာဏသည် ၀ ထက် ကြီးရပါမည်' : 'Amount must be greater than 0';
+    if (code === 'transfer-failed') return lang === 'my' ? 'ပိုက်ဆံအိတ်မှတ်တမ်း ထည့်သွင်း၍ မရပါ — ထပ်ကြိုးစားပါ' : 'Could not record the wallet transaction — please try again';
     return lang === 'my' ? 'စုပြီးသားထက် ပိုထုတ်၍ မရပါ' : 'Cannot withdraw more than the saved amount';
   };
 
@@ -186,6 +220,7 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang }) => {
     setEntryAmount('');
     setEntryNote('');
     setEntryDate(todayLocalDateString());
+    setEntryWalletId('');
     setEntryError(null);
     setEditingPotId(null);
   };
@@ -197,13 +232,47 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang }) => {
       setEntryError(err);
       return;
     }
-    const contribution = {
+    const entryDateValue = entryDate !== '' ? entryDate : todayLocalDateString();
+    // [v7.6.13] Wallet picked → create the real transaction FIRST,
+    // through the existing creation path (the callback). A blocked
+    // creation returns null: the pot entry is NOT saved, so the pot
+    // can never claim money that never moved. The transaction id
+    // links the two records; deleting the pot later never deletes
+    // the transaction. No wallet picked → the v7.6.09 entry below,
+    // unchanged.
+    let linkedWalletId: string | undefined;
+    let linkedTransactionId: string | undefined;
+    if (canTransfer && entryWalletId !== '' && onCreatePotTransfer) {
+      const createdId = onCreatePotTransfer(
+        buildPotTransferTransaction({
+          potId: pot.id,
+          potName: pot.name,
+          entryType,
+          amount,
+          walletId: entryWalletId,
+          date: entryDateValue,
+          note: entryNote,
+          categories: categories ?? [],
+        }),
+      );
+      if (!createdId) {
+        setEntryError('transfer-failed');
+        return;
+      }
+      linkedWalletId = entryWalletId;
+      linkedTransactionId = createdId;
+    }
+    const contribution: SavingsPotContribution = {
       id: newSavingsPotContributionId(),
       amount,
       type: entryType,
       ...(entryNote.trim() !== '' ? { note: entryNote.trim() } : {}),
-      date: entryDate !== '' ? entryDate : todayLocalDateString(),
+      date: entryDateValue,
     };
+    if (linkedWalletId !== undefined && linkedTransactionId !== undefined) {
+      contribution.walletId = linkedWalletId;
+      contribution.transactionId = linkedTransactionId;
+    }
     persist(
       pots.map((p) =>
         p.id === pot.id ? { ...p, contributions: [...p.contributions, contribution] } : p,
@@ -421,6 +490,33 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang }) => {
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
+            {canTransfer && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">{lang === 'my' ? 'ပိုက်ဆံအိတ်' : 'Wallet'}</label>
+                <select
+                  data-pot-wallet-select
+                  value={entryWalletId}
+                  onChange={(e) => setEntryWalletId(e.target.value)}
+                  className="w-full min-h-11 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="">
+                    {lang === 'my' ? 'ပိုက်ဆံအိတ် မရွေး (ခြေရာခံခြင်းသာ)' : 'No wallet (tracking only)'}
+                  </option>
+                  {wallets?.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {lang === 'my' ? w.name : w.nameEn || w.name}
+                    </option>
+                  ))}
+                </select>
+                {entryWalletId !== '' && (
+                  <p data-pot-transfer-notice className="text-xs font-semibold text-amber-700">
+                    {entryType === 'in'
+                      ? (lang === 'my' ? 'ပိုက်ဆံအိတ်ထဲက တကယ် လျော့မည်' : 'The wallet balance will really decrease.')
+                      : (lang === 'my' ? 'ပိုက်ဆံအိတ်ထဲ တကယ် တိုးမည်' : 'The wallet balance will really increase.')}
+                  </p>
+                )}
+              </div>
+            )}
             {entryError && <p className="text-xs font-semibold text-rose-600">{errorText(entryError)}</p>}
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
@@ -461,6 +557,9 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang }) => {
                     <div className="min-w-0">
                       <span className="text-slate-500">{c.date}</span>
                       {c.note && <span className="text-slate-700 truncate"> · {c.note}</span>}
+                      {c.walletId && walletNameFor(c.walletId) && (
+                        <span data-pot-entry-wallet className="text-slate-500"> · {walletNameFor(c.walletId)}</span>
+                      )}
                     </div>
                     <span
                       className={`font-bold shrink-0 ${c.type === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}

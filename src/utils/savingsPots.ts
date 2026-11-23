@@ -1,9 +1,21 @@
+import type { Category, Transaction, TransactionType } from '../types';
+
 // [v7.6.09] Named savings pots — tracking-only progress toward a
-// named goal (e.g. "ဆိုင်ကယ် အသစ်"). A pot NEVER moves money: it
-// creates no transaction, touches no wallet balance, and affects no
-// budget, report or limit. savedAmount is always DERIVED (in minus
-// out) — it is never stored separately, so it cannot diverge from
-// the contributions list.
+// named goal (e.g. "ဆိုင်ကယ် အသစ်") by DEFAULT: an entry with no
+// wallet picked creates no transaction, touches no wallet balance,
+// and affects no budget, report or limit. savedAmount is always
+// DERIVED (in minus out) — it is never stored separately, so it
+// cannot diverge from the contributions list.
+//
+// [v7.6.13] Opt-in real movement: picking a wallet on an entry ALSO
+// creates one real transaction through the existing transaction
+// creation path (expense wallet → pot, income pot → wallet), so plan
+// limits, validation, sync and shared-wallet rules all apply. The
+// entry then carries walletId + transactionId, and the transaction
+// carries savingsPotId + the pot name in its note. Deleting a pot
+// (or its entries) never deletes the linked transaction — the money
+// record stays. There is no per-entry edit: entries are append-only,
+// so a linked entry can never silently diverge from its transaction.
 //
 // Persistence mirrors MonthlySavingsTarget (the monthly target):
 // the `ngwe_savings_pots` device key for everyone, plus the
@@ -24,6 +36,13 @@ export interface SavingsPotContribution {
   type: 'in' | 'out';
   note?: string;
   date: string;
+  // [v7.6.13] Wallet-transfer link — present ONLY when the entry was
+  // saved with a wallet picked: walletId is the wallet the money
+  // really moved from/into, transactionId is the real transaction
+  // created through the existing creation path. Absent = the
+  // tracking-only default (no transaction exists for this entry).
+  walletId?: string;
+  transactionId?: string;
 }
 
 export interface SavingsPot {
@@ -87,7 +106,11 @@ export type SavingsPotValidationError =
   | 'name-required'
   | 'target-invalid'
   | 'amount-invalid'
-  | 'withdraw-exceeds';
+  | 'withdraw-exceeds'
+  // [v7.6.13] The linked wallet transaction could not be created
+  // (plan limit / permission) — the pot entry is NOT saved, so the
+  // pot and the wallet can never silently diverge.
+  | 'transfer-failed';
 
 /** Create/edit form: name must be non-blank, target must be > 0. */
 export function validateSavingsPotInput(
@@ -129,12 +152,21 @@ function sanitizeContribution(
   const cleanDate =
     typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : fallbackDate;
   const note = typeof value.note === 'string' ? value.note.trim() : '';
+  // [v7.6.13] Link fields survive the round-trip only when both are
+  // non-empty strings; a half-link (one side only) is dropped whole,
+  // so a persisted entry can never claim a wallet without its
+  // transaction, or a transaction without its wallet.
+  const walletId = typeof value.walletId === 'string' && value.walletId !== '' ? value.walletId : '';
+  const transactionId =
+    typeof value.transactionId === 'string' && value.transactionId !== '' ? value.transactionId : '';
+  const hasLink = walletId !== '' && transactionId !== '';
   return {
     id: typeof value.id === 'string' && value.id !== '' ? value.id : newSavingsPotContributionId(),
     amount,
     type: value.type,
     ...(note !== '' ? { note } : {}),
     date: cleanDate,
+    ...(hasLink ? { walletId, transactionId } : {}),
   };
 }
 
@@ -211,4 +243,67 @@ export function summarizeActivePots(pots: SavingsPot[]): {
     if (progress.complete) completedCount += 1;
   }
   return { potCount: active.length, totalSaved, totalTarget, totalRemaining, completedCount };
+}
+
+/**
+ * [v7.6.13] Category for a pot-transfer transaction. There is NO
+ * savings category in the shipped category list (initialData.ts),
+ * so the durable "other" category for the direction is used — the
+ * same ids CategoriesView / useDataHandlers reassign orphaned
+ * transactions to when a category is deleted, so they are the ids
+ * least likely to ever disappear. NEVER 'cat_transfer': the
+ * creation path turns a cat_transfer payload into a PAIRED
+ * wallet↔wallet transfer, which a pot transfer is not. When the
+ * other-category id is missing from the live list (a user removed
+ * it), the first category of the same type wins; with no category
+ * of that type at all, the hardcoded id is still returned — the
+ * creation path and the rules do not require the category to exist.
+ */
+export function getPotTransferCategoryId(
+  categories: Category[],
+  type: TransactionType,
+): string {
+  const otherId = type === 'income' ? 'cat_income_other' : 'cat_expense_other';
+  if (categories.some((c) => c.id === otherId)) return otherId;
+  const firstOfType = categories.find((c) => c.type === type);
+  return firstOfType ? firstOfType.id : otherId;
+}
+
+export interface PotTransferTxInput {
+  potId: string;
+  potName: string;
+  entryType: 'in' | 'out';
+  amount: number;
+  walletId: string;
+  date: string;
+  note?: string;
+  categories: Category[];
+}
+
+/**
+ * [v7.6.13] The real-transaction payload for a wallet-linked pot
+ * entry, ready for the EXISTING creation path (handleAddTransaction)
+ * — this helper creates nothing itself. Contribute ('in') is an
+ * EXPENSE from the wallet; withdraw ('out') is an INCOME into it.
+ * The note ALWAYS names the pot (fixed Burmese marker, the same
+ * convention as the transfer auto-notes), with the user's own note
+ * appended, so the record stays findable from Records/search. No
+ * transfer flags: isTransfer / transferToWalletId stay absent, so
+ * the creation path takes its plain single-transaction branch.
+ */
+export function buildPotTransferTransaction(
+  input: PotTransferTxInput,
+): Omit<Transaction, 'id' | 'createdAt'> {
+  const type: TransactionType = input.entryType === 'in' ? 'expense' : 'income';
+  const marker = `[စုငွေအိုး: ${input.potName}]`;
+  const userNote = (input.note || '').trim();
+  return {
+    type,
+    amount: input.amount,
+    category: getPotTransferCategoryId(input.categories, type),
+    walletId: input.walletId,
+    date: input.date,
+    note: userNote !== '' ? `${marker} ${userNote}` : marker,
+    savingsPotId: input.potId,
+  };
 }

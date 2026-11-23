@@ -332,11 +332,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.10 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.12');
-    expect(CURRENT_BUILD_NUMBER).toBe(326);
-    expect(VERSION_JSON.version).toBe('v7.6.12');
-    expect(VERSION_JSON.buildNumber).toBe(326);
+  it('the shipped identity is 7.6.13 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
+    expect(CURRENT_BUILD_NUMBER).toBe(327);
+    expect(VERSION_JSON.version).toBe('v7.6.13');
+    expect(VERSION_JSON.buildNumber).toBe(327);
   });
 });
 
@@ -372,32 +372,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.12 (build 326)', () => {
+describe('Version bump to v7.6.13 (build 327)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.12');
-    expect(CURRENT_BUILD_NUMBER).toBe(326);
-    expect(VERSION_JSON.version).toBe('v7.6.12');
-    expect(VERSION_JSON.buildNumber).toBe(326);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
+    expect(CURRENT_BUILD_NUMBER).toBe(327);
+    expect(VERSION_JSON.version).toBe('v7.6.13');
+    expect(VERSION_JSON.buildNumber).toBe(327);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.12');
-    expect(entry.buildNumber).toBe(326);
+    expect(entry.version).toBe('v7.6.13');
+    expect(entry.buildNumber).toBe(327);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'သတိပေးချက် စာသား ရှင်းလင်းခြင်း (၂ ဆ တိတိကနေ စပြီး)',
+      'စုငွေအိုးနှင့် ပိုက်ဆံအိတ် အရွှေ့',
     );
     expect(entry.titleEn).toBe(
-      'Anomaly alert wording clarified (alerts start at exactly twice)',
+      'Savings-pot transfers to and from a wallet',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက် စာသား ပြင်ဆင်ခြင်း — ၂ ဆ တိတိကနေ စပြီး သတိပေးသည် (၂ ဆ၊ ၃ ဆ၊ ၄ ဆ အားလုံး ပါဝင်သည်)',
+      'စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Anomaly alert wording clarified — alerts start at exactly twice the 4-week weekly average and continue above it (2×, 3×, 4× all alert). The threshold itself is unchanged.',
+      'Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only.',
     );
   });
 

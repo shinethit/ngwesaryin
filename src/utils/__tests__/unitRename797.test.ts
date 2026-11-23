@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.08 (build 322)', () => {
+describe('Version bump to v7.6.09 (build 323)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.08');
-    expect(CURRENT_BUILD_NUMBER).toBe(322);
-    expect(VERSION_JSON.version).toBe('v7.6.08');
-    expect(VERSION_JSON.buildNumber).toBe(322);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
+    expect(CURRENT_BUILD_NUMBER).toBe(323);
+    expect(VERSION_JSON.version).toBe('v7.6.09');
+    expect(VERSION_JSON.buildNumber).toBe(323);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.08');
-    expect(entry.buildNumber).toBe(322);
+    expect(entry.version).toBe('v7.6.09');
+    expect(entry.buildNumber).toBe(323);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက်');
-    expect(entry.titleEn).toBe('Unusually high spending alert');
+    expect(entry.titleMy).toBe('စုငွေအိုးများ');
+    expect(entry.titleEn).toBe('Savings Pots');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

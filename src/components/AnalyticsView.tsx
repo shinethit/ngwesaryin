@@ -8,6 +8,7 @@ import { ItemPriceAnalyticsView } from './ItemPriceAnalyticsView';
 
 import { BudgetAnalyticsView } from './BudgetAnalyticsView';
 import { MonthlySavingsTarget } from './MonthlySavingsTarget';
+import { SavingsPots } from './SavingsPots';
 import { DailySpendingLimitCard } from './DailySpendingLimitCard';
 import { CurrentMonthBudgetSummaryCard } from './CurrentMonthBudgetSummaryCard';
 import { FinancialHealthCard } from './FinancialHealthCard';
@@ -367,6 +368,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             plan={plan}
             onOpenUpgrade={onOpenUpgradeModal}
           />
+
+          {/* [v7.6.09] Named savings pots — BELOW the monthly target.
+              For guests the whole view is replaced by App's lock
+              card, with the same section rendered below it there —
+              so pots stay reachable for everyone. */}
+          <SavingsPots lang={lang} />
 
           {/* [v7.5.60 M-01] Daily limit must use the same scoped
               transactions as the rest of Analytics — raw `transactions`

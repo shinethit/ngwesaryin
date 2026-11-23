@@ -241,28 +241,28 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.08 (build 322)', () => {
+describe('version pins rolled forward to v7.6.09 (build 323)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.08');
-    expect(CURRENT_BUILD_NUMBER).toBe(322);
-    expect(VERSION_JSON.version).toBe('v7.6.08');
-    expect(VERSION_JSON.buildNumber).toBe(322);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
+    expect(CURRENT_BUILD_NUMBER).toBe(323);
+    expect(VERSION_JSON.version).toBe('v7.6.09');
+    expect(VERSION_JSON.buildNumber).toBe(323);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the anomaly alerts, no Admin strings', () => {
+  it('the top history entry carries the savings pots, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.08');
-    expect(top.buildNumber).toBe(322);
+    expect(top.version).toBe('v7.6.09');
+    expect(top.buildNumber).toBe(323);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'ပုံမှန်ထက် အသုံးများရင် သတိပေးခြင်း — အမျိုးအစားအလိုက် ဒီအပတ် သုံးငွေ ပြီးခဲ့တဲ့ ၄ ပတ်ပျမ်းမျှထက် ၂ ဆများရင် အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
+      'နာမည်ပေးထားတဲ့ စုငွေအိုးများ — ပန်းတိုင်ပမာဏ + စုပြီးသား + ထည့်သွင်း/ထုတ်ယူမှတ်တမ်း (တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ)',
     ]);
     expect(top.changesEn).toEqual([
-      'Anomaly alerts — when this week\'s spend in a category is at least twice its 4-week weekly average, it appears in Notifications and counts on the bell badge.',
+      'Named savings pots — set a target per pot, record contributions and withdrawals, and track progress (tracking only; wallet balances are untouched).',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

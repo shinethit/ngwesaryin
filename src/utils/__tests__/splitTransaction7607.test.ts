@@ -459,27 +459,27 @@ describe('splits cleared on edit (D1: merge writes keep an omitted field)', () =
   });
 });
 
-describe('Version bump to v7.6.08 (build 322)', () => {  it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.08');
-    expect(CURRENT_BUILD_NUMBER).toBe(322);
-    expect(VERSION_JSON.version).toBe('v7.6.08');
-    expect(VERSION_JSON.buildNumber).toBe(322);
+describe('Version bump to v7.6.09 (build 323)', () => {  it('version constants and history entry match version.json', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
+    expect(CURRENT_BUILD_NUMBER).toBe(323);
+    expect(VERSION_JSON.version).toBe('v7.6.09');
+    expect(VERSION_JSON.buildNumber).toBe(323);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.08');
-    expect(entry.buildNumber).toBe(322);
+    expect(entry.version).toBe('v7.6.09');
+    expect(entry.buildNumber).toBe(323);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက်');
-    expect(entry.titleEn).toBe('Unusually high spending alert');
+    expect(entry.titleMy).toBe('စုငွေအိုးများ');
+    expect(entry.titleEn).toBe('Savings Pots');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ပုံမှန်ထက် အသုံးများရင် သတိပေးခြင်း — အမျိုးအစားအလိုက် ဒီအပတ် သုံးငွေ ပြီးခဲ့တဲ့ ၄ ပတ်ပျမ်းမျှထက် ၂ ဆများရင် အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
+      'နာမည်ပေးထားတဲ့ စုငွေအိုးများ — ပန်းတိုင်ပမာဏ + စုပြီးသား + ထည့်သွင်း/ထုတ်ယူမှတ်တမ်း (တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Anomaly alerts — when this week\'s spend in a category is at least twice its 4-week weekly average, it appears in Notifications and counts on the bell badge.',
+      'Named savings pots — set a target per pot, record contributions and withdrawals, and track progress (tracking only; wallet balances are untouched).',
     );
   });
 

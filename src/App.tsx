@@ -140,6 +140,9 @@ import {
 // Lazy loaded heavy/secondary components
 const AdminPanel = lazyWithRetry(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 const AnalyticsView = lazyWithRetry(() => import('./components/AnalyticsView').then(m => ({ default: m.AnalyticsView })));
+// [v7.6.09] Savings pots render below the guest lock card too (the
+// lock branch below) — pots are tracking-only and open to everyone.
+const SavingsPots = lazyWithRetry(() => import('./components/SavingsPots').then(m => ({ default: m.SavingsPots })));
 const DataManagementView = lazyWithRetry(() => import('./components/DataManagementView').then(m => ({ default: m.DataManagementView })));
 const FeedbackView = lazyWithRetry(() => import('./components/FeedbackView').then(m => ({ default: m.FeedbackView })));
 const PrivacyModal = lazyWithRetry(() => import('./components/PrivacyModal').then(m => ({ default: m.PrivacyModal })));
@@ -3012,6 +3015,13 @@ export default function App() {
         <div className={(activeTab === 'analytics' || activeTab === 'budgets' || activeTab === 'reports' || activeTab === 'budget' || activeTab === 'compare') ? '' : 'hidden'}>
           <div className="space-y-6">
             {plan === 'guest' || !limits.hasBudgets ? (
+              <>
+              {/* [v7.6.09] The lock covers Analysis / Compare Price /
+                  Budgets, but savings pots sit OUTSIDE it: pots are
+                  tracking-only (local data), so everyone sees them
+                  below the lock card. Signed-in users get the same
+                  section inside AnalyticsView's Budget tab instead —
+                  the two branches are exclusive, so it never doubles. */}
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs max-w-lg mx-auto my-6">
                 <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto text-2xl border border-amber-200 shadow-inner">
                   🔒
@@ -3047,6 +3057,8 @@ export default function App() {
                   {lang === 'my' ? 'Google Account ဖြင့် ဝင်ရောက်မည်' : 'Sign In with Google'}
                 </button>
               </div>
+              <SavingsPots lang={lang} />
+              </>
             ) : (
               <AnalyticsView
                 transactions={transactions}

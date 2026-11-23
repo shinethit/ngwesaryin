@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.08';
-export const CURRENT_BUILD_NUMBER = 322;
+export const CURRENT_APP_VERSION = 'v7.6.09';
+export const CURRENT_BUILD_NUMBER = 323;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.09',
+    buildNumber: 323,
+    releaseDate: '2026-11-22',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'စုငွေအိုးများ',
+    titleEn: 'Savings Pots',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'နာမည်ပေးထားတဲ့ စုငွေအိုးတွေမှာ ပန်းတိုင်ပမာဏ သတ်မှတ်ပြီး ထည့်သွင်း/ထုတ်ယူမှတ်တမ်းနဲ့ တိုးတက်မှုကို ခြေရာခံနိုင်ပြီ — စုငွေအိုးက တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ။',
+    descriptionEn: 'Named savings pots — set a target per pot, record contributions and withdrawals, and track progress. Tracking only: wallet balances are untouched.',
+    changesMy: [
+      'နာမည်ပေးထားတဲ့ စုငွေအိုးများ — ပန်းတိုင်ပမာဏ + စုပြီးသား + ထည့်သွင်း/ထုတ်ယူမှတ်တမ်း (တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ)',
+    ],
+    changesEn: [
+      'Named savings pots — set a target per pot, record contributions and withdrawals, and track progress (tracking only; wallet balances are untouched).',
+    ],
+  },
   {
     version: 'v7.6.08',
     buildNumber: 322,

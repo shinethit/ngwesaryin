@@ -90,12 +90,13 @@ describe('normalizeMenuUnit', () => {
     expect(normalizeMenuUnit(42)).toBe(DEFAULT_MENU_UNIT);
   });
 
-  // [v7.5.95 U2] A non-empty unknown string is a CUSTOM unit typed via
-  // 'အခြား' — preserved as-is, never collapsed to the default (the
-  // old 'per kilo' → default expectation is void).
-  it('preserves a custom unit string as-is', () => {
-    expect(normalizeMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
-    expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('တစ်ဗူး');
+  // [v7.6.10] A leading Myanmar number word is stripped from a
+  // custom unit: 'တစ်ဗူး' normalizes to 'ဗူး'. A custom string
+  // with no number-word prefix is preserved as-is, never collapsed
+  // to the default.
+  it('strips a leading number word from a custom unit, preserves the rest', () => {
+    expect(normalizeMenuUnit('တစ်ဗူး')).toBe('ဗူး');
+    expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('ဗူး');
     expect(normalizeMenuUnit('per kilo')).toBe('per kilo');
     expect(normalizeMenuUnit('အခြား')).toBe('အခြား');
   });
@@ -110,27 +111,27 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
       'ကီလို',
       'လီတာ',
       'ထုပ်',
-      'တစ်ဗူး',
+      'ဗူး',
       'အခြား',
     ]);
-    expect(opts.find((o) => o.value === 'တစ်ဗူး')).toEqual({
-      value: 'တစ်ဗူး',
-      labelMy: 'တစ်ဗူး',
-      labelEn: 'တစ်ဗူး',
+    expect(opts.find((o) => o.value === 'ဗူး')).toEqual({
+      value: 'ဗူး',
+      labelMy: 'ဗူး',
+      labelEn: 'ဗူး',
     });
   });
 
   it('resolveMenuUnitSelectValue shows list/custom values, Other for the rest', () => {
     expect(resolveMenuUnitSelectValue('ကီလို')).toBe('ကီလို');
-    expect(resolveMenuUnitSelectValue('တစ်ဗူး', ['တစ်ဗူး'])).toBe('တစ်ဗူး');
+    expect(resolveMenuUnitSelectValue('တစ်ဗူး', ['တစ်ဗူး'])).toBe('ဗူး');
     expect(resolveMenuUnitSelectValue('တစ်ဗူး', [])).toBe('အခြား');
     expect(resolveMenuUnitSelectValue('အခြား')).toBe('အခြား');
     expect(resolveMenuUnitSelectValue('')).toBe('အခြား');
     expect(resolveMenuUnitSelectValue(undefined)).toBe(DEFAULT_MENU_UNIT);
   });
 
-  it('customMenuUnitText returns the raw custom string only', () => {
-    expect(customMenuUnitText('တစ်ဗူး')).toBe('တစ်ဗူး');
+  it('customMenuUnitText returns the normalized custom string only', () => {
+    expect(customMenuUnitText('တစ်ဗူး')).toBe('ဗူး');
     expect(customMenuUnitText('ကီလို')).toBe('');
     expect(customMenuUnitText('အခြား')).toBe('');
     expect(customMenuUnitText('')).toBe('');
@@ -146,7 +147,7 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
 
   it('resolveSavedMenuUnit resolves the Other sentinel to the default', () => {
     expect(resolveSavedMenuUnit('အခြား')).toBe(DEFAULT_MENU_UNIT);
-    expect(resolveSavedMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(resolveSavedMenuUnit('တစ်ဗူး')).toBe('ဗူး');
     expect(resolveSavedMenuUnit('')).toBe(DEFAULT_MENU_UNIT);
   });
 
@@ -154,7 +155,7 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
     expect(collectNewCustomUnits(['တစ်ဗူး', 'တစ်ကီလို', 'တစ်ဗူး', ''], ['တစ်ဗူး'])).toEqual([]);
     expect(
       collectNewCustomUnits(['တစ်ဗူး', 'တစ်ထောင်း', 'တစ်ဗူး'], ['တစ်ပုံး']),
-    ).toEqual(['တစ်ဗူး', 'တစ်ထောင်း']);
+    ).toEqual(['ဗူး', 'ထောင်း']);
   });
 
   it('computeMenuDiff keeps a custom unit distinct from the default', () => {
@@ -163,7 +164,7 @@ describe('custom menu units (v7.5.95 U1/U2)', () => {
       [{ name: 'ဆန်', price: 120, quantity: 1, unit: 'တစ်ဗူး' }],
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0].unit).toBe('တစ်ဗူး');
+    expect(rows[0].unit).toBe('ဗူး');
     const sameDefault = computeMenuDiff(
       [{ name: 'ဆန်', price: 100, unit: 'တစ်ဗူး' }],
       [{ name: 'ဆန်', price: 120, quantity: 1 }],

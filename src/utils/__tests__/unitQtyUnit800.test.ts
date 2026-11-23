@@ -74,11 +74,11 @@ function unitQtySection(): string {
 }
 
 describe('resolveSavedMenuUnit — the save normalization the unit_qty mode now shares (v7.6.01)', () => {
-  it('presets save canonicalized, customs save as typed, အခြား never stores', () => {
+  it('presets save canonicalized, customs save stripped of a leading number word, အခြား never stores', () => {
     expect(resolveSavedMenuUnit('ပါကင်')).toBe('ပါကင်');
     expect(resolveSavedMenuUnit('ကီလို')).toBe('ကီလို');
     expect(resolveSavedMenuUnit('ဗူး')).toBe('ဗူး');
-    expect(resolveSavedMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(resolveSavedMenuUnit('တစ်ဗူး')).toBe('ဗူး');
     expect(resolveSavedMenuUnit('တစ်ခု')).toBe('ခု');
     expect(resolveSavedMenuUnit('အခြား')).toBe('ခု');
     expect(resolveSavedMenuUnit('')).toBe('ခု');
@@ -92,7 +92,7 @@ describe('resolveSavedMenuUnit — the save normalization the unit_qty mode now 
     expect(collectNewCustomUnits(['ဗူး'], ['ဗူး'])).toEqual([]);
     expect(
       collectNewCustomUnits(['တစ်ဗူး'], ['ဗူး']),
-    ).toEqual(['တစ်ဗူး']);
+    ).toEqual([]);
   });
 
   it('select options are presets, then customs, then အခြား last', () => {
@@ -204,7 +204,7 @@ describe('saved item details show the normalized unit (v7.6.01)', () => {
     expect(displayMenuUnit('တစ်ခု')).toBe('ခု');
     expect(displayMenuUnit('တစ်ပါကင်')).toBe('ပါကင်');
     expect(displayMenuUnit('ဗူး')).toBe('ဗူး');
-    expect(displayMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(displayMenuUnit('တစ်ဗူး')).toBe('ဗူး');
     expect(unitSuffix('ခု')).toBe(' ခု');
     expect(unitSuffix('တစ်ခု')).toBe(' ခု');
     expect(unitSuffix('ဗူး')).toBe(' ဗူး');
@@ -332,11 +332,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.09 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
-    expect(CURRENT_BUILD_NUMBER).toBe(323);
-    expect(VERSION_JSON.version).toBe('v7.6.09');
-    expect(VERSION_JSON.buildNumber).toBe(323);
+  it('the shipped identity is 7.6.10 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
+    expect(CURRENT_BUILD_NUMBER).toBe(324);
+    expect(VERSION_JSON.version).toBe('v7.6.10');
+    expect(VERSION_JSON.buildNumber).toBe(324);
   });
 });
 
@@ -372,32 +372,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.09 (build 323)', () => {
+describe('Version bump to v7.6.10 (build 324)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
-    expect(CURRENT_BUILD_NUMBER).toBe(323);
-    expect(VERSION_JSON.version).toBe('v7.6.09');
-    expect(VERSION_JSON.buildNumber).toBe(323);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
+    expect(CURRENT_BUILD_NUMBER).toBe(324);
+    expect(VERSION_JSON.version).toBe('v7.6.10');
+    expect(VERSION_JSON.buildNumber).toBe(324);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.09');
-    expect(entry.buildNumber).toBe(323);
-    expect(entry.releaseDate).toBe('2026-11-22');
+    expect(entry.version).toBe('v7.6.10');
+    expect(entry.buildNumber).toBe(324);
+    expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'စုငွေအိုးများ',
+      'Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Savings Pots',
+      'Number words in unit names are stripped automatically',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'နာမည်ပေးထားတဲ့ စုငွေအိုးများ — ပန်းတိုင်ပမာဏ + စုပြီးသား + ထည့်သွင်း/ထုတ်ယူမှတ်တမ်း (တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ)',
+      'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Named savings pots — set a target per pot, record contributions and withdrawals, and track progress (tracking only; wallet balances are untouched).',
+      'Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. "တစ်ဗူး" shows as "ဗူး".',
     );
   });
 

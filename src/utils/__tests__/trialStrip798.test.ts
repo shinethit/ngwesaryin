@@ -261,19 +261,19 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
   });
 });
 
-describe('Version bump to v7.6.09 (build 323)', () => {
+describe('Version bump to v7.6.10 (build 324)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
-    expect(CURRENT_BUILD_NUMBER).toBe(323);
-    expect(VERSION_JSON.version).toBe('v7.6.09');
-    expect(VERSION_JSON.buildNumber).toBe(323);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
+    expect(CURRENT_BUILD_NUMBER).toBe(324);
+    expect(VERSION_JSON.version).toBe('v7.6.10');
+    expect(VERSION_JSON.buildNumber).toBe(324);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.09');
-    expect(entry.buildNumber).toBe(323);
-    expect(entry.releaseDate).toBe('2026-11-22');
+    expect(entry.version).toBe('v7.6.10');
+    expect(entry.buildNumber).toBe(324);
+    expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'စုငွေအိုးများ',
+      'Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);

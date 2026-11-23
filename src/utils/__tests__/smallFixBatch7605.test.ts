@@ -133,7 +133,7 @@ function buildGeneratedNote(
 }
 
 describe('generated shopping notes include the unit (v7.6.05b)', () => {
-  it('unit sits after the quantity: old forms canonicalize, customs stay verbatim', () => {
+  it('unit sits after the quantity: old forms canonicalize, number-word customs strip to the bare form', () => {
     expect(
       buildGeneratedNote([{ name: 'ဆန်', quantity: 2, amount: 10000, unit: 'ခု' }]),
     ).toBe(`ဆန် x2 ခု (${formatMMK(10000)})`);
@@ -145,7 +145,7 @@ describe('generated shopping notes include the unit (v7.6.05b)', () => {
     ).toBe(`ဆန် ပါကင် (${formatMMK(5000)})`);
     expect(
       buildGeneratedNote([{ name: 'ဆန်', quantity: 3, amount: 9000, unit: 'တစ်ဗူး' }]),
-    ).toBe(`ဆန် x3 တစ်ဗူး (${formatMMK(9000)})`);
+    ).toBe(`ဆန် x3 ဗူး (${formatMMK(9000)})`);
     expect(
       buildGeneratedNote([{ name: 'ဆီ', quantity: 2, amount: 6200, unit: 'လီတာ' }]),
     ).toBe(`ဆီ x2 လီတာ (${formatMMK(6200)})`);
@@ -243,7 +243,7 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
       typeof unit === 'string' && unit.trim() ? displayMenuUnit(unit) : '';
     expect(displayMenuUnit('တစ်ခု')).toBe('ခု');
     expect(displayMenuUnit('တစ်ကီလို')).toBe('ကီလို');
-    expect(displayMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(displayMenuUnit('တစ်ဗူး')).toBe('ဗူး');
     expect(displayMenuUnit('ဗူး')).toBe('ဗူး');
     expect(badge(undefined)).toBe('');
     expect(badge('')).toBe('');
@@ -259,29 +259,29 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.09 (build 323)', () => {
+describe('version pins rolled forward to v7.6.10 (build 324)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
-    expect(CURRENT_BUILD_NUMBER).toBe(323);
-    expect(VERSION_JSON.version).toBe('v7.6.09');
-    expect(VERSION_JSON.buildNumber).toBe(323);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
+    expect(CURRENT_BUILD_NUMBER).toBe(324);
+    expect(VERSION_JSON.version).toBe('v7.6.10');
+    expect(VERSION_JSON.buildNumber).toBe(324);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the savings pots, no Admin strings', () => {
+  it('the top history entry carries the unit number-word strip entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.09');
-    expect(top.buildNumber).toBe(323);
-    expect(top.releaseDate).toBe('2026-11-22');
+    expect(top.version).toBe('v7.6.10');
+    expect(top.buildNumber).toBe(324);
+    expect(top.releaseDate).toBe('2026-11-23');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('စုငွေအိုးများ');
-    expect(top.titleEn).toBe('Savings Pots');
+    expect(top.titleMy).toBe('Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း');
+    expect(top.titleEn).toBe('Number words in unit names are stripped automatically');
     expect(top.changesMy).toEqual([
-      'နာမည်ပေးထားတဲ့ စုငွေအိုးများ — ပန်းတိုင်ပမာဏ + စုပြီးသား + ထည့်သွင်း/ထုတ်ယူမှတ်တမ်း (တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ)',
+      'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်',
     ]);
     expect(top.changesEn).toEqual([
-      'Named savings pots — set a target per pot, record contributions and withdrawals, and track progress (tracking only; wallet balances are untouched).',
+      'Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. "တစ်ဗူး" shows as "ဗူး".',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

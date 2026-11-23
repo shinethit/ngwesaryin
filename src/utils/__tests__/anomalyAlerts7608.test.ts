@@ -675,29 +675,29 @@ describe('anomaly section wiring — modal + bell badge (v7.6.08)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.09 (build 323)', () => {
+describe('version pins rolled forward to v7.6.10 (build 324)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
-    expect(CURRENT_BUILD_NUMBER).toBe(323);
-    expect(VERSION_JSON.version).toBe('v7.6.09');
-    expect(VERSION_JSON.buildNumber).toBe(323);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
+    expect(CURRENT_BUILD_NUMBER).toBe(324);
+    expect(VERSION_JSON.version).toBe('v7.6.10');
+    expect(VERSION_JSON.buildNumber).toBe(324);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the savings pots entry, no Admin strings', () => {
+  it('the top history entry carries the unit number-word strip entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.09');
-    expect(top.buildNumber).toBe(323);
-    expect(top.releaseDate).toBe('2026-11-22');
+    expect(top.version).toBe('v7.6.10');
+    expect(top.buildNumber).toBe(324);
+    expect(top.releaseDate).toBe('2026-11-23');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('စုငွေအိုးများ');
-    expect(top.titleEn).toBe('Savings Pots');
+    expect(top.titleMy).toBe('Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း');
+    expect(top.titleEn).toBe('Number words in unit names are stripped automatically');
     expect(top.changesMy).toEqual([
-      'နာမည်ပေးထားတဲ့ စုငွေအိုးများ — ပန်းတိုင်ပမာဏ + စုပြီးသား + ထည့်သွင်း/ထုတ်ယူမှတ်တမ်း (တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ)',
+      'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်',
     ]);
     expect(top.changesEn).toEqual([
-      'Named savings pots — set a target per pot, record contributions and withdrawals, and track progress (tracking only; wallet balances are untouched).',
+      'Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. "တစ်ဗူး" shows as "ဗူး".',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -71,7 +71,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   // [v7.5.82] Display label for a stored menu unit (stored value is the
   // Myanmar string). Unit-less items have no label at all.
   // [v7.5.97] Normalize first: an old stored 'တစ်ခု' renders as 'ခု'
-  // (labelEn 'per piece' in EN mode); a custom unit renders as-is.
+  // (labelEn 'per piece' in EN mode); [v7.6.10] a custom unit renders
+  // stripped of a mistaken leading number word ('တစ်ဗူး' → 'ဗူး').
   const menuUnitLabel = (unit?: string): string | null => {
     if (!unit) return null;
     const normalized = normalizeMenuUnit(unit);

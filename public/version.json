@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.09",
-  "buildNumber": 323,
+  "version": "v7.6.10",
+  "buildNumber": 324,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "နာမည်ပေးထားတဲ့ စုငွေအိုးများ — ပန်းတိုင်ပမာဏ + စုပြီးသား + ထည့်သွင်း/ထုတ်ယူမှတ်တမ်း (တိုးတက်မှုကို ခြေရာခံခြင်းသာ၊ ပိုက်ဆံအိတ်လက်ကျန်ကို မထိပါ)"
+    "Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်"
   ],
   "changesEn": [
-    "Named savings pots — set a target per pot, record contributions and withdrawals, and track progress (tracking only; wallet balances are untouched)."
+    "Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. \"တစ်ဗူး\" shows as \"ဗူး\"."
   ]
 }

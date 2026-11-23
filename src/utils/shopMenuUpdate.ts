@@ -35,40 +35,60 @@ export const SHOP_MENU_UNITS: { value: string; labelMy: string; labelEn: string 
   { value: 'အခြား', labelMy: 'အခြား', labelEn: 'other' },
 ];
 
-/** [v7.5.97] The five old preset spellings, canonicalized by
- * normalizeMenuUnit to the bare forms above. Only these exact
- * strings map — a custom string is never stripped (see below). */
-const LEGACY_MENU_UNITS: Record<string, string> = {
-  'တစ်ခု': 'ခု',
-  'တစ်ပါကင်': 'ပါကင်',
-  'တစ်ကီလို': 'ကီလို',
-  'တစ်လီတာ': 'လီတာ',
-  'တစ်ထုပ်': 'ထုပ်',
-};
+/** [v7.6.10] Myanmar cardinal number words (1–10), stripped from
+ * the front of a unit name when a non-empty remainder remains — a
+ * number word mistakenly typed into a unit ('တစ်ဗူး', 'နှစ်ထုပ်')
+ * is removed automatically. No word here is a prefix of another,
+ * so a single startsWith pass in this order is unambiguous. */
+const MENU_UNIT_NUMBER_WORDS = [
+  'တစ်',
+  'နှစ်',
+  'သုံး',
+  'လေး',
+  'ငါး',
+  'ခြောက်',
+  'ခုနှစ်',
+  'ရှစ်',
+  'ကိုး',
+  'ဆယ်',
+];
 
 /** Trim; empty / non-string values fall back to the default.
- * [v7.5.97] The five OLD preset forms ('တစ်ခု' etc., stored before
- * this version) canonicalize to the bare forms ('ခု' etc.), so an
- * old stored line and a new entry MATCH and DISPLAY the same.
- * [v7.5.95 U2] A non-empty string that is NOT one of the five old
- * forms or the six list values is a CUSTOM unit (e.g. 'တစ်ဗူး')
- * typed via the 'အခြား' option — it is PRESERVED as-is, never
- * collapsed to the default and never stripped of its leading
- * 'တစ်'. Matching stays exact string equality on the NORMALIZED
- * form everywhere (computeMenuDiff / buildUpdatedMenuItems /
- * shopItemSearch), so a custom unit matches only the same custom
- * unit. The literal 'အခြား' itself is a list value, so it is
- * preserved too (old entries stay as-is). */
+ * [v7.6.10] ONE leading Myanmar cardinal number word (1–10) is
+ * stripped when a non-empty remainder remains, so a stored
+ * 'တစ်ဗူး' DISPLAYS and MATCHES as 'ဗူး' and a stored 'တစ်ခု'
+ * still canonicalizes to the bare preset 'ခု' — the v7.5.97
+ * five-form map is subsumed by this general rule. Guards: a
+ * string that IS only a number word ('တစ်') keeps it (an empty
+ * remainder never strips to nothing); only ONE prefix is ever
+ * stripped ('တစ်နှစ်ဗူး' → 'နှစ်ဗူး'); digits are never
+ * stripped ('2ဗူး' stays '2ဗူး'); spaced forms strip too
+ * ('တစ် ဗူး' → 'ဗူး', via the post-strip trim). The literal
+ * 'အခြား' carries no number-word prefix, so it is preserved.
+ * Matching stays exact string equality on the NORMALIZED form
+ * everywhere (computeMenuDiff / buildUpdatedMenuItems /
+ * shopItemSearch), so a stripped custom unit matches the same
+ * bare custom unit. No stored string is rewritten: stored units
+ * stay as typed until re-save; normalization happens at read
+ * time, as in v7.5.97. */
 export function normalizeMenuUnit(unit: unknown): string {
   if (typeof unit !== 'string') return DEFAULT_MENU_UNIT;
   const trimmed = unit.trim();
   if (!trimmed) return DEFAULT_MENU_UNIT;
-  return LEGACY_MENU_UNITS[trimmed] ?? trimmed;
+  for (const word of MENU_UNIT_NUMBER_WORDS) {
+    if (trimmed.startsWith(word)) {
+      const rest = trimmed.slice(word.length).trim();
+      if (rest) return rest;
+      return trimmed;
+    }
+  }
+  return trimmed;
 }
 
-/** [v7.5.97] The unit to DISPLAY for a stored unit string: the
- * normalized form, so an old 'တစ်ခု' line renders as 'ခု' while a
- * custom unit renders exactly as typed. */
+/** [v7.6.10] The unit to DISPLAY for a stored unit string: the
+ * normalized form, so an old 'တစ်ခု' line renders as 'ခု' and a
+ * stored 'တစ်ဗူး' renders as 'ဗူး' (its mistaken leading number
+ * word stripped); any other custom unit renders as typed. */
 export function displayMenuUnit(unit: unknown): string {
   return normalizeMenuUnit(unit);
 }
@@ -149,9 +169,10 @@ export function menuUnitNeedsCustomInput(unit: unknown, customUnits: string[] = 
   return resolveMenuUnitSelectValue(unit, customUnits) === OTHER_MENU_UNIT;
 }
 
-/** [v7.5.95 U1] The free-text value for a stored unit: the raw custom
- * string when the unit is custom, '' otherwise (a list value, the
- * literal 'အခြား', or empty all show an empty input). */
+/** [v7.5.95 U1] The free-text value for a stored unit: the
+ * normalized custom string when the unit is custom ('တစ်ဗူး' opens
+ * for edit as 'ဗူး'), '' otherwise (a list value, the literal
+ * 'အခြား', or empty all show an empty input). */
 export function customMenuUnitText(unit: unknown): string {
   if (typeof unit !== 'string') return '';
   const trimmed = unit.trim();
@@ -166,26 +187,31 @@ export function customMenuUnitText(unit: unknown): string {
 /** [v7.5.95 U1] The unit to SAVE for a stored/typed value: the
  * 'အခြား' sentinel (picked but nothing typed) resolves to the
  * default — choosing 'အခြား' must never store the literal 'အခြား'.
- * Every other value goes through normalizeMenuUnit (custom strings
- * preserved, empty → default). */
+ * Every other value goes through normalizeMenuUnit (a mistaken
+ * leading number word is stripped, empty → default). */
 export function resolveSavedMenuUnit(unit: unknown): string {
   if (typeof unit === 'string' && unit.trim() === OTHER_MENU_UNIT) return DEFAULT_MENU_UNIT;
   return normalizeMenuUnit(unit);
 }
 
 /** [v7.5.95 U2] Custom units in `units` that are not already in
- * `existingCustom` — the append-on-save set (deduped, in order). */
+ * `existingCustom` — the append-on-save set (deduped, in order).
+ * [v7.6.10] Both sides are normalized before deduping, so a stored
+ * 'တစ်ဗူး' and an existing 'ဗူး' collapse to the one bare custom
+ * 'ဗူး' instead of persisting a duplicate. */
 export function collectNewCustomUnits(
   units: (string | undefined)[],
   existingCustom: string[],
 ): string[] {
-  const known = new Set((existingCustom || []).map((u) => (typeof u === 'string' ? u.trim() : '')));
+  const known = new Set(
+    (existingCustom || []).map((u) => (typeof u === 'string' ? normalizeMenuUnit(u.trim()) : '')),
+  );
   const out: string[] = [];
   for (const u of units) {
     if (!isCustomMenuUnit(u)) continue;
-    const trimmed = (u as string).trim();
-    if (known.has(trimmed) || out.includes(trimmed)) continue;
-    out.push(trimmed);
+    const normalized = normalizeMenuUnit((u as string).trim());
+    if (known.has(normalized) || out.includes(normalized)) continue;
+    out.push(normalized);
   }
   return out;
 }

@@ -211,9 +211,9 @@ describe('Persisted state syncs same-tab between mounted owners (U2)', () => {
 });
 
 describe('Custom units: type + reappear (U1, U2, U3)', () => {
-  it('normalizeMenuUnit preserves a custom string', () => {
-    expect(normalizeMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
-    expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('တစ်ဗူး');
+  it('normalizeMenuUnit strips a mistaken leading number word (v7.6.10)', () => {
+    expect(normalizeMenuUnit('တစ်ဗူး')).toBe('ဗူး');
+    expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('ဗူး');
     expect(normalizeMenuUnit('')).toBe(DEFAULT_MENU_UNIT);
     expect(resolveSavedMenuUnit('အခြား')).toBe(DEFAULT_MENU_UNIT);
   });

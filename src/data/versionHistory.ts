@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.09';
-export const CURRENT_BUILD_NUMBER = 323;
+export const CURRENT_APP_VERSION = 'v7.6.10';
+export const CURRENT_BUILD_NUMBER = 324;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.10',
+    buildNumber: 324,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း',
+    titleEn: 'Number words in unit names are stripped automatically',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံး (တစ်၊ နှစ်၊ …) ကို အလိုအလျောက် ဖြုတ်ပေးပြီ — တစ်ဗူး ကို ဗူး လို့ ပြပြီး၊ ဗူး နဲ့ တူညီတဲ့ စာရင်းနဲ့ ကိုက်ညီမည်။ သိမ်းထားတဲ့ စာရင်းတွေ ဘာမှ မပြောင်းလဲပါ။',
+    descriptionEn: 'A mistaken leading number word (one, two, …) in a unit name is now stripped automatically — "တစ်ဗူး" shows as "ဗူး" and matches a "ဗူး" entry. Nothing already saved changes.',
+    changesMy: [
+      'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်',
+    ],
+    changesEn: [
+      'Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. "တစ်ဗူး" shows as "ဗူး".',
+    ],
+  },
   {
     version: 'v7.6.09',
     buildNumber: 323,

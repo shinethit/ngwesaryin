@@ -86,11 +86,11 @@ describe('normalizeMenuUnit canonicalizes the old preset forms (v7.5.97)', () =>
     expect(normalizeMenuUnit('အခြား')).toBe('အခြား');
   });
 
-  it('preserves custom strings, including တစ်- customs and လုံး', () => {
-    expect(normalizeMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
-    expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('တစ်ဗူး');
+  it('strips a leading number word from customs; other customs pass through (v7.6.10)', () => {
+    expect(normalizeMenuUnit('တစ်ဗူး')).toBe('ဗူး');
+    expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('ဗူး');
     expect(normalizeMenuUnit('လုံး')).toBe('လုံး');
-    expect(normalizeMenuUnit('တစ်ထောင်း')).toBe('တစ်ထောင်း');
+    expect(normalizeMenuUnit('တစ်ထောင်း')).toBe('ထောင်း');
     expect(normalizeMenuUnit('per kilo')).toBe('per kilo');
   });
 
@@ -106,7 +106,7 @@ describe('normalizeMenuUnit canonicalizes the old preset forms (v7.5.97)', () =>
   it('displayMenuUnit is the normalized form', () => {
     expect(displayMenuUnit('တစ်ထုပ်')).toBe('ထုပ်');
     expect(displayMenuUnit('တစ်ခု')).toBe('ခု');
-    expect(displayMenuUnit('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(displayMenuUnit('တစ်ဗူး')).toBe('ဗူး');
     expect(displayMenuUnit('လုံး')).toBe('လုံး');
   });
 });
@@ -199,7 +199,7 @@ describe('unit selects derive the bare preset for an old stored unit (v7.5.97)',
       'ကီလို',
       'လီတာ',
       'ထုပ်',
-      'တစ်ဗူး',
+      'ဗူး',
       'လုံး',
       'အခြား',
     ]);
@@ -213,7 +213,7 @@ describe('unit selects derive the bare preset for an old stored unit (v7.5.97)',
       'ကီလို',
       'လီတာ',
       'ထုပ်',
-      'တစ်ဗူး',
+      'ဗူး',
       'အခြား',
     ]);
   });
@@ -222,7 +222,7 @@ describe('unit selects derive the bare preset for an old stored unit (v7.5.97)',
     for (const [oldForm, bare] of OLD_TO_BARE) {
       expect(resolveMenuUnitSelectValue(oldForm)).toBe(bare);
     }
-    expect(resolveMenuUnitSelectValue('တစ်ဗူး', ['တစ်ဗူး'])).toBe('တစ်ဗူး');
+    expect(resolveMenuUnitSelectValue('တစ်ဗူး', ['တစ်ဗူး'])).toBe('ဗူး');
     expect(resolveMenuUnitSelectValue('လုံး', ['လုံး'])).toBe('လုံး');
     expect(resolveMenuUnitSelectValue('အခြား')).toBe('အခြား');
     expect(resolveMenuUnitSelectValue('')).toBe('အခြား');
@@ -235,7 +235,7 @@ describe('unit selects derive the bare preset for an old stored unit (v7.5.97)',
       expect(customMenuUnitText(oldForm)).toBe('');
     }
     expect(menuUnitNeedsCustomInput('တစ်ဗူး')).toBe(true);
-    expect(customMenuUnitText('တစ်ဗူး')).toBe('တစ်ဗူး');
+    expect(customMenuUnitText('တစ်ဗူး')).toBe('ဗူး');
   });
 });
 
@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.09 (build 323)', () => {
+describe('Version bump to v7.6.10 (build 324)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.09');
-    expect(CURRENT_BUILD_NUMBER).toBe(323);
-    expect(VERSION_JSON.version).toBe('v7.6.09');
-    expect(VERSION_JSON.buildNumber).toBe(323);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
+    expect(CURRENT_BUILD_NUMBER).toBe(324);
+    expect(VERSION_JSON.version).toBe('v7.6.10');
+    expect(VERSION_JSON.buildNumber).toBe(324);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.09');
-    expect(entry.buildNumber).toBe(323);
-    expect(entry.releaseDate).toBe('2026-11-22');
+    expect(entry.version).toBe('v7.6.10');
+    expect(entry.buildNumber).toBe(324);
+    expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('စုငွေအိုးများ');
-    expect(entry.titleEn).toBe('Savings Pots');
+    expect(entry.titleMy).toBe('Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း');
+    expect(entry.titleEn).toBe('Number words in unit names are stripped automatically');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

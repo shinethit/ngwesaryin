@@ -1189,7 +1189,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
                                     <span className="min-w-0 flex-1 break-words">{item.name}</span>
                                     {/* [v7.6.01] Unit beside price × quantity, normalized
-                                        ('တစ်ခု' → 'ခု', custom verbatim); no suffix
+                                        ('တစ်ခု' → 'ခု', 'တစ်ဗူး' → 'ဗူး'); no suffix
                                         when the stored unit is missing/blank.
                                         [v7.6.01 top-up] Row wraps: a long unit
                                         drops below the name instead of squeezing

@@ -837,7 +837,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     // same position as the quantity: `name x2 ခု (amount)`, or
     // `name ခု (amount)` at qty 1 (the x1 is omitted, as before).
     // displayMenuUnit canonicalizes old forms ('တစ်ခု' -> 'ခု')
-    // and keeps custom units verbatim; a missing/blank unit — or
+    // and strips a mistaken leading number word from customs
+    // ('တစ်ဗူး' -> 'ဗူး'); a missing/blank unit — or
     // the bare 'အခြား' sentinel (Other picked, nothing typed yet) —
     // contributes nothing, never an invented default. The shape is
     // otherwise unchanged, and only NEW notes are generated here:

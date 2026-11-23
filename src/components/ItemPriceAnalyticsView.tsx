@@ -123,7 +123,8 @@ const ITEM_COLORS = [
 // [v7.5.87] Menu unit as a readable label (same mapping ShopCard uses
 // for its menu lines — the stored value is the Myanmar string).
 // [v7.5.97] Normalize first: an old stored 'တစ်ခု' renders as 'ခု'
-// (labelEn 'per piece' in EN mode); a custom unit renders as-is.
+// (labelEn 'per piece' in EN mode); [v7.6.10] a custom unit renders
+// stripped of a mistaken leading number word ('တစ်ဗူး' → 'ဗူး').
 const menuUnitDisplay = (unit: string, lang: 'my' | 'en'): string => {
   const normalized = normalizeMenuUnit(unit);
   const found = SHOP_MENU_UNITS.find((u) => u.value === normalized);

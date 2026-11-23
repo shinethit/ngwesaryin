@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.13",
-  "buildNumber": 327,
+  "version": "v7.6.14",
+  "buildNumber": 328,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်"
+    "စာရင်းအသစ် ထည့်တဲ့အခါ ဘာမှ မရွေးထားတဲ့ ပုံမှန်ပုံစံက စပြီး ယာဉ်အမျိုးအစား ရွေးမှ ယာဉ်ပုံစံ ပေါ်မည် — ယာဉ်ပုံစံထဲမှာ ခလုတ် ၄ ခုကသာ ရွေးချယ်စရာ ဖြစ်ပြီး အပေါ် Bar ကို ဖျောက်ထားသည်"
   ],
   "changesEn": [
-    "Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only."
+    "New entries now open neutral with nothing pre-selected; vehicle mode appears only after choosing a vehicle category, and the four tiles are the only vehicle-type selector (the top bar is hidden in vehicle mode)."
   ]
 }

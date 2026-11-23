@@ -970,17 +970,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     });
   }, [selectedCatObj, allTransactions, effectiveCategoryId, lang]);
 
+  // [v7.6.14] Explicit-category gating: vehicle mode engages only
+  // from the category the user actually picked (categoryId). The
+  // fallback inside selectedCatObj (first / most-used category)
+  // must never engage a mode: on a fresh open categoryId is '' and
+  // the form stays neutral / general until a vehicle category is
+  // picked. selectedCatObj / effectiveCategoryId keep the fallback
+  // for their read-only consumers (sub-category sort, suggestions).
+  const explicitCatObj = categoryId ? categories.find((c) => c.id === categoryId) : undefined;
   const isVehicleRelatedCategory = useMemo(() => {
-    if (type !== 'expense' || !selectedCatObj) return false;
-    const id = (selectedCatObj.id || '').toLowerCase();
-    const name = (selectedCatObj.name || '').toLowerCase();
-    const nameEn = (selectedCatObj.nameEn || '').toLowerCase();
-    const subIds = (selectedCatObj.subCategories || []).map((s) => (s.id || '').toLowerCase());
-    const subNames = (selectedCatObj.subCategories || []).map((s) => (s.name || '').toLowerCase());
+    if (type !== 'expense' || !explicitCatObj) return false;
+    const id = (explicitCatObj.id || '').toLowerCase();
+    const name = (explicitCatObj.name || '').toLowerCase();
+    const nameEn = (explicitCatObj.nameEn || '').toLowerCase();
+    const subIds = (explicitCatObj.subCategories || []).map((s) => (s.id || '').toLowerCase());
+    const subNames = (explicitCatObj.subCategories || []).map((s) => (s.name || '').toLowerCase());
     const hasVehicleSub = subIds.some((sid) => sid.startsWith('sub_veh_')) || subNames.some((sn) => sn.includes('ဆီဖိုး') || sn.includes('ဆီ') || sn.includes('မော်တော်') || sn.includes('အင်ဂျင်ဝိုင်'));
     if (hasVehicleSub) return true;
     return id === 'cat_vehicle' || id === 'cat_vehicle_management' || id === 'cat_expense_car' || id === 'cat_transport' || id.includes('vehicle') || id.includes('fuel') || name.includes('ယာဉ်') || name.includes('ကား') || name.includes('စက်သုံးဆီ') || name.includes('ဆီဖိုး') || nameEn.includes('vehicle') || nameEn.includes('fuel') || nameEn.includes('petrol') || nameEn.includes('transport');
-  }, [type, selectedCatObj]);
+  }, [type, explicitCatObj]);
 
   const showModelSelector = useMemo(() => {
     return isVehicleRelatedCategory || initialModel === 'fuel' || initialModel === 'vehicle_service';
@@ -992,6 +1000,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsVehicleLinkEnabled(false);
     }
   }, [showModelSelector, entryModel]);
+
+  // [v7.6.14] Fresh-open vehicle mode: the 4 tiles below are the
+  // sole vehicle-type selector, so the top dropdown Bar and the
+  // Mode chip row hide while one is engaged. Edit mode is
+  // excluded (the Bar / chip stay the edit path), and the general
+  // state is excluded (the Bar stays the entry point there).
+  const inFreshVehicleMode = !isEditing && entryModel !== 'general' && isVehicleRelatedCategory;
 
   const handleSwitchModel = (newModel: EntryModel) => {
     setEntryModel(newModel);
@@ -1053,6 +1068,26 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     } else {
       setIsVehicleLinkEnabled(false);
     }
+  };
+
+  // [v7.6.14] Toggle-off: tapping the already-selected vehicle tile
+  // returns to a neutral general entry — the vehicle link is
+  // disabled and the category / sub-category are cleared, so the
+  // category row shows its empty placeholder and the tiles hide
+  // (their gate needs entryModel off 'general'). The ref guards
+  // are set exactly as the other tile taps set them, so the
+  // one-time auto-select cannot re-engage on this open. Vehicle
+  // field values are left as-is, like the Mode chip's close
+  // button: a general-mode save cannot use them (the save path
+  // builds a vehicle payload only for a vehicle entryModel, and
+  // with no category it asks for one instead).
+  const toggleOffVehicleMode = () => {
+    setEntryModel('general');
+    setIsVehicleLinkEnabled(false);
+    setCategoryId('');
+    setSubCategoryId('');
+    autoSelectedRef.current = false;
+    autoSelectDoneRef.current = true;
   };
 
   // [v7.6.03] One-time auto-select of the most-used vehicle entry
@@ -1952,8 +1987,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           {/* [v7.5.61] Entry-mode switcher is now vehicle-only: the three
               general modes (item / unit x qty / shopping list) live in the
               tabs below, so offering them here too was a duplicate. The
-              switcher only appears when a vehicle mode can apply. */}
-          {(isVehicleRelatedCategory || showModelSelector) && (
+              switcher only appears when a vehicle mode can apply.
+              [v7.6.14] In fresh-open vehicle mode the tiles below are
+              the sole selector, so this Bar hides there. */}
+          {(isVehicleRelatedCategory || showModelSelector) && !inFreshVehicleMode && (
           <div className="px-3 py-2 border-b border-slate-100 shrink-0">
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setMoreOpen(!moreOpen)} className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
@@ -2017,7 +2054,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             )}
 
-            {entryModel !== "general" && (
+            {/* [v7.6.14] The Mode chip row hides in fresh-open
+                vehicle mode with the Bar above (the tiles are the
+                sole selector); its ✕ close stays for edit mode. */}
+            {entryModel !== "general" && !inFreshVehicleMode && (
               <div className="px-3 pt-3">
                 <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200">
                   <span className="text-xs font-bold text-emerald-800 min-w-0">
@@ -2239,20 +2279,29 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 selector is the only entry point. While EDITING the
                 tiles stay hidden, as before: the edit restores its
                 vehicle model via getResolvedModel, and the switcher
-                dropdown above remains the edit path. The current
-                mode's tile renders active and is a no-op. A manual
-                tile tap clears the auto-selected state. */}
+                dropdown above remains the edit path. [v7.6.14] In
+                fresh-open vehicle mode the top Bar hides, so these
+                tiles are the SOLE selector — and tapping the
+                already-selected tile toggles back to 'general'
+                (toggleOffVehicleMode). The fuel-guide button moved
+                here from the hidden Bar so it stays reachable. A
+                manual tile tap clears the auto-selected state. */}
             {isVehicleRelatedCategory && !isEditing && entryModel !== 'general' && (
               <div className="px-4 py-3 border-b border-slate-100">
                 <div className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
                   <Car className="w-3.5 h-3.5 text-blue-600" />
                   <span>{lang === 'my' ? 'ယာဉ် မှတ်တမ်း အမျိုးအစား ရွေးပါ:' : 'Select vehicle entry type:'}</span>
+                  {/* [v7.6.14] Fuel guide, relocated from the top Bar
+                      (hidden in fresh-open vehicle mode). */}
+                  <button type="button" onClick={() => setShowFuelGuideModal(true)} className="ml-auto p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 shrink-0" title={lang === "my" ? "ဆီဖိုး လမ်းညွှန်" : "Fuel Guide"}>
+                    <HelpCircle className="w-4 h-4" />
+                  </button>
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
-                  <button type="button" onClick={() => { if (entryModel !== "fuel") handleSwitchModel("fuel"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "fuel" ? " ring-2 ring-emerald-500 bg-emerald-100" : "")}><Fuel className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
-                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType !== "tires")) handleSwitchModel("vehicle_service"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? " ring-2 ring-blue-500 bg-blue-100" : "")}><Wrench className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
-                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType === "tires")) { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); } autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType === "tires" ? " ring-2 ring-amber-500 bg-amber-100" : "")}><Car className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'တာယာလဲလှယ်' : 'Tire Replace'}</span></button>
-                  <button type="button" onClick={() => { if (entryModel !== "tire_pressure") handleSwitchModel("tire_pressure"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "tire_pressure" ? " ring-2 ring-teal-500 bg-teal-100" : "")}><Gauge className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span></button>
+                  <button type="button" onClick={() => { if (entryModel === "fuel") toggleOffVehicleMode(); else handleSwitchModel("fuel"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "fuel" ? " ring-2 ring-emerald-500 bg-emerald-100" : "")}><Fuel className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
+                  <button type="button" onClick={() => { if (entryModel === "vehicle_service" && maintServiceType !== "tires") toggleOffVehicleMode(); else handleSwitchModel("vehicle_service"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? " ring-2 ring-blue-500 bg-blue-100" : "")}><Wrench className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
+                  <button type="button" onClick={() => { if (entryModel === "vehicle_service" && maintServiceType === "tires") toggleOffVehicleMode(); else { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); } autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType === "tires" ? " ring-2 ring-amber-500 bg-amber-100" : "")}><Car className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'တာယာလဲလှယ်' : 'Tire Replace'}</span></button>
+                  <button type="button" onClick={() => { if (entryModel === "tire_pressure") toggleOffVehicleMode(); else handleSwitchModel("tire_pressure"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "tire_pressure" ? " ring-2 ring-teal-500 bg-teal-100" : "")}><Gauge className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span></button>
                 </div>
               </div>
             )}

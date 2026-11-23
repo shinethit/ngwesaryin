@@ -339,34 +339,34 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.13 (build 327)', () => {
-  it('current version is v7.6.13 / build 327 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
-    expect(CURRENT_BUILD_NUMBER).toBe(327);
-    expect(VERSION_JSON.version).toBe('v7.6.13');
-    expect(VERSION_JSON.buildNumber).toBe(327);
+describe('Version bump to v7.6.14 (build 328)', () => {
+  it('current version is v7.6.14 / build 328 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.14');
+    expect(CURRENT_BUILD_NUMBER).toBe(328);
+    expect(VERSION_JSON.version).toBe('v7.6.14');
+    expect(VERSION_JSON.buildNumber).toBe(328);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.13 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.14 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.13');
-    expect(entry.buildNumber).toBe(327);
+    expect(entry.version).toBe('v7.6.14');
+    expect(entry.buildNumber).toBe(328);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('စုငွေအိုးနှင့် ပိုက်ဆံအိတ် အရွှေ့');
+    expect(entry.titleMy).toBe('စာရင်းအသစ် ပုံမှန်ပုံစံ + ယာဉ်ရွေးချယ်မှု တစ်ခုတည်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်',
+      'စာရင်းအသစ် ထည့်တဲ့အခါ ဘာမှ မရွေးထားတဲ့ ပုံမှန်ပုံစံက စပြီး ယာဉ်အမျိုးအစား ရွေးမှ ယာဉ်ပုံစံ ပေါ်မည် — ယာဉ်ပုံစံထဲမှာ ခလုတ် ၄ ခုကသာ ရွေးချယ်စရာ ဖြစ်ပြီး အပေါ် Bar ကို ဖျောက်ထားသည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only.',
+      'New entries now open neutral with nothing pre-selected; vehicle mode appears only after choosing a vehicle category, and the four tiles are the only vehicle-type selector (the top bar is hidden in vehicle mode).',
     ]);
   });
 });

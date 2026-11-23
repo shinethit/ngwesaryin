@@ -155,11 +155,17 @@ describe('Tire-pressure tiles stay visible (v7.5.94 Fix E)', () => {
     );
   });
 
-  it('the current mode tile is a no-op and renders active', () => {
-    expect(MODAL_SRC).toContain('if (entryModel !== "fuel") handleSwitchModel("fuel")');
+  // [v7.6.14] SUPERSEDES the no-op reading: tapping the
+  // already-selected tile now toggles back to a neutral general
+  // entry (toggleOffVehicleMode). The active ring stays.
+  it('the current mode tile toggles off and renders active', () => {
     expect(MODAL_SRC).toContain(
-      'if (entryModel !== "tire_pressure") handleSwitchModel("tire_pressure")',
+      'if (entryModel === "fuel") toggleOffVehicleMode(); else handleSwitchModel("fuel")',
     );
+    expect(MODAL_SRC).toContain(
+      'if (entryModel === "tire_pressure") toggleOffVehicleMode(); else handleSwitchModel("tire_pressure")',
+    );
+    expect(MODAL_SRC).not.toContain('is a no-op');
     expect(MODAL_SRC).toContain('ring-2 ring-emerald-500');
     expect(MODAL_SRC).toContain('ring-2 ring-blue-500');
     expect(MODAL_SRC).toContain('ring-2 ring-amber-500');
@@ -185,15 +191,15 @@ describe('Tire-pressure tiles stay visible (v7.5.94 Fix E)', () => {
   });
 });
 
-describe('Version bump to v7.6.13 (build 327)', () => {
+describe('Version bump to v7.6.14 (build 328)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
-    expect(CURRENT_BUILD_NUMBER).toBe(327);
-    expect(VERSION_JSON.version).toBe('v7.6.13');
-    expect(VERSION_JSON.buildNumber).toBe(327);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.14');
+    expect(CURRENT_BUILD_NUMBER).toBe(328);
+    expect(VERSION_JSON.version).toBe('v7.6.14');
+    expect(VERSION_JSON.buildNumber).toBe(328);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.13');
-    expect(entry.buildNumber).toBe(327);
+    expect(entry.version).toBe('v7.6.14');
+    expect(entry.buildNumber).toBe(328);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

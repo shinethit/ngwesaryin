@@ -347,29 +347,29 @@ describe('expiry section wiring — modal + bell badge (v7.6.06)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.13 (build 327)', () => {
+describe('version pins rolled forward to v7.6.14 (build 328)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.13');
-    expect(CURRENT_BUILD_NUMBER).toBe(327);
-    expect(VERSION_JSON.version).toBe('v7.6.13');
-    expect(VERSION_JSON.buildNumber).toBe(327);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.14');
+    expect(CURRENT_BUILD_NUMBER).toBe(328);
+    expect(VERSION_JSON.version).toBe('v7.6.14');
+    expect(VERSION_JSON.buildNumber).toBe(328);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the pot-transfer entry, no Admin strings', () => {
+  it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.13');
-    expect(top.buildNumber).toBe(327);
+    expect(top.version).toBe('v7.6.14');
+    expect(top.buildNumber).toBe(328);
     expect(top.releaseDate).toBe('2026-11-23');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('စုငွေအိုးနှင့် ပိုက်ဆံအိတ် အရွှေ့');
-    expect(top.titleEn).toBe('Savings-pot transfers to and from a wallet');
+    expect(top.titleMy).toBe('စာရင်းအသစ် ပုံမှန်ပုံစံ + ယာဉ်ရွေးချယ်မှု တစ်ခုတည်း');
+    expect(top.titleEn).toBe('Neutral new entry + a single vehicle selector');
     expect(top.changesMy).toEqual([
-      'စုငွေအိုးထဲ ပိုက်ဆံအိတ်ကနေ ရွှေ့နိုင်ပြီး အိုးကနေလည်း ပိုက်ဆံအိတ်ထဲ ပြန်ရွှေ့နိုင်သည် — ရွှေ့လိုက်တဲ့ ပမာဏက ပိုက်ဆံအိတ်လက်ကျန်မှာ တကယ် ပြောင်းလဲမည်',
+      'စာရင်းအသစ် ထည့်တဲ့အခါ ဘာမှ မရွေးထားတဲ့ ပုံမှန်ပုံစံက စပြီး ယာဉ်အမျိုးအစား ရွေးမှ ယာဉ်ပုံစံ ပေါ်မည် — ယာဉ်ပုံစံထဲမှာ ခလုတ် ၄ ခုကသာ ရွေးချယ်စရာ ဖြစ်ပြီး အပေါ် Bar ကို ဖျောက်ထားသည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Savings pots can now move money to and from a wallet — a transfer really changes the wallet balance; without a wallet picked, entries stay tracking-only.',
+      'New entries now open neutral with nothing pre-selected; vehicle mode appears only after choosing a vehicle category, and the four tiles are the only vehicle-type selector (the top bar is hidden in vehicle mode).',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

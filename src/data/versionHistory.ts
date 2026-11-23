@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.13';
-export const CURRENT_BUILD_NUMBER = 327;
+export const CURRENT_APP_VERSION = 'v7.6.14';
+export const CURRENT_BUILD_NUMBER = 328;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.14',
+    buildNumber: 328,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'စာရင်းအသစ် ပုံမှန်ပုံစံ + ယာဉ်ရွေးချယ်မှု တစ်ခုတည်း',
+    titleEn: 'Neutral new entry + a single vehicle selector',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းအသစ် ထည့်တဲ့အခါ ဘာမှ မရွေးထားတဲ့ ပုံမှန်ပုံစံက စပြီး ယာဉ်အမျိုးအစား ရွေးမှ ယာဉ်ပုံစံ ပေါ်မည် — ယာဉ်ပုံစံထဲမှာ ခလုတ် ၄ ခုကသာ ရွေးချယ်စရာ ဖြစ်ပြီး အပေါ် Bar ကို ဖျောက်ထားသည်။',
+    descriptionEn: 'New entries now open neutral with nothing pre-selected; vehicle mode appears only after choosing a vehicle category, and the four tiles are the only vehicle-type selector (the top bar is hidden in vehicle mode).',
+    changesMy: [
+      'စာရင်းအသစ် ထည့်တဲ့အခါ ဘာမှ မရွေးထားတဲ့ ပုံမှန်ပုံစံက စပြီး ယာဉ်အမျိုးအစား ရွေးမှ ယာဉ်ပုံစံ ပေါ်မည် — ယာဉ်ပုံစံထဲမှာ ခလုတ် ၄ ခုကသာ ရွေးချယ်စရာ ဖြစ်ပြီး အပေါ် Bar ကို ဖျောက်ထားသည်',
+    ],
+    changesEn: [
+      'New entries now open neutral with nothing pre-selected; vehicle mode appears only after choosing a vehicle category, and the four tiles are the only vehicle-type selector (the top bar is hidden in vehicle mode).',
+    ],
+  },
   {
     version: 'v7.6.13',
     buildNumber: 327,

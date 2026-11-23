@@ -51,13 +51,3 @@ export function parseMyanmarNumber(value: string | number | null | undefined): n
   return parseFloat(cleaned);
 }
 
-/** True when the value contains at least one Myanmar digit. */
-export function containsMyanmarDigits(value: string | number | null | undefined): boolean {
-  if (value === null || value === undefined) return false;
-  const s = String(value);
-  for (let i = 0; i < s.length; i++) {
-    const code = s.charCodeAt(i);
-    if (code >= MYANMAR_ZERO && code <= MYANMAR_ZERO + 9) return true;
-  }
-  return false;
-}

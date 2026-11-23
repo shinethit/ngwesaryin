@@ -76,7 +76,6 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   lang,
   onAddWallet,
   onUpdateWallet,
-  onUpdateWalletBalance,
   onDeleteWallet,
   onTransferFunds,
   onOpenUpgradeModal,
@@ -85,7 +84,6 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   onShareWallet,
   onUnshareWallet,
   onUpdatePermissions,
-  onSyncRefresh,
   onTransferOwnership,
   maxCollaborators,
   onOpenSignIn,
@@ -94,8 +92,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   // exposed from AuthContext by another worker — the per-viewer Separate
   // toggle for shared wallets (never writes includeInTotals to the
   // shared doc).
-  const { user, activeWorkspaceId, invitedWorkspaces, switchWorkspace, updateSharedWalletScopeOverride, sharedWalletScopeOverrides } = useAuth();
-  const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
+  const { user, activeWorkspaceId, updateSharedWalletScopeOverride, sharedWalletScopeOverrides } = useAuth();
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [walletToEdit, setWalletToEdit] = useState<Wallet | null>(null);

@@ -12,7 +12,6 @@ interface FinancialHealthModalProps {
   health: FinancialHealthResult;
   lang: 'my' | 'en';
   onNavigateToAnalytics?: () => void;
-  onNavigateToBudgets?: () => void;
 }
 
 export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
@@ -21,7 +20,6 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
   health,
   lang,
   onNavigateToAnalytics,
-  onNavigateToBudgets,
 }) => {
   if (!isOpen) return null;
 
@@ -249,17 +247,6 @@ export const FinancialHealthModal: React.FC<FinancialHealthModalProps> = ({
               className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer min-w-0 text-left"
             >
               <span>{lang === 'my' ? 'ဘတ်ဂျက်နှင့် စာရင်းအင်းသို့ သွားမည်' : 'View Budgets & Analytics'}</span>
-              <ChevronRight className="w-4 h-4 shrink-0" />
-            </button>
-          ) : onNavigateToBudgets ? (
-            <button
-              onClick={() => {
-                onClose();
-                onNavigateToBudgets?.();
-              }}
-              className="text-xs font-bold text-indigo-700 hover:text-indigo-900 transition-colors flex items-center gap-1 cursor-pointer min-w-0 text-left"
-            >
-              <span>{lang === 'my' ? 'ဘတ်ဂျက်သို့ သွားမည်' : 'View Budgets'}</span>
               <ChevronRight className="w-4 h-4 shrink-0" />
             </button>
           ) : (

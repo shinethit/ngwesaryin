@@ -3,8 +3,6 @@ import { safeGetItem, safeSetItem, safeRemoveItem } from './utils/storage';
 import {
   INITIAL_BUDGETS,
   INITIAL_CATEGORIES,
-  INITIAL_DEBTS,
-  INITIAL_TRANSACTIONS,
   INITIAL_WALLETS,
   DEFAULT_PLAN_LIMITS,
 } from './data/initialData';
@@ -115,7 +113,7 @@ import {
   declineSharedWalletInvite,
 } from './lib/sharedWalletService';
 import { subscribeMyRefs } from './lib/sharedWalletRefs';
-import { areArraysEqual, deduplicateById } from './utils/syncGuards';
+import { areArraysEqual } from './utils/syncGuards';
 import { mergeById, mergeByKey } from './utils/mergeById';
 import { usePersistedState } from './hooks/usePersistedState';
 import { hashPin, generateSalt, isHashedPinFormat } from './utils/pinHash';
@@ -2511,7 +2509,6 @@ export default function App() {
     computedWallets,
     transactions,
     setTransactions,
-    categories,
     addCollaborator,
     removeCollaborator,
   });
@@ -2886,7 +2883,6 @@ export default function App() {
                     lang={lang}
               dataScope={dataScope}
               onSetDataScope={handleSetDataScope}
-              onAddTransaction={handleOpenAddTx}
               onDeleteTransaction={handleDeleteTransaction}
               onEditTransaction={handleOpenEditTx}
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
@@ -3583,10 +3579,6 @@ export default function App() {
           setIsTxModalOpen(false);
           setActiveTab('categories');
         }}
-        onOpenAddVehicle={() => {
-          setIsTxModalOpen(false);
-          setActiveTab('vehicles');
-        }}
       />
       {/* [v7.6.11] Read-only record view for search hits. */}
       <TransactionDetailModal
@@ -3753,8 +3745,6 @@ export default function App() {
             onClose={() => setIsAdminPanelOpen(false)}
             onNavigate={setActiveTab}
             lang={lang}
-            transactions={transactions}
-            wallets={computedWallets}
             categories={categories}
           />
         )}
@@ -3874,11 +3864,7 @@ export default function App() {
         lang={lang}
         transactions={transactions}
         cloudTxIds={cloudTxIds}
-        debts={debts}
-        wallets={computedWallets}
         activeWorkspaceId={activeWorkspaceId || undefined}
-        onForcePushAll={handleForcePushAll}
-        onForcePullAll={handleForcePullAll}
         onUpdateCloudTxIds={handleUpdateConfirmedCloudTxIds}
       />
 

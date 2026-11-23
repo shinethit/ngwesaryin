@@ -12,7 +12,6 @@ import {
   buildPotTransferTransaction,
   getPotProgress,
   getSavedAmount,
-  isValidSavingsPots,
   newSavingsPotContributionId,
   newSavingsPotId,
   sanitizeSavingsPots,

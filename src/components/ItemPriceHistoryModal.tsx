@@ -30,7 +30,6 @@ interface ItemPriceHistoryModalProps {
   categories: Category[];
   wallets: WalletType[];
   lang: 'my' | 'en';
-  onSelectSubCategory?: (subCatId: string, suggestedAmount?: number) => void;
 }
 
 export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
@@ -40,7 +39,6 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
   categories,
   wallets,
   lang,
-  onSelectSubCategory,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState<string>('all');

@@ -45,7 +45,6 @@ interface UseWalletHandlersParams {
   computedWallets: Wallet[];
   transactions: Transaction[];
   setTransactions: Dispatch<SetStateAction<Transaction[]>>;
-  categories: Category[];
   addCollaborator: (email: string) => Promise<{ success: boolean; error?: string }>;
   removeCollaborator: (email: string) => Promise<boolean>;
 }
@@ -69,7 +68,6 @@ export function useWalletHandlers({
   computedWallets,
   transactions,
   setTransactions,
-  categories,
   addCollaborator,
   removeCollaborator,
 }: UseWalletHandlersParams) {
@@ -105,12 +103,6 @@ export function useWalletHandlers({
     if (!w) return true;
     if (w.isSharedFromOther && w.ownerUid && user?.uid && w.ownerUid !== user.uid) return false;
     return true;
-  };
-  const countRolling30DayTransactions = (txs: Transaction[]) => {
-    const d = new Date();
-    d.setDate(d.getDate() - 29);
-    const start = getLocalDateString(d);
-    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
   };
   // [v7.5.68] Transaction limit is per CALENDAR MONTH for both Guest
   // and Free (user decision 2026-11-06): count transactions dated
@@ -521,7 +513,7 @@ export function useWalletHandlers({
       let sharedOk = true;
       if (fromWallet && (fromWallet.isSharedFromOther || (fromWallet.sharedWith && fromWallet.sharedWith.length > 0))) {
         const fromDocId = getSharedWalletDocId(fromWallet, user.uid);
-        const saved = await saveSharedWalletTransaction(fromWallet.id, outTx, (fromWallet.balance ?? 0) - cleanAmount, fromDocId, user.uid);
+        const saved = await saveSharedWalletTransaction(fromWallet.id, outTx, fromDocId, user.uid);
         if (!saved) {
           sharedOk = false;
         } else {
@@ -531,7 +523,7 @@ export function useWalletHandlers({
       }
       if (toWallet && (toWallet.isSharedFromOther || (toWallet.sharedWith && toWallet.sharedWith.length > 0))) {
         const toDocId = getSharedWalletDocId(toWallet, user.uid);
-        const saved = await saveSharedWalletTransaction(toWallet.id, inTx, (toWallet.balance ?? 0) + cleanAmount, toDocId, user.uid);
+        const saved = await saveSharedWalletTransaction(toWallet.id, inTx, toDocId, user.uid);
         if (!saved) {
           sharedOk = false;
         } else {
@@ -884,7 +876,7 @@ export function useWalletHandlers({
             return false;
           }
           const sharedDocId = getSharedWalletDocId(targetWallet, user.uid);
-          const saved = await saveSharedWalletTransaction(walletId, newTx, actualBalance, sharedDocId, user.uid);
+          const saved = await saveSharedWalletTransaction(walletId, newTx, sharedDocId, user.uid);
           if (!saved) {
             showToast(cloudPendingMsg);
             return false;

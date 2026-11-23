@@ -95,28 +95,28 @@ describe('view-first records (v7.6.11)', () => {
   });
 });
 
-describe('Version bump to v7.6.17 (build 331)', () => {
+describe('Version bump to v7.6.18 (build 332)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.17');
-    expect(CURRENT_BUILD_NUMBER).toBe(331);
-    expect(VERSION_JSON.version).toBe('v7.6.17');
-    expect(VERSION_JSON.buildNumber).toBe(331);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.18');
+    expect(CURRENT_BUILD_NUMBER).toBe(332);
+    expect(VERSION_JSON.version).toBe('v7.6.18');
+    expect(VERSION_JSON.buildNumber).toBe(332);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.17');
-    expect(entry.buildNumber).toBe(331);
+    expect(entry.version).toBe('v7.6.18');
+    expect(entry.buildNumber).toBe(332);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Entry Form Category များ အသုံးအများဆုံးအစဉ် ပြခြင်း');
-    expect(entry.titleEn).toBe('Most-used categories first in the entry form');
+    expect(entry.titleMy).toBe('အသုံးမပြုတဲ့ code များ ရှင်းလင်းခြင်း');
+    expect(entry.titleEn).toBe('Removing unused code');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်',
+      'အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom.',
+      'Removed unused code, unwired props, and dead helpers — no visible or behavioral changes.',
     );
   });
 

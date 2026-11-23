@@ -33,8 +33,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAccountModal,
   onLockApp,
   lang,
-  onToggleLang,
-  activeTab,
   setActiveTab,
   logoStyle = 'pixiu',
   onSelectLogoStyle,
@@ -43,7 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdminPanel,
   onOpenShareApp,
 }) => {
-  const { user, isGuest, isSyncing, activeWorkspaceId, isAdmin } = useAuth();
+  const { user, isGuest, isSyncing, isAdmin } = useAuth();
   const { isInstalled, isStandalone } = usePWAInstall();
   const [showLogoPicker, setShowLogoPicker] = useState(false);
   const logoPickerRef = useRef<HTMLDivElement>(null);

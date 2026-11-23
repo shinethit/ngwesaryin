@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History, Database } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { FortuneLogo, LogoStyle } from './FortuneLogo';
+import { FortuneLogo } from './FortuneLogo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { CURRENT_APP_VERSION } from '../data/versionHistory';
 
@@ -23,8 +23,6 @@ interface SidebarProps {
   debtsCount: number;
   walletsCount: number;
   vehiclesCount?: number;
-  logoStyle?: LogoStyle;
-  onSelectLogoStyle?: (style: LogoStyle) => void;
   onOpenPrivacy?: () => void;
   onOpenUserGuide?: () => void;
   onOpenShareApp?: () => void;
@@ -49,8 +47,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   debtsCount,
   walletsCount,
   vehiclesCount = 0,
-  logoStyle = 'pixiu',
-  onSelectLogoStyle,
   onOpenPrivacy,
   onOpenUserGuide,
   onOpenShareApp,
@@ -59,35 +55,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, isGuest, isSyncing, isAdmin, logout, activeWorkspaceId } = useAuth();
   const { isInstalled, isStandalone } = usePWAInstall();
-  const [showLogoPicker, setShowLogoPicker] = useState(false);
-  const logoPickerRef = useRef<HTMLDivElement>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // [v7.5.60 S13] Logo tap goes home (Dashboard); long-press (600ms)
-  // opens the logo picker. Same behaviour as the Navbar logo.
-  const longPressTimerRef = useRef<number | null>(null);
-  const longPressFiredRef = useRef(false);
+  // Logo tap goes home (Dashboard). The Navbar logo keeps the
+  // long-press logo-style picker; the Sidebar copy was never wired.
   const handleLogoTap = () => {
-    if (longPressFiredRef.current) {
-      longPressFiredRef.current = false;
-      return;
-    }
-    setShowLogoPicker(false);
     setActiveTab('dashboard');
     onClose();
-  };
-  const handleLogoPointerDown = () => {
-    longPressFiredRef.current = false;
-    longPressTimerRef.current = window.setTimeout(() => {
-      longPressFiredRef.current = true;
-      setShowLogoPicker(true);
-    }, 600);
-  };
-  const cancelLogoLongPress = () => {
-    if (longPressTimerRef.current) {
-      window.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
   };
 
   useEffect(() => {
@@ -101,15 +75,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (logoPickerRef.current && !logoPickerRef.current.contains(e.target as Node)) {
-        setShowLogoPicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Lock body scroll when Sidebar is open
   useEffect(() => {
@@ -228,126 +193,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Brand header */}
           <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
             <div className="flex items-center gap-3">
-              {/* Fortune Logo with Dropdown */}
-              <div className="relative" ref={logoPickerRef}>
+              {/* Fortune Logo */}
+              <div className="relative">
                 <button
                   type="button"
                   onClick={handleLogoTap}
-                  onPointerDown={handleLogoPointerDown}
-                  onPointerUp={cancelLogoLongPress}
-                  onPointerLeave={cancelLogoLongPress}
-                  onContextMenu={(e) => e.preventDefault()}
                   className="group relative flex items-center cursor-pointer transition-transform active:scale-95 focus:outline-none"
                   title={
                     lang === 'my'
-                      ? 'ပင်မ စာမျက်နှာ ပြန်ရန် နှိပ်ပါ · Logo ပုံစံပြောင်းရန် ကြာကြာ ဖိပါ'
-                      : 'Tap to go home · Long-press to change the logo style'
+                      ? 'ပင်မ စာမျက်နှာ ပြန်ရန် နှိပ်ပါ'
+                      : 'Tap to go home'
                   }
                 >
-                  <FortuneLogo size="md" style={logoStyle} animate />
+                  <FortuneLogo size="md" animate />
                   <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-white border border-amber-300 rounded-full flex items-center justify-center text-[9px] text-amber-700 shadow-2xs group-hover:scale-110 transition-transform">
                     ✨
                   </span>
                 </button>
 
-                {/* Auspicious Emblem Dropdown Picker */}
-                {showLogoPicker && (
-                  <div className="absolute left-0 top-12 z-50 w-64 p-2 bg-white rounded-2xl border border-amber-200 shadow-2xl animate-fadeIn">
-                    <div className="px-2 py-1.5 border-b border-amber-100 flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                        <span>✨</span>
-                        <span>{lang === 'my' ? 'လာဘ်ရွှင်စေသော Logo ရွေးပါ' : 'Select Lucky Logo'}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="text-[10px] text-amber-700 font-semibold px-1.5 py-0.5 bg-amber-50 rounded">
-                          Fortune
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowLogoPicker(false)}
-                          className="min-w-8 min-h-8 w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center cursor-pointer"
-                          title={lang === 'my' ? 'ပိတ်မည်' : 'Close'}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onSelectLogoStyle) onSelectLogoStyle('money_bag');
-                          setShowLogoPicker(false);
-                        }}
-                        className={`w-full p-2 rounded-xl flex items-center gap-2.5 transition-colors text-left cursor-pointer ${
-                          logoStyle === 'money_bag'
-                            ? 'bg-amber-50/80 border border-amber-300 text-amber-950 font-semibold'
-                            : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <FortuneLogo size="sm" style="money_bag" />
-                        <div className="flex-1">
-                          <div className="text-xs font-semibold">
-                            {lang === 'my' ? '💰 ရွှေငွေထုပ်' : '💰 Fortune Bag'}
-                          </div>
-                          <div className="text-[10px] text-slate-500 font-normal">
-                            {lang === 'my' ? 'စီးပွားတိုးတက် ငွေဝင်ကြမ်းစေခြင်း' : 'Abundant Wealth'}
-                          </div>
-                        </div>
-                        {logoStyle === 'money_bag' && <span className="text-xs text-amber-600 font-bold">✓</span>}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onSelectLogoStyle) onSelectLogoStyle('gold_ingot');
-                          setShowLogoPicker(false);
-                        }}
-                        className={`w-full p-2 rounded-xl flex items-center gap-2.5 transition-colors text-left cursor-pointer ${
-                          logoStyle === 'gold_ingot'
-                            ? 'bg-amber-50/80 border border-amber-300 text-amber-950 font-semibold'
-                            : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <FortuneLogo size="sm" style="gold_ingot" />
-                        <div className="flex-1">
-                          <div className="text-xs font-semibold">
-                            {lang === 'my' ? '🪙 တရုတ်ရွှေတုံး (Yuanbao)' : '🪙 Gold Ingot (Yuanbao)'}
-                          </div>
-                          <div className="text-[10px] text-slate-500 font-normal">
-                            {lang === 'my' ? 'စည်းစိမ်တိုးပွားခြင်း' : 'Prosperity & Pure Fortune'}
-                          </div>
-                        </div>
-                        {logoStyle === 'gold_ingot' && <span className="text-xs text-amber-600 font-bold">✓</span>}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onSelectLogoStyle) onSelectLogoStyle('pixiu');
-                          setShowLogoPicker(false);
-                        }}
-                        className={`w-full p-2 rounded-xl flex items-center gap-2.5 transition-colors text-left cursor-pointer ${
-                          logoStyle === 'pixiu'
-                            ? 'bg-amber-50/80 border border-amber-300 text-amber-950 font-semibold'
-                            : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <FortuneLogo size="sm" style="pixiu" />
-                        <div className="flex-1">
-                          <div className="text-xs font-semibold">
-                            {lang === 'my' ? '🦁 ဖီချူး (Pixiu)' : '🦁 Auspicious Pixiu'}
-                          </div>
-                          <div className="text-[10px] text-slate-500 font-normal">
-                            {lang === 'my' ? 'ငွေဝင်မထွက် လာဘ်စုပ်အဆောင်' : 'Attracts & Locks Wealth'}
-                          </div>
-                        </div>
-                        {logoStyle === 'pixiu' && <span className="text-xs text-amber-600 font-bold">✓</span>}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div>

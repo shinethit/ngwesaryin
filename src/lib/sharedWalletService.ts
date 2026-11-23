@@ -680,7 +680,6 @@ export function subscribeSharedWalletDebts(
 export async function saveSharedWalletTransaction(
   walletId: string,
   tx: Transaction,
-  newWalletBalance: number,
   sharedDocId?: string,
   currentUid?: string
 ): Promise<boolean> {

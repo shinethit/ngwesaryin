@@ -35,10 +35,9 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   onClearAllData,
   onExportJson,
   onImportJson,
-  onOpenAccountModal,
   onOpenPremiumModal,
 }) => {
-  const { user, isGuest, isSyncing, lastSyncedAt } = useAuth();
+  const { isGuest } = useAuth();
 
   return (
     <div className="max-w-4xl mx-auto py-4 sm:py-6 space-y-6">

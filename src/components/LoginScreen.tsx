@@ -33,7 +33,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     isSyncing,
   } = useAuth();
 
-  const [authMode, setAuthMode] = useState<'google' | 'email'>('email');
   // [v7.5.60 G-S1] Default to Sign In — most visitors are returning
   // users; defaulting to Sign Up invited accidental new accounts
   // (whose old data then "vanished").
@@ -45,7 +44,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showNewTabOption, setShowNewTabOption] = useState(false);
-  const [showVpnTip, setShowVpnTip] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // [v7.5.60 G-M1] Forgot-password flow state.
@@ -64,7 +62,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // Friendly error formatter
   const formatAuthError = (err: any): string => {
     const details = getAuthErrorDetails(err, lang);
-    if (details.isVpnRelated) setShowVpnTip(true);
     if (details.isIframeRelated || details.isVpnRelated) setShowNewTabOption(true);
     return `${details.title}: ${details.message}`;
   };

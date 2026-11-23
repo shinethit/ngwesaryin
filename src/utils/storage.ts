@@ -40,7 +40,6 @@ const __DEVICE_GLOBAL_KEYS = new Set<string>([
   'ngwe_lang',
   'ngwe_lang_picker_seen',  // [v7.4.1] first-launch flag
   'ngwe_amount_display',  // [v7.5.99] display preference, like ngwe_lang
-  'ngwe_theme',
   'ngwe_pin',
   'ngwe_pin_salt',
   'ngwe_pin_settings',
@@ -169,8 +168,4 @@ export function setStorageScope(scope: string | null): void {
       }
     }, 120);
   }
-}
-
-export function getStorageScope(): string | null {
-  return __storageScope;
 }

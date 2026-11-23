@@ -37,10 +37,6 @@ export function setLiveRates(rates: Record<string, number> | null): void {
   __liveRates = Object.keys(clean).length > 0 ? clean : null;
 }
 
-export function hasLiveRates(): boolean {
-  return __liveRates !== null;
-}
-
 export const getCurrencyInfo = (currencyCode: string = 'MMK'): CurrencyInfo => {
   const code = (currencyCode || 'MMK').toUpperCase();
   const info = SUPPORTED_CURRENCIES.find((c) => c.code === code) || SUPPORTED_CURRENCIES[0];

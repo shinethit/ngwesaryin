@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.17 (build 331)', () => {
+describe('Version bump to v7.6.18 (build 332)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.17');
-    expect(CURRENT_BUILD_NUMBER).toBe(331);
-    expect(VERSION_JSON.version).toBe('v7.6.17');
-    expect(VERSION_JSON.buildNumber).toBe(331);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.18');
+    expect(CURRENT_BUILD_NUMBER).toBe(332);
+    expect(VERSION_JSON.version).toBe('v7.6.18');
+    expect(VERSION_JSON.buildNumber).toBe(332);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.17');
-    expect(entry.buildNumber).toBe(331);
+    expect(entry.version).toBe('v7.6.18');
+    expect(entry.buildNumber).toBe(332);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Entry Form Category များ အသုံးအများဆုံးအစဉ် ပြခြင်း');
-    expect(entry.titleEn).toBe('Most-used categories first in the entry form');
+    expect(entry.titleMy).toBe('အသုံးမပြုတဲ့ code များ ရှင်းလင်းခြင်း');
+    expect(entry.titleEn).toBe('Removing unused code');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

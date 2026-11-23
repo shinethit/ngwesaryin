@@ -170,24 +170,6 @@ function sanitizeContribution(
   };
 }
 
-/**
- * Strict shape check for a persisted pots value (device-key JSON or
- * the user-document field). Duplicate names are allowed, so names are
- * never checked for uniqueness.
- */
-export function isValidSavingsPots(value: unknown): value is SavingsPot[] {
-  if (!Array.isArray(value)) return false;
-  return value.every((pot) => {
-    if (!isRecord(pot)) return false;
-    if (typeof pot.id !== 'string' || pot.id === '') return false;
-    if (typeof pot.name !== 'string' || pot.name.trim() === '') return false;
-    if (typeof pot.targetAmount !== 'number' || !Number.isFinite(pot.targetAmount) || pot.targetAmount <= 0) return false;
-    if (typeof pot.createdAt !== 'number' || !Number.isFinite(pot.createdAt)) return false;
-    if (!Array.isArray(pot.contributions)) return false;
-    const fallbackDate = todayLocalDateString(new Date(pot.createdAt));
-    return pot.contributions.every((c) => sanitizeContribution(c, fallbackDate) !== null);
-  });
-}
 
 /**
  * Coerce an unknown persisted value into clean pots, dropping

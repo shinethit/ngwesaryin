@@ -249,20 +249,6 @@ export interface PlanLimits {
   hasAdvancedCharts: boolean;
 }
 
-export interface UserProfile {
-  userId: string;
-  email: string;
-  plan: PlanType;
-  collaborators: string[];
-  premiumExpiresAt?: string; // ISO string for expiration timestamp
-  premiumActivatedAt?: string;
-  premiumCodeUsed?: string;
-  premiumMonths?: number;
-  trialClaimed?: boolean;
-  trialClaimedAt?: string;
-  accountCreatedAt?: string;
-}
-
 export interface ActivationCode {
   code: string;
   months: number;
@@ -324,12 +310,6 @@ export interface RecurringTransaction {
 }
 
 export type Currency = 'MMK' | 'USD' | 'THB' | 'SGD';
-
-export interface ExchangeRates {
-  USD: number; // MMK per 1 USD (e.g. 4500)
-  THB: number; // MMK per 1 THB (e.g. 135)
-  SGD: number; // MMK per 1 SGD (e.g. 3450)
-}
 
 export interface PinLockSettings {
   isEnabled: boolean;

@@ -84,8 +84,6 @@ interface TransactionModalProps {
   onOpenUpgrade: () => void;
   onAddSubCategory?: (categoryId: string, subCategory: Omit<SubCategory, 'id'>) => void;
   onManageCategories?: () => void;
-  onOpenAddVehicle?: () => void;
-  onOpenVehicleManagement?: () => void;
   // [v7.5.78 C] Called AFTER a successful save when the typed shop name
   // has no shop record with details yet. App shows the
   // ShopDetailsPromptModal for the name. The prompt CANNOT live in this
@@ -123,8 +121,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onOpenUpgrade,
   onAddSubCategory,
   onManageCategories,
-  onOpenAddVehicle,
-  onOpenVehicleManagement,
   onShopNeedsDetails,
   onShopMenuUpdateCandidate,
   fuelLogs = [],

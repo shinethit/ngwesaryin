@@ -675,29 +675,29 @@ describe('anomaly section wiring — modal + bell badge (v7.6.08)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.17 (build 331)', () => {
+describe('version pins rolled forward to v7.6.18 (build 332)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.17');
-    expect(CURRENT_BUILD_NUMBER).toBe(331);
-    expect(VERSION_JSON.version).toBe('v7.6.17');
-    expect(VERSION_JSON.buildNumber).toBe(331);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.18');
+    expect(CURRENT_BUILD_NUMBER).toBe(332);
+    expect(VERSION_JSON.version).toBe('v7.6.18');
+    expect(VERSION_JSON.buildNumber).toBe(332);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.17');
-    expect(top.buildNumber).toBe(331);
+    expect(top.version).toBe('v7.6.18');
+    expect(top.buildNumber).toBe(332);
     expect(top.releaseDate).toBe('2026-11-23');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Entry Form Category များ အသုံးအများဆုံးအစဉ် ပြခြင်း');
-    expect(top.titleEn).toBe('Most-used categories first in the entry form');
+    expect(top.titleMy).toBe('အသုံးမပြုတဲ့ code များ ရှင်းလင်းခြင်း');
+    expect(top.titleEn).toBe('Removing unused code');
     expect(top.changesMy).toEqual([
-      'Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်',
+      'အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
     ]);
     expect(top.changesEn).toEqual([
-      'The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom.',
+      'Removed unused code, unwired props, and dead helpers — no visible or behavioral changes.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

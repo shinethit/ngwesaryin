@@ -231,5 +231,3 @@ export function mapShopRow(
   return docData;
 }
 
-// Re-exported for callers that need the stored doc shape in types.
-export type MappedShopDoc = PublicShop & { nameEn?: string; helpfulCount: number };

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.17';
-export const CURRENT_BUILD_NUMBER = 331;
+export const CURRENT_APP_VERSION = 'v7.6.18';
+export const CURRENT_BUILD_NUMBER = 332;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.18',
+    buildNumber: 332,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'အသုံးမပြုတဲ့ code များ ရှင်းလင်းခြင်း',
+    titleEn: 'Removing unused code',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ။',
+    descriptionEn: 'Removed unused code, unwired props, and dead helpers — no visible or behavioral changes.',
+    changesMy: [
+      'အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
+    ],
+    changesEn: [
+      'Removed unused code, unwired props, and dead helpers — no visible or behavioral changes.',
+    ],
+  },
   {
     version: 'v7.6.17',
     buildNumber: 331,

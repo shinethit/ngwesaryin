@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Activity, CheckCircle2, AlertTriangle, Zap, Cloud, Smartphone, Layers, ShieldCheck, RotateCcw, Wifi, WifiOff, Server, HelpCircle, Clock, AlertOctagon, Trash2, Copy, Check } from 'lucide-react';
+import { X, Activity, CheckCircle2, AlertTriangle, Zap, Cloud, Smartphone, ShieldCheck, RotateCcw, Wifi, WifiOff, Server, HelpCircle, Clock, AlertOctagon, Trash2, Copy, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
 import { testFirestoreQuotaPing } from '../lib/firebase';
@@ -12,12 +12,7 @@ interface SyncHealthModalProps {
   lang: 'my' | 'en';
   transactions: Transaction[];
   cloudTxIds: Set<string>;
-  debts?: Debt[];
-  wallets?: Wallet[];
   activeWorkspaceId?: string;
-  onForcePushAll: () => Promise<boolean>;
-  onForcePullAll: () => Promise<void>;
-  onOpenDatabaseTracker?: () => void;
   onUpdateCloudTxIds?: (newlyConfirmedIds: string[]) => void;
 }
 
@@ -27,12 +22,7 @@ export const SyncHealthModal: React.FC<SyncHealthModalProps> = ({
   lang,
   transactions,
   cloudTxIds,
-  debts = [],
-  wallets = [],
   activeWorkspaceId,
-  onForcePushAll,
-  onForcePullAll,
-  onOpenDatabaseTracker,
   onUpdateCloudTxIds,
 }) => {
   const { user, isSyncing, lastSyncedAt } = useAuth();
@@ -94,9 +84,7 @@ Code: ${err.errorCode || 'N/A'}`;
   const syncedTxsCount = transactions.filter((t) => cloudTxIds.has(t.id)).length;
   const pendingTxsCount = totalLocalTxs - syncedTxsCount;
 
-  const pendingQueueCount = queueItems.filter((q) => q.status === 'pending').length;
   const failedQueueCount = queueItems.filter((q) => q.status === 'failed').length;
-  const inProgressCount = queueItems.filter((q) => q.status === 'in_progress').length;
 
   // Calculate Health Score (0 - 100%)
   let healthScore = 100;
@@ -804,19 +792,6 @@ Code: ${err.errorCode || 'N/A'}`;
                 <span>{isTestingPing ? 'Pinging...' : (lang === 'my' ? 'Ping စမ်းမည်' : 'Ping Test')}</span>
               </button>
 
-              {onOpenDatabaseTracker && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenDatabaseTracker();
-                  }}
-                  className="py-2.5 px-3.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 rounded-2xl font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>{lang === 'my' ? 'စာရင်းတစ်ခုချင်း အသေးစိတ်' : 'Detailed Records View'}</span>
-                </button>
-              )}
             </div>
 
             <button

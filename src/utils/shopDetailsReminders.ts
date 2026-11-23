@@ -23,7 +23,6 @@ export const SHOP_DETAIL_REMINDERS_KEY = 'ngwe_shop_detail_reminders';
 export const SHOP_DETAIL_DISMISSED_KEY = 'ngwe_shop_detail_dismissed';
 // Fired (same-tab) after every dismissal add/clear so the prompt check
 // (which reads the dismissed set) stays fresh without a reload.
-export const SHOP_DISMISSED_CHANGED_EVENT = 'ngwe:shop-dismissed-changed';
 // [v7.5.91 D2] Deep-link event — the floating-bar Shops badge dispatches
 // it, ShopsView listens and turns the needs-details filter ON.
 export const OPEN_SHOPS_NEEDS_DETAILS_EVENT = 'ngwe:open-shops-needs-details';
@@ -245,16 +244,6 @@ export interface ShopDetailDismissal {
   dismissedAt: number;
 }
 
-function notifyDismissedChanged(): void {
-  try {
-    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-      window.dispatchEvent(new CustomEvent(SHOP_DISMISSED_CHANGED_EVENT));
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
 export function loadShopDetailDismissals(): ShopDetailDismissal[] {
   try {
     const raw = readRaw(SHOP_DETAIL_DISMISSED_KEY);
@@ -303,7 +292,6 @@ export function loadShopDetailDismissedKeys(): Set<string> {
 
 function persistShopDetailDismissals(list: ShopDetailDismissal[]): void {
   writeRaw(SHOP_DETAIL_DISMISSED_KEY, JSON.stringify(list));
-  notifyDismissedChanged();
 }
 
 /**

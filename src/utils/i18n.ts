@@ -18,9 +18,6 @@ export const SUPPORTED_LANGS: { code: Lang; labelEn: string; nativeLabel: string
 
 export const DEFAULT_LANG: Lang = 'my';
 
-export const isValidLang = (v: unknown): v is Lang =>
-  v === 'my' || v === 'en';
-
 // Documentation of intended shape. Only 'my' and 'en' are required;
 // legacy 'zh'/'th' entries below are optional leftovers and fall
 // back to English (the picker no longer offers them).

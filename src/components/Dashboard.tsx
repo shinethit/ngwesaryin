@@ -35,13 +35,11 @@ interface DashboardProps {
   onExportJson?: () => void;
   onImportJson?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onManualSync?: () => void;
-  onOpenDatabaseTracker?: () => void;
   cloudTxIds?: Set<string>;
   // [v7.5.56] Per-viewer Separate choice for shared wallets, keyed by
   // shared wallet doc id (sharedDocId, else wallet id). Loaded/saved by
   // the owner of the user doc; when absent, the wallet's own
   // includeInTotals applies. Wired by the parent when available.
-  sharedWalletScopeOverrides?: Record<string, boolean>;
 }
 
 type TimeFilterOption = 'all' | 'this_month' | 'last_month' | 'this_week' | 'last_30' | 'this_year' | 'custom';
@@ -50,14 +48,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   transactions, debts, wallets, categories, plan,
   lang,
   onAddTransaction, onAddDebt, onSelectTab, onOpenUpgrade, onOpenSearch,
-  sharedWalletScopeOverrides,
 }) => {
   const { user, isSyncing, syncDataToCloud, invitedWorkspaces, sharedWalletScopeOverrides: ctxScopeOverrides } = useAuth();
   // [v7.5.56] Scope overrides come from AuthContext (loaded from the
-  // viewer's own user doc by the context); the prop is a fallback for
-  // callers that pass them directly. Absent either way, the wallet's own
+  // viewer's own user doc by the context). Absent, the wallet's own
   // includeInTotals applies.
-  const scopeOverrides = ctxScopeOverrides ?? sharedWalletScopeOverrides ?? {};
+  const scopeOverrides = ctxScopeOverrides ?? {};
 
   const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('this_month');
   const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);

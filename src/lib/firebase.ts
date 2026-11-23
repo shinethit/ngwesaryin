@@ -191,13 +191,6 @@ export interface FirestoreErrorInfo {
   };
 }
 
-let quotaWarningLogged = false;
-let isNetworkPausedForQuota = false;
-
-const QUOTA_KEY = 'ngwe_quota_exhausted';
-const QUOTA_TIME_KEY = 'ngwe_quota_exhausted_at';
-const QUOTA_RESET_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes retry
-
 /**
  * Ensures an asynchronous Promise resolves within a fixed time budget.
  * Prevents infinite UI spinning when VPN or mobile network stalls.
@@ -224,14 +217,6 @@ export function withTimeout<T>(
         reject(err);
       });
   });
-}
-
-// Exported helper to identify timeout errors
-export function isTimeoutError(e: unknown): boolean {
-  if (!e) return false;
-  const code = (e as any)?.code;
-  const msg = e instanceof Error ? e.message : String(e);
-  return code === 'timeout' || msg.includes('timed out') || msg.includes('timeout');
 }
 
 // Exported helper to identify permission-denied errors
@@ -435,7 +420,6 @@ export async function safeSetDoc(
   try {
     // 8-second timeout to prevent infinite hanging on mobile LTE or iOS Safari WebKit
     await withTimeout(setDoc(docRef, cleanForFirestore(data), options), 8000);
-    isNetworkPausedForQuota = false;
     recordFirestoreOp('write', docRef?.parent?.id || path || 'system', 1);
     if (entityType && entityId) {
       import('./syncQueue')
@@ -548,7 +532,6 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
     // ⚡ For transaction deletes we already used REST; if SDK ever runs it
     // still has 8s timeout as fail-safe.
     await withTimeout(deleteDoc(docRef), 8000);
-    isNetworkPausedForQuota = false;
     recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
     if (entityType && entityId) {
       import('./syncQueue')
@@ -610,7 +593,6 @@ export async function safeUpdateDoc(docRef: any, data: any): Promise<boolean> {
   try {
     // Wrap updateDoc in withTimeout(..., 8000) to prevent hanging
     await withTimeout(updateDoc(docRef, cleanForFirestore(data)), 8000);
-    isNetworkPausedForQuota = false;
     recordFirestoreOp('write', docRef?.parent?.id || docRef?.path || 'system', 1);
     return true;
   } catch (error) {

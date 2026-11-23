@@ -8,8 +8,6 @@ import {
   Vehicle,
   TirePressureLog,
   VehicleMaintenance,
-  RecurringTransaction,
-  AdminSystemMessage,
   getBudgetCategoryIds,
 } from '../types';
 // [v7.5.99 top-up] Generated messages follow the app-wide lakh-display
@@ -71,8 +69,6 @@ interface NotificationModalProps {
   vehicles?: Vehicle[];
   tireLogs?: TirePressureLog[];
   maintenanceLogs?: VehicleMaintenance[];
-  recurringTransactions?: RecurringTransaction[];
-  systemMessages?: AdminSystemMessage[];
   onNavigateTab: (tab: string) => void;
   readNotificationIds: string[];
   onMarkAsRead: (id: string) => void;
@@ -96,8 +92,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   vehicles = [],
   tireLogs = [],
   maintenanceLogs = [],
-  recurringTransactions = [],
-  systemMessages = [],
   onNavigateTab,
   readNotificationIds = [],
   onMarkAsRead,
@@ -350,42 +344,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     });
   });
 
-  // 4. Recurring Transaction Reminders
-  recurringTransactions.forEach((rec) => {
-    if (rec.isActive && rec.dayOfMonth === currentDayNum) {
-      generatedNotifications.push({
-        id: `notif_recurring_${rec.id}_${currentDayNum}`,
-        type: 'recurring',
-        title:
-          lang === 'my'
-            ? `🔄 ဒီနေ့ ပုံမှန် ${rec.type === 'income' ? 'ဝင်ငွေ' : 'ထွက်ငွေ'} စာရင်း ထည့်ရန်နေ့ပါ`
-            : `🔄 Recurring ${rec.type} due today: ${rec.title}`,
-        message: `${rec.title}: ${formatLakhs(rec.amount, lang)}`,
-        exactAmount: formatMMK(rec.amount),
-        severity: 'info',
-        actionTab: 'transactions',
-        actionText: lang === 'my' ? 'စာရင်းထည့်မည်' : 'View Transactions',
-        createdAt: Date.now(),
-      });
-    }
-  });
-
-  // 5. Admin Broadcast System Messages
-  systemMessages.forEach((msg) => {
-    if (msg.isActive) {
-      generatedNotifications.push({
-        id: `notif_system_${msg.id}`,
-        type: 'system',
-        title: `📢 ${msg.title}`,
-        message: msg.content,
-        severity: 'info',
-        actionTab: 'dashboard',
-        actionText: lang === 'my' ? 'ဖတ်ရှုမည်' : 'View Announcement',
-        createdAt: msg.createdAt ? new Date(msg.createdAt).getTime() : Date.now(),
-      });
-    }
-  });
-
   // 6. [v7.5.78 C] Shop-details "fill later" reminders — one per shop
   // name, created when the user saves a transaction with a new shop
   // name and chooses "Later". They stay here (and on the Sidebar Shops
@@ -576,12 +534,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     return n.type === filterTab;
   });
 
-  // [v7.5.60 G-S4] App passes no recurringTransactions / systemMessages
-  // yet, so the "System" tab would always be empty (dead UI). Hide it
-  // until that wiring lands instead of showing an empty tab.
-  const hasSystemNotifications = generatedNotifications.some(
-    (n) => n.type === 'system' || n.type === 'recurring'
-  );
 
   // [v7.5.78 C] Same dead-UI rule for the Shops tab: show it only when
   // at least one shop-details reminder exists.
@@ -961,19 +913,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               🚗 {lang === 'my' ? 'ယာဉ်စနစ်' : 'Vehicles'}
             </button>
 
-            {hasSystemNotifications && (
-              <button
-                type="button"
-                onClick={() => setFilterTab('system')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  filterTab === 'system'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                📢 {lang === 'my' ? 'စနစ်အသိပေးချက်' : 'System'}
-              </button>
-            )}
 
             {hasShopNotifications && (
               <button

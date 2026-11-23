@@ -37,8 +37,6 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
   onClose,
   lang,
   transactions,
-  wallets,
-  debts,
   cloudTxIds,
   onForcePushAll,
   onForcePullAll,
@@ -46,13 +44,12 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
   onOpenSyncHealth,
   onUpdateCloudTxIds,
 }) => {
-  const { user, isSyncing, lastSyncedAt, activeWorkspaceId } = useAuth();
+  const { user, lastSyncedAt, activeWorkspaceId } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'synced' | 'pending'>('all');
   const [isPushing, setIsPushing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
   const [isTestingPing, setIsTestingPing] = useState(false);
-  const [pingResult, setPingResult] = useState<{ success: boolean; latencyMs: number; message: string } | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
@@ -74,7 +71,6 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
   const pushLogsCount = syncLogs.filter((l) => l.direction === 'push').length;
   const pullLogsCount = syncLogs.filter((l) => l.direction === 'pull').length;
   const failedLogsCount = syncLogs.filter((l) => l.status === 'failed').length;
-  const hasRecentErrors = failedLogsCount > 0;
 
   const filteredLogs = syncLogs.filter((log) => {
     if (logFilter === 'all') return true;
@@ -106,7 +102,6 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
 
   const totalUnsyncedCount = pendingTxsCount > 0 ? pendingTxsCount : queueItems.length;
   const totalStuckOrMissingCount = totalUnsyncedCount;
-  const totalPendingCount = totalUnsyncedCount;
 
   const handleRetryFailedSyncs = async () => {
     if (!user) {
@@ -428,16 +423,11 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
 
   const handleTestPing = async () => {
     setIsTestingPing(true);
-    setPingResult(null);
     try {
       const res = await testFirestoreQuotaPing();
-      setPingResult(res);
     } catch (err: any) {
-      setPingResult({
-        success: false,
-        latencyMs: 0,
-        message: err?.message || 'Ping failed',
-      });
+      // Ping result is computed but never rendered; the failure
+      // surfaces through the action notice / retry state instead.
     } finally {
       setIsTestingPing(false);
     }

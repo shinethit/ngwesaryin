@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.17",
-  "buildNumber": 331,
+  "version": "v7.6.18",
+  "buildNumber": 332,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Entry Form မှာ Category နဲ့ ကဏ္ဍခွဲများကို အသုံးအများဆုံးကနေ အနည်းဆုံးအထိ အစဉ်လိုက် ပြမည် — အသုံးမပြုရသေးတာတွေ အောက်ဆုံးမှာ ကျန်မည်"
+    "အသုံးမပြုတော့တဲ့ code၊ မချိတ်ထားတဲ့ props နဲ့ အသေ function များကို ဖယ်ရှားခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ"
   ],
   "changesEn": [
-    "The entry form now lists categories and sub-categories most-used first — unused ones stay at the bottom."
+    "Removed unused code, unwired props, and dead helpers — no visible or behavioral changes."
   ]
 }

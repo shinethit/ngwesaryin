@@ -197,62 +197,6 @@ export async function pushTransactionsDirectHttp(
   }
 }
 
-/**
- * Directly pulls all transactions from Firestore over HTTPS REST API.
- * Bypasses local client cache completely.
- */
-export async function pullTransactionsDirectHttp(
-  uid: string
-): Promise<{ success: boolean; transactions: Transaction[]; error?: string }> {
-  if (!auth.currentUser || !uid) {
-    return { success: false, transactions: [], error: 'User not signed in' };
-  }
-
-  try {
-    const idToken = await auth.currentUser.getIdToken(false);
-    const allDocs: any[] = [];
-    let nextPageToken: string | undefined = undefined;
-
-    do {
-      let url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/users/${uid}/transactions?pageSize=300`;
-      if (nextPageToken) {
-        url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
-      }
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        return { success: false, transactions: [], error: `HTTP ${response.status}` };
-      }
-
-      const json = await response.json();
-      if (json.documents && Array.isArray(json.documents)) {
-        allDocs.push(...json.documents);
-      }
-      nextPageToken = json.nextPageToken;
-    } while (nextPageToken);
-
-    const transactions: Transaction[] = allDocs.map((docSnap: any) => {
-      const rawFields = docSnap.fields || {};
-      const t: Record<string, any> = {};
-      for (const [k, v] of Object.entries(rawFields)) {
-        t[k] = fromFirestoreRestValue(v);
-      }
-      const nameParts = (docSnap.name || '').split('/');
-      const id = nameParts[nameParts.length - 1] || t.id;
-      return { ...t, id } as Transaction;
-    });
-
-    return { success: true, transactions };
-  } catch (err: any) {
-    return { success: false, transactions: [], error: err?.message || String(err) };
-  }
-}
 
 /**
  * Directly DELETE a transaction from Firestore via HTTPS REST API.

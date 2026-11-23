@@ -67,8 +67,6 @@ interface AdminPanelProps {
   isOpen: boolean;
   onClose: () => void;
   lang: 'my' | 'en';
-  transactions?: Transaction[];
-  wallets?: Wallet[];
   categories?: Category[];
   // [v7.5.82] App owns setActiveTab — AdminPanel calls this to switch
   // tabs (e.g. jumping to the Shops tab from a price alert).
@@ -130,8 +128,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   isOpen,
   onClose,
   lang,
-  transactions = [],
-  wallets = [],
   categories = [],
   onNavigate,
 }) => {

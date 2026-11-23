@@ -112,7 +112,7 @@ export function useDebtHandlers({
   const saveLinkedTxSharedChecked = async (tx: Transaction, wallet: Wallet, postBalance: number): Promise<boolean> => {
     if (!user?.uid) return false;
     const sharedDocId = getSharedWalletDocId(wallet, user.uid);
-    const ok = await saveSharedWalletTransaction(wallet.id, tx, postBalance, sharedDocId, user.uid);
+    const ok = await saveSharedWalletTransaction(wallet.id, tx, sharedDocId, user.uid);
     if (!ok) {
       enqueueSharedTxRetry(tx, sharedDocId, 'upsert');
       return false;
@@ -183,12 +183,6 @@ export function useDebtHandlers({
     if (!w) return true;
     if (w.isSharedFromOther && w.ownerUid && user?.uid && w.ownerUid !== user.uid) return false;
     return true;
-  };
-  const countRolling30DayTransactions = (txs: Transaction[]) => {
-    const d = new Date();
-    d.setDate(d.getDate() - 29);
-    const start = getLocalDateString(d);
-    return txs.filter((t) => t.date && t.date >= start && countsTowardMyLimit(t)).length;
   };
   // [v7.5.68] Transaction limit is per CALENDAR MONTH for both Guest
   // and Free (user decision 2026-11-06): count transactions dated

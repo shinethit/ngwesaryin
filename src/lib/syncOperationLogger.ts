@@ -65,37 +65,6 @@ function saveLogs(logs: SyncOperationLog[]): void {
   }
 }
 
-/**
- * Record a completed sync operation directly
- */
-export function recordSyncOperation(entry: {
-  type: SyncOperationType;
-  status: SyncOperationStatus;
-  itemCount?: number;
-  details?: string;
-  errorMessage?: string;
-  durationMs?: number;
-  targetUid?: string;
-}): SyncOperationLog {
-  const direction: 'push' | 'pull' = entry.type === 'pull' ? 'pull' : 'push';
-  const newLog: SyncOperationLog = {
-    id: `synclog_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    timestamp: Date.now(),
-    type: entry.type,
-    direction,
-    status: entry.status,
-    itemCount: entry.itemCount || 0,
-    details: entry.details,
-    errorMessage: entry.errorMessage,
-    durationMs: entry.durationMs,
-    devicePlatform: getDevicePlatform(),
-    targetUid: entry.targetUid,
-  };
-
-  const current = getSyncOperationLogs();
-  saveLogs([newLog, ...current]);
-  return newLog;
-}
 
 /**
  * Start tracking an in-progress sync operation. Returns operation ID to close later.

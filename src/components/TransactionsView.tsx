@@ -47,7 +47,6 @@ interface TransactionsViewProps {
   lang: 'my' | 'en';
   dataScope?: DataScope;
   onSetDataScope?: (scope: DataScope) => void;
-  onAddTransaction: (type?: 'income' | 'expense', targetWalletId?: string) => void;
   onDeleteTransaction: (id: string) => void;
   onEditTransaction: (tx: Transaction) => void;
   onOpenUpgradeModal: () => void;
@@ -56,7 +55,6 @@ interface TransactionsViewProps {
   // reaches its linked FuelLog via FuelLog.transactionId (see
   // utils/fuelRowLine). Optional: without it no fuel line renders.
   fuelLogs?: FuelLog[];
-  onOpenDatabaseTracker?: () => void;
   // [v7.5.55] Full cloud refresh for the sync-detail modal (e.g. App's
   // manual sync). Optional: without it the modal retries via syncQueue.
   onRefreshSync?: () => void | Promise<void>;
@@ -108,13 +106,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   lang,
   dataScope = 'all',
   onSetDataScope,
-  onAddTransaction,
   onDeleteTransaction,
   onEditTransaction,
   onOpenUpgradeModal,
   cloudTxIds,
   fuelLogs = [],
-  onOpenDatabaseTracker,
   onRefreshSync,
 }) => {
   const { user } = useAuth();

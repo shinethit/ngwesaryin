@@ -17,19 +17,6 @@ export function areArraysEqual<T>(
   return true;
 }
 
-export function deduplicateById<T extends { id: string }>(items: T[]): T[] {
-  if (!items || items.length === 0) return [];
-  const map = new Map<string, T>();
-  items.forEach((item) => {
-    if (item && item.id) {
-      if (!map.has(item.id)) {
-        map.set(item.id, item);
-      }
-    }
-  });
-  return Array.from(map.values());
-}
-
 /**
  * Sync fingerprint helpers
  * -------------------------

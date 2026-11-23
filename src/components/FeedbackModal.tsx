@@ -10,7 +10,6 @@ interface FeedbackModalProps {
   onClose: () => void;
   lang: 'my' | 'en';
   currentPlan: PlanType;
-  onSuccess?: () => void;
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({
@@ -18,7 +17,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   onClose,
   lang,
   currentPlan,
-  onSuccess,
 }) => {
   const { user } = useAuth();
   const [rating, setRating] = useState<number>(5);
@@ -112,7 +110,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       }
 
       setIsSuccess(true);
-      if (onSuccess) onSuccess();
 
       setTimeout(() => {
         setIsSuccess(false);

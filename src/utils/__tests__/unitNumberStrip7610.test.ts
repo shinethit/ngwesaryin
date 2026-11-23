@@ -177,28 +177,28 @@ describe('select resolution for a stored တစ်- custom (v7.6.10)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.10 (build 324)', () => {
+describe('version pins rolled forward to v7.6.11 (build 325)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
-    expect(CURRENT_BUILD_NUMBER).toBe(324);
-    expect(VERSION_JSON.version).toBe('v7.6.10');
-    expect(VERSION_JSON.buildNumber).toBe(324);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.11');
+    expect(CURRENT_BUILD_NUMBER).toBe(325);
+    expect(VERSION_JSON.version).toBe('v7.6.11');
+    expect(VERSION_JSON.buildNumber).toBe(325);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.10');
-    expect(entry.buildNumber).toBe(324);
+    expect(entry.version).toBe('v7.6.11');
+    expect(entry.buildNumber).toBe(325);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း');
-    expect(entry.titleEn).toBe('Number words in unit names are stripped automatically');
+    expect(entry.titleMy).toBe('စာရင်း ကြည့်ရှုခြင်း → ပြင်ဆင်ခြင်း ခွဲခြားခြင်း');
+    expect(entry.titleEn).toBe('Viewing a record is now separate from editing it');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်',
+      'သွင်းပြီးသား စာရင်းကို နှိပ်ရင် အရင်ဆုံး ကြည့်ရှုခြင်းသာ ပြပြီး ပြင်ချင်မှ Edit ခလုတ်ကို နှိပ်ရမည် (မှားနှိပ်မိပြီး စာရင်း မပျက်စေရန်)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. "တစ်ဗူး" shows as "ဗူး".',
+      'Tapping a saved record now opens a read-only view first; editing requires tapping the Edit button, so an accidental tap cannot change a record.',
     );
   });
 
@@ -217,21 +217,21 @@ describe('version pins rolled forward to v7.6.10 (build 324)', () => {
     expect(VERSION_JSON.version).not.toBe('v7.6.1');
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.09/7.6.10, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.09';
-    const TO_VERSION = '7.6.10';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.10/7.6.11, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.10';
+    const TO_VERSION = '7.6.11';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
-    // '7.6.10' has no leading zero to mangle by Number(), so the
-    // mangled form here is the trailing-zero drop a loose guard
+    // '7.6.11' has no leading zero to mangle by Number(), so the
+    // mangled form here is the trailing-digit drop a loose guard
     // would accept — built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/0$/, '');
+    const mangled = TO_VERSION.replace(/1$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.10');
-    expect(guardFails('7.6.09')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.11');
     expect(guardFails('7.6.10')).toBe(false);
+    expect(guardFails('7.6.11')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('7.6.1')).toBe(true);
     expect(guardFails('')).toBe(true);

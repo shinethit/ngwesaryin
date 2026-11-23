@@ -339,34 +339,34 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.10 (build 324)', () => {
-  it('current version is v7.6.10 / build 324 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
-    expect(CURRENT_BUILD_NUMBER).toBe(324);
-    expect(VERSION_JSON.version).toBe('v7.6.10');
-    expect(VERSION_JSON.buildNumber).toBe(324);
+describe('Version bump to v7.6.11 (build 325)', () => {
+  it('current version is v7.6.11 / build 325 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.11');
+    expect(CURRENT_BUILD_NUMBER).toBe(325);
+    expect(VERSION_JSON.version).toBe('v7.6.11');
+    expect(VERSION_JSON.buildNumber).toBe(325);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.10 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.11 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.10');
-    expect(entry.buildNumber).toBe(324);
+    expect(entry.version).toBe('v7.6.11');
+    expect(entry.buildNumber).toBe(325);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း');
+    expect(entry.titleMy).toBe('စာရင်း ကြည့်ရှုခြင်း → ပြင်ဆင်ခြင်း ခွဲခြားခြင်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်',
+      'သွင်းပြီးသား စာရင်းကို နှိပ်ရင် အရင်ဆုံး ကြည့်ရှုခြင်းသာ ပြပြီး ပြင်ချင်မှ Edit ခလုတ်ကို နှိပ်ရမည် (မှားနှိပ်မိပြီး စာရင်း မပျက်စေရန်)',
     ]);
     expect(entry.changesEn).toEqual([
-      'Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. "တစ်ဗူး" shows as "ဗူး".',
+      'Tapping a saved record now opens a read-only view first; editing requires tapping the Edit button, so an accidental tap cannot change a record.',
     ]);
   });
 });

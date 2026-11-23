@@ -39,6 +39,7 @@ import { DebtsView } from './components/DebtsView';
 import { WalletsView } from './components/WalletsView';
 import { CategoriesView } from './components/CategoriesView';
 import { TransactionModal } from './components/TransactionModal';
+import { TransactionDetailModal } from './components/TransactionDetailModal';
 import { DebtModal } from './components/DebtModal';
 import { RepaymentModal } from './components/RepaymentModal';
 import { AdBanner } from './components/AdBanner';
@@ -358,6 +359,9 @@ export default function App() {
   const [txModalInitialWalletId, setTxModalInitialWalletId] = useState<string | undefined>(undefined);
   const [txModalInitialModel, setTxModalInitialModel] = useState<'general' | 'fuel' | 'vehicle_service'>('general');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  // [v7.6.11] View-first: the read-only record view opened from a
+  // search hit (the list opens its own instance in TransactionsView).
+  const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
   // [v7.5.55 D28] Debt being edited in DebtModal (null = adding new).
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
@@ -3559,6 +3563,15 @@ export default function App() {
           setActiveTab('vehicles');
         }}
       />
+      {/* [v7.6.11] Read-only record view for search hits. */}
+      <TransactionDetailModal
+        transaction={viewingTransaction}
+        categories={categories}
+        wallets={computedWallets}
+        lang={lang}
+        onClose={() => setViewingTransaction(null)}
+        onEdit={(tx) => handleOpenEditTx(tx)}
+      />
 
       <ShopDetailsPromptModal
         isOpen={!!shopDetailsPromptName}
@@ -3743,10 +3756,11 @@ export default function App() {
           setIsRepaymentModalOpen(true);
         }}
         onSelectTransaction={(t) => {
-          // Opens the record itself (edit modal) — the destination
-          // list's own search/highlight is owned by TransactionsView.
+          // [v7.6.11] View-first: a search hit opens the read-only
+          // record view, never the edit form directly. The view's
+          // Edit button opens the edit form.
           setIsSearchModalOpen(false);
-          handleOpenEditTx(t);
+          setViewingTransaction(t);
         }}
         onSelectWallet={(w) => {
           setIsSearchModalOpen(false);

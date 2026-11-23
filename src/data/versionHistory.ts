@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.10';
-export const CURRENT_BUILD_NUMBER = 324;
+export const CURRENT_APP_VERSION = 'v7.6.11';
+export const CURRENT_BUILD_NUMBER = 325;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.11',
+    buildNumber: 325,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'စာရင်း ကြည့်ရှုခြင်း → ပြင်ဆင်ခြင်း ခွဲခြားခြင်း',
+    titleEn: 'Viewing a record is now separate from editing it',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'သွင်းပြီးသား စာရင်းကို နှိပ်လိုက်ရင် တခါတည်း ပြင်ဆင်နိုင်တဲ့ ပုံစံ ဖြစ်နေတာကြောင့် မှားနှိပ်မိရင် စာရင်း ပျက်နိုင်သည်။ အခု နှိပ်ရင် အရင်ဆုံး ကြည့်ရှုခြင်းသာ ပြပြီး ပြင်ချင်မှ "ပြင်ဆင်မည်" ခလုတ်ကို နှိပ်ရမည်။ ရှာဖွေမှုကနေ ဖွင့်တဲ့ စာရင်းလည်း ဒီအတိုင်းပဲ ဖြစ်သည်။',
+    descriptionEn: 'Tapping a saved record used to open the edit form directly, so a mistaken tap could change the record. Now the tap opens a read-only view first, and editing requires tapping the Edit button inside the view. Records opened from search behave the same way.',
+    changesMy: [
+      'သွင်းပြီးသား စာရင်းကို နှိပ်ရင် အရင်ဆုံး ကြည့်ရှုခြင်းသာ ပြပြီး ပြင်ချင်မှ Edit ခလုတ်ကို နှိပ်ရမည် (မှားနှိပ်မိပြီး စာရင်း မပျက်စေရန်)',
+    ],
+    changesEn: [
+      'Tapping a saved record now opens a read-only view first; editing requires tapping the Edit button, so an accidental tap cannot change a record.',
+    ],
+  },
   {
     version: 'v7.6.10',
     buildNumber: 324,

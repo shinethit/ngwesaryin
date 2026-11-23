@@ -86,7 +86,7 @@ describe('normalizeMenuUnit canonicalizes the old preset forms (v7.5.97)', () =>
     expect(normalizeMenuUnit('အခြား')).toBe('အခြား');
   });
 
-  it('strips a leading number word from customs; other customs pass through (v7.6.10)', () => {
+  it('strips a leading number word from customs; other customs pass through (v7.6.11)', () => {
     expect(normalizeMenuUnit('တစ်ဗူး')).toBe('ဗူး');
     expect(normalizeMenuUnit('  တစ်ဗူး ')).toBe('ဗူး');
     expect(normalizeMenuUnit('လုံး')).toBe('လုံး');
@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.10 (build 324)', () => {
+describe('Version bump to v7.6.11 (build 325)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
-    expect(CURRENT_BUILD_NUMBER).toBe(324);
-    expect(VERSION_JSON.version).toBe('v7.6.10');
-    expect(VERSION_JSON.buildNumber).toBe(324);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.11');
+    expect(CURRENT_BUILD_NUMBER).toBe(325);
+    expect(VERSION_JSON.version).toBe('v7.6.11');
+    expect(VERSION_JSON.buildNumber).toBe(325);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.10');
-    expect(entry.buildNumber).toBe(324);
+    expect(entry.version).toBe('v7.6.11');
+    expect(entry.buildNumber).toBe(325);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း');
-    expect(entry.titleEn).toBe('Number words in unit names are stripped automatically');
+    expect(entry.titleMy).toBe('စာရင်း ကြည့်ရှုခြင်း → ပြင်ဆင်ခြင်း ခွဲခြားခြင်း');
+    expect(entry.titleEn).toBe('Viewing a record is now separate from editing it');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

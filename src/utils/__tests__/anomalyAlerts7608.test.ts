@@ -675,29 +675,29 @@ describe('anomaly section wiring — modal + bell badge (v7.6.08)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.10 (build 324)', () => {
+describe('version pins rolled forward to v7.6.11 (build 325)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.10');
-    expect(CURRENT_BUILD_NUMBER).toBe(324);
-    expect(VERSION_JSON.version).toBe('v7.6.10');
-    expect(VERSION_JSON.buildNumber).toBe(324);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.11');
+    expect(CURRENT_BUILD_NUMBER).toBe(325);
+    expect(VERSION_JSON.version).toBe('v7.6.11');
+    expect(VERSION_JSON.buildNumber).toBe(325);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the unit number-word strip entry, no Admin strings', () => {
+  it('the top history entry carries the view-first entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.10');
-    expect(top.buildNumber).toBe(324);
+    expect(top.version).toBe('v7.6.11');
+    expect(top.buildNumber).toBe(325);
     expect(top.releaseDate).toBe('2026-11-23');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Unit ဂဏန်းစကားလုံး အလိုအလျောက် ဖြုတ်ခြင်း');
-    expect(top.titleEn).toBe('Number words in unit names are stripped automatically');
+    expect(top.titleMy).toBe('စာရင်း ကြည့်ရှုခြင်း → ပြင်ဆင်ခြင်း ခွဲခြားခြင်း');
+    expect(top.titleEn).toBe('Viewing a record is now separate from editing it');
     expect(top.changesMy).toEqual([
-      'Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်',
+      'သွင်းပြီးသား စာရင်းကို နှိပ်ရင် အရင်ဆုံး ကြည့်ရှုခြင်းသာ ပြပြီး ပြင်ချင်မှ Edit ခလုတ်ကို နှိပ်ရမည် (မှားနှိပ်မိပြီး စာရင်း မပျက်စေရန်)',
     ]);
     expect(top.changesEn).toEqual([
-      'Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. "တစ်ဗူး" shows as "ဗူး".',
+      'Tapping a saved record now opens a read-only view first; editing requires tapping the Edit button, so an accidental tap cannot change a record.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

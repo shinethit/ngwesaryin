@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.10",
-  "buildNumber": 324,
+  "version": "v7.6.11",
+  "buildNumber": 325,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Unit မှာ မှားပြီး ပါလာတဲ့ ဂဏန်းစကားလုံးကို အလိုအလျောက် ဖြုတ်ခြင်း — တစ်ဗူး → ဗူး၊ နှစ်ထုပ် → ထုပ်"
+    "သွင်းပြီးသား စာရင်းကို နှိပ်ရင် အရင်ဆုံး ကြည့်ရှုခြင်းသာ ပြပြီး ပြင်ချင်မှ Edit ခလုတ်ကို နှိပ်ရမည် (မှားနှိပ်မိပြီး စာရင်း မပျက်စေရန်)"
   ],
   "changesEn": [
-    "Unit names with a mistaken leading number word (one, two, …) are stripped automatically — e.g. \"တစ်ဗူး\" shows as \"ဗူး\"."
+    "Tapping a saved record now opens a read-only view first; editing requires tapping the Edit button, so an accidental tap cannot change a record."
   ]
 }

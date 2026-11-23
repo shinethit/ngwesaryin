@@ -9,6 +9,7 @@ import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { MultiWalletSelector } from './MultiWalletSelector';
 import { FinancialSummaryTable } from './FinancialSummaryTable';
 import { TransactionSyncDetailModal } from './TransactionSyncDetailModal';
+import { TransactionDetailModal } from './TransactionDetailModal';
 import { getTransactionSyncStatus } from '../utils/transactionSyncStatus';
 import { useSearchSeed } from '../hooks/useSearchSeed';
 import { toLatinDigits, toMyanmarDigits } from '../utils/myanmarDigits';
@@ -149,6 +150,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
   const [showSummaryTable, setShowSummaryTable] = useState<boolean>(true);
   const [expandedShoppingTxIds, setExpandedShoppingTxIds] = useState<Record<string, boolean>>({});
+  // [v7.6.11] View-first: tapping a row opens the read-only detail
+  // view; the edit form opens only from the view's Edit button
+  // (or the row's explicit pencil button, unchanged).
+  const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
   const [selectedTxForSyncModal, setSelectedTxForSyncModal] = useState<Transaction | null>(null);
   // [v7.5.55] Delete confirmation (inline dialog — this app has no shared
   // ConfirmModal component; native window.confirm is no longer used).
@@ -944,9 +949,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       return (
                         <div
                           key={t.id}
-                          onClick={() => onEditTransaction(t)}
+                          onClick={() => setViewingTx(t)}
                           className="p-3.5 sm:p-4 sm:px-6 hover:bg-slate-50/80 transition-colors cursor-pointer"
-                          title={lang === 'my' ? 'နှိပ်၍ ပြင်ဆင်မည်' : 'Tap to edit'}
+                          title={lang === 'my' ? 'နှိပ်၍ ကြည့်မည်' : 'Tap to view'}
                         >
                           {/* [v7.5.95 T1] Header line only — the expanded
                               item table is a sibling below (full width),
@@ -1291,6 +1296,25 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         lang={lang}
         onClose={() => setSelectedTxForSyncModal(null)}
         onRefreshSync={handleRefreshSync}
+      />
+
+      {/* [v7.6.11] Read-only record view — tap a row to view; the
+          Edit button inside the view opens the existing edit form.
+          canEdit mirrors the row pencil's permission check; the
+          edit handler's own gate still applies on Edit tap. */}
+      <TransactionDetailModal
+        transaction={viewingTx}
+        categories={categories}
+        wallets={wallets}
+        lang={lang}
+        canEdit={(() => {
+          if (!viewingTx) return true;
+          const w = walletMap.get(viewingTx.walletId);
+          const perms = getCollaboratorPermissions(w, user?.email, user?.uid);
+          return viewingTx.type === 'income' ? perms.canEditIncome : perms.canEditExpense;
+        })()}
+        onClose={() => setViewingTx(null)}
+        onEdit={(tx) => onEditTransaction(tx)}
       />
     </div>
   );

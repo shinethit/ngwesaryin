@@ -259,45 +259,45 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.05 (build 319)', () => {
+describe('version pins rolled forward to v7.6.06 (build 320)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
-    expect(CURRENT_BUILD_NUMBER).toBe(319);
-    expect(VERSION_JSON.version).toBe('v7.6.05');
-    expect(VERSION_JSON.buildNumber).toBe(319);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.06');
+    expect(CURRENT_BUILD_NUMBER).toBe(320);
+    expect(VERSION_JSON.version).toBe('v7.6.06');
+    expect(VERSION_JSON.buildNumber).toBe(320);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the three small fixes, no Admin strings', () => {
+  it('the top history entry carries the expiry reminders, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.05');
-    expect(top.buildNumber).toBe(319);
+    expect(top.version).toBe('v7.6.06');
+    expect(top.buildNumber).toBe(320);
     expect(top.releaseDate).toBe('2026-11-22');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('အသေးစားပြင်ဆင်ချက် ၃ ခု');
-    expect(top.titleEn).toBe('Three small fixes');
+    expect(top.titleMy).toBe('သက်တမ်းကုန်ရက် အသိပေးချက်');
+    expect(top.titleEn).toBe('Expiry reminders');
     expect(top.changesMy).toEqual([
-      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
+      'သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
+      'Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.04/7.6.05, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.04';
-    const TO_VERSION = '7.6.05';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.05/7.6.06, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.05';
+    const TO_VERSION = '7.6.06';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     const mangled = TO_VERSION.split('.').map(Number).join('.');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.05');
-    expect(guardFails('7.6.04')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.06');
     expect(guardFails('7.6.05')).toBe(false);
+    expect(guardFails('7.6.06')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

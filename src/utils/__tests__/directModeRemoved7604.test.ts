@@ -241,28 +241,28 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.05 (build 319)', () => {
+describe('version pins rolled forward to v7.6.06 (build 320)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
-    expect(CURRENT_BUILD_NUMBER).toBe(319);
-    expect(VERSION_JSON.version).toBe('v7.6.05');
-    expect(VERSION_JSON.buildNumber).toBe(319);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.06');
+    expect(CURRENT_BUILD_NUMBER).toBe(320);
+    expect(VERSION_JSON.version).toBe('v7.6.06');
+    expect(VERSION_JSON.buildNumber).toBe(320);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the three small fixes, no Admin strings', () => {
+  it('the top history entry carries the expiry reminders, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.05');
-    expect(top.buildNumber).toBe(319);
+    expect(top.version).toBe('v7.6.06');
+    expect(top.buildNumber).toBe(320);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
+      'သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
+      'Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

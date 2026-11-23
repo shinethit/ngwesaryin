@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.05 (build 319)', () => {
+describe('Version bump to v7.6.06 (build 320)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
-    expect(CURRENT_BUILD_NUMBER).toBe(319);
-    expect(VERSION_JSON.version).toBe('v7.6.05');
-    expect(VERSION_JSON.buildNumber).toBe(319);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.06');
+    expect(CURRENT_BUILD_NUMBER).toBe(320);
+    expect(VERSION_JSON.version).toBe('v7.6.06');
+    expect(VERSION_JSON.buildNumber).toBe(320);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.05');
-    expect(entry.buildNumber).toBe(319);
+    expect(entry.version).toBe('v7.6.06');
+    expect(entry.buildNumber).toBe(320);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('အသေးစားပြင်ဆင်ချက် ၃ ခု');
-    expect(entry.titleEn).toBe('Three small fixes');
+    expect(entry.titleMy).toBe('သက်တမ်းကုန်ရက် အသိပေးချက်');
+    expect(entry.titleEn).toBe('Expiry reminders');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

@@ -19,16 +19,22 @@ import {
 import { formatMMK, formatLakhAmount as formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { buildWalletMap, isTransferTransaction } from '../utils/walletBalance';
-import { getMaintenanceAlerts } from '../utils/vehicleAnalytics';
+import { getMaintenanceAlerts, SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
+// [v7.6.06] Expiry reminders — overdue + due-within-30-days license /
+// insurance expiries and debt due dates, computed at render time.
+import { getExpiryReminders, type ExpiryReminder } from '../utils/expiryReminders';
 // [v7.5.78 C] Shop-details "fill later" reminders (one per shop name).
 // [v7.5.91 D3] dismissShopDetailReminder — the per-reminder "Not now".
 import { dispatchOpenShopForm, dismissShopDetailReminder, useShopDetailReminders } from '../utils/shopDetailsReminders';
 
 export interface NotificationItem {
   id: string;
-  type: 'debt' | 'budget' | 'vehicle' | 'recurring' | 'system' | 'shop';
+  type: 'debt' | 'budget' | 'vehicle' | 'recurring' | 'system' | 'shop' | 'expiry';
   title: string;
   message: string;
+  // [v7.6.06] The computed expiry reminder behind an 'expiry' item —
+  // the grouped section renders from this (band, days, record).
+  expiry?: ExpiryReminder;
   // [v7.5.78 C] Shop name for 'shop' reminders — the action opens the
   // ShopModal pre-filled with this name.
   shopName?: string;
@@ -89,7 +95,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   onMarkAllAsRead,
   onOpenShopReminder,
 }) => {
-  const [filterTab, setFilterTab] = useState<'all' | 'debt' | 'budget' | 'vehicle' | 'system' | 'shop'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'debt' | 'budget' | 'vehicle' | 'system' | 'shop' | 'expiry'>('all');
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission>('default');
   const [isTestSending, setIsTestSending] = useState(false);
   // [v7.5.78 C] Live "fill in shop details later" reminders (one per
@@ -397,6 +403,100 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     });
   });
 
+  // 7. [v7.6.06] Expiry reminders — overdue + due-within-30-days
+  // maintenance expiries (derived date + lifespan, local time) and
+  // debt due dates. Computed at render time from current data, so
+  // guests see them too; read-only v1: no defer/dismiss controls,
+  // no mark-done. They join generatedNotifications (same ids the bell
+  // badge counts in App) and render as their own grouped section
+  // below; the existing sections above are untouched. A record
+  // already warned about by the older vehicle alerts keeps those
+  // alerts too — this section ADDS, never replaces.
+  const expiryReminders = getExpiryReminders(maintenanceLogs, debts, todayStr);
+  expiryReminders.forEach((r) => {
+    const isOverdue = r.band === 'overdue';
+    const daysOverdue = -r.daysUntilExpiry;
+    let title = '';
+    let message = '';
+    let actionTab = 'vehicles';
+    let actionText = lang === 'my' ? 'ယာဉ်စာရင်း ကြည့်မည်' : 'View Vehicle';
+    if (r.kind === 'maintenance') {
+      const vehicle = vehicles.find((v) => v.id === r.vehicleId);
+      const vehicleName =
+        vehicle?.name || r.vehicleName || (lang === 'my' ? 'ယာဉ်' : 'Vehicle');
+      const label = r.serviceType
+        ? lang === 'my'
+          ? SERVICE_TYPE_CONFIG[r.serviceType]?.labelMy
+          : SERVICE_TYPE_CONFIG[r.serviceType]?.labelEn
+        : undefined;
+      const serviceLabel =
+        label || r.title || (lang === 'my' ? 'ပြုပြင်ထိန်းသိမ်းမှု' : 'Maintenance');
+      if (isOverdue) {
+        title =
+          lang === 'my'
+            ? `${vehicleName} — ${serviceLabel} သက်တမ်းလွန်ပြီး ${daysOverdue} ရက် ရှိပါပြီ`
+            : `${vehicleName} — ${serviceLabel} expired ${daysOverdue} days ago`;
+      } else if (r.daysUntilExpiry === 0) {
+        title =
+          lang === 'my'
+            ? `${vehicleName} — ${serviceLabel} သက်တမ်းကုန်ဆုံးရက် ဒီနေ့ဖြစ်ပါသည်`
+            : `${vehicleName} — ${serviceLabel} expires today`;
+      } else {
+        title =
+          lang === 'my'
+            ? `${vehicleName} — ${serviceLabel} သက်တမ်းကုန်ရန် ${r.daysUntilExpiry} ရက် ကျန်ပါသည်`
+            : `${vehicleName} — ${serviceLabel} expires in ${r.daysUntilExpiry} days`;
+      }
+      message =
+        (r.title ? `${r.title} · ` : '') +
+        (lang === 'my' ? `ကုန်ဆုံးမည့်ရက်: ${r.expiryDate}` : `Expiry date: ${r.expiryDate}`);
+    } else {
+      const typeLabel =
+        r.debtType === 'payable'
+          ? lang === 'my'
+            ? 'ပေးရန်အကြွေး'
+            : 'Payable Debt'
+          : lang === 'my'
+          ? 'ရရန်အကြွေး'
+          : 'Receivable Debt';
+      if (isOverdue) {
+        title =
+          lang === 'my'
+            ? `${r.personName} သို့ ${typeLabel} ရက်လွန်ပြီး ${daysOverdue} ရက် ရှိပါပြီ`
+            : `${typeLabel} for ${r.personName} is ${daysOverdue} days OVERDUE`;
+      } else if (r.daysUntilExpiry === 0) {
+        title =
+          lang === 'my'
+            ? `${r.personName} သို့ ${typeLabel} ဒီနေ့ ပေးရမည့်ရက် ဖြစ်ပါသည်`
+            : `${typeLabel} for ${r.personName} is DUE TODAY`;
+      } else {
+        title =
+          lang === 'my'
+            ? `${r.personName} သို့ ${typeLabel} ${r.daysUntilExpiry} ရက် အတွင်း ပေးရပါမည်`
+            : `${typeLabel} for ${r.personName} is due in ${r.daysUntilExpiry} days`;
+      }
+      message = `${lang === 'my' ? 'ကျန်ရှိငွေ' : 'Remaining'}: ${formatLakhs(
+        r.remainingAmount ?? 0,
+        lang
+      )} | ${lang === 'my' ? 'ပေးရမည့်ရက်' : 'Due'}: ${r.expiryDate}`;
+      actionTab = 'debts';
+      actionText = lang === 'my' ? 'အကြွေးကြည့်မည်' : 'View Debt';
+    }
+    generatedNotifications.push({
+      id: r.id,
+      type: 'expiry',
+      expiry: r,
+      title,
+      message,
+      exactAmount: r.kind === 'debt' ? formatMMK(r.remainingAmount ?? 0) : undefined,
+      date: r.expiryDate,
+      severity: isOverdue ? 'danger' : 'warning',
+      actionTab,
+      actionText,
+      createdAt: new Date(r.expiryDate).getTime() || Date.now(),
+    });
+  });
+
   // Filter based on selected tab
   const filteredNotifications = generatedNotifications.filter((n) => {
     if (filterTab === 'all') return true;
@@ -414,6 +514,19 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   // [v7.5.78 C] Same dead-UI rule for the Shops tab: show it only when
   // at least one shop-details reminder exists.
   const hasShopNotifications = generatedNotifications.some((n) => n.type === 'shop');
+
+  // [v7.6.06] Same dead-UI rule as the Shops tab: the Expiry tab
+  // shows only when at least one expiry reminder exists. The
+  // section itself renders from the 'expiry' items in the filtered
+  // list, grouped by band in helper order.
+  const hasExpiryNotifications = generatedNotifications.some((n) => n.type === 'expiry');
+  // Total (unfiltered) count for the tab label — the filtered
+  // expiryItems list is empty under the other tabs.
+  const expiryTotalCount = generatedNotifications.filter((n) => n.type === 'expiry').length;
+  const expiryItems = filteredNotifications.filter((n) => n.type === 'expiry');
+  const nonExpiryNotifications = filteredNotifications.filter((n) => n.type !== 'expiry');
+  const expiryOverdueItems = expiryItems.filter((n) => n.expiry?.band === 'overdue');
+  const expirySoonItems = expiryItems.filter((n) => n.expiry?.band === 'expiring_soon');
 
   // Count unread
   const unreadCount = generatedNotifications.filter((n) => !readNotificationIds.includes(n.id)).length;
@@ -476,6 +589,93 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       }
       setIsTestSending(false);
     }, 400);
+  };
+
+  // [v7.6.06] One expiry-reminder row — mirrors the generic card
+  // below (same severity colours, same View + mark-as-read
+  // actions) but grouped under its band heading. Read-only v1:
+  // deliberately NO dismiss button here; tapping View
+  // navigates to the record via the existing navigation paths.
+  const renderExpiryRow = (notif: NotificationItem) => {
+    const isRead = readNotificationIds.includes(notif.id);
+    const isOverdue = notif.expiry?.band === 'overdue';
+    const bgColor = isOverdue
+      ? isRead
+        ? 'bg-rose-50/40 border-rose-200'
+        : 'bg-rose-50 border-rose-300 shadow-2xs'
+      : isRead
+      ? 'bg-amber-50/40 border-amber-200'
+      : 'bg-amber-50 border-amber-300 shadow-2xs';
+    return (
+      <div
+        key={notif.id}
+        className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${bgColor} ${
+          isRead ? 'opacity-70' : 'opacity-100 font-medium'
+        }`}
+      >
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="mt-0.5 shrink-0">
+            {notif.expiry?.kind === 'debt' ? (
+              <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                <HandCoins className="w-5 h-5" />
+              </div>
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+                <Car className="w-5 h-5" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-sm font-bold text-slate-900 leading-snug break-words">
+                {notif.title}
+              </h4>
+              {!isRead && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+              )}
+            </div>
+            <p
+              className="text-xs text-slate-600 mt-0.5 leading-relaxed break-words"
+              title={
+                notif.exactAmount
+                  ? (lang === 'my' ? 'အတိအကျ: ' : 'Exact: ') + notif.exactAmount
+                  : undefined
+              }
+            >
+              {notif.message}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60">
+          {notif.actionTab && (
+            <button
+              type="button"
+              onClick={() => {
+                onMarkAsRead(notif.id);
+                onNavigateTab(notif.actionTab!);
+                onClose();
+              }}
+              className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+            >
+              <span>{notif.actionText || (lang === 'my' ? 'ကြည့်မည်' : 'View')}</span>
+              <ChevronRight className="w-3.5 h-3.5 text-white" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onMarkAsRead(notif.id)}
+            className={`p-2.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
+              isRead
+                ? 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200'
+                : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+            }`}
+            title={isRead ? (lang === 'my' ? 'ဖတ်ပြီးပါပြီ' : 'Read') : (lang === 'my' ? 'ဖတ်ပြီးကြောင်း မှတ်မည်' : 'Mark as read')}
+          >
+            <CheckCircle2 className={`w-4 h-4 ${isRead ? 'text-emerald-500' : 'text-slate-400'}`} />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -629,6 +829,20 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 🏬 {lang === 'my' ? 'ဆိုင်များ' : 'Shops'}
               </button>
             )}
+
+            {hasExpiryNotifications && (
+              <button
+                type="button"
+                onClick={() => setFilterTab('expiry')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  filterTab === 'expiry'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                ⏰ {lang === 'my' ? 'သက်တမ်းကုန်' : 'Expiring'} ({expiryTotalCount})
+              </button>
+            )}
           </div>
 
           {unreadCount > 0 && (
@@ -646,7 +860,49 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
         {/* Notification List Container */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-h-[250px]">
-          {filteredNotifications.length === 0 ? (
+          {/* [v7.6.06] Expiry-reminder section — overdue first (red),
+              then expiring soon (amber), in helper order. Shown on
+              the All tab and the Expiry tab; hidden under the other
+              tabs, like every other section. Absent entirely when
+              no reminder exists. */}
+          {expiryItems.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 min-w-0">
+                  <span className="shrink-0">⏰</span>
+                  <span className="truncate">
+                    {lang === 'my'
+                      ? 'သက်တမ်းကုန်ရက် / အကြွေးပေးရမည့်ရက် အသိပေးချက်များ'
+                      : 'Expiry & Due-Date Reminders'}
+                  </span>
+                </h4>
+                <span className="px-2 py-0.5 text-xs font-black bg-rose-500 text-white rounded-full shadow-xs shrink-0">
+                  {expiryItems.length}
+                </span>
+              </div>
+              <div className="p-3 space-y-3">
+                {expiryOverdueItems.length > 0 && (
+                  <div>
+                    <p className="text-xs font-black text-rose-700 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                      {lang === 'my' ? 'သက်တမ်းလွန်ပြီး' : 'Overdue'} ({expiryOverdueItems.length})
+                    </p>
+                    <div className="space-y-3 mt-2">{expiryOverdueItems.map(renderExpiryRow)}</div>
+                  </div>
+                )}
+                {expirySoonItems.length > 0 && (
+                  <div>
+                    <p className="text-xs font-black text-amber-800 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                      {lang === 'my' ? 'မကြာမီ ကုန်ဆုံးမည်' : 'Expiring soon'} ({expirySoonItems.length})
+                    </p>
+                    <div className="space-y-3 mt-2">{expirySoonItems.map(renderExpiryRow)}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {nonExpiryNotifications.length === 0 && expiryItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
               <div className="w-16 h-16 rounded-3xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-3">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />
@@ -661,7 +917,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               </p>
             </div>
           ) : (
-            filteredNotifications.map((notif) => {
+            nonExpiryNotifications.map((notif) => {
               const isRead = readNotificationIds.includes(notif.id);
 
               let bgColor = 'bg-slate-50 border-slate-200';

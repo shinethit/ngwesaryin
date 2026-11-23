@@ -89,6 +89,7 @@ import { trackVisitorSession } from './lib/analyticsService';
 import { syncWalletsWithTransactions, isWalletMatch, repairOrphanedTransactions, isTransferTransaction, buildWalletMap } from './utils/walletBalance';
 import { convertToMMK } from './utils/currency';
 import { getMaintenanceAlerts } from './utils/vehicleAnalytics';
+import { getExpiryReminders } from './utils/expiryReminders';
 import { getLocalDateString } from './utils/dateUtils';
 import { mergeAndCleanCategories } from './utils/categoryCleanUp';
 import {
@@ -712,6 +713,10 @@ export default function App() {
       getMaintenanceAlerts(vehicle, vLogs, lang).forEach((a) => ids.push(a.id));
     });
 
+    // [v7.6.06] Expiry reminders too — same ids the modal renders,
+    // so "mark all read" clears the bell badge for them as well.
+    getExpiryReminders(vehicleMaintenance, debts, todayStr).forEach((r) => ids.push(r.id));
+
     setReadNotificationIds(ids);
     safeSetItem('ngwe_read_notifications', JSON.stringify(ids));
   };
@@ -807,6 +812,14 @@ export default function App() {
     // that still needs its details filled.
     shopDetailReminders.forEach((r) => {
       if (!readNotificationIds.includes(shopReminderId(r.key))) count++;
+    });
+
+    // [v7.6.06] Expiry reminders — the same helper and ids the
+    // NotificationModal renders, so the bell badge and the modal
+    // agree (existing counting mechanism, extended — no second
+    // badge system). Computed from local data: guests included.
+    getExpiryReminders(vehicleMaintenance, debts, todayStr).forEach((r) => {
+      if (!readNotificationIds.includes(r.id)) count++;
     });
 
     return count;

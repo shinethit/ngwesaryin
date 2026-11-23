@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.05",
-  "buildNumber": 319,
+  "version": "v7.6.06",
+  "buildNumber": 320,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း"
+    "သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်"
   ],
   "changesEn": [
-    "Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison."
+    "Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge."
   ]
 }

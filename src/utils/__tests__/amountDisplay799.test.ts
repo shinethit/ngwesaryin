@@ -251,32 +251,32 @@ const VERSION_JSON = JSON.parse(
   readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
 );
 
-describe('Version bump to v7.6.05 (build 319)', () => {
+describe('Version bump to v7.6.06 (build 320)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.05');
-    expect(CURRENT_BUILD_NUMBER).toBe(319);
-    expect(VERSION_JSON.version).toBe('v7.6.05');
-    expect(VERSION_JSON.buildNumber).toBe(319);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.06');
+    expect(CURRENT_BUILD_NUMBER).toBe(320);
+    expect(VERSION_JSON.version).toBe('v7.6.06');
+    expect(VERSION_JSON.buildNumber).toBe(320);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.05');
-    expect(entry.buildNumber).toBe(319);
+    expect(entry.version).toBe('v7.6.06');
+    expect(entry.buildNumber).toBe(320);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'အသေးစားပြင်ဆင်ချက် ၃ ခု',
+      'သက်တမ်းကုန်ရက် အသိပေးချက်',
     );
     expect(entry.titleEn).toBe(
-      'Three small fixes',
+      'Expiry reminders',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'အသေးစားပြင်ဆင်ချက် ၃ ခု — လိုင်စင်သက်တမ်းကုန်ရက် ပြင်ရာမှာ ပြန်ပေါ်ခြင်း + ဈေးဝယ်မှတ်ချက်မှာ Unit ပါခြင်း + ဈေးနှုန်းနှိုင်းယှဉ်မှာ Unit အလိုက် ပြခြင်း',
+      'သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Three small fixes — license expiry date restored when editing, unit included in generated shopping notes, per-row units in price comparison.',
+      'Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge.',
     );
   });
 

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.05';
-export const CURRENT_BUILD_NUMBER = 319;
+export const CURRENT_APP_VERSION = 'v7.6.06';
+export const CURRENT_BUILD_NUMBER = 320;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.06',
+    buildNumber: 320,
+    releaseDate: '2026-11-22',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'သက်တမ်းကုန်ရက် အသိပေးချက်',
+    titleEn: 'Expiry reminders',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'လိုင်စင်/အာမခံ သက်တမ်းကုန်ရက်နှင့် အကြွေးပေးရမည့်ရက်များ နီးလာလျှင် အသိပေးချက် စာမျက်နှာတွင် ပြသပြီး ခေါင်းလောင်းအမှတ်တွင် ရေတွက်ပေးမည် — သက်တမ်းလွန်ပြီး နှင့် ရက် ၃၀ အတွင်း ကုန်မည့်များကို သီးခြားအုပ်စုဖြင့် ပြသည်။',
+    descriptionEn: 'License/insurance expiries and debt due dates now surface in Notifications with a bell-badge count — overdue and due-within-30-days items shown in separate groups.',
+    changesMy: [
+      'သက်တမ်းကုန်ရက် + အကြွေးပေးရမည့်ရက် နီးလာရင် အသိပေးခြင်း — သက်တမ်းလွန်ပြီး + ရက် ၃၀ အတွင်း ကုန်မည့်များကို အသိပေးချက် စာမျက်နှာမှာ ပြပြီး ခေါင်းလောင်းအမှတ်မှာ ရေတွက်မည်',
+    ],
+    changesEn: [
+      'Expiry reminders — overdue and due-within-30-days license/insurance expiries and debt due dates now appear in Notifications and count on the bell badge.',
+    ],
+  },
   {
     version: 'v7.6.05',
     buildNumber: 319,

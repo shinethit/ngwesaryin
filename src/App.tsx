@@ -2741,6 +2741,7 @@ export default function App() {
       <Navbar
         onOpenShareApp={() => setIsShareAppModalOpen(true)}
         currentPlan={plan}
+        premiumExpiresAt={userProfile?.premiumExpiresAt}
         usageChip={usageChip}
         onOpenSearch={() => setIsSearchModalOpen(true)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}

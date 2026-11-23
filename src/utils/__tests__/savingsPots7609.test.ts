@@ -388,23 +388,23 @@ describe('placement and UI wiring (v7.6.09)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.21 (build 335)', () => {
+describe('version pins rolled forward to v7.6.22 (build 336)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.21');
-    expect(CURRENT_BUILD_NUMBER).toBe(335);
-    expect(VERSION_JSON.version).toBe('v7.6.21');
-    expect(VERSION_JSON.buildNumber).toBe(335);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.22');
+    expect(CURRENT_BUILD_NUMBER).toBe(336);
+    expect(VERSION_JSON.version).toBe('v7.6.22');
+    expect(VERSION_JSON.buildNumber).toBe(336);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.21');
-    expect(entry.buildNumber).toBe(335);
+    expect(entry.version).toBe('v7.6.22');
+    expect(entry.buildNumber).toBe(336);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ထပ်နေတဲ့ function များ စုစည်းခြင်း');
+    expect(entry.titleMy).toBe('VIP badge ဘေးမှာ လက်ကျန်ရက် ပြခြင်း');
     expect(entry.changesMy).toEqual([
-      'အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
+      'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change.',
+      'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
     ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

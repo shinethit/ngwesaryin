@@ -241,12 +241,12 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.21 (build 335)', () => {
+describe('version pins rolled forward to v7.6.22 (build 336)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.21');
-    expect(CURRENT_BUILD_NUMBER).toBe(335);
-    expect(VERSION_JSON.version).toBe('v7.6.21');
-    expect(VERSION_JSON.buildNumber).toBe(335);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.22');
+    expect(CURRENT_BUILD_NUMBER).toBe(336);
+    expect(VERSION_JSON.version).toBe('v7.6.22');
+    expect(VERSION_JSON.buildNumber).toBe(336);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -255,14 +255,14 @@ describe('version pins rolled forward to v7.6.21 (build 335)', () => {
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.21');
-    expect(top.buildNumber).toBe(335);
+    expect(top.version).toBe('v7.6.22');
+    expect(top.buildNumber).toBe(336);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
+      'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change.',
+      'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

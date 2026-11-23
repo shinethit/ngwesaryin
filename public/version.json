@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.21",
-  "buildNumber": 335,
+  "version": "v7.6.22",
+  "buildNumber": 336,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ"
+    "VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်"
   ],
   "changesEn": [
-    "Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change."
+    "Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest."
   ]
 }

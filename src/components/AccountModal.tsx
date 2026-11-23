@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { safeGetItem } from '../utils/storage';
+import {
+  resolvePremiumExpiryIso,
+  getPremiumDaysLeft,
+  formatPremiumRemaining,
+} from '../utils/premiumExpiry';
 import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCircle, ArrowDownCircle, FileJson, Download, Upload, Lock, Trash2, Crown, Clock, Calendar, Users, Mail, ShieldCheck, BookOpen, RefreshCw, AlertCircle, History, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resetFirestoreConnection } from '../lib/firebase';
@@ -147,13 +152,14 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     }
   };
 
-  // Calculate Days Left
-  const expiryIso = userProfile?.premiumExpiresAt || safeGetItem('ngwe_premium_expires_at');
-  let daysLeft: number | null = null;
-  if (expiryIso) {
-    const diffMs = new Date(expiryIso).getTime() - Date.now();
-    daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-  }
+  // Calculate Days Left — shared rule in utils/premiumExpiry.ts
+  // (same computation + threshold as before; an unparseable expiry
+  // now yields null instead of NaN).
+  const expiryIso = resolvePremiumExpiryIso(
+    userProfile?.premiumExpiresAt,
+    safeGetItem('ngwe_premium_expires_at'),
+  );
+  const daysLeft = getPremiumDaysLeft(expiryIso);
 
   // [v7.5.56] Delete account: confirm first, then (password users)
   // ask for the password inline, then call deleteAccount() and report
@@ -417,9 +423,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   {plan === 'premium' && daysLeft !== null && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-emerald-600" />
-                      {daysLeft > 3650
-                        ? (lang === 'my' ? 'တစ်သက်တာ' : 'Lifetime')
-                        : (lang === 'my' ? `${daysLeft} ရက်ကျန်` : `${daysLeft} days left`)}
+                      {formatPremiumRemaining(daysLeft, lang)}
                     </span>
                   )}
                 </div>

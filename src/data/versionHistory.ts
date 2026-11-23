@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.21';
-export const CURRENT_BUILD_NUMBER = 335;
+export const CURRENT_APP_VERSION = 'v7.6.22';
+export const CURRENT_BUILD_NUMBER = 336;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.22',
+    buildNumber: 336,
+    releaseDate: '2026-11-23',
+    releaseTime: '5:00 PM (MMT)',
+    titleMy: 'VIP badge ဘေးမှာ လက်ကျန်ရက် ပြခြင်း',
+    titleEn: 'Remaining-days chip beside the VIP badge',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်။',
+    descriptionEn: 'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
+    changesMy: [
+      'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်',
+    ],
+    changesEn: [
+      'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
+    ],
+  },
   {
     version: 'v7.6.21',
     buildNumber: 335,

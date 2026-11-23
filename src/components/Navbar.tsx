@@ -2,12 +2,21 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Crown, ShieldCheck, Search, Cloud, User as UserIcon, Lock, Bell, Share2, WifiOff, X } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
+import {
+  resolvePremiumExpiryIso,
+  getPremiumDaysLeft,
+  formatPremiumRemaining,
+} from '../utils/premiumExpiry';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { syncQueue } from '../lib/syncQueue';
+import { safeGetItem } from '../utils/storage';
 
 interface NavbarProps {
   currentPlan: PlanType;
+  // [v7.6.22] Premium expiry for the remaining-days chip beside the
+  // VIP badge (App passes userProfile.premiumExpiresAt).
+  premiumExpiresAt?: string | null;
   // [v7.5.60 C-N1] Compact one-line plan/usage summary, e.g.
   // "Free · မှတ်တမ်း 82/100 · အကြွေး 3/5" (computed by App).
   usageChip?: string;
@@ -26,6 +35,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentPlan,
+  premiumExpiresAt,
   usageChip,
   onOpenSearch,
   onOpenAccountModal,
@@ -54,6 +64,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const isAutoSyncing = isSyncing || isQueueProcessing;
+
+  // [v7.6.22] Remaining-days chip beside the VIP badge — same rule as
+  // AccountModal (see utils/premiumExpiry.ts). Display-only; null
+  // renders nothing.
+  const premiumRemainingText =
+    currentPlan === 'premium'
+      ? formatPremiumRemaining(
+          getPremiumDaysLeft(
+            resolvePremiumExpiryIso(
+              premiumExpiresAt,
+              safeGetItem('ngwe_premium_expires_at'),
+            ),
+          ),
+          lang,
+        )
+      : null;
 
   const handleLogoTap = () => {
     // [v7.5.60 S13] A tap goes home (Dashboard) — the old behaviour
@@ -267,10 +293,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {lang === 'my' ? 'ဧည့်သည်' : 'Guest'}
                 </span>
               ) : currentPlan === 'premium' ? (
-                <span className="inline-flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300/80 whitespace-nowrap shrink-0 shadow-2xs">
-                  <Crown className="w-2.5 h-2.5 text-amber-600 fill-amber-500 shrink-0" />
-                  <span>VIP</span>
-                </span>
+                <>
+                  <span className="inline-flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300/80 whitespace-nowrap shrink-0 shadow-2xs">
+                    <Crown className="w-2.5 h-2.5 text-amber-600 fill-amber-500 shrink-0" />
+                    <span>VIP</span>
+                  </span>
+                  {/* [v7.6.22] Remaining-days chip beside the VIP badge —
+                      display-only, same rule as the AccountModal chip. */}
+                  {premiumRemainingText && (
+                    <span
+                      title={premiumRemainingText}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap shrink-0"
+                    >
+                      {premiumRemainingText}
+                    </span>
+                  )}
+                </>
               ) : (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
                   Free

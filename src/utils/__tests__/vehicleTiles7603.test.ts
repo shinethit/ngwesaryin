@@ -339,34 +339,34 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.19 (build 333)', () => {
-  it('current version is v7.6.19 / build 333 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
-    expect(CURRENT_BUILD_NUMBER).toBe(333);
-    expect(VERSION_JSON.version).toBe('v7.6.19');
-    expect(VERSION_JSON.buildNumber).toBe(333);
+describe('Version bump to v7.6.20 (build 334)', () => {
+  it('current version is v7.6.20 / build 334 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
+    expect(CURRENT_BUILD_NUMBER).toBe(334);
+    expect(VERSION_JSON.version).toBe('v7.6.20');
+    expect(VERSION_JSON.buildNumber).toBe(334);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.19 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.20 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.19');
-    expect(entry.buildNumber).toBe(333);
+    expect(entry.version).toBe('v7.6.20');
+    expect(entry.buildNumber).toBe(334);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Filter စာတန်းပြင်ဆင်ခြင်းနှင့် ရွေးထားတဲ့ Wallet ပြခြင်း');
+    expect(entry.titleMy).toBe('Smart Calendar အသေးစိတ် ပြခြင်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်',
+      'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
+      'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
     ]);
   });
 });

@@ -411,28 +411,28 @@ describe('no rules change is needed (v7.6.13)', () => {
   });
 });
 
-describe('Version bump to v7.6.19 (build 333)', () => {
+describe('Version bump to v7.6.20 (build 334)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
-    expect(CURRENT_BUILD_NUMBER).toBe(333);
-    expect(VERSION_JSON.version).toBe('v7.6.19');
-    expect(VERSION_JSON.buildNumber).toBe(333);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
+    expect(CURRENT_BUILD_NUMBER).toBe(334);
+    expect(VERSION_JSON.version).toBe('v7.6.20');
+    expect(VERSION_JSON.buildNumber).toBe(334);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.19');
-    expect(entry.buildNumber).toBe(333);
+    expect(entry.version).toBe('v7.6.20');
+    expect(entry.buildNumber).toBe(334);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Filter စာတန်းပြင်ဆင်ခြင်းနှင့် ရွေးထားတဲ့ Wallet ပြခြင်း');
-    expect(entry.titleEn).toBe('Filter notice fix and selected-wallet display');
+    expect(entry.titleMy).toBe('Smart Calendar အသေးစိတ် ပြခြင်း');
+    expect(entry.titleEn).toBe('Smart Calendar detail view');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်',
+      'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
+      'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
     );
   });
 
@@ -447,23 +447,23 @@ describe('Version bump to v7.6.19 (build 333)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.19'.replace(/9$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.19'.replace(/9$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.20'.replace(/0$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.20'.replace(/0$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.18/7.6.19, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.18';
-    const TO_VERSION = '7.6.19';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.19/7.6.20, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.19';
+    const TO_VERSION = '7.6.20';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/9$/, '');
+    const mangled = TO_VERSION.replace(/0$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.19');
-    expect(guardFails('7.6.18')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.20');
     expect(guardFails('7.6.19')).toBe(false);
+    expect(guardFails('7.6.20')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

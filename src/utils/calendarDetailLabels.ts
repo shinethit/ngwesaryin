@@ -3,7 +3,14 @@
 // category name), and the detail line shows the transaction's item
 // names (winning over the note) so rows for the same category can be
 // told apart. Pure helpers, unit-tested in calendarDetailLabels794.
+// [v7.6.20] The detail line now shows each item's quantity / unit /
+// price (the same per-item data the Records list item table shows),
+// and the fuel line wins when a fuel log is linked — see
+// formatCalendarDetailItemsDetailed / resolveCalendarDetailLine.
+// The names-only formatCalendarDetailItems is unchanged.
 import type { SubCategory, TransactionItem } from '../types';
+import { formatMMK } from './formatters';
+import { displayMenuUnit } from './shopMenuUpdate';
 
 export function resolveCalendarDetailMainLabel(
   subCategoryId: string | undefined,
@@ -31,4 +38,48 @@ export function formatCalendarDetailItems(
   if (names.length <= 2) return shown;
   const extra = names.length - 2;
   return `${shown} · +${extra} ${lang === 'my' ? 'မျိုး' : 'more'}`;
+}
+
+/**
+ * [v7.6.20] Detailed item line for the Smart Calendar day detail:
+ * each item renders as `name (price × qty unit)` — the same per-item
+ * data the Records list item table shows (formatMMK price, raw
+ * quantity, displayMenuUnit unit) — first 2 items, then `+N မျိုး`
+ * / `more`, exactly like formatCalendarDetailItems. Items with a
+ * blank name are skipped; null when nothing nameable is present, so
+ * the note fallback still applies.
+ */
+export function formatCalendarDetailItemsDetailed(
+  items: TransactionItem[] | undefined,
+  lang: 'my' | 'en',
+): string | null {
+  if (!items) return null;
+  const named = items.filter(
+    (i) => typeof i.name === 'string' && i.name.trim().length > 0,
+  );
+  if (named.length === 0) return null;
+  const render = (i: TransactionItem): string => {
+    const unit = i.unit && i.unit.trim() ? ` ${displayMenuUnit(i.unit)}` : '';
+    return `${i.name} (${formatMMK(i.price)} × ${i.quantity}${unit})`;
+  };
+  const shown = named.slice(0, 2).map(render).join(' · ');
+  if (named.length <= 2) return shown;
+  const extra = named.length - 2;
+  return `${shown} · +${extra} ${lang === 'my' ? 'မျိုး' : 'more'}`;
+}
+
+/**
+ * [v7.6.20] Day-detail detail-line precedence for one record: the
+ * fuel line (with rate) wins when a fuel log is linked; otherwise
+ * the detailed item line; otherwise null and the caller falls back
+ * to the note, exactly as before. Pure, so the precedence is
+ * unit-tested in calendarDetail7620.
+ */
+export function resolveCalendarDetailLine(
+  fuelLine: string,
+  items: TransactionItem[] | undefined,
+  lang: 'my' | 'en',
+): string | null {
+  if (fuelLine) return fuelLine;
+  return formatCalendarDetailItemsDetailed(items, lang);
 }

@@ -1,11 +1,15 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tag, Wallet as WalletIcon, Check, Filter } from 'lucide-react';
-import { Transaction, Category, Wallet } from '../types';
+import { Transaction, Category, Wallet, FuelLog } from '../types';
 import { formatMMK, getAmountDisplayMode, formatAbsoluteKyats, getCategoryDisplayName } from '../utils/formatters';
 import {
   resolveCalendarDetailMainLabel,
-  formatCalendarDetailItems,
+  resolveCalendarDetailLine,
 } from '../utils/calendarDetailLabels';
+import {
+  findFuelLogForTransaction,
+  formatFuelRowLineWithRate,
+} from '../utils/fuelRowLine';
 import { isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -14,6 +18,9 @@ interface SmartCalendarCardProps {
   categories?: Category[];
   wallets?: Wallet[];
   lang: 'my' | 'en';
+  // [v7.6.20] Fuel logs for the day-detail fuel line (with rate).
+  // Optional: absent/empty keeps the pre-7.6.20 detail lines.
+  fuelLogs?: FuelLog[];
 }
 
 const getLocalDateString = (d: Date = new Date()): string => {
@@ -44,6 +51,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   categories = [],
   wallets = [],
   lang,
+  fuelLogs = [],
 }) => {
   const todayStr = getLocalDateString(new Date());
   const [viewDate, setViewDate] = useState(() => new Date());
@@ -612,11 +620,17 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                     const cat = catMap.get(t.category);
                     const catName = getCategoryDisplayName(t.category, categories, lang);
                     // [v7.5.94] Main line = sub-category name when the txn
-                    // has one, else the category name. Detail line = item
-                    // names when present (winning over the note), else
-                    // the note exactly as before.
+                    // has one, else the category name. Detail line = fuel
+                    // line (with rate) when a fuel log is linked, else
+                    // the detailed item line (qty/unit/price), else the
+                    // note exactly as before. [v7.6.20] The shop shows
+                    // on non-fuel rows only — the station already rides
+                    // on the fuel line.
                     const detailMainLabel = resolveCalendarDetailMainLabel(t.subCategoryId, cat, catName, lang);
-                    const detailItemsLine = formatCalendarDetailItems(t.items, lang);
+                    const linkedFuelLog = findFuelLogForTransaction(fuelLogs, t.id);
+                    const fuelLine = formatFuelRowLineWithRate(linkedFuelLog);
+                    const detailItemsLine = resolveCalendarDetailLine(fuelLine, t.items, lang);
+                    const shopLine = !fuelLine && t.shopName && t.shopName.trim() ? t.shopName.trim() : null;
                     const catColor = cat?.color || (isInc ? '#10B981' : '#EF4444');
                     const catIcon = cat?.icon || 'Tag';
                     // [v7.5.56] Shared badge on the row's wallet (finding 25).
@@ -647,6 +661,9 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                                 <div className="text-[11px] text-slate-500 break-words">{detailItemsLine}</div>
                               ) : t.note ? (
                                 <div className="text-[11px] text-slate-500 truncate italic">"{t.note}"</div>
+                              ) : null}
+                              {shopLine ? (
+                                <div className="text-[11px] text-slate-500 truncate">🏪 {shopLine}</div>
                               ) : null}
                             </div>
                           </div>

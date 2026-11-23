@@ -264,11 +264,14 @@ describe('sweep — every sibling quantity display, dispositioned (v7.6.01)', ()
     expect(ANALYTICS_SRC).toContain("it.unit ? it.name + ' · ' + it.unit");
   });
 
-  it('Smart Calendar detail rows are item names only — no quantity anywhere', () => {
-    expect(CAL_SRC).toContain('formatCalendarDetailItems(t.items, lang)');
-    expect(CAL_SRC).not.toContain('quantity');
+  it('Smart Calendar detail rows show qty/unit/price (v7.6.20 supersedes the names-only line)', () => {
+    expect(CAL_SRC).toContain('resolveCalendarDetailLine(fuelLine, t.items, lang)');
+    expect(CAL_SRC).toContain('formatFuelRowLineWithRate(linkedFuelLog)');
+    expect(CAL_LABELS_SRC).toContain('i.quantity');
+    expect(CAL_LABELS_SRC).toContain('displayMenuUnit');
+    expect(CAL_LABELS_SRC).toContain('formatCalendarDetailItemsDetailed');
+    // The names-only helper is intact for its own callers/tests.
     expect(CAL_LABELS_SRC).toContain('.map((i) => i.name)');
-    expect(CAL_LABELS_SRC).not.toContain('quantity');
   });
 
   it('ShopCard menu lines already show the unit via menuUnitLabel', () => {
@@ -332,11 +335,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.19 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
-    expect(CURRENT_BUILD_NUMBER).toBe(333);
-    expect(VERSION_JSON.version).toBe('v7.6.19');
-    expect(VERSION_JSON.buildNumber).toBe(333);
+  it('the shipped identity is 7.6.20 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
+    expect(CURRENT_BUILD_NUMBER).toBe(334);
+    expect(VERSION_JSON.version).toBe('v7.6.20');
+    expect(VERSION_JSON.buildNumber).toBe(334);
   });
 });
 
@@ -372,32 +375,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.19 (build 333)', () => {
+describe('Version bump to v7.6.20 (build 334)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
-    expect(CURRENT_BUILD_NUMBER).toBe(333);
-    expect(VERSION_JSON.version).toBe('v7.6.19');
-    expect(VERSION_JSON.buildNumber).toBe(333);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
+    expect(CURRENT_BUILD_NUMBER).toBe(334);
+    expect(VERSION_JSON.version).toBe('v7.6.20');
+    expect(VERSION_JSON.buildNumber).toBe(334);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.19');
-    expect(entry.buildNumber).toBe(333);
+    expect(entry.version).toBe('v7.6.20');
+    expect(entry.buildNumber).toBe(334);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'Filter စာတန်းပြင်ဆင်ခြင်းနှင့် ရွေးထားတဲ့ Wallet ပြခြင်း',
+      'Smart Calendar အသေးစိတ် ပြခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Filter notice fix and selected-wallet display',
+      'Smart Calendar detail view',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်',
+      'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list.',
+      'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
     );
   });
 

@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.19",
-  "buildNumber": 333,
+  "version": "v7.6.20",
+  "buildNumber": 334,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Wallet ရွေးချယ်မှု (ကိုယ်ပိုင်/မျှဝေထား အပါအဝင်) ကြောင့် Filter သတိပေးစာတန်း မပေါ်တော့ပါ — စာရင်းအပေါ်မှာ ရွေးထားတဲ့ Wallet ကို ပြမည်"
+    "Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်"
   ],
   "changesEn": [
-    "The filter notice bar no longer appears for a wallet or scope (personal/shared) selection — the selected wallet is now shown at the top of the Records list."
+    "The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list."
   ]
 }

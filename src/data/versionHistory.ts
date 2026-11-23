@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.19';
-export const CURRENT_BUILD_NUMBER = 333;
+export const CURRENT_APP_VERSION = 'v7.6.20';
+export const CURRENT_BUILD_NUMBER = 334;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.20',
+    buildNumber: 334,
+    releaseDate: '2026-11-23',
+    releaseTime: '5:00 PM (MMT)',
+    titleMy: 'Smart Calendar အသေးစိတ် ပြခြင်း',
+    titleEn: 'Smart Calendar detail view',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်။',
+    descriptionEn: 'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
+    changesMy: [
+      'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်',
+    ],
+    changesEn: [
+      'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
+    ],
+  },
   {
     version: 'v7.6.19',
     buildNumber: 333,

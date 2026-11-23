@@ -2849,6 +2849,7 @@ export default function App() {
               wallets={computedWallets}
               categories={categories}
               budgets={budgets}
+              fuelLogs={fuelLogs}
               plan={plan}
               lang={lang}
               onAddTransaction={(type) => handleOpenAddTx(type)}

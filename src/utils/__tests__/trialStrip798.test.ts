@@ -261,19 +261,19 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
   });
 });
 
-describe('Version bump to v7.6.19 (build 333)', () => {
+describe('Version bump to v7.6.20 (build 334)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
-    expect(CURRENT_BUILD_NUMBER).toBe(333);
-    expect(VERSION_JSON.version).toBe('v7.6.19');
-    expect(VERSION_JSON.buildNumber).toBe(333);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
+    expect(CURRENT_BUILD_NUMBER).toBe(334);
+    expect(VERSION_JSON.version).toBe('v7.6.20');
+    expect(VERSION_JSON.buildNumber).toBe(334);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.19');
-    expect(entry.buildNumber).toBe(333);
+    expect(entry.version).toBe('v7.6.20');
+    expect(entry.buildNumber).toBe(334);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'Filter စာတန်းပြင်ဆင်ခြင်းနှင့် ရွေးထားတဲ့ Wallet ပြခြင်း',
+      'Smart Calendar အသေးစိတ် ပြခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);

@@ -129,7 +129,7 @@ describe('Smart Calendar detail rows (v7.5.94 Fix D)', () => {
 
   it('rows resolve the main label and item line via the helpers', () => {
     expect(CALENDAR_SRC).toContain('resolveCalendarDetailMainLabel');
-    expect(CALENDAR_SRC).toContain('formatCalendarDetailItems');
+    expect(CALENDAR_SRC).toContain('resolveCalendarDetailLine');
     expect(CALENDAR_SRC).toContain('{detailMainLabel}');
     expect(CALENDAR_SRC).toContain('{detailItemsLine}');
   });
@@ -191,15 +191,15 @@ describe('Tire-pressure tiles stay visible (v7.5.94 Fix E)', () => {
   });
 });
 
-describe('Version bump to v7.6.19 (build 333)', () => {
+describe('Version bump to v7.6.20 (build 334)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.19');
-    expect(CURRENT_BUILD_NUMBER).toBe(333);
-    expect(VERSION_JSON.version).toBe('v7.6.19');
-    expect(VERSION_JSON.buildNumber).toBe(333);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
+    expect(CURRENT_BUILD_NUMBER).toBe(334);
+    expect(VERSION_JSON.version).toBe('v7.6.20');
+    expect(VERSION_JSON.buildNumber).toBe(334);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.19');
-    expect(entry.buildNumber).toBe(333);
+    expect(entry.version).toBe('v7.6.20');
+    expect(entry.buildNumber).toBe(334);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

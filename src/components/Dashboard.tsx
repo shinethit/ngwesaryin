@@ -4,7 +4,7 @@ import {
   Calendar, ChevronRight, ChevronDown, Search, RefreshCw,
   Wallet, Scale, Crown, MessageCircle, GraduationCap, BarChart3,
 } from 'lucide-react';
-import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType } from '../types';
+import { BudgetConfig, Category, Debt, FuelLog, PlanType, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK, formatLakhs, formatShortDate, isOverdue, getAmountDisplayMode } from '../utils/formatters';
 import { convertToMMK, getCurrencyInfo } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
@@ -23,6 +23,9 @@ interface DashboardProps {
   wallets: WalletType[];
   categories: Category[];
   budgets?: BudgetConfig[];
+  // [v7.6.20] Fuel logs for the Smart Calendar day detail (optional:
+  // absent keeps the pre-7.6.20 detail lines).
+  fuelLogs?: FuelLog[];
   plan: PlanType;
   lang: 'my' | 'en';
   onAddTransaction: (type: 'income' | 'expense') => void;
@@ -46,6 +49,7 @@ type TimeFilterOption = 'all' | 'this_month' | 'last_month' | 'this_week' | 'las
 
 export const Dashboard: React.FC<DashboardProps> = ({
   transactions, debts, wallets, categories, plan,
+  fuelLogs,
   lang,
   onAddTransaction, onAddDebt, onSelectTab, onOpenUpgrade, onOpenSearch,
 }) => {
@@ -695,6 +699,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         categories={categories}
         wallets={scopedWallets}
         lang={lang}
+        fuelLogs={fuelLogs}
       />
 
       {/* DEBT REMINDERS — [v7.5.75] p-4→p-3, tighter header/row gaps; content unchanged. */}

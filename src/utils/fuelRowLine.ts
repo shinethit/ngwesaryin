@@ -29,13 +29,48 @@ export function findFuelLogForTransaction(
  */
 export function formatFuelRowLine(fuelLog: FuelLog | null | undefined): string {
   if (!fuelLog) return '';
+  return fuelLineParts(fuelLog, false).join(' · ');
+}
+
+/**
+ * [v7.6.20] Calendar variant: the Records line PLUS the per-litre
+ * rate, so the Smart Calendar day detail shows at a glance what the
+ * Records list shows plus the rate the list omits:
+ * `{fuelType} · {liters} လီတာ · {pricePerLiter}/လီတာ · {station}`.
+ * The rate renders verbatim (`3000/လီတာ`, no commas/rounding);
+ * a missing/zero rate is omitted, and the result is '' when there
+ * is no log (or nothing to show), exactly like formatFuelRowLine.
+ * The Records list keeps calling formatFuelRowLine and is unchanged.
+ */
+export function formatFuelRowLineWithRate(
+  fuelLog: FuelLog | null | undefined,
+): string {
+  if (!fuelLog) return '';
+  return fuelLineParts(fuelLog, true).join(' · ');
+}
+
+/**
+ * Shared part builder for both fuel-line variants: fuel type,
+ * litres, [rate], station — in that order, each omitted gracefully
+ * when missing. Litres and the rate render EXACTLY as stored
+ * (verbatim numbers), like the VehiclesView fuel-history rows.
+ */
+function fuelLineParts(fuelLog: FuelLog, includeRate: boolean): string[] {
   const parts: string[] = [];
   const fuelType = (fuelLog.fuelType || '').trim();
   if (fuelType) parts.push(fuelType);
   if (typeof fuelLog.liters === 'number' && Number.isFinite(fuelLog.liters)) {
     parts.push(`${fuelLog.liters} လီတာ`);
   }
+  if (
+    includeRate &&
+    typeof fuelLog.pricePerLiter === 'number' &&
+    Number.isFinite(fuelLog.pricePerLiter) &&
+    fuelLog.pricePerLiter > 0
+  ) {
+    parts.push(`${fuelLog.pricePerLiter}/လီတာ`);
+  }
   const station = (fuelLog.gasStation || '').trim();
   if (station) parts.push(station);
-  return parts.join(' · ');
+  return parts;
 }

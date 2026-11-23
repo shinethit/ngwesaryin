@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.15';
-export const CURRENT_BUILD_NUMBER = 329;
+export const CURRENT_APP_VERSION = 'v7.6.16';
+export const CURRENT_BUILD_NUMBER = 330;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.16',
+    buildNumber: 330,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'Wallet ရွေးထားချိန် Filter စာတန်း ဖျောက်ခြင်း',
+    titleEn: 'Filter notice hidden for wallet-only selection',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်။',
+    descriptionEn: 'The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active.',
+    changesMy: [
+      'ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်',
+    ],
+    changesEn: [
+      'The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active.',
+    ],
+  },
   {
     version: 'v7.6.15',
     buildNumber: 329,

@@ -332,11 +332,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.15 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
-    expect(CURRENT_BUILD_NUMBER).toBe(329);
-    expect(VERSION_JSON.version).toBe('v7.6.15');
-    expect(VERSION_JSON.buildNumber).toBe(329);
+  it('the shipped identity is 7.6.16 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
+    expect(CURRENT_BUILD_NUMBER).toBe(330);
+    expect(VERSION_JSON.version).toBe('v7.6.16');
+    expect(VERSION_JSON.buildNumber).toBe(330);
   });
 });
 
@@ -372,32 +372,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.15 (build 329)', () => {
+describe('Version bump to v7.6.16 (build 330)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
-    expect(CURRENT_BUILD_NUMBER).toBe(329);
-    expect(VERSION_JSON.version).toBe('v7.6.15');
-    expect(VERSION_JSON.buildNumber).toBe(329);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
+    expect(CURRENT_BUILD_NUMBER).toBe(330);
+    expect(VERSION_JSON.version).toBe('v7.6.16');
+    expect(VERSION_JSON.buildNumber).toBe(330);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.15');
-    expect(entry.buildNumber).toBe(329);
+    expect(entry.version).toBe('v7.6.16');
+    expect(entry.buildNumber).toBe(330);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း',
+      'Wallet ရွေးထားချိန် Filter စာတန်း ဖျောက်ခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Fuel details shown on the record row',
+      'Filter notice hidden for wallet-only selection',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(1);
+    expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ဆီဖိုးစာရင်းတန်းမှာ ဆီအမျိုးအစား၊ လီတာနဲ့ ဆိုင် ပြမည်',
+      'ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Fuel rows now show the fuel type, litres and station on the record row',
+      'The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active.',
     );
   });
 

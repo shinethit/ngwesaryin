@@ -191,37 +191,33 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
   });
 });
 
-describe('Version bump to v7.6.15 (build 329)', () => {
-  it('current version is v7.6.15 / build 329 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
-    expect(CURRENT_BUILD_NUMBER).toBe(329);
-    expect(VERSION_JSON.version).toBe('v7.6.15');
-    expect(VERSION_JSON.buildNumber).toBe(329);
+describe('Version bump to v7.6.16 (build 330)', () => {
+  it('current version is v7.6.16 / build 330 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
+    expect(CURRENT_BUILD_NUMBER).toBe(330);
+    expect(VERSION_JSON.version).toBe('v7.6.16');
+    expect(VERSION_JSON.buildNumber).toBe(330);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.15 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.16 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.15');
-    expect(entry.buildNumber).toBe(329);
+    expect(entry.version).toBe('v7.6.16');
+    expect(entry.buildNumber).toBe(330);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း');
-    expect(entry.titleEn).toBe('Fuel details shown on the record row');
+    expect(entry.titleMy).toBe('Wallet ရွေးထားချိန် Filter စာတန်း ဖျောက်ခြင်း');
+    expect(entry.titleEn).toBe('Filter notice hidden for wallet-only selection');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'ဆီဖိုးစာရင်းတန်းမှာ ဆီအမျိုးအစား၊ လီတာနဲ့ ဆိုင် ပြမည်',
-      'ဆီလမ်းညွှန် ပိတ်တဲ့အခါ စာရင်းပုံစံ မပိတ်တော့ပါ',
-      'အမျိုးအစား မရွေးရသေးချိန် အမျိုးအစား အိုင်ကွန်နှင့် အရောင် မှန်ကန်စွာ ပြမည်',
+      'ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Fuel rows now show the fuel type, litres and station on the record row',
-      'Closing the fuel guide no longer closes the whole entry form',
-      'Category icon and color now show the neutral state until a category is picked in a new entry',
+      'The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active.',
     ]);
   });
 });

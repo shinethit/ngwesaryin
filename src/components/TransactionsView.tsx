@@ -23,6 +23,10 @@ import { hasSplits } from '../utils/transactionSplits';
 // [v7.6.15] Fuel line on Records rows (fuel type / litres / station
 // from the linked FuelLog).
 import { findFuelLogForTransaction, formatFuelRowLine } from '../utils/fuelRowLine';
+// [v7.6.16] Filter-notice gate: the amber banner shows only when a
+// non-wallet filter is active (a wallet-only pick is a scope
+// choice, not a "missing records" warning).
+import { shouldShowFilterNotice } from '../utils/filterNotice';
 
 export type TimeFilterType =
   | 'all'
@@ -764,7 +768,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       </div>
 
             {/* Active Filter Notice Bar if filtered is less than total */}
-      {transactions.length > 0 && filtered.length < transactions.length && (
+      {shouldShowFilterNotice(transactions.length, filtered.length, { typeFilter, effectiveDataScope, timeFilter, selectedCategory, searchTerm }) && (
         <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2 font-medium min-w-0">
             <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />

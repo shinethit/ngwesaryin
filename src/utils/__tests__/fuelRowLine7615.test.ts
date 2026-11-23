@@ -253,40 +253,28 @@ describe('neutral form category icon and color (v7.6.15)', () => {
   });
 });
 
-describe('Version bump to v7.6.15 (build 329)', () => {
+describe('Version bump to v7.6.16 (build 330)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
-    expect(CURRENT_BUILD_NUMBER).toBe(329);
-    expect(VERSION_JSON.version).toBe('v7.6.15');
-    expect(VERSION_JSON.buildNumber).toBe(329);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
+    expect(CURRENT_BUILD_NUMBER).toBe(330);
+    expect(VERSION_JSON.version).toBe('v7.6.16');
+    expect(VERSION_JSON.buildNumber).toBe(330);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.15');
-    expect(entry.buildNumber).toBe(329);
+    expect(entry.version).toBe('v7.6.16');
+    expect(entry.buildNumber).toBe(330);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း');
-    expect(entry.titleEn).toBe('Fuel details shown on the record row');
+    expect(entry.titleMy).toBe('Wallet ရွေးထားချိန် Filter စာတန်း ဖျောက်ခြင်း');
+    expect(entry.titleEn).toBe('Filter notice hidden for wallet-only selection');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(1);
+    expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ဆီဖိုးစာရင်းတန်းမှာ ဆီအမျိုးအစား၊ လီတာနဲ့ ဆိုင် ပြမည်',
-    );
-    expect(entry.changesMy[1]).toBe(
-      'ဆီလမ်းညွှန် ပိတ်တဲ့အခါ စာရင်းပုံစံ မပိတ်တော့ပါ',
-    );
-    expect(entry.changesMy[2]).toBe(
-      'အမျိုးအစား မရွေးရသေးချိန် အမျိုးအစား အိုင်ကွန်နှင့် အရောင် မှန်ကန်စွာ ပြမည်',
+      'ပိုက်ဆံအိတ်တည်း ရွေးထားချိန်မှာ Filter သတိပေးစာတန်း မပေါ်တော့ပါ — အခြား Filter ပါရင် ပေါ်မည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Fuel rows now show the fuel type, litres and station on the record row',
-    );
-    expect(entry.changesEn[1]).toBe(
-      'Closing the fuel guide no longer closes the whole entry form',
-    );
-    expect(entry.changesEn[2]).toBe(
-      'Category icon and color now show the neutral state until a category is picked in a new entry',
+      'The filter notice banner no longer appears when only a wallet is selected — it still appears when other filters are active.',
     );
   });
 
@@ -301,23 +289,23 @@ describe('Version bump to v7.6.15 (build 329)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.15'.replace(/5$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.15'.replace(/5$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.16'.replace(/6$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.16'.replace(/6$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.14/7.6.15, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.14';
-    const TO_VERSION = '7.6.15';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.15/7.6.16, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.15';
+    const TO_VERSION = '7.6.16';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/5$/, '');
+    const mangled = TO_VERSION.replace(/6$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.15');
-    expect(guardFails('7.6.14')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.16');
     expect(guardFails('7.6.15')).toBe(false);
+    expect(guardFails('7.6.16')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

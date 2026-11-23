@@ -348,23 +348,23 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.15 (build 329)', () => {
+describe('Version bump to v7.6.16 (build 330)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.15');
-    expect(CURRENT_BUILD_NUMBER).toBe(329);
-    expect(VERSION_JSON.version).toBe('v7.6.15');
-    expect(VERSION_JSON.buildNumber).toBe(329);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.16');
+    expect(CURRENT_BUILD_NUMBER).toBe(330);
+    expect(VERSION_JSON.version).toBe('v7.6.16');
+    expect(VERSION_JSON.buildNumber).toBe(330);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.15');
-    expect(entry.buildNumber).toBe(329);
+    expect(entry.version).toBe('v7.6.16');
+    expect(entry.buildNumber).toBe(330);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဆီဖိုးအသေးစိတ် စာရင်းတန်းမှာ ပြခြင်း');
-    expect(entry.titleEn).toBe('Fuel details shown on the record row');
+    expect(entry.titleMy).toBe('Wallet ရွေးထားချိန် Filter စာတန်း ဖျောက်ခြင်း');
+    expect(entry.titleEn).toBe('Filter notice hidden for wallet-only selection');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(1);
+    expect(entry.changesEn).toHaveLength(1);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

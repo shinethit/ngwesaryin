@@ -1096,6 +1096,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                   {anomalyItems.length}
                 </span>
               </div>
+              {/* [v7.6.12] Trigger wording, clarified: alerts start at
+                  exactly twice the usual weekly average and continue
+                  above it — the heading alone read as if only 2x
+                  alerts. The threshold itself is unchanged. */}
+              <p className="px-4 pt-3 pb-1 text-xs text-slate-500 leading-relaxed">
+                {lang === 'my'
+                  ? '၂ ဆ တိတိကနေ စပြီး သတိပေးသည် — ပုံမှန်အပတ်စဉ် ပျမ်းမျှထက် ၂ ဆ၊ ၃ ဆ၊ ၄ ဆ ဖြစ်လျှင်လည်း သတိပေးသည်။'
+                  : 'Alerts start at exactly twice the usual weekly average and continue above it — 2×, 3×, 4× all alert.'}
+              </p>
               <div className="p-3 space-y-3">{anomalyItems.map(renderAnomalyRow)}</div>
             </div>
           )}

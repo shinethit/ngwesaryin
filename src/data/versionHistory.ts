@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.11';
-export const CURRENT_BUILD_NUMBER = 325;
+export const CURRENT_APP_VERSION = 'v7.6.12';
+export const CURRENT_BUILD_NUMBER = 326;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.12',
+    buildNumber: 326,
+    releaseDate: '2026-11-23',
+    releaseTime: '1:00 AM (MMT)',
+    titleMy: 'သတိပေးချက် စာသား ရှင်းလင်းခြင်း (၂ ဆ တိတိကနေ စပြီး)',
+    titleEn: 'Anomaly alert wording clarified (alerts start at exactly twice)',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက်ရဲ့ စာသားကို ရှင်းလင်းလိုက်သည် — ၂ ဆ တိတိကနေ စပြီး သတိပေးသည် (၂ ဆ၊ ၃ ဆ၊ ၄ ဆ အားလုံး ပါဝင်သည်)။ သတိပေးရတဲ့ အဆင့်ကို လုံးဝ မပြောင်းလဲပါ။',
+    descriptionEn: 'Clarified the anomaly alert wording — alerts start at exactly twice the 4-week weekly average and continue above it (2×, 3×, 4× all alert). The threshold itself is unchanged.',
+    changesMy: [
+      'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက် စာသား ပြင်ဆင်ခြင်း — ၂ ဆ တိတိကနေ စပြီး သတိပေးသည် (၂ ဆ၊ ၃ ဆ၊ ၄ ဆ အားလုံး ပါဝင်သည်)',
+    ],
+    changesEn: [
+      'Anomaly alert wording clarified — alerts start at exactly twice the 4-week weekly average and continue above it (2×, 3×, 4× all alert). The threshold itself is unchanged.',
+    ],
+  },
   {
     version: 'v7.6.11',
     buildNumber: 325,

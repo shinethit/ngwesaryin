@@ -241,28 +241,28 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.11 (build 325)', () => {
+describe('version pins rolled forward to v7.6.12 (build 326)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.11');
-    expect(CURRENT_BUILD_NUMBER).toBe(325);
-    expect(VERSION_JSON.version).toBe('v7.6.11');
-    expect(VERSION_JSON.buildNumber).toBe(325);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.12');
+    expect(CURRENT_BUILD_NUMBER).toBe(326);
+    expect(VERSION_JSON.version).toBe('v7.6.12');
+    expect(VERSION_JSON.buildNumber).toBe(326);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the view-first entry, no Admin strings', () => {
+  it('the top history entry carries the anomaly-wording entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.11');
-    expect(top.buildNumber).toBe(325);
+    expect(top.version).toBe('v7.6.12');
+    expect(top.buildNumber).toBe(326);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'သွင်းပြီးသား စာရင်းကို နှိပ်ရင် အရင်ဆုံး ကြည့်ရှုခြင်းသာ ပြပြီး ပြင်ချင်မှ Edit ခလုတ်ကို နှိပ်ရမည် (မှားနှိပ်မိပြီး စာရင်း မပျက်စေရန်)',
+      'ပုံမှန်ထက် အသုံးများခြင်း သတိပေးချက် စာသား ပြင်ဆင်ခြင်း — ၂ ဆ တိတိကနေ စပြီး သတိပေးသည် (၂ ဆ၊ ၃ ဆ၊ ၄ ဆ အားလုံး ပါဝင်သည်)',
     ]);
     expect(top.changesEn).toEqual([
-      'Tapping a saved record now opens a read-only view first; editing requires tapping the Edit button, so an accidental tap cannot change a record.',
+      'Anomaly alert wording clarified — alerts start at exactly twice the 4-week weekly average and continue above it (2×, 3×, 4× all alert). The threshold itself is unchanged.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

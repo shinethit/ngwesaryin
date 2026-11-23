@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Wallet as WalletIcon, ChevronDown, Check, X, Search, Filter } from 'lucide-react';
 import { Wallet } from '../types';
 import { formatCurrency } from '../utils/currency';
-import { effectiveIncludeInTotals } from '../utils/walletBalance';
+import { effectiveIncludeInTotals, isSharedWallet } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
 
 
@@ -59,8 +59,6 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
     wallets.length > 0 && selectedWalletIds.length === wallets.length;
 
   // [v7.5.56] Shared-wallet display helpers (finding 25).
-  const isSharedWallet = (w: Wallet) =>
-    !!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0);
   const getOwnerName = (w: Wallet): string => w.ownerName || w.ownerEmail || '';
   const getWalletDisplayName = (w: Wallet): string =>
     lang === 'my' ? w.name : w.nameEn || w.name;

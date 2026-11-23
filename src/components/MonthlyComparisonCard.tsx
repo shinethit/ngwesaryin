@@ -13,8 +13,7 @@ import {
 import { BarChart3, TrendingUp, TrendingDown, Calendar, ArrowRight, Sparkles } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
-import { isTransferTransaction, buildWalletMap, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { isTransferTransaction, buildWalletMap, isWalletMatch, effectiveIncludeInTotals, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -105,13 +104,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
   const { sharedWalletScopeOverrides } = useAuth();
 
   const convertTxToMMK = useMemo(() => {
-    return (tx: Transaction) => {
-      let w = walletMap.get(tx.walletId);
-      if (!w) {
-        w = wallets.find((wall) => isWalletMatch(wall, tx.walletId));
-      }
-      return convertToMMK(tx.amount, w?.currency, w?.exchangeRate);
-    };
+    return (tx: Transaction) => sharedConvertTxToMMK(walletMap, wallets, tx);
   }, [walletMap, wallets]);
 
   // Filter transactions for previous month & this month

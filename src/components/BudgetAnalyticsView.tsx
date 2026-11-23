@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { Sparkles, Lock, PieChart, TrendingDown, AlertTriangle, CheckCircle, Plus, ArrowRight, ShieldAlert, Edit2, Trash2, Percent, Banknote, Wallet as WalletIcon, Layers, ChevronDown, ChevronUp, Calendar, ArrowUpDown } from 'lucide-react';
 import { BudgetConfig, Category, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet, getBudgetCategoryIds } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
 import { CategoryIcon } from './CategoryIcon';
 import { BudgetModal } from './BudgetModal';
 import { SpendingComparisonView } from './SpendingComparisonView';
 import { FinancialHealthModal } from './FinancialHealthModal';
 import { calculateFinancialHealth } from '../utils/financialHealth';
-import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 
 interface BudgetAnalyticsViewProps {
@@ -93,13 +92,8 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   const catMap = React.useMemo(() => new Map<string, Category>(categories.map((c) => [c.id, c])), [categories]);
 
   const convertTxToMMK = React.useCallback(
-    (t: Transaction, amount: number = t.amount) => {
-      let w = walletMap.get(t.walletId);
-      if (!w) {
-        w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-      }
-      return convertToMMK(amount, w?.currency, w?.exchangeRate);
-    },
+    (t: Transaction, amount: number = t.amount) =>
+      sharedConvertTxToMMK(walletMap, wallets, t, amount),
     [walletMap, wallets]
   );
 

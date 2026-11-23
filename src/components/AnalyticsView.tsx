@@ -20,7 +20,7 @@ import { MonthlyComparisonCard } from './MonthlyComparisonCard';
 import { MonthlySummaryChart } from './MonthlySummaryChart';
 import { ClayCategoryCard } from './ClayIllustrations';
 import { calculateFinancialHealth } from '../utils/financialHealth';
-import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 
 interface AnalyticsViewProps {
   transactions: Transaction[];
@@ -104,11 +104,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     [transactions, scopedWalletIds]
   );
 
-  const convertTxToMMK = (t: Transaction) => {
-    let w = walletMap.get(t.walletId);
-    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
-  };
+  const convertTxToMMK = (t: Transaction) =>
+    sharedConvertTxToMMK(walletMap, wallets, t);
 
   const totalIncome = scopedTransactions
     .filter((t) => t.type === 'income' && !isTransferTransaction(t))

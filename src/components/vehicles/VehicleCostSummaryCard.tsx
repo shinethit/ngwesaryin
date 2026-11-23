@@ -3,6 +3,7 @@ import { Fuel, Wrench, Disc, Calendar, TrendingUp, Gauge } from 'lucide-react';
 import { FuelLog, VehicleMaintenance, TirePressureLog } from '../../types';
 import { calculateCostPerKm } from '../../utils/vehicleAnalytics';
 import { formatLakhs, formatShortDate } from '../../utils/formatters';
+import { getLocalDateString } from '../../utils/dateUtils';
 
 type RangePreset = '1m' | '3m' | '6m' | '1y' | 'all' | 'custom';
 
@@ -18,13 +19,6 @@ interface VehicleCostSummaryCardProps {
   onCustomStartChange: (s: string) => void;
   onCustomEndChange: (s: string) => void;
 }
-
-const getLocalDateString = (d: Date): string => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
 
 const getRangeForPreset = (preset: RangePreset): { start: string; end: string } => {
   if (preset === 'all') return { start: '', end: '' };

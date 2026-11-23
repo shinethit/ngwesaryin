@@ -17,7 +17,6 @@ interface DataManagementViewProps {
   onClearAllData: () => void;
   onExportJson: () => void;
   onImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onOpenAccountModal: () => void;
   onOpenPremiumModal: () => void;
 }
 

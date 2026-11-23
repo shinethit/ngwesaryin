@@ -125,12 +125,12 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.6.20 — history entry and version.json in sync', () => {
-  it('current version is v7.6.20 / build 334', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
-    expect(CURRENT_BUILD_NUMBER).toBe(334);
-    expect(VERSION_JSON.version).toBe('v7.6.20');
-    expect(VERSION_JSON.buildNumber).toBe(334);
+describe('Version v7.6.21 — history entry and version.json in sync', () => {
+  it('current version is v7.6.21 / build 335', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.21');
+    expect(CURRENT_BUILD_NUMBER).toBe(335);
+    expect(VERSION_JSON.version).toBe('v7.6.21');
+    expect(VERSION_JSON.buildNumber).toBe(335);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -139,16 +139,16 @@ describe('Version v7.6.20 — history entry and version.json in sync', () => {
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.20 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.21 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.20');
-    expect(entry.buildNumber).toBe(334);
+    expect(entry.version).toBe('v7.6.21');
+    expect(entry.buildNumber).toBe(335);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('Smart Calendar အသေးစိတ် ပြခြင်း');
-    expect(entry.titleEn).toBe('Smart Calendar detail view');
+    expect(entry.titleMy).toBe('ထပ်နေတဲ့ function များ စုစည်းခြင်း');
+    expect(entry.titleEn).toBe('Duplicate helper consolidation');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

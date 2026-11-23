@@ -5,6 +5,7 @@ import { formatCurrency } from '../utils/currency';
 import { formatLakhs, getAmountDisplayMode } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { getLocalDateString } from '../utils/dateUtils';
+import { lakhMultiplyGuard } from '../utils/lakhMultiply';
 
 interface DebtModalProps {
   isOpen: boolean;
@@ -101,19 +102,13 @@ export const DebtModal: React.FC<DebtModalProps> = ({
   };
 
   const handleMultiplyLakh = () => {
-    const val = parseMyanmarNumber(totalAmount);
-    if (!val || val <= 0) return;
-    if (lakhConverted) return; // idempotent: a second tap does nothing
-    // [v7.5.55 D31] A value already at kyat scale must not be multiplied:
-    // an edited debt's stored total (e.g. 2,500,000) would explode to
-    // 250,000,000,000 with one tap. 100,000+ in the field is kyat already
-    // (100,000 lakh = 10 billion MMK is not a real debt).
-    if (val >= 100000) {
-      setError(lang === 'my' ? 'ဒီပမာဏက ကျပ်နဲ့ ရိုက်ထားပြီးသား ဖြစ်ပါတယ် — သိန်းနဲ့ ထပ်မြှောက်စရာ မလိုပါဘူး' : 'This amount is already in kyat — no need to multiply by 100,000');
+    const res = lakhMultiplyGuard(totalAmount, lakhConverted, lang);
+    if (res.kind === 'refused') {
+      setError(res.message);
       return;
     }
-    const result = Math.round(val * 100000);
-    setTotalAmount(String(result));
+    if (res.kind !== 'ok') return;
+    setTotalAmount(res.value);
     setLakhConverted(true);
   };
 

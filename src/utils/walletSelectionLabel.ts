@@ -10,12 +10,7 @@
 // in the active scope". Pure function; the selector's own
 // rendering is untouched.
 import type { Wallet } from '../types';
-
-function isSharedWallet(w: Wallet): boolean {
-  // Same predicate as MultiWalletSelector (B-17 will consolidate
-  // the copies into one helper in a later version).
-  return !!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0);
-}
+import { isSharedWallet } from './walletBalance';
 
 function walletDisplayName(w: Wallet, lang: 'my' | 'en'): string {
   return lang === 'my' ? w.name : w.nameEn || w.name;

@@ -1,4 +1,5 @@
 import { Wallet, Transaction, Debt } from '../types';
+import { convertToMMK } from './currency';
 
 /**
  * Checks whether a transaction is an internal transfer between wallets.
@@ -178,6 +179,48 @@ export function isWalletMatch(
   }
 
   return false;
+}
+
+// [v7.6.21] B-17 consolidation: the one shared-wallet predicate.
+// Nine copies (components, hooks, inline Booleans) all computed the
+// same thing — shared TO me (isSharedFromOther) or shared OUT by me
+// (a non-empty sharedWith list). Null/undefined wallets are not
+// shared; every call site's existence guard is preserved by
+// accepting them here.
+export function isSharedWallet(wallet: Wallet | undefined | null): boolean {
+  return !!wallet && (!!wallet.isSharedFromOther || !!(wallet.sharedWith && wallet.sharedWith.length > 0));
+}
+
+// [v7.6.21] B-18 consolidation: the one scope check for a
+// transaction. Three identical copies (CategorySpendingTrendLineChart,
+// MonthlySummaryChart, ItemPriceAnalyticsView) each looked the
+// transaction's wallet up, kept unknown wallets, and otherwise asked
+// effectiveIncludeInTotals with the viewer's scope overrides.
+export function isScopedTx(
+  walletMap: Map<string, Wallet>,
+  wallets: Wallet[],
+  sharedWalletScopeOverrides: Record<string, boolean> | undefined,
+  t: Transaction,
+): boolean {
+  const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
+  return !w || effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
+}
+
+// [v7.6.21] B-16 consolidation: the one transaction-to-MMK
+// conversion. Eight identical copies converted a transaction (or one
+// split slice) through its wallet's currency/rate, falling back from
+// the wallet map to an isWalletMatch scan. The two call patterns are
+// both preserved: convertTxToMMK(map, wallets, t) converts t.amount,
+// convertTxToMMK(map, wallets, t, amount) converts the given amount.
+export function convertTxToMMK(
+  walletMap: Map<string, Wallet>,
+  wallets: Wallet[],
+  t: Transaction,
+  amount: number = t.amount,
+): number {
+  let w = walletMap.get(t.walletId);
+  if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
+  return convertToMMK(amount, w?.currency, w?.exchangeRate);
 }
 
 /**

@@ -175,28 +175,28 @@ describe('Records header chip wiring (v7.6.19)', () => {
   });
 });
 
-describe('Version bump to v7.6.20 (build 334)', () => {
+describe('Version bump to v7.6.21 (build 335)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
-    expect(CURRENT_BUILD_NUMBER).toBe(334);
-    expect(VERSION_JSON.version).toBe('v7.6.20');
-    expect(VERSION_JSON.buildNumber).toBe(334);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.21');
+    expect(CURRENT_BUILD_NUMBER).toBe(335);
+    expect(VERSION_JSON.version).toBe('v7.6.21');
+    expect(VERSION_JSON.buildNumber).toBe(335);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.20');
-    expect(entry.buildNumber).toBe(334);
+    expect(entry.version).toBe('v7.6.21');
+    expect(entry.buildNumber).toBe(335);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Smart Calendar အသေးစိတ် ပြခြင်း');
-    expect(entry.titleEn).toBe('Smart Calendar detail view');
+    expect(entry.titleMy).toBe('ထပ်နေတဲ့ function များ စုစည်းခြင်း');
+    expect(entry.titleEn).toBe('Duplicate helper consolidation');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်',
+      'အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
+      'Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change.',
     );
   });
 
@@ -211,23 +211,23 @@ describe('Version bump to v7.6.20 (build 334)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.20'.replace(/0$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.20'.replace(/0$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.21'.replace(/1$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.21'.replace(/1$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.19/7.6.20, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.19';
-    const TO_VERSION = '7.6.20';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.20/7.6.21, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.20';
+    const TO_VERSION = '7.6.21';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/0$/, '');
+    const mangled = TO_VERSION.replace(/1$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.20');
-    expect(guardFails('7.6.19')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.21');
     expect(guardFails('7.6.20')).toBe(false);
+    expect(guardFails('7.6.21')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

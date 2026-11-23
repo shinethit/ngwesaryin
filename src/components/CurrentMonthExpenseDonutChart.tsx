@@ -2,10 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { PieChart, Tag } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
-import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 import { useAuth } from '../context/AuthContext';
+import { getLocalDateString } from '../utils/dateUtils';
 import { CategoryIcon } from './CategoryIcon';
 
 interface CurrentMonthExpenseDonutChartProps {
@@ -14,13 +14,6 @@ interface CurrentMonthExpenseDonutChartProps {
   wallets?: Wallet[];
   lang: 'my' | 'en';
 }
-
-const getLocalDateString = (d: Date = new Date()): string => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutChartProps> = ({
   transactions,
@@ -32,11 +25,8 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
   // [v7.6.07] The optional amount converts one split slice instead of
   // the whole record (same wallet lookup either way).
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
-  const convertTxToMMK = (t: Transaction, amount: number = t.amount) => {
-    let w = walletMap.get(t.walletId);
-    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(amount, w?.currency, w?.exchangeRate);
-  };
+  const convertTxToMMK = (t: Transaction, amount: number = t.amount) =>
+    sharedConvertTxToMMK(walletMap, wallets, t, amount);
   const currentYearMonth = useMemo(() => getLocalDateString(new Date()).slice(0, 7), []);
   // [v7.5.60 A-S19] Phone has no hover — tapping an amount toggles it
   // between lakhs and the exact kyat value.

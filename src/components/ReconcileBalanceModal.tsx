@@ -3,6 +3,7 @@ import { Scale, X, ArrowUpRight, ArrowDownRight, Check, Wallet as WalletIcon, Ca
 import { Wallet, Transaction } from '../types';
 import { formatMMK, getAmountDisplayMode } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
+import { lakhMultiplyGuard } from '../utils/lakhMultiply';
 import { isWalletMatch } from '../utils/walletBalance';
 
 interface ReconcileBalanceModalProps {
@@ -96,14 +97,13 @@ export const ReconcileBalanceModal: React.FC<ReconcileBalanceModalProps> = ({
   // tap does nothing, and a value already at kyat scale (>= 100,000) is
   // refused with a message instead of exploding to billions.
   const handleMultiplyLakh = () => {
-    const val = parseMyanmarNumber(actualBalanceInput);
-    if (!val || val <= 0) return;
-    if (lakhConverted) return;
-    if (val >= 100000) {
-      setError(lang === 'my' ? 'ဒီပမာဏက ကျပ်နဲ့ ရိုက်ထားပြီးသား ဖြစ်ပါတယ် — သိန်းနဲ့ ထပ်မြှောက်စရာ မလိုပါဘူး' : 'This amount is already in kyat — no need to multiply by 100,000');
+    const res = lakhMultiplyGuard(actualBalanceInput, lakhConverted, lang);
+    if (res.kind === 'refused') {
+      setError(res.message);
       return;
     }
-    setActualBalanceInput(String(Math.round(val * 100000)));
+    if (res.kind !== 'ok') return;
+    setActualBalanceInput(res.value);
     setLakhConverted(true);
   };
 

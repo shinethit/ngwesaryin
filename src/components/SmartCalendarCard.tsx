@@ -10,7 +10,8 @@ import {
   findFuelLogForTransaction,
   formatFuelRowLineWithRate,
 } from '../utils/fuelRowLine';
-import { isTransferTransaction, isWalletMatch } from '../utils/walletBalance';
+import { isTransferTransaction, isWalletMatch, isSharedWallet } from '../utils/walletBalance';
+import { getLocalDateString } from '../utils/dateUtils';
 import { CategoryIcon } from './CategoryIcon';
 
 interface SmartCalendarCardProps {
@@ -22,13 +23,6 @@ interface SmartCalendarCardProps {
   // Optional: absent/empty keeps the pre-7.6.20 detail lines.
   fuelLogs?: FuelLog[];
 }
-
-const getLocalDateString = (d: Date = new Date()): string => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 // [v6.1.7] Compact number format for tight calendar cells
 // [v7.5.58] Capped at 4 decimals so the longest token stays short
@@ -110,8 +104,6 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   };
 
   // [v7.5.56] Shared-wallet helpers (finding 25): 🤝 + owner name.
-  const isSharedWallet = (w: Wallet | undefined | null): boolean =>
-    !!w && (!!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0));
   const getWalletOwnerName = (w: Wallet | undefined | null): string =>
     w?.ownerName || w?.ownerEmail || '';
   const findWalletForTx = (walletId: string | undefined): Wallet | undefined =>

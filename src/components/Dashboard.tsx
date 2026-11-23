@@ -12,7 +12,7 @@ import { MultiWalletSelector } from './MultiWalletSelector';
 import { SmartCalendarCard } from './SmartCalendarCard';
 import { Toast } from './Toast';
 import { useAuth } from '../context/AuthContext';
-import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, isWalletMatch, isTransferTransaction, convertTxToMMK as sharedConvertTxToMMK, isSharedWallet } from '../utils/walletBalance';
 import { calculateFinancialHealth, type FinancialHealthTier } from '../utils/financialHealth';
 import { FinancialHealthModal } from './FinancialHealthModal';
 import { TrialStrip } from './TrialStrip';
@@ -184,9 +184,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [timeFilter, customRange]);
 
-  // [v7.5.56] Shared-wallet helpers (findings 15/24/25).
-  const isSharedWallet = useCallback((w: WalletType) =>
-    !!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0), []);
   const getWalletOwnerName = useCallback((w: WalletType): string => {
     if (w.ownerName) return w.ownerName;
     if (w.ownerEmail) return w.ownerEmail;
@@ -254,11 +251,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const catMap = useMemo(() => new Map<string, Category>(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
 
-  const convertTxToMMK = useCallback((t: Transaction) => {
-    let w = walletMap.get(t.walletId);
-    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(t.amount, w?.currency, w?.exchangeRate);
-  }, [walletMap, wallets]);
+  const convertTxToMMK = useCallback((t: Transaction) =>
+    sharedConvertTxToMMK(walletMap, wallets, t), [walletMap, wallets]);
 
   const convertDebtToMMK = useCallback((d: Debt) => {
     let w = walletMap.get(d.walletId);

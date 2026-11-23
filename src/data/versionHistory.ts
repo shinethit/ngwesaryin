@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.20';
-export const CURRENT_BUILD_NUMBER = 334;
+export const CURRENT_APP_VERSION = 'v7.6.21';
+export const CURRENT_BUILD_NUMBER = 335;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.21',
+    buildNumber: 335,
+    releaseDate: '2026-11-23',
+    releaseTime: '5:00 PM (MMT)',
+    titleMy: 'ထပ်နေတဲ့ function များ စုစည်းခြင်း',
+    titleEn: 'Duplicate helper consolidation',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ။',
+    descriptionEn: 'Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change.',
+    changesMy: [
+      'အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
+    ],
+    changesEn: [
+      'Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change.',
+    ],
+  },
   {
     version: 'v7.6.20',
     buildNumber: 334,

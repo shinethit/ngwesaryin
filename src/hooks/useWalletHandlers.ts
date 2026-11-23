@@ -15,7 +15,7 @@ import {
   recomputeSharedWalletBalance,
 } from '../lib/sharedWalletService';
 import { deleteRefsForWallet } from '../lib/sharedWalletRefs';
-import { isWalletMatch } from '../utils/walletBalance';
+import { isWalletMatch, isSharedWallet } from '../utils/walletBalance';
 import { formatLakhs } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -195,14 +195,12 @@ export function useWalletHandlers({
 
   const handleUpdateWallet = (updatedWallet: Wallet) => {
     const existing = wallets.find((w) => w.id === updatedWallet.id);
-    const isSharedWallet = Boolean(
-      existing && (existing.isSharedFromOther || (existing.sharedWith && existing.sharedWith.length > 0))
-    );
+    const sharedWalletFlag = isSharedWallet(existing);
     // [v7.5.56] Never rewrite ownerUid/ownerEmail/ownerName for a shared
     // wallet — the incoming wallet object may carry stale or foreign
     // owner data (e.g. a collaborator's edit, or a stale local copy).
     // The stored owner fields are authoritative.
-    if (isSharedWallet && existing) {
+    if (sharedWalletFlag && existing) {
       updatedWallet = {
         ...updatedWallet,
         ownerUid: existing.ownerUid,
@@ -229,7 +227,7 @@ export function useWalletHandlers({
     // [v7.5.56] Only the OWNER syncs a shared wallet to the cloud.
     // syncSharedWalletToCloud stamps ownerUid = current user, so a
     // collaborator sync would silently steal ownership.
-    if (user && isSharedWallet && !updatedWallet.isSharedFromOther) {
+    if (user && sharedWalletFlag && !updatedWallet.isSharedFromOther) {
       syncSharedWalletToCloud(updatedWallet, user);
     }
     showToast(lang === 'my' ? 'အကောင့် အချက်အလက် ပြင်ဆင်ပြီးပါပြီ ✓' : 'Wallet updated successfully ✓');
@@ -773,9 +771,7 @@ export function useWalletHandlers({
     const targetWallet = computedWallets.find((w) => w.id === walletId);
     const prevBalance = targetWallet?.balance || 0;
     const difference = actualBalance - prevBalance;
-    const isSharedWallet = Boolean(
-      targetWallet && (targetWallet.isSharedFromOther || (targetWallet.sharedWith && targetWallet.sharedWith.length > 0))
-    );
+    const sharedWalletFlag = isSharedWallet(targetWallet);
     const isOwnerOfShared = Boolean(
       targetWallet && !targetWallet.isSharedFromOther && targetWallet.sharedWith && targetWallet.sharedWith.length > 0
     );
@@ -866,7 +862,7 @@ export function useWalletHandlers({
         // other members never see the adjustment. A collaborator with
         // the matching add right may write the shared tx too, but only
         // the owner recomputes (rules: balance is owner-only).
-        if (isSharedWallet && targetWallet) {
+        if (sharedWalletFlag && targetWallet) {
           const adjPerms = getCollaboratorPermissions(targetWallet, user.email, user.uid);
           const mayWriteShared = isIncome ? adjPerms.canAddIncome : adjPerms.canAddExpense;
           if (!mayWriteShared) {

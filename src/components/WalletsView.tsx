@@ -17,7 +17,7 @@ import {
   type RateSnapshot,
 } from '../lib/exchangeRates';
 import { getCollaboratorPermissions, DEFAULT_WALLET_PERMISSIONS } from '../utils/permissions';
-import { isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { isWalletMatch, effectiveIncludeInTotals, isSharedWallet } from '../utils/walletBalance';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { ShareWalletModal } from './ShareWalletModal';
 import { WalletModal } from './WalletModal';
@@ -31,7 +31,6 @@ interface WalletsViewProps {
   lang: 'my' | 'en';
   onAddWallet: (wallet: Omit<Wallet, 'id'>) => void;
   onUpdateWallet?: (wallet: Wallet) => void;
-  onUpdateWalletBalance: (id: string, newBalance: number) => void;
   onDeleteWallet: (id: string) => void;
   // [v7.5.60 M-10] Returns false when the transfer was refused (e.g.
   // insufficient balance / rolling limit) so the modal stays open with
@@ -45,7 +44,6 @@ interface WalletsViewProps {
   onShareWallet?: (walletId: string, email: string) => Promise<boolean> | boolean | void;
   onUnshareWallet?: (walletId: string, email: string) => Promise<boolean> | boolean | void;
   onUpdatePermissions?: (walletId: string, email: string, permissions: WalletPermissions) => void;
-  onSyncRefresh?: (overrideWorkspaceId?: string) => Promise<void>;
   // [v7.5.56] Coordinator wires these from App: onTransferOwnership =
   // handleTransferOwnership, maxCollaborators = limits.maxCollaborators
   // (limits table, single source of truth), onOpenSignIn = opens the
@@ -194,8 +192,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     // flag: with an override in place the raw flag is stale, and the
     // toggle would write the same value back (a visible no-op).
     const nextState = !effectiveIncludeInTotals(wallet, sharedWalletScopeOverrides);
-    const isSharedWallet = Boolean(wallet.isSharedFromOther || (wallet.sharedWith && wallet.sharedWith.length > 0));
-    if (isSharedWallet) {
+    if (isSharedWallet(wallet)) {
       if (typeof updateSharedWalletScopeOverride === 'function' && user?.uid) {
         const sharedDocId = getSharedWalletDocId(wallet, user.uid);
         const ok = await updateSharedWalletScopeOverride(sharedDocId, nextState);

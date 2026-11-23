@@ -11,8 +11,7 @@ import {
 import { TrendingUp } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
-import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, isScopedTx as sharedIsScopedTx, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 import { useAuth } from '../context/AuthContext';
 
@@ -48,21 +47,16 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
 
   // [v7.5.55 D18] Convert amounts to MMK via each transaction's wallet.
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
-  const convertTxToMMK = (t: Transaction, amount: number = t.amount) => {
-    let w = walletMap.get(t.walletId);
-    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(amount, w?.currency, w?.exchangeRate);
-  };
+  const convertTxToMMK = (t: Transaction, amount: number = t.amount) =>
+    sharedConvertTxToMMK(walletMap, wallets, t, amount);
 
   // [v7.5.68] Per-viewer shared-wallet scope overrides.
   const { sharedWalletScopeOverrides } = useAuth();
 
   // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope). Unknown
   // wallets are kept — their scope cannot be judged.
-  const isScopedTx = (t: Transaction) => {
-    const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return !w || effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
-  };
+  const isScopedTx = (t: Transaction) =>
+    sharedIsScopedTx(walletMap, wallets, sharedWalletScopeOverrides, t);
 
   // 1. Determine last 6 months in chronological order
   const lastSixMonths = useMemo(() => {

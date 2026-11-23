@@ -2,9 +2,8 @@ import React from 'react';
 import { PieChart } from 'lucide-react';
 import { Budget, Category, Transaction, UNBUDGETED_CATEGORY_ID, Wallet, getBudgetCategoryIds } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
-import { buildWalletMap, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, isWalletMatch, isTransferTransaction, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 
 interface CurrentMonthBudgetSummaryCardProps {
@@ -52,11 +51,8 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
     return transactions.filter((t) => t.date && t.date.startsWith(currentYearMonth));
   }, [transactions, currentYearMonth]);
 
-  const convertTxToMMK = React.useCallback((t: Transaction, amount: number = t.amount) => {
-    let w = walletMap.get(t.walletId);
-    if (!w) w = wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return convertToMMK(amount, w?.currency, w?.exchangeRate);
-  }, [walletMap, wallets]);
+  const convertTxToMMK = React.useCallback((t: Transaction, amount: number = t.amount) =>
+    sharedConvertTxToMMK(walletMap, wallets, t, amount), [walletMap, wallets]);
 
   // [v7.5.74] A multi-category budget covers every category in its
   // resolved list — all of them are excluded from the General pool.

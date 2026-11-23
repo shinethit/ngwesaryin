@@ -31,7 +31,7 @@ const VEHICLE_SUB_CATEGORY_IDS = new Set([
   'sub_veh_license',
 ]);
 
-import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, isScopedTx as sharedIsScopedTx } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
 import { convertToMMK } from '../utils/currency';
 
@@ -216,10 +216,8 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
     if (onSelectTab) onSelectTab('shops');
   };
 
-  const isScopedTx = (t: Transaction) => {
-    const w = walletMap.get(t.walletId) || wallets.find((wall) => isWalletMatch(wall, t.walletId));
-    return !w || effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
-  };
+  const isScopedTx = (t: Transaction) =>
+    sharedIsScopedTx(walletMap, wallets, sharedWalletScopeOverrides, t);
   // Currencies actually used (for the mixed-currency note).
   const mixedCurrencies = useMemo(() => {
     const set = new Set<string>();

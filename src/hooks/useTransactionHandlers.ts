@@ -9,7 +9,7 @@ import { getLocalDateString } from '../utils/dateUtils';
 // [v7.5.93] Multi-row vehicle service entries: one maintenance record
 // per distinct row service type, each with its own cost + title.
 import { groupServiceRowsByType, resolvePerTypeTitle } from '../utils/vehicleServiceRows';
-import { isWalletMatch } from '../utils/walletBalance';
+import { isWalletMatch, isSharedWallet } from '../utils/walletBalance';
 // [v7.6.07 D1] Clearing splits on edit: a merge write keeps an
 // omitted `splits` field, so had-splits → now-none edits write
 // `splits: []` (see shouldClearSplits) instead of omitting the key.
@@ -127,8 +127,6 @@ export function useTransactionHandlers({
 
   // [v7.5.56] Shared-wallet helpers (A1–A9).
   const creatorName = user?.displayName || user?.email?.split('@')[0] || '';
-  const isSharedWallet = (w?: Wallet | null): boolean =>
-    !!w && (!!w.isSharedFromOther || (w.sharedWith?.length || 0) > 0);
   // I own a wallet when it is not shared TO me (my own wallet, even one
   // I shared out) — or when the shared doc names me as owner.
   const isWalletOwner = (w?: Wallet | null): boolean =>

@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.20",
-  "buildNumber": 334,
+  "version": "v7.6.21",
+  "buildNumber": 335,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်"
+    "အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ"
   ],
   "changesEn": [
-    "The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list."
+    "Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change."
   ]
 }

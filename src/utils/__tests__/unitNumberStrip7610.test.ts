@@ -177,28 +177,28 @@ describe('select resolution for a stored တစ်- custom (v7.6.10)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.20 (build 334)', () => {
+describe('version pins rolled forward to v7.6.21 (build 335)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
-    expect(CURRENT_BUILD_NUMBER).toBe(334);
-    expect(VERSION_JSON.version).toBe('v7.6.20');
-    expect(VERSION_JSON.buildNumber).toBe(334);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.21');
+    expect(CURRENT_BUILD_NUMBER).toBe(335);
+    expect(VERSION_JSON.version).toBe('v7.6.21');
+    expect(VERSION_JSON.buildNumber).toBe(335);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.20');
-    expect(entry.buildNumber).toBe(334);
+    expect(entry.version).toBe('v7.6.21');
+    expect(entry.buildNumber).toBe(335);
     expect(entry.releaseDate).toBe('2026-11-23');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Smart Calendar အသေးစိတ် ပြခြင်း');
-    expect(entry.titleEn).toBe('Smart Calendar detail view');
+    expect(entry.titleMy).toBe('ထပ်နေတဲ့ function များ စုစည်းခြင်း');
+    expect(entry.titleEn).toBe('Duplicate helper consolidation');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်',
+      'အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
+      'Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change.',
     );
   });
 

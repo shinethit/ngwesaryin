@@ -14,8 +14,7 @@ import {
 import { BarChart3, TrendingUp, TrendingDown, Sparkles, Filter } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
-import { convertToMMK } from '../utils/currency';
-import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeInTotals } from '../utils/walletBalance';
+import { buildWalletMap, isTransferTransaction, isWalletMatch, isScopedTx as sharedIsScopedTx, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 // [v7.6.07] Split-aware average-cost-per-category: only the slices in
 // the selected category count (a record counts once; 'all' keeps
 // the whole amount, as before).
@@ -48,20 +47,15 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
   // [v7.5.55 D18] Convert every amount to MMK via its wallet (raw sums mixed
   // USD/THB/etc. with MMK before).
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
-  const convertTxToMMK = (tx: Transaction, amount: number = tx.amount) => {
-    let w = walletMap.get(tx.walletId);
-    if (!w) w = wallets.find((wall) => isWalletMatch(wall, tx.walletId));
-    return convertToMMK(amount, w?.currency, w?.exchangeRate);
-  };
+  const convertTxToMMK = (tx: Transaction, amount: number = tx.amount) =>
+    sharedConvertTxToMMK(walletMap, wallets, tx, amount);
   // [v7.5.68] Per-viewer shared-wallet scope overrides.
   const { sharedWalletScopeOverrides } = useAuth();
 
   // [v7.5.60 M-01] Separate wallets excluded (Dashboard scope). Unknown
   // wallets are kept — their scope cannot be judged.
-  const isScopedTx = (tx: Transaction) => {
-    const w = walletMap.get(tx.walletId) || wallets.find((wall) => isWalletMatch(wall, tx.walletId));
-    return !w || effectiveIncludeInTotals(w, sharedWalletScopeOverrides);
-  };
+  const isScopedTx = (tx: Transaction) =>
+    sharedIsScopedTx(walletMap, wallets, sharedWalletScopeOverrides, tx);
   const [viewMode, setViewMode] = useState<'cashflow' | 'category_cost'>('cashflow');
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
   const [monthRange, setMonthRange] = useState<6 | 12>(6);

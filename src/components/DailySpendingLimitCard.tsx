@@ -9,19 +9,13 @@ import { convertToMMK } from '../utils/currency';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { isTransferTransaction } from '../utils/walletBalance';
+import { getLocalDateString } from '../utils/dateUtils';
 
 interface DailySpendingLimitCardProps {
   transactions: Transaction[];
   wallets?: Wallet[];
   lang: 'my' | 'en';
 }
-
-const getLocalDateString = (d: Date = new Date()): string => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
   transactions,

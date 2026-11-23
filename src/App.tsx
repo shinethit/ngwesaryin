@@ -2486,7 +2486,6 @@ export default function App() {
     handleAddWallet,
     handleUpdateWallet,
     handleDeleteWallet,
-    handleUpdateWalletBalance,
     handleTransferFunds,
     handleShareWallet,
     handleUnshareWallet,
@@ -2747,8 +2746,6 @@ export default function App() {
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
         onLockApp={handleLockApp}
         lang={lang}
-        onToggleLang={handleToggleLang}
-        activeTab={activeTab}
         setActiveTab={setActiveTab}
         logoStyle={logoStyle}
         onSelectLogoStyle={handleSelectLogoStyle}
@@ -2996,7 +2993,6 @@ export default function App() {
               lang={lang}
               onAddWallet={handleAddWallet}
               onUpdateWallet={handleUpdateWallet}
-              onUpdateWalletBalance={handleUpdateWalletBalance}
               onDeleteWallet={handleDeleteWallet}
               onTransferFunds={handleTransferFunds}
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
@@ -3008,7 +3004,6 @@ export default function App() {
               onShareWallet={handleShareWallet}
               onUnshareWallet={handleUnshareWallet}
               onUpdatePermissions={handleUpdateWalletPermissions}
-              onSyncRefresh={handleManualSyncDown}
               // [v7.5.56] Ownership transfer + ShareWalletModal wiring:
               // without onTransferOwnership the transfer button stays
               // hidden; maxCollaborators comes from the limits table
@@ -3134,7 +3129,6 @@ export default function App() {
             onClearAllData={handleClearAllData}
             onExportJson={handleExportJson}
             onImportJson={handleImportJson}
-            onOpenAccountModal={() => setIsAccountModalOpen(true)}
             onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
           />
         </div>
@@ -3849,8 +3843,6 @@ export default function App() {
         onClose={() => setIsDatabaseTrackerOpen(false)}
         lang={lang}
         transactions={transactions}
-        wallets={computedWallets}
-        debts={debts}
         cloudTxIds={cloudTxIds}
         onForcePushAll={handleForcePushAll}
         onForcePullAll={handleForcePullAll}

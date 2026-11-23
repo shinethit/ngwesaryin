@@ -15,8 +15,6 @@ interface NavbarProps {
   onOpenAccountModal: () => void;
   onLockApp: () => void;
   lang: 'my' | 'en';
-  onToggleLang: () => void;
-  activeTab: string;
   setActiveTab: (tab: string) => void;
   logoStyle?: LogoStyle;
   onSelectLogoStyle?: (style: LogoStyle) => void;

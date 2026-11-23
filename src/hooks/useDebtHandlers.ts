@@ -5,7 +5,7 @@ import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { markTxDeleted } from '../utils/deletedMarkers';
 import { getLocalDateString } from '../utils/dateUtils';
-import { isWalletMatch } from '../utils/walletBalance';
+import { isWalletMatch, isSharedWallet } from '../utils/walletBalance';
 import {
   getSharedWalletDocId,
   saveSharedWalletTransaction,
@@ -76,8 +76,6 @@ export function useDebtHandlers({
   // sharedWallets/{docId}/debts (member-visible mirror, same id), and
   // its linked wallet transaction goes through the shared path.
   const creatorName = user?.displayName || user?.email?.split('@')[0] || '';
-  const isSharedWallet = (w?: Wallet | null): boolean =>
-    !!w && (!!w.isSharedFromOther || (w.sharedWith?.length || 0) > 0);
   const isWalletOwner = (w?: Wallet | null): boolean =>
     !w || !w.isSharedFromOther || !w.ownerUid || w.ownerUid === user?.uid;
   const randomSuffix = () => Math.random().toString(36).slice(2, 8);

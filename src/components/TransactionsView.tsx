@@ -3,6 +3,7 @@ import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, 
 import { Category, FuelLog, PlanType, Transaction, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
+import { getLocalDateString } from '../utils/dateUtils';
 import { safeSetItem } from '../utils/storage';
 import { CategoryIcon } from './CategoryIcon';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
@@ -16,7 +17,7 @@ import { toLatinDigits, toMyanmarDigits } from '../utils/myanmarDigits';
 import { syncQueue } from '../lib/syncQueue';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
-import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction } from '../utils/walletBalance';
+import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, isSharedWallet } from '../utils/walletBalance';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 // [v7.6.07] Split badge on collapsed rows.
 import { hasSplits } from '../utils/transactionSplits';
@@ -61,13 +62,6 @@ interface TransactionsViewProps {
   // manual sync). Optional: without it the modal retries via syncQueue.
   onRefreshSync?: () => void | Promise<void>;
 }
-
-const getLocalDateString = (d: Date = new Date()): string => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 const formatLocalizedDate = (dateStr: string, lang: 'my' | 'en'): string => {
   if (!dateStr) return '';
@@ -202,8 +196,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   }, [wallets]);
 
   // [v7.5.56] Shared-wallet helpers (findings 25/38).
-  const isSharedWallet = (w: Wallet | undefined | null): boolean =>
-    !!w && (!!w.isSharedFromOther || !!(w.sharedWith && w.sharedWith.length > 0));
   const getWalletOwnerName = (w: Wallet | undefined | null): string =>
     w?.ownerName || w?.ownerEmail || '';
 

@@ -5,6 +5,7 @@ import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatter
 import { formatCurrency } from '../utils/currency';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
 import { getLocalDateString } from '../utils/dateUtils';
+import { lakhMultiplyGuard } from '../utils/lakhMultiply';
 
 interface RepaymentModalProps {
   isOpen: boolean;
@@ -83,15 +84,14 @@ export const RepaymentModal: React.FC<RepaymentModalProps> = ({
     setLakhConverted(false);
   };
   const handleMultiplyLakh = () => {
-    const val = parseMyanmarNumber(amount);
-    if (!val || val <= 0) return;
-    if (lakhConverted) return;
-    if (val >= 100000) {
-      setError(lang === 'my' ? 'ဒီပမာဏက ကျပ်နဲ့ ရိုက်ထားပြီးသား ဖြစ်ပါတယ် — သိန်းနဲ့ ထပ်မြှောက်စရာ မလိုပါဘူး' : 'This amount is already in kyat — no need to multiply by 100,000');
+    const res = lakhMultiplyGuard(amount, lakhConverted, lang);
+    if (res.kind === 'refused') {
+      setError(res.message);
       return;
     }
+    if (res.kind !== 'ok') return;
     setError('');
-    setAmount(String(Math.round(val * 100000)));
+    setAmount(res.value);
     setLakhConverted(true);
   };
   const handleAddOneLakh = () => {

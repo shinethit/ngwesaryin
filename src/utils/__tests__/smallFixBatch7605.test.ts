@@ -259,29 +259,29 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.20 (build 334)', () => {
+describe('version pins rolled forward to v7.6.21 (build 335)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.20');
-    expect(CURRENT_BUILD_NUMBER).toBe(334);
-    expect(VERSION_JSON.version).toBe('v7.6.20');
-    expect(VERSION_JSON.buildNumber).toBe(334);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.21');
+    expect(CURRENT_BUILD_NUMBER).toBe(335);
+    expect(VERSION_JSON.version).toBe('v7.6.21');
+    expect(VERSION_JSON.buildNumber).toBe(335);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.20');
-    expect(top.buildNumber).toBe(334);
+    expect(top.version).toBe('v7.6.21');
+    expect(top.buildNumber).toBe(335);
     expect(top.releaseDate).toBe('2026-11-23');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Smart Calendar အသေးစိတ် ပြခြင်း');
-    expect(top.titleEn).toBe('Smart Calendar detail view');
+    expect(top.titleMy).toBe('ထပ်နေတဲ့ function များ စုစည်းခြင်း');
+    expect(top.titleEn).toBe('Duplicate helper consolidation');
     expect(top.changesMy).toEqual([
-      'Smart Calendar မှာ ရက်တစ်ရက်ရဲ့ စာရင်းအသေးစိတ်မှာ အရေအတွက်၊ နှုန်း၊ ဆိုင်တို့ကို စာရင်းထဲကအတိုင်း ပြမည်',
+      'အတွင်းမှာ ထပ်နေတဲ့ function များကို တစ်ခုတည်းဖြစ်အောင် စုစည်းခြင်း — မြင်ရတဲ့ပုံစံနဲ့ လုပ်ဆောင်ချက်များ မပြောင်းလဲပါ',
     ]);
     expect(top.changesEn).toEqual([
-      'The Smart Calendar day detail now shows quantity, rate and shop, matching the Records list.',
+      'Duplicate internal helper functions are consolidated into single shared implementations — no visible or behavioral change.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

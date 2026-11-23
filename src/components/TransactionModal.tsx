@@ -38,6 +38,8 @@ import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, OTHER_MENU_UNIT, collectN
 import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
 // [v7.5.93] Per-row service types for multi-row vehicle service entries.
 import { ROW_SERVICE_TYPES, resolveVehicleServiceSubCategory } from '../utils/vehicleServiceRows';
+// [v7.6.03] Most-used vehicle entry type for the one-time auto-select.
+import { resolveMostUsedVehicleEntry } from '../utils/vehicleMostUsed';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
@@ -181,6 +183,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [entryModel, setEntryModel] = useState<EntryModel>(getResolvedModel);
   const prevIsOpenRef = React.useRef(false);
   const prevEditTxIdRef = React.useRef<string | undefined>(undefined);
+  // [v7.6.03] Auto-select guards. autoSelectDoneRef: the one-time
+  // most-used pick has been considered for this open (fired or
+  // superseded by a manual pick), so it never re-fires — not even
+  // after the user closes the vehicle mode with the ✕ button.
+  // autoSelectedRef: the current vehicle model came from that
+  // auto-select and no manual pick has overridden it yet; while it
+  // holds, a sub-category pick still switches the model (the
+  // sub-category effect below). Both reset on a fresh open.
+  const autoSelectDoneRef = React.useRef(false);
+  const autoSelectedRef = React.useRef(false);
   const formRef = React.useRef<HTMLFormElement>(null);
 
   const [entryMode, setEntryMode] = useState<'direct' | 'unit_qty' | 'shopping_list'>(
@@ -313,6 +325,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     if (isOpen) {
       if (formRef.current) formRef.current.scrollTop = 0;
+      // [v7.6.03] A fresh open gets a fresh one-time auto-select.
+      if (isNewlyOpened) {
+        autoSelectDoneRef.current = false;
+        autoSelectedRef.current = false;
+      }
       if (editTransaction) {
         if (isNewlyOpened || isEditTxChanged) {
           if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
@@ -801,15 +818,38 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    if (entryModel !== 'general') return;
+    // [v7.6.03] A sub-category picked AFTER the one-time auto-select
+    // still switches the model: the auto-selected model is
+    // provisional until the user picks something. A switch only
+    // happens when the sub-category's model differs from the
+    // current one, so the auto-select's own sub-category write
+    // cannot bounce the model back, and a manual switch clears
+    // the auto-selected state.
+    if (entryModel !== 'general' && !autoSelectedRef.current) return;
     if (!subCategoryId) return;
     if (subCategoryId === 'sub_veh_fuel') {
-      handleSwitchModel('fuel');
+      if (entryModel !== 'fuel') {
+        handleSwitchModel('fuel');
+        autoSelectedRef.current = false;
+        autoSelectDoneRef.current = true;
+      }
     } else if (subCategoryId === 'sub_veh_tire') {
-      handleSwitchModel('vehicle_service');
-      setMaintServiceType('tires');
+      // sub_veh_tire is shared by tire-pressure checks and tire
+      // replacements: while in tire-pressure mode it already means
+      // the current model (the auto-select's own write lands here),
+      // so only a switch away from another model counts as a pick.
+      if (entryModel !== 'tire_pressure' && !(entryModel === 'vehicle_service' && maintServiceType === 'tires')) {
+        handleSwitchModel('vehicle_service');
+        setMaintServiceType('tires');
+        autoSelectedRef.current = false;
+        autoSelectDoneRef.current = true;
+      }
     } else if (subCategoryId === 'sub_veh_maintenance' || subCategoryId === 'sub_veh_parts' || subCategoryId === 'sub_veh_wash' || subCategoryId === 'sub_veh_license') {
-      handleSwitchModel('vehicle_service');
+      if (entryModel !== 'vehicle_service') {
+        handleSwitchModel('vehicle_service');
+        autoSelectedRef.current = false;
+        autoSelectDoneRef.current = true;
+      }
     }
   }, [isOpen, subCategoryId, entryModel]);
 
@@ -933,6 +973,45 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsVehicleLinkEnabled(false);
     }
   };
+
+  // [v7.6.03] One-time auto-select of the most-used vehicle entry
+  // type. Fires at most once per fresh open (autoSelectDoneRef):
+  // new entry only, no explicit initialModel, a vehicle-related
+  // category, and still on 'general'. It also fires when the user
+  // picks the vehicle category after opening, since the effective
+  // category only becomes vehicle-related then. No history at all
+  // leaves 'general' untouched. The switch goes through
+  // handleSwitchModel, exactly like a tile tap (tires also sets
+  // maintServiceType, like the tire tile). Explicit picks always
+  // win: the tile / top-menu handlers clear the auto-selected
+  // state, and this effect never runs again once considered.
+  // Placed after handleSwitchModel / isVehicleRelatedCategory:
+  // the dependency array is evaluated during render, so every
+  // name in it must already be declared.
+  useEffect(() => {
+    if (!isOpen || isEditing) return;
+    if (initialModel && initialModel !== 'general') return;
+    if (autoSelectDoneRef.current) return;
+    if (entryModel !== 'general') return;
+    if (!isVehicleRelatedCategory) return;
+    autoSelectDoneRef.current = true;
+    const choice = resolveMostUsedVehicleEntry({
+      fuelLogs,
+      vehicleMaintenance,
+      tirePressureLogs,
+      transactions: allTransactions,
+    });
+    if (!choice) return;
+    autoSelectedRef.current = true;
+    if (choice === 'fuel') {
+      handleSwitchModel('fuel');
+    } else if (choice === 'tire_pressure') {
+      handleSwitchModel('tire_pressure');
+    } else {
+      handleSwitchModel('vehicle_service');
+      if (choice === 'tires') setMaintServiceType('tires');
+    }
+  }, [isOpen, isEditing, initialModel, entryModel, isVehicleRelatedCategory, fuelLogs, vehicleMaintenance, tirePressureLogs, allTransactions]);
 
   const filteredShopsForDatalist = useMemo(() => {
     if (!shopInput.trim()) return shops.slice(0, 5).concat(publicShops.slice(0, 5) as any);
@@ -1734,16 +1813,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div className="mt-1.5 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                 {(isVehicleRelatedCategory || showModelSelector) && (
                   <>
-                    <button type="button" onClick={() => { handleSwitchModel("fuel"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "fuel" ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50")}>
+                    <button type="button" onClick={() => { handleSwitchModel("fuel"); setMoreOpen(false); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "fuel" ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50")}>
                       <Fuel className="w-4 h-4" /><span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span>{entryModel === "fuel" && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" strokeWidth={3} />}
                     </button>
-                    <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50")}>
+                    <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMoreOpen(false); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? "bg-blue-50 text-blue-800" : "text-slate-700 hover:bg-slate-50")}>
                       <Wrench className="w-4 h-4" /><span>{lang === 'my' ? 'ဝန်ဆောင်မှု / ပြုပြင်' : 'Service / Repair'}</span>{entryModel === "vehicle_service" && maintServiceType !== "tires" && <Check className="w-3.5 h-3.5 ml-auto text-blue-600" strokeWidth={3} />}
                     </button>
-                    <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType === "tires" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}>
+                    <button type="button" onClick={() => { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); setMoreOpen(false); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "vehicle_service" && maintServiceType === "tires" ? "bg-amber-50 text-amber-800" : "text-slate-700 hover:bg-slate-50")}>
                       <Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာ လဲလှယ်' : 'Tire Replacement'}</span>{entryModel === "vehicle_service" && maintServiceType === "tires" && <Check className="w-3.5 h-3.5 ml-auto text-amber-600" strokeWidth={3} />}
                     </button>
-                    <button type="button" onClick={() => { handleSwitchModel("tire_pressure"); setMoreOpen(false); }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "tire_pressure" ? "bg-teal-50 text-teal-800" : "text-slate-700 hover:bg-slate-50")}>
+                    <button type="button" onClick={() => { handleSwitchModel("tire_pressure"); setMoreOpen(false); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"w-full flex items-center gap-2 px-3 py-2 text-xs font-bold transition-colors " + (entryModel === "tire_pressure" ? "bg-teal-50 text-teal-800" : "text-slate-700 hover:bg-slate-50")}>
                       <Gauge className="w-4 h-4" /><span>{lang === 'my' ? 'လေချိန် (PSI)' : 'Tire Pressure (PSI)'}</span>{entryModel === "tire_pressure" && <Check className="w-3.5 h-3.5 ml-auto text-teal-600" strokeWidth={3} />}
                     </button>
                   </>
@@ -1782,7 +1861,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     {entryModel === 'vehicle_service' && maintServiceType === 'tires' && (lang === 'my' ? '🛞 တာယာ Mode' : '🛞 Tire Mode')}
                     {entryModel === 'vehicle_service' && maintServiceType !== 'tires' && (lang === 'my' ? '🔧 ဝန်ဆောင်မှု Mode' : '🔧 Service Mode')}
                   </span>
-                  <button type="button" onClick={() => { setEntryModel("general"); setIsVehicleLinkEnabled(false); }} className="text-[10px] font-bold text-slate-500 hover:text-slate-800 shrink-0">✕ {lang === 'my' ? 'ပိတ်' : 'Close'}</button>
+                  <button type="button" onClick={() => { setEntryModel("general"); setIsVehicleLinkEnabled(false); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className="text-[10px] font-bold text-slate-500 hover:text-slate-800 shrink-0">✕ {lang === 'my' ? 'ပိတ်' : 'Close'}</button>
                 </div>
               </div>
             )}
@@ -1889,25 +1968,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
 
-            {/* [v7.5.94] Tiles stay visible in CREATE mode even after the
-                sub-category auto-switch moves entryModel off 'general'
-                (e.g. tire sub-category -> tire replacement) — that is
-                what hid the tire-pressure tile. While EDITING an
-                existing transaction the tiles stay hidden: the edit
-                restores its vehicle model via getResolvedModel, and
-                the switcher dropdown above remains the edit path. The
-                current mode's tile renders active and is a no-op. */}
-            {isVehicleRelatedCategory && !isEditing && (
+            {/* [v7.6.03] Tiles render in ONE row and ONLY once a
+                vehicle entry path is chosen (entryModel off
+                'general', via the top selector or the one-time
+                auto-select) — on 'general' the top "🚗 ယာဉ် မှတ်တမ်း"
+                selector is the only entry point. While EDITING the
+                tiles stay hidden, as before: the edit restores its
+                vehicle model via getResolvedModel, and the switcher
+                dropdown above remains the edit path. The current
+                mode's tile renders active and is a no-op. A manual
+                tile tap clears the auto-selected state. */}
+            {isVehicleRelatedCategory && !isEditing && entryModel !== 'general' && (
               <div className="px-4 py-3 border-b border-slate-100">
                 <div className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
                   <Car className="w-3.5 h-3.5 text-blue-600" />
                   <span>{lang === 'my' ? 'ယာဉ် မှတ်တမ်း အမျိုးအစား ရွေးပါ:' : 'Select vehicle entry type:'}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button type="button" onClick={() => { if (entryModel !== "fuel") handleSwitchModel("fuel"); }} className={"py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "fuel" ? " ring-2 ring-emerald-500 bg-emerald-100" : "")}><Fuel className="w-4 h-4" /><span>{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
-                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType !== "tires")) handleSwitchModel("vehicle_service"); }} className={"py-2 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? " ring-2 ring-blue-500 bg-blue-100" : "")}><Wrench className="w-4 h-4" /><span>{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
-                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType === "tires")) { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); } }} className={"py-2 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType === "tires" ? " ring-2 ring-amber-500 bg-amber-100" : "")}><Car className="w-4 h-4" /><span>{lang === 'my' ? 'တာယာလဲလှယ်' : 'Tire Replace'}</span></button>
-                  <button type="button" onClick={() => { if (entryModel !== "tire_pressure") handleSwitchModel("tire_pressure"); }} className={"py-2 px-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex flex-col items-center gap-1 transition-colors" + (entryModel === "tire_pressure" ? " ring-2 ring-teal-500 bg-teal-100" : "")}><Gauge className="w-4 h-4" /><span>{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span></button>
+                <div className="grid grid-cols-4 gap-1.5">
+                  <button type="button" onClick={() => { if (entryModel !== "fuel") handleSwitchModel("fuel"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "fuel" ? " ring-2 ring-emerald-500 bg-emerald-100" : "")}><Fuel className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'ဆီဖိုး' : 'Fuel'}</span></button>
+                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType !== "tires")) handleSwitchModel("vehicle_service"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType !== "tires" ? " ring-2 ring-blue-500 bg-blue-100" : "")}><Wrench className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'ဝန်ဆောင်မှု' : 'Service'}</span></button>
+                  <button type="button" onClick={() => { if (!(entryModel === "vehicle_service" && maintServiceType === "tires")) { handleSwitchModel("vehicle_service"); setMaintServiceType("tires"); } autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "vehicle_service" && maintServiceType === "tires" ? " ring-2 ring-amber-500 bg-amber-100" : "")}><Car className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'တာယာလဲလှယ်' : 'Tire Replace'}</span></button>
+                  <button type="button" onClick={() => { if (entryModel !== "tire_pressure") handleSwitchModel("tire_pressure"); autoSelectedRef.current = false; autoSelectDoneRef.current = true; }} className={"min-h-11 py-2 px-1 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-colors" + (entryModel === "tire_pressure" ? " ring-2 ring-teal-500 bg-teal-100" : "")}><Gauge className="w-4 h-4 shrink-0" /><span className="leading-tight text-center">{lang === 'my' ? 'လေချိန်' : 'Pressure'}</span></button>
                 </div>
               </div>
             )}

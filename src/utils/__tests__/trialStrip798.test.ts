@@ -261,19 +261,19 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
   });
 });
 
-describe('Version bump to v7.6.02 (build 316)', () => {
+describe('Version bump to v7.6.03 (build 317)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
-    expect(CURRENT_BUILD_NUMBER).toBe(316);
-    expect(VERSION_JSON.version).toBe('v7.6.02');
-    expect(VERSION_JSON.buildNumber).toBe(316);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.03');
+    expect(CURRENT_BUILD_NUMBER).toBe(317);
+    expect(VERSION_JSON.version).toBe('v7.6.03');
+    expect(VERSION_JSON.buildNumber).toBe(317);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.02');
-    expect(entry.buildNumber).toBe(316);
+    expect(entry.version).toBe('v7.6.03');
+    expect(entry.buildNumber).toBe(317);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည် ပြခြင်း',
+      'ယာဉ်မှတ်တမ်း ရွေးစရာများ တစ်တန်းထဲ + အများဆုံးသုံးတာ အလိုရွေး',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);

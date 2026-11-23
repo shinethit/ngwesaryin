@@ -324,11 +324,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.02 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
-    expect(CURRENT_BUILD_NUMBER).toBe(316);
-    expect(VERSION_JSON.version).toBe('v7.6.02');
-    expect(VERSION_JSON.buildNumber).toBe(316);
+  it('the shipped identity is 7.6.03 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.03');
+    expect(CURRENT_BUILD_NUMBER).toBe(317);
+    expect(VERSION_JSON.version).toBe('v7.6.03');
+    expect(VERSION_JSON.buildNumber).toBe(317);
   });
 });
 
@@ -364,32 +364,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.02 (build 316)', () => {
+describe('Version bump to v7.6.03 (build 317)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
-    expect(CURRENT_BUILD_NUMBER).toBe(316);
-    expect(VERSION_JSON.version).toBe('v7.6.02');
-    expect(VERSION_JSON.buildNumber).toBe(316);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.03');
+    expect(CURRENT_BUILD_NUMBER).toBe(317);
+    expect(VERSION_JSON.version).toBe('v7.6.03');
+    expect(VERSION_JSON.buildNumber).toBe(317);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.02');
-    expect(entry.buildNumber).toBe(316);
+    expect(entry.version).toBe('v7.6.03');
+    expect(entry.buildNumber).toBe(317);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည် ပြခြင်း',
+      'ယာဉ်မှတ်တမ်း ရွေးစရာများ တစ်တန်းထဲ + အများဆုံးသုံးတာ အလိုရွေး',
     );
     expect(entry.titleEn).toBe(
-      'Item name shown in the transaction list',
+      'Vehicle entry choices in one row + most-used type auto-selected',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည်ကိုပါ ပြခြင်း — ဈေး × အရေအတွက် ဖြင့် ထည့်ထားသော မှတ်တမ်းများတွင် ပစ္စည်းအမည်ကို မှတ်ချက်ဘေးမှာ ပြမည် (မှတ်ချက်နဲ့ အမည်တူရင် တစ်ခါပဲ ပြမည်)',
+      'ယာဉ်မှတ်တမ်း ရွေးစရာ ၄ ခုကို တစ်တန်းထဲ ထားခြင်း + အများဆုံးသုံးတဲ့ အမျိုးအစားကို အလိုအလျောက် ရွေးပေးခြင်း (ယာဉ်မှတ်တမ်း ရွေးမှသာ ရွေးစရာများ ပေါ်မည်)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Transaction list now shows the item name beside the note for Unit × Qty entries (shown once when the note matches the name).',
+      'Vehicle entry choices in a single row, with the most-used type auto-selected (choices appear only once a vehicle entry is chosen).',
     );
   });
 

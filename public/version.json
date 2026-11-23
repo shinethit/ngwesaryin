@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.02",
-  "buildNumber": 316,
+  "version": "v7.6.03",
+  "buildNumber": 317,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "မှတ်တမ်းစာရင်းမှာ ပစ္စည်းအမည်ကိုပါ ပြခြင်း — ဈေး × အရေအတွက် ဖြင့် ထည့်ထားသော မှတ်တမ်းများတွင် ပစ္စည်းအမည်ကို မှတ်ချက်ဘေးမှာ ပြမည် (မှတ်ချက်နဲ့ အမည်တူရင် တစ်ခါပဲ ပြမည်)"
+    "ယာဉ်မှတ်တမ်း ရွေးစရာ ၄ ခုကို တစ်တန်းထဲ ထားခြင်း + အများဆုံးသုံးတဲ့ အမျိုးအစားကို အလိုအလျောက် ရွေးပေးခြင်း (ယာဉ်မှတ်တမ်း ရွေးမှသာ ရွေးစရာများ ပေါ်မည်)"
   ],
   "changesEn": [
-    "Transaction list now shows the item name beside the note for Unit × Qty entries (shown once when the note matches the name)."
+    "Vehicle entry choices in a single row, with the most-used type auto-selected (choices appear only once a vehicle entry is chosen)."
   ]
 }

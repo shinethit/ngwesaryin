@@ -141,8 +141,15 @@ describe('Smart Calendar detail rows (v7.5.94 Fix D)', () => {
 });
 
 describe('Tire-pressure tiles stay visible (v7.5.94 Fix E)', () => {
-  it('tiles are gated on create-only, not on entryModel general', () => {
-    expect(MODAL_SRC).toContain('isVehicleRelatedCategory && !isEditing && (');
+  // [v7.6.03] SUPERSEDES the v7.5.94 gating: the tiles now render
+  // only once a vehicle entry path is chosen (entryModel off
+  // 'general'), so on 'general' the top selector is the only entry
+  // point. Create-only and edit-hidden are unchanged.
+  it('tiles are gated on create-only and on a chosen vehicle model', () => {
+    expect(MODAL_SRC).toContain(
+      "isVehicleRelatedCategory && !isEditing && entryModel !== 'general' && (",
+    );
+    expect(MODAL_SRC).not.toContain('isVehicleRelatedCategory && !isEditing && (');
     expect(MODAL_SRC).not.toContain(
       'isVehicleRelatedCategory && entryModel === "general" && (',
     );
@@ -178,15 +185,15 @@ describe('Tire-pressure tiles stay visible (v7.5.94 Fix E)', () => {
   });
 });
 
-describe('Version bump to v7.6.02 (build 316)', () => {
+describe('Version bump to v7.6.03 (build 317)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.02');
-    expect(CURRENT_BUILD_NUMBER).toBe(316);
-    expect(VERSION_JSON.version).toBe('v7.6.02');
-    expect(VERSION_JSON.buildNumber).toBe(316);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.03');
+    expect(CURRENT_BUILD_NUMBER).toBe(317);
+    expect(VERSION_JSON.version).toBe('v7.6.03');
+    expect(VERSION_JSON.buildNumber).toBe(317);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.02');
-    expect(entry.buildNumber).toBe(316);
+    expect(entry.version).toBe('v7.6.03');
+    expect(entry.buildNumber).toBe(317);
     expect(entry.releaseDate).toBe('2026-11-22');
     expect(entry.tag).toBe('fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

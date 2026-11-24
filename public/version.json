@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.22",
-  "buildNumber": 336,
+  "version": "v7.6.23",
+  "buildNumber": 337,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်"
+    "စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်"
   ],
   "changesEn": [
-    "Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest."
+    "Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row."
   ]
 }

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.22';
-export const CURRENT_BUILD_NUMBER = 336;
+export const CURRENT_APP_VERSION = 'v7.6.23';
+export const CURRENT_BUILD_NUMBER = 337;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.23',
+    buildNumber: 337,
+    releaseDate: '2026-11-24',
+    releaseTime: '5:00 PM (MMT)',
+    titleMy: 'စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း',
+    titleEn: 'Records header controls on a single row',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်။',
+    descriptionEn: 'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
+    changesMy: [
+      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
+    ],
+    changesEn: [
+      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
+    ],
+  },
   {
     version: 'v7.6.22',
     buildNumber: 336,

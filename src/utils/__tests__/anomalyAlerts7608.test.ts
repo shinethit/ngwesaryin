@@ -675,29 +675,29 @@ describe('anomaly section wiring — modal + bell badge (v7.6.08)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.22 (build 336)', () => {
+describe('version pins rolled forward to v7.6.23 (build 337)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.22');
-    expect(CURRENT_BUILD_NUMBER).toBe(336);
-    expect(VERSION_JSON.version).toBe('v7.6.22');
-    expect(VERSION_JSON.buildNumber).toBe(336);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
+    expect(CURRENT_BUILD_NUMBER).toBe(337);
+    expect(VERSION_JSON.version).toBe('v7.6.23');
+    expect(VERSION_JSON.buildNumber).toBe(337);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.22');
-    expect(top.buildNumber).toBe(336);
-    expect(top.releaseDate).toBe('2026-11-23');
+    expect(top.version).toBe('v7.6.23');
+    expect(top.buildNumber).toBe(337);
+    expect(top.releaseDate).toBe('2026-11-24');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('VIP badge ဘေးမှာ လက်ကျန်ရက် ပြခြင်း');
-    expect(top.titleEn).toBe('Remaining-days chip beside the VIP badge');
+    expect(top.titleMy).toBe('စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း');
+    expect(top.titleEn).toBe('Records header controls on a single row');
     expect(top.changesMy).toEqual([
-      'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်',
+      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
+      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -584,12 +584,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     <div className="space-y-6">
       {/* [v7.5.73] Title card REMOVED — actions only, one slim row,
           no card background. The record count moved to the summary line. */}
-      <div className="flex items-center gap-2 flex-wrap py-0.5">
+      <div className="flex min-w-0 items-center gap-2 py-0.5">
           {/* [v7.5.55] C10: opens the price-history / comparison modal. */}
           <button
             type="button"
             onClick={() => setIsPriceHistoryOpen(true)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-all cursor-pointer active:scale-95"
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-all cursor-pointer active:scale-95"
           >
             <History className="w-4 h-4" />
             <span>{lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'Price Compare'}</span>
@@ -599,7 +599,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={handleExport}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
             >
               <span>{lang === 'my' ? '⬇️ CSV ထုတ်ယူမည်' : '⬇️ Export CSV'}</span>
             </button>
@@ -607,10 +607,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           {/* [v7.6.19] Selected-wallet chip (display only): shows which
               wallet the list is scoped to, in the empty space beside
               the Price Compare / CSV buttons. Same wording as the
-              filter panel's wallet selector; scope is not shown. */}
+              filter panel's wallet selector; scope is not shown.
+              [v7.6.23] Single-row header: the chip flexes to fill the
+              remaining row width and truncates, instead of wrapping
+              onto a second line. */}
           <span
             title={walletSelectionLabel}
-            className="ml-auto inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+            className="inline-flex min-w-0 flex-1 items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700"
           >
             <span className="truncate">{walletSelectionLabel}</span>
           </span>

@@ -339,34 +339,34 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.22 (build 336)', () => {
-  it('current version is v7.6.22 / build 336 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.22');
-    expect(CURRENT_BUILD_NUMBER).toBe(336);
-    expect(VERSION_JSON.version).toBe('v7.6.22');
-    expect(VERSION_JSON.buildNumber).toBe(336);
+describe('Version bump to v7.6.23 (build 337)', () => {
+  it('current version is v7.6.23 / build 337 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
+    expect(CURRENT_BUILD_NUMBER).toBe(337);
+    expect(VERSION_JSON.version).toBe('v7.6.23');
+    expect(VERSION_JSON.buildNumber).toBe(337);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('top history entry is the v7.6.22 fix entry with no Admin mention', () => {
+  it('top history entry is the v7.6.23 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.22');
-    expect(entry.buildNumber).toBe(336);
-    expect(entry.releaseDate).toBe('2026-11-23');
+    expect(entry.version).toBe('v7.6.23');
+    expect(entry.buildNumber).toBe(337);
+    expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('VIP badge ဘေးမှာ လက်ကျန်ရက် ပြခြင်း');
+    expect(entry.titleMy).toBe('စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်',
+      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
+      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
     ]);
   });
 });

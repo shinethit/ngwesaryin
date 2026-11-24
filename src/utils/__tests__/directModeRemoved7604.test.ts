@@ -241,12 +241,12 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.22 (build 336)', () => {
+describe('version pins rolled forward to v7.6.23 (build 337)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.22');
-    expect(CURRENT_BUILD_NUMBER).toBe(336);
-    expect(VERSION_JSON.version).toBe('v7.6.22');
-    expect(VERSION_JSON.buildNumber).toBe(336);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
+    expect(CURRENT_BUILD_NUMBER).toBe(337);
+    expect(VERSION_JSON.version).toBe('v7.6.23');
+    expect(VERSION_JSON.buildNumber).toBe(337);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -255,14 +255,14 @@ describe('version pins rolled forward to v7.6.22 (build 336)', () => {
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.22');
-    expect(top.buildNumber).toBe(336);
+    expect(top.version).toBe('v7.6.23');
+    expect(top.buildNumber).toBe(337);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်',
+      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
+      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

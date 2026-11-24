@@ -348,19 +348,19 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
   });
 });
 
-describe('Version bump to v7.6.22 (build 336)', () => {
+describe('Version bump to v7.6.23 (build 337)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.22');
-    expect(CURRENT_BUILD_NUMBER).toBe(336);
-    expect(VERSION_JSON.version).toBe('v7.6.22');
-    expect(VERSION_JSON.buildNumber).toBe(336);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
+    expect(CURRENT_BUILD_NUMBER).toBe(337);
+    expect(VERSION_JSON.version).toBe('v7.6.23');
+    expect(VERSION_JSON.buildNumber).toBe(337);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.22');
-    expect(entry.buildNumber).toBe(336);
-    expect(entry.releaseDate).toBe('2026-11-23');
+    expect(entry.version).toBe('v7.6.23');
+    expect(entry.buildNumber).toBe(337);
+    expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('VIP badge ဘေးမှာ လက်ကျန်ရက် ပြခြင်း');
-    expect(entry.titleEn).toBe('Remaining-days chip beside the VIP badge');
+    expect(entry.titleMy).toBe('စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း');
+    expect(entry.titleEn).toBe('Records header controls on a single row');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

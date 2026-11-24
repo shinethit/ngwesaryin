@@ -353,31 +353,31 @@ describe('B-21: shared-wallet balance is recomputed, not passed in (v7.6.18)', (
   });
 });
 
-describe('Version bump to v7.6.22 (build 336)', () => {
+describe('Version bump to v7.6.23 (build 337)', () => {
   it('version constants and history entry match version.json', () => {
     const VERSION_JSON = JSON.parse(
       readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
     );
-    expect(CURRENT_APP_VERSION).toBe('v7.6.22');
-    expect(CURRENT_BUILD_NUMBER).toBe(336);
-    expect(VERSION_JSON.version).toBe('v7.6.22');
-    expect(VERSION_JSON.buildNumber).toBe(336);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
+    expect(CURRENT_BUILD_NUMBER).toBe(337);
+    expect(VERSION_JSON.version).toBe('v7.6.23');
+    expect(VERSION_JSON.buildNumber).toBe(337);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.22');
-    expect(entry.buildNumber).toBe(336);
-    expect(entry.releaseDate).toBe('2026-11-23');
+    expect(entry.version).toBe('v7.6.23');
+    expect(entry.buildNumber).toBe(337);
+    expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('VIP badge ဘေးမှာ လက်ကျန်ရက် ပြခြင်း');
-    expect(entry.titleEn).toBe('Remaining-days chip beside the VIP badge');
+    expect(entry.titleMy).toBe('စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း');
+    expect(entry.titleEn).toBe('Records header controls on a single row');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'VIP badge ဘေးမှာ Premium လက်ကျန်ရက်ကို ပြမည် — တစ်သက်တာဆို တစ်သက်တာ၊ ကျန်တာ ရက်နဲ့ ပြမည်',
+      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Show the remaining Premium days beside the VIP badge — Lifetime for lifetime plans, days for the rest.',
+      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
     );
   });
 
@@ -398,23 +398,23 @@ describe('Version bump to v7.6.22 (build 336)', () => {
     );
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.22'.replace(/2$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.22'.replace(/2$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.23'.replace(/3$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.23'.replace(/3$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.21/7.6.22, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.21';
-    const TO_VERSION = '7.6.22';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.22/7.6.23, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.22';
+    const TO_VERSION = '7.6.23';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/2$/, '');
+    const mangled = TO_VERSION.replace(/3$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.22');
-    expect(guardFails('7.6.21')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.23');
     expect(guardFails('7.6.22')).toBe(false);
+    expect(guardFails('7.6.23')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

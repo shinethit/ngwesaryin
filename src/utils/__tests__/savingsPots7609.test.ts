@@ -388,23 +388,23 @@ describe('placement and UI wiring (v7.6.09)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.26 (build 340)', () => {
+describe('version pins rolled forward to v7.6.27 (build 341)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
-    expect(CURRENT_BUILD_NUMBER).toBe(340);
-    expect(VERSION_JSON.version).toBe('v7.6.26');
-    expect(VERSION_JSON.buildNumber).toBe(340);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
+    expect(CURRENT_BUILD_NUMBER).toBe(341);
+    expect(VERSION_JSON.version).toBe('v7.6.27');
+    expect(VERSION_JSON.buildNumber).toBe(341);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.26');
-    expect(entry.buildNumber).toBe(340);
+    expect(entry.version).toBe('v7.6.27');
+    expect(entry.buildNumber).toBe(341);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း');
+    expect(entry.titleMy).toBe('PDF စာရင်းရှင်းတမ်း ထုတ်ယူနိုင်ခြင်း');
     expect(entry.changesMy).toEqual([
-      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
+      'အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ',
     ]);
     expect(entry.changesEn).toEqual([
-      'CSV export moved into Data Management — exports all transactions as CSV.',
+      'Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list.',
     ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

@@ -191,33 +191,33 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
   });
 });
 
-describe('Version bump to v7.6.26 (build 340)', () => {
-  it('current version is v7.6.26 / build 340 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
-    expect(CURRENT_BUILD_NUMBER).toBe(340);
-    expect(VERSION_JSON.version).toBe('v7.6.26');
-    expect(VERSION_JSON.buildNumber).toBe(340);
+describe('Version bump to v7.6.27 (build 341)', () => {
+  it('current version is v7.6.27 / build 341 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
+    expect(CURRENT_BUILD_NUMBER).toBe(341);
+    expect(VERSION_JSON.version).toBe('v7.6.27');
+    expect(VERSION_JSON.buildNumber).toBe(341);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('top history entry is the v7.6.18 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.26');
-    expect(entry.buildNumber).toBe(340);
+    expect(entry.version).toBe('v7.6.27');
+    expect(entry.buildNumber).toBe(341);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း');
-    expect(entry.titleEn).toBe('CSV export moved to Data Management');
+    expect(entry.titleMy).toBe('PDF စာရင်းရှင်းတမ်း ထုတ်ယူနိုင်ခြင်း');
+    expect(entry.titleEn).toBe('PDF statement export');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
+      'အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ',
     ]);
     expect(entry.changesEn).toEqual([
-      'CSV export moved into Data Management — exports all transactions as CSV.',
+      'Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list.',
     ]);
   });
 });

@@ -1,8 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { BarChart3, Wallet, ShoppingBag } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, ShopContact, PublicShop } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
+import { getLocalDateString } from '../utils/dateUtils';
+import { buildStatementData, type StatementData } from '../utils/statementData';
+import { StatementPrintView } from './StatementPrintView';
 import { useAuth } from '../context/AuthContext';
 import { ItemPriceAnalyticsView } from './ItemPriceAnalyticsView';
 
@@ -79,6 +83,57 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   // both, the Transactions tab already toggles it, Analytics did not.
   const [financialSystem, setFinancialSystem] = useState<'inflow_outflow' | 'opening_closing'>('opening_closing');
 
+  // [v7.6.27] Statement period + print state. The Reports tab itself
+  // has NO date filter (its cards are all-time) — the period below
+  // belongs ONLY to the printed statement, so the other cards keep
+  // their all-time totals untouched. Default: the current month, the
+  // usual "၁ လတာ စာရင်းရှင်းတမ်း".
+  type StatementPeriod = 'thisMonth' | 'lastMonth' | 'all' | 'custom';
+  const [statementPeriod, setStatementPeriod] = useState<StatementPeriod>('thisMonth');
+  const [statementStart, setStatementStart] = useState(() =>
+    getLocalDateString(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+  );
+  const [statementEnd, setStatementEnd] = useState(() => getLocalDateString(new Date()));
+  const [printData, setPrintData] = useState<StatementData | null>(null);
+
+  const statementBounds = useMemo(() => {
+    const now = new Date();
+    const monthBounds = (d: Date) => ({
+      start: getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1)),
+      end: getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
+    });
+    if (statementPeriod === 'all') return { start: null as string | null, end: null as string | null };
+    if (statementPeriod === 'lastMonth') {
+      return monthBounds(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    }
+    if (statementPeriod === 'custom') return { start: statementStart, end: statementEnd };
+    return monthBounds(now);
+  }, [statementPeriod, statementStart, statementEnd]);
+
+  // [v7.6.27] Print only after the portal has painted, and unmount it
+  // once the print dialog closes (afterprint fires on cancel too).
+  // The data is built from live state at click time — never a stale
+  // snapshot.
+  useEffect(() => {
+    if (!printData) return;
+    let cancelled = false;
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled && typeof window.print === 'function') window.print();
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [printData]);
+
+  useEffect(() => {
+    const onAfterPrint = () => setPrintData(null);
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => window.removeEventListener('afterprint', onAfterPrint);
+  }, []);
+
   // [v7.5.68] Per-viewer shared-wallet scope overrides (Dashboard honours
   // them; Analysis did not — see scopedWallets below).
   const { sharedWalletScopeOverrides } = useAuth();
@@ -106,6 +161,21 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
   const convertTxToMMK = (t: Transaction) =>
     sharedConvertTxToMMK(walletMap, wallets, t);
+
+  // [v7.6.27] Build the statement from live state at click time:
+  // included-wallet scope + the statement period only.
+  const handlePrintStatement = () => {
+    setPrintData(
+      buildStatementData({
+        transactions: scopedTransactions,
+        categories,
+        convertAmount: (tx, amount) => sharedConvertTxToMMK(walletMap, wallets, tx, amount),
+        start: statementBounds.start,
+        end: statementBounds.end,
+        lang,
+      }),
+    );
+  };
 
   const totalIncome = scopedTransactions
     .filter((t) => t.type === 'income' && !isTransferTransaction(t))
@@ -210,6 +280,65 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       {/* REPORTS SUB-TAB */}
       {subTab === 'reports' && (
         <div className="space-y-4">
+          {/* [v7.6.27] Statement period + Print/PDF. Statement-scoped
+              only — the cards below keep their all-time totals. */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-3 space-y-2">
+            <div className="text-xs font-bold text-slate-700">
+              {lang === 'my' ? 'စာရင်းရှင်းတမ်း ကာလ' : 'Statement period'}
+            </div>
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold flex-wrap">
+              {(
+                [
+                  ['thisMonth', lang === 'my' ? 'ဒီလ' : 'This month'],
+                  ['lastMonth', lang === 'my' ? 'ပြီးခဲ့တဲ့လ' : 'Last month'],
+                  ['all', lang === 'my' ? 'အချိန်အားလုံး' : 'All time'],
+                  ['custom', lang === 'my' ? 'စိတ်ကြိုက်' : 'Custom'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setStatementPeriod(value)}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${statementPeriod === value ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {statementPeriod === 'custom' && (
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                <input
+                  type="date"
+                  value={statementStart}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setStatementStart(v);
+                    if (v && statementEnd && v > statementEnd) setStatementEnd(v);
+                  }}
+                  className="min-w-0 flex-1 min-h-[44px] border border-slate-200 rounded-lg px-2 focus:outline-none"
+                />
+                <span aria-hidden="true">→</span>
+                <input
+                  type="date"
+                  value={statementEnd}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setStatementEnd(v);
+                    if (v && statementStart && v < statementStart) setStatementStart(v);
+                  }}
+                  className="min-w-0 flex-1 min-h-[44px] border border-slate-200 rounded-lg px-2 focus:outline-none"
+                />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handlePrintStatement}
+              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xs transition-all active:scale-[0.99] cursor-pointer"
+            >
+              {lang === 'my' ? '🖨️ PDF ထုတ်ယူမည်' : '🖨️ Export PDF'}
+            </button>
+          </div>
+
           {/* Financial Health */}
           <FinancialHealthCard
             health={financialHealth}
@@ -423,6 +552,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         lang={lang}
         onNavigateToAnalytics={() => goToSubTab('budget')}
       />
+
+      {/* [v7.6.27] Print portal — mounted only while printing, so the
+          statement never affects on-screen layout, scroll, or
+          selectors. The print stylesheet hides everything else. */}
+      {printData &&
+        createPortal(
+          <div id="ngwe-print-root">
+            <StatementPrintView
+              data={printData}
+              lang={lang}
+              walletScopeLabel={
+                lang === 'my'
+                  ? `ပါဝင်သည့် ပိုက်ဆံအိတ် ${scopedWallets.length} ခု`
+                  : `Included wallets: ${scopedWallets.length}`
+              }
+            />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

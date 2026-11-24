@@ -675,29 +675,29 @@ describe('anomaly section wiring — modal + bell badge (v7.6.08)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.26 (build 340)', () => {
+describe('version pins rolled forward to v7.6.27 (build 341)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
-    expect(CURRENT_BUILD_NUMBER).toBe(340);
-    expect(VERSION_JSON.version).toBe('v7.6.26');
-    expect(VERSION_JSON.buildNumber).toBe(340);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
+    expect(CURRENT_BUILD_NUMBER).toBe(341);
+    expect(VERSION_JSON.version).toBe('v7.6.27');
+    expect(VERSION_JSON.buildNumber).toBe(341);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.26');
-    expect(top.buildNumber).toBe(340);
+    expect(top.version).toBe('v7.6.27');
+    expect(top.buildNumber).toBe(341);
     expect(top.releaseDate).toBe('2026-11-24');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း');
-    expect(top.titleEn).toBe('CSV export moved to Data Management');
+    expect(top.titleMy).toBe('PDF စာရင်းရှင်းတမ်း ထုတ်ယူနိုင်ခြင်း');
+    expect(top.titleEn).toBe('PDF statement export');
     expect(top.changesMy).toEqual([
-      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
+      'အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ',
     ]);
     expect(top.changesEn).toEqual([
-      'CSV export moved into Data Management — exports all transactions as CSV.',
+      'Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.26';
-export const CURRENT_BUILD_NUMBER = 340;
+export const CURRENT_APP_VERSION = 'v7.6.27';
+export const CURRENT_BUILD_NUMBER = 341;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.27',
+    buildNumber: 341,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'PDF စာရင်းရှင်းတမ်း ထုတ်ယူနိုင်ခြင်း',
+    titleEn: 'PDF statement export',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ။',
+    descriptionEn: 'Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list.',
+    changesMy: [
+      'အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ',
+    ],
+    changesEn: [
+      'Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list.',
+    ],
+  },
   {
     version: 'v7.6.26',
     buildNumber: 340,

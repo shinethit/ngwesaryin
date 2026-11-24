@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.26",
-  "buildNumber": 340,
+  "version": "v7.6.27",
+  "buildNumber": 341,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်"
+    "အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ"
   ],
   "changesEn": [
-    "CSV export moved into Data Management — exports all transactions as CSV."
+    "Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list."
   ]
 }

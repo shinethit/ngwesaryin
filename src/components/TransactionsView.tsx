@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart } from 'lucide-react';
 import { Category, FuelLog, PlanType, Transaction, Wallet, DataScope } from '../types';
-import { formatMMK, formatLakhs, exportToCSV, getCategoryDisplayName } from '../utils/formatters';
+import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { safeSetItem } from '../utils/storage';
@@ -530,27 +530,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     }
   };
 
-  const handleExport = () => {
-    // [v7.5.55] Premium-only: hidden entirely for other plans (no locked
-    // button, no upgrade prompt) and gated here too.
-    if (plan !== 'premium') {
-      return;
-    }
-    const catLabels: Record<string, string> = {};
-    categories.forEach((c) => {
-      catLabels[c.id] = `${c.name} (${c.nameEn})`;
-    });
-    const subCatLabels: Record<string, string> = {};
-    subCatMap.forEach((val, key) => {
-      subCatLabels[key] = `${val.name} (${val.nameEn})`;
-    });
-    const walletLabels: Record<string, string> = {};
-    wallets.forEach((w) => {
-      walletLabels[w.id] = w.name;
-    });
-    exportToCSV(filtered, catLabels, walletLabels, subCatLabels);
-  };
-
   // [v7.5.55] The transaction limit window: both Guest and Free count
   // the calendar month (v7.5.68) — so the banner counts transactions
   // dated within the plan's window.
@@ -594,19 +573,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <History className="w-4 h-4" />
             <span>{lang === 'my' ? 'ဈေးနှိုင်းယှဉ်' : 'Price Compare'}</span>
           </button>
-          {/* [v7.5.55] B10: CSV Export — Premium only, hidden entirely otherwise. */}
-          {plan === 'premium' && (
-            <button
-              type="button"
-              onClick={handleExport}
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer active:scale-95"
-            >
-              <span>{lang === 'my' ? '⬇️ CSV ထုတ်ယူမည်' : '⬇️ Export CSV'}</span>
-            </button>
-          )}
+          {/* [v7.6.26] CSV Export moved to Data Management — the header
+              row is Price Compare + wallet chip only. */}
           {/* [v7.6.19] Selected-wallet chip (display only): shows which
               wallet the list is scoped to, in the empty space beside
-              the Price Compare / CSV buttons. Same wording as the
+              the Price Compare button. Same wording as the
               filter panel's wallet selector; scope is not shown.
               [v7.6.23] Single-row header: the chip flexes to fill the
               remaining row width and truncates, instead of wrapping

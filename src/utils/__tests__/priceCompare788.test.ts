@@ -125,12 +125,12 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
   });
 });
 
-describe('Version v7.6.25 — history entry and version.json in sync', () => {
-  it('current version is v7.6.25 / build 339', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
-    expect(CURRENT_BUILD_NUMBER).toBe(339);
-    expect(VERSION_JSON.version).toBe('v7.6.25');
-    expect(VERSION_JSON.buildNumber).toBe(339);
+describe('Version v7.6.26 — history entry and version.json in sync', () => {
+  it('current version is v7.6.26 / build 340', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
+    expect(CURRENT_BUILD_NUMBER).toBe(340);
+    expect(VERSION_JSON.version).toBe('v7.6.26');
+    expect(VERSION_JSON.buildNumber).toBe(340);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.25 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.25');
-    expect(entry.buildNumber).toBe(339);
+    expect(entry.version).toBe('v7.6.26');
+    expect(entry.buildNumber).toBe(340);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း');
-    expect(entry.titleEn).toBe('Single merged entry form');
+    expect(entry.titleMy).toBe('CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း');
+    expect(entry.titleEn).toBe('CSV export moved to Data Management');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

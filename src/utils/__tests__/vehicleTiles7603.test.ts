@@ -339,12 +339,12 @@ describe('auto-select wiring (v7.6.03)', () => {
   });
 });
 
-describe('Version bump to v7.6.25 (build 339)', () => {
-  it('current version is v7.6.25 / build 339 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
-    expect(CURRENT_BUILD_NUMBER).toBe(339);
-    expect(VERSION_JSON.version).toBe('v7.6.25');
-    expect(VERSION_JSON.buildNumber).toBe(339);
+describe('Version bump to v7.6.26 (build 340)', () => {
+  it('current version is v7.6.26 / build 340 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
+    expect(CURRENT_BUILD_NUMBER).toBe(340);
+    expect(VERSION_JSON.version).toBe('v7.6.26');
+    expect(VERSION_JSON.buildNumber).toBe(340);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -353,20 +353,20 @@ describe('Version bump to v7.6.25 (build 339)', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.25');
-    expect(entry.buildNumber).toBe(339);
+    expect(entry.version).toBe('v7.6.26');
+    expect(entry.buildNumber).toBe(340);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း');
+    expect(entry.titleMy).toBe('CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
+      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
+      'CSV export moved into Data Management — exports all transactions as CSV.',
     ]);
   });
 });

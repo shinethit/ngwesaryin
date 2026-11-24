@@ -324,11 +324,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.25 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
-    expect(CURRENT_BUILD_NUMBER).toBe(339);
-    expect(VERSION_JSON.version).toBe('v7.6.25');
-    expect(VERSION_JSON.buildNumber).toBe(339);
+  it('the shipped identity is 7.6.26 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
+    expect(CURRENT_BUILD_NUMBER).toBe(340);
+    expect(VERSION_JSON.version).toBe('v7.6.26');
+    expect(VERSION_JSON.buildNumber).toBe(340);
   });
 });
 
@@ -364,32 +364,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.25 (build 339)', () => {
+describe('Version bump to v7.6.26 (build 340)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
-    expect(CURRENT_BUILD_NUMBER).toBe(339);
-    expect(VERSION_JSON.version).toBe('v7.6.25');
-    expect(VERSION_JSON.buildNumber).toBe(339);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
+    expect(CURRENT_BUILD_NUMBER).toBe(340);
+    expect(VERSION_JSON.version).toBe('v7.6.26');
+    expect(VERSION_JSON.buildNumber).toBe(340);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.25');
-    expect(entry.buildNumber).toBe(339);
+    expect(entry.version).toBe('v7.6.26');
+    expect(entry.buildNumber).toBe(340);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း',
+      'CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Single merged entry form',
+      'CSV export moved to Data Management',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
+      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
+      'CSV export moved into Data Management — exports all transactions as CSV.',
     );
   });
 

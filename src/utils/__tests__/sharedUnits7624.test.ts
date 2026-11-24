@@ -225,30 +225,30 @@ describe('shared-units wiring (v7.6.24)', () => {
   });
 });
 
-// ---------- Version bump to v7.6.25 (build 339) ----------
+// ---------- Version bump to v7.6.26 (build 340) ----------
 
-describe('Version bump to v7.6.25 (build 339)', () => {
+describe('Version bump to v7.6.26 (build 340)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
-    expect(CURRENT_BUILD_NUMBER).toBe(339);
-    expect(VERSION_JSON.version).toBe('v7.6.25');
-    expect(VERSION_JSON.buildNumber).toBe(339);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
+    expect(CURRENT_BUILD_NUMBER).toBe(340);
+    expect(VERSION_JSON.version).toBe('v7.6.26');
+    expect(VERSION_JSON.buildNumber).toBe(340);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.25');
-    expect(entry.buildNumber).toBe(339);
+    expect(entry.version).toBe('v7.6.26');
+    expect(entry.buildNumber).toBe(340);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း');
-    expect(entry.titleEn).toBe('Single merged entry form');
+    expect(entry.titleMy).toBe('CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း');
+    expect(entry.titleEn).toBe('CSV export moved to Data Management');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
+      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
+      'CSV export moved into Data Management — exports all transactions as CSV.',
     );
   });
 
@@ -263,23 +263,23 @@ describe('Version bump to v7.6.25 (build 339)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.25'.replace(/5$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.25'.replace(/5$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.26'.replace(/6$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.26'.replace(/6$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.24/7.6.25, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.24';
-    const TO_VERSION = '7.6.25';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.25/7.6.26, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.25';
+    const TO_VERSION = '7.6.26';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/5$/, '');
+    const mangled = TO_VERSION.replace(/6$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.25');
-    expect(guardFails('7.6.24')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.26');
     expect(guardFails('7.6.25')).toBe(false);
+    expect(guardFails('7.6.26')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('7.6.2')).toBe(true);
     expect(guardFails('')).toBe(true);

@@ -316,12 +316,12 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.25 (build 339)', () => {
+describe('version pins rolled forward to v7.6.26 (build 340)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
-    expect(CURRENT_BUILD_NUMBER).toBe(339);
-    expect(VERSION_JSON.version).toBe('v7.6.25');
-    expect(VERSION_JSON.buildNumber).toBe(339);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.26');
+    expect(CURRENT_BUILD_NUMBER).toBe(340);
+    expect(VERSION_JSON.version).toBe('v7.6.26');
+    expect(VERSION_JSON.buildNumber).toBe(340);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,16 +330,16 @@ describe('version pins rolled forward to v7.6.25 (build 339)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.25');
-    expect(top.buildNumber).toBe(339);
+    expect(top.version).toBe('v7.6.26');
+    expect(top.buildNumber).toBe(340);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း');
-    expect(top.titleEn).toBe('Single merged entry form');
+    expect(top.titleMy).toBe('CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း');
+    expect(top.titleEn).toBe('CSV export moved to Data Management');
     expect(top.changesMy).toEqual([
-      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
+      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
+      'CSV export moved into Data Management — exports all transactions as CSV.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

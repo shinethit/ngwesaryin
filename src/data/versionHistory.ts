@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.25';
-export const CURRENT_BUILD_NUMBER = 339;
+export const CURRENT_APP_VERSION = 'v7.6.26';
+export const CURRENT_BUILD_NUMBER = 340;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.26',
+    buildNumber: 340,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'CSV ထုတ်ယူခြင်းကို Data Management သို့ ရွှေ့ခြင်း',
+    titleEn: 'CSV export moved to Data Management',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်။',
+    descriptionEn: 'CSV export moved into Data Management — exports all transactions as CSV.',
+    changesMy: [
+      'CSV ထုတ်ယူခြင်းကို Data Management ထဲသို့ ရွှေ့လိုက်သည် — စာရင်းအားလုံးကို CSV ဖြင့် ထုတ်ပေးမည်',
+    ],
+    changesEn: [
+      'CSV export moved into Data Management — exports all transactions as CSV.',
+    ],
+  },
   {
     version: 'v7.6.25',
     buildNumber: 339,

@@ -2,6 +2,8 @@ import React from 'react';
 import { Database, Trash2, Download, Upload, KeyRound, AlertTriangle, Crown, Cloud, CloudOff, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, ShopContact, Transaction, Vehicle, Wallet } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { exportToCSV } from '../utils/formatters';
+import { buildCsvExportData } from '../utils/csvExport';
 
 interface DataManagementViewProps {
   transactions: Transaction[];
@@ -37,6 +39,20 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   onOpenPremiumModal,
 }) => {
   const { isGuest } = useAuth();
+
+  // [v7.6.26] CSV export — moved here from the Records header.
+  // Premium-only: hidden entirely for other plans (no locked button,
+  // no upgrade prompt) and gated here too. Exports ALL transactions
+  // (this view has no filters); labels and row order come from
+  // buildCsvExportData, mirroring the old Records export exactly.
+  const handleExportCsv = () => {
+    if (plan !== 'premium') {
+      return;
+    }
+    const { rows, catLabels, walletLabels, subCatLabels } =
+      buildCsvExportData(transactions, categories, wallets);
+    exportToCSV(rows, catLabels, walletLabels, subCatLabels);
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-4 sm:py-6 space-y-6">
@@ -353,6 +369,30 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               </span>
               <span className="text-[11px] text-slate-500 block mt-0.5">
                 {lang === 'my' ? 'ဖိုင်အဖြစ် ကွန်ပျူတာ/ဖုန်းထဲဒေါင်းလုဒ်ဆွဲရန်' : 'Download JSON file'}
+              </span>
+            </div>
+          </button>
+          )}
+
+          {/* [v7.6.26] CSV Export — moved here from the Records header.
+              Premium only, hidden entirely otherwise. Same card style
+              as the JSON Backup export; exports ALL transactions. */}
+          {plan === 'premium' && (
+          <button
+            type="button"
+            id="btn-export-csv"
+            onClick={handleExportCsv}
+            className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 active:scale-95 transition-all text-left flex items-start gap-3 cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+              <Download className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold text-xs text-slate-900 block">
+                {lang === 'my' ? 'CSV ထုတ်ယူမည်' : 'Export CSV'}
+              </span>
+              <span className="text-[11px] text-slate-500 block mt-0.5">
+                {lang === 'my' ? 'စာရင်းအားလုံး CSV ဖိုင်အဖြစ် ထုတ်ယူရန်' : 'Download all transactions as a CSV file'}
               </span>
             </div>
           </button>

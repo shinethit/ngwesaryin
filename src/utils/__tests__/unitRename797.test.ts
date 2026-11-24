@@ -350,17 +350,17 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.29');
-    expect(CURRENT_BUILD_NUMBER).toBe(343);
-    expect(VERSION_JSON.version).toBe('v7.6.29');
-    expect(VERSION_JSON.buildNumber).toBe(343);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.30');
+    expect(CURRENT_BUILD_NUMBER).toBe(344);
+    expect(VERSION_JSON.version).toBe('v7.6.30');
+    expect(VERSION_JSON.buildNumber).toBe(344);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.29');
-    expect(entry.buildNumber).toBe(343);
+    expect(entry.version).toBe('v7.6.30');
+    expect(entry.buildNumber).toBe(344);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ခွဲရေးဖွင့်ချိန် ကဏ္ဍရွေးတန်းကို ဖျောက်ထားခြင်း');
-    expect(entry.titleEn).toBe('Hide the category picker while splitting');
+    expect(entry.titleMy).toBe('ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်ကဏ္ဍ အလိုအလျောက်ဖြည့်ပေးခြင်း');
+    expect(entry.titleEn).toBe('New split rows auto-fill the previous row’s category');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

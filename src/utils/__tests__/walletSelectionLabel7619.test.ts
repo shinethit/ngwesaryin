@@ -181,26 +181,26 @@ describe('Records header chip wiring (v7.6.19)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.29');
-    expect(CURRENT_BUILD_NUMBER).toBe(343);
-    expect(VERSION_JSON.version).toBe('v7.6.29');
-    expect(VERSION_JSON.buildNumber).toBe(343);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.30');
+    expect(CURRENT_BUILD_NUMBER).toBe(344);
+    expect(VERSION_JSON.version).toBe('v7.6.30');
+    expect(VERSION_JSON.buildNumber).toBe(344);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.29');
-    expect(entry.buildNumber).toBe(343);
+    expect(entry.version).toBe('v7.6.30');
+    expect(entry.buildNumber).toBe(344);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ခွဲရေးဖွင့်ချိန် ကဏ္ဍရွေးတန်းကို ဖျောက်ထားခြင်း');
-    expect(entry.titleEn).toBe('Hide the category picker while splitting');
+    expect(entry.titleMy).toBe('ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်ကဏ္ဍ အလိုအလျောက်ဖြည့်ပေးခြင်း');
+    expect(entry.titleEn).toBe('New split rows auto-fill the previous row’s category');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ခွဲရေးဖွင့်ထားချိန်မှာ အပေါ်က ကဏ္ဍရွေးတဲ့ တန်းကို အလိုအလျောက် ဖျောက်ထားမည် — ကဏ္ဍကို ခွဲရေးတန်းတွေထဲမှာပဲ ရွေးရမည်',
+      'ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်တန်းက ကဏ္ဍနဲ့ ကဏ္ဍခွဲကို အလိုအလျောက် ဖြည့်ပေးမည် — လိုမှ ပြန်ရွေးရုံပဲ',
     );
     expect(entry.changesEn[0]).toBe(
-      'While splits are on, the top category picker is hidden automatically — pick categories in the split rows instead.',
+      'A new split row auto-fills the previous row’s category and sub-category — re-pick only when it changes.',
     );
   });
 
@@ -215,23 +215,23 @@ describe('Version bump to v7.6.27 (build 342)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.29'.replace(/9$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.29'.replace(/9$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.30'.replace(/0$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.30'.replace(/0$/, ''));
   });
 
   it('the fix-script guard is raw string equality: accepts exactly 7.6.25/7.6.26, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.29';
-    const TO_VERSION = '7.6.29';
+    const FROM_VERSION = '7.6.30';
+    const TO_VERSION = '7.6.30';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/9$/, '');
+    const mangled = TO_VERSION.replace(/0$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.29');
-    expect(guardFails('7.6.29')).toBe(false);
-    expect(guardFails('7.6.29')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.30');
+    expect(guardFails('7.6.30')).toBe(false);
+    expect(guardFails('7.6.30')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

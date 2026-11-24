@@ -164,6 +164,22 @@ export function defaultSplitRows(categoryId: string, subCategoryId: string): Spl
   ];
 }
 
+/** [v7.6.30] The row appended by "Add row": copies the LAST row's
+ *  category + sub-category, so the user only re-picks when the
+ *  category changes. Amount and note NEVER carry over (always
+ *  start empty). A blank last row (or no rows at all) yields a
+ *  blank row, exactly as before. The copied fields stay fully
+ *  editable — this is a starting value, not a link. */
+export function nextSplitRow(rows: SplitFormRow[]): SplitFormRow {
+  const last = rows[rows.length - 1];
+  return {
+    categoryId: last?.categoryId || '',
+    subCategoryId: last?.subCategoryId || '',
+    amount: '',
+    note: '',
+  };
+}
+
 /** Restore a stored split record into form rows (edit mode), or
  *  null when the record has no splits (section stays off). */
 export function splitRowsFromTransaction(tx: Transaction): SplitFormRow[] | null {

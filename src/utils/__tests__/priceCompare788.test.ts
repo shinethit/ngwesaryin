@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.29');
-    expect(CURRENT_BUILD_NUMBER).toBe(343);
-    expect(VERSION_JSON.version).toBe('v7.6.29');
-    expect(VERSION_JSON.buildNumber).toBe(343);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.30');
+    expect(CURRENT_BUILD_NUMBER).toBe(344);
+    expect(VERSION_JSON.version).toBe('v7.6.30');
+    expect(VERSION_JSON.buildNumber).toBe(344);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.29');
-    expect(entry.buildNumber).toBe(343);
+    expect(entry.version).toBe('v7.6.30');
+    expect(entry.buildNumber).toBe(344);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('ခွဲရေးဖွင့်ချိန် ကဏ္ဍရွေးတန်းကို ဖျောက်ထားခြင်း');
-    expect(entry.titleEn).toBe('Hide the category picker while splitting');
+    expect(entry.titleMy).toBe('ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်ကဏ္ဍ အလိုအလျောက်ဖြည့်ပေးခြင်း');
+    expect(entry.titleEn).toBe('New split rows auto-fill the previous row’s category');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.29';
-export const CURRENT_BUILD_NUMBER = 343;
+export const CURRENT_APP_VERSION = 'v7.6.30';
+export const CURRENT_BUILD_NUMBER = 344;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.30',
+    buildNumber: 344,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်ကဏ္ဍ အလိုအလျောက်ဖြည့်ပေးခြင်း',
+    titleEn: 'New split rows auto-fill the previous row’s category',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်တန်းက ကဏ္ဍနဲ့ ကဏ္ဍခွဲကို အလိုအလျောက် ဖြည့်ပေးမည် — ပမာဏနဲ့ မှတ်ချက်ကတော့ အမြဲ ဗလာနဲ့ စမည်။',
+    descriptionEn: 'Adding a split row auto-fills the previous row’s category and sub-category — amount and note always start empty.',
+    changesMy: [
+      'ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်တန်းက ကဏ္ဍနဲ့ ကဏ္ဍခွဲကို အလိုအလျောက် ဖြည့်ပေးမည် — လိုမှ ပြန်ရွေးရုံပဲ',
+    ],
+    changesEn: [
+      'A new split row auto-fills the previous row’s category and sub-category — re-pick only when it changes.',
+    ],
+  },
   {
     version: 'v7.6.29',
     buildNumber: 343,

@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.29",
-  "buildNumber": 343,
+  "version": "v7.6.30",
+  "buildNumber": 344,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ခွဲရေးဖွင့်ထားချိန်မှာ အပေါ်က ကဏ္ဍရွေးတဲ့ တန်းကို အလိုအလျောက် ဖျောက်ထားမည် — ကဏ္ဍကို ခွဲရေးတန်းတွေထဲမှာပဲ ရွေးရမည်"
+    "ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်တန်းက ကဏ္ဍနဲ့ ကဏ္ဍခွဲကို အလိုအလျောက် ဖြည့်ပေးမည် — လိုမှ ပြန်ရွေးရုံပဲ"
   ],
   "changesEn": [
-    "While splits are on, the top category picker is hidden automatically — pick categories in the split rows instead."
+    "A new split row auto-fills the previous row’s category and sub-category — re-pick only when it changes."
   ]
 }

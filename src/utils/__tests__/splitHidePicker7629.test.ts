@@ -91,13 +91,13 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.29');
-    expect(CURRENT_BUILD_NUMBER).toBe(343);
-    expect(VERSION_JSON.version).toBe('v7.6.29');
-    expect(VERSION_JSON.buildNumber).toBe(343);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.30');
+    expect(CURRENT_BUILD_NUMBER).toBe(344);
+    expect(VERSION_JSON.version).toBe('v7.6.30');
+    expect(VERSION_JSON.buildNumber).toBe(344);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.29');
-    expect(entry.buildNumber).toBe(343);
+    expect(entry.version).toBe('v7.6.30');
+    expect(entry.buildNumber).toBe(344);
     expect(entry.changesMy[0]).toContain('ခွဲရေး');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -107,25 +107,25 @@ describe('Version bump to v7.6.29 (build 343)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.29'.replace(/9$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.29'.replace(/9$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.30'.replace(/0$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.30'.replace(/0$/, ''));
   });
 
   it('the fix-script guard is raw string equality: accepts exactly 7.6.29/7.6.29, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.28';
-    const TO_VERSION = '7.6.29';
+    const FROM_VERSION = '7.6.29';
+    const TO_VERSION = '7.6.30';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/9$/, '');
+    const mangled = TO_VERSION.replace(/0$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.29');
+    expect(TO_VERSION).toBe('7.6.30');
     expect(guardFails('7.6.29')).toBe(false);
-    expect(guardFails('7.6.29')).toBe(false);
+    expect(guardFails('7.6.30')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
-    expect(guardFails('7.6.2')).toBe(true);
+    expect(guardFails('7.6.3')).toBe(true);
     expect(guardFails('')).toBe(true);
   });
 });

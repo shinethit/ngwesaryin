@@ -46,6 +46,7 @@ import { resolveMostUsedVehicleEntry } from '../utils/vehicleMostUsed';
 import {
   defaultSplitRows,
   fillRemainderAmount,
+  nextSplitRow,
   rowsToSplits,
   splitRemainder,
   splitRowsFromTransaction,
@@ -1426,7 +1427,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const addSplitRow = () => {
-    setSplitRows((prev) => [...prev, { categoryId: '', subCategoryId: '', amount: '', note: '' }]);
+    // [v7.6.30] The new row starts with the last row's category +
+    // sub-category (amount/note stay empty); the user re-picks only
+    // when the category changes.
+    setSplitRows((prev) => [...prev, nextSplitRow(prev)]);
   };
 
   const removeSplitRow = (index: number) => {

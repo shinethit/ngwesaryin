@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.30');
-    expect(CURRENT_BUILD_NUMBER).toBe(344);
-    expect(VERSION_JSON.version).toBe('v7.6.30');
-    expect(VERSION_JSON.buildNumber).toBe(344);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
+    expect(CURRENT_BUILD_NUMBER).toBe(345);
+    expect(VERSION_JSON.version).toBe('v7.6.31');
+    expect(VERSION_JSON.buildNumber).toBe(345);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,16 +330,16 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.30');
-    expect(top.buildNumber).toBe(344);
-    expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်ကဏ္ဍ အလိုအလျောက်ဖြည့်ပေးခြင်း');
-    expect(top.titleEn).toBe('New split rows auto-fill the previous row’s category');
+    expect(top.version).toBe('v7.6.31');
+    expect(top.buildNumber).toBe(345);
+    expect(top.tag).toBe('feature');
+    expect(top.titleMy).toBe('Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း');
+    expect(top.titleEn).toBe('Choose which categories each wallet shows');
     expect(top.changesMy).toEqual([
-      'ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်တန်းက ကဏ္ဍနဲ့ ကဏ္ဍခွဲကို အလိုအလျောက် ဖြည့်ပေးမည် — လိုမှ ပြန်ရွေးရုံပဲ',
+      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ',
     ]);
     expect(top.changesEn).toEqual([
-      'A new split row auto-fills the previous row’s category and sub-category — re-pick only when it changes.',
+      'Each wallet can choose which categories it shows — hidden categories no longer appear when entering records for that wallet.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -153,6 +153,15 @@ export interface Wallet {
   accountNumber?: string;
   isDefault?: boolean;
   includeInTotals?: boolean; // true or undefined: စုစုပေါင်းထဲ ရောပြမည်, false: စုစုပေါင်းထဲ မရောပါ (သီးသန့်ထားမည်)
+  // [v7.6.31] Per-wallet category denylist (opt-OUT, never an
+  // allowlist): category ids HIDDEN in this wallet's entry picker.
+  // Absent/undefined/empty = ALL categories visible (current
+  // behavior, zero migration); a category added later is visible
+  // in every wallet until hidden. Sub-categories follow their
+  // parent — no per-sub ids. cat_transfer is never hidden (see
+  // utils/walletCategories). Written explicitly ([]) on every
+  // WalletModal save so merge:true never resurrects a stale list.
+  hiddenCategoryIds?: string[];
   sharedWith?: string[]; // List of collaborator emails who have access to this specific wallet
   collaboratorPermissions?: Record<string, WalletPermissions>; // email -> permissions mapping
   ownerUid?: string; // UID of the user who owns and shared this wallet

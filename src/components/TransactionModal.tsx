@@ -26,6 +26,7 @@ import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { CategoryPickerModal } from './CategoryPickerModal';
 import { FuelExpenseGuideModal } from './vehicles/FuelExpenseGuideModal';
 import { useAuth } from '../context/AuthContext';
+import { getVisibleCategories } from '../utils/walletCategories';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { getAllItemSuggestions, findMatchingItemInfo, normalizeItemName } from '../utils/itemIntelligence';
 import type { UnifiedItemInfo } from '../utils/itemIntelligence';
@@ -301,6 +302,23 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const { user } = useAuth();
   const selectedWallet = useMemo(() => wallets.find((w) => w.id === walletId) || wallets[0], [wallets, walletId]);
+  // [v7.6.31] The entry pickers show only the categories this wallet
+  // allows (its denylist). The form's CURRENT category and every
+  // split row's category are always included, so editing a record
+  // whose category is hidden in this wallet never strands it, and
+  // switching wallets mid-form never drops the picked category.
+  // No wallet selected yet -> every category. Vehicle/transfer
+  // forms set their category programmatically (handleSwitchModel /
+  // cat_transfer, never hidden) — this list only feeds the pickers
+  // and filteredCats below.
+  const visibleCategories = useMemo(
+    () =>
+      getVisibleCategories(categories, selectedWallet, [
+        categoryId,
+        ...splitRows.map((r) => r.categoryId),
+      ]),
+    [categories, selectedWallet, categoryId, splitRows],
+  );
   const walletPerms = useMemo(() => getCollaboratorPermissions(selectedWallet, user?.email, user?.uid), [selectedWallet, user]);
 
   const isEditing = Boolean(editTransaction);
@@ -777,7 +795,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const filteredCats = useMemo(() => {
-    const cats = categories.filter(
+    // [v7.6.31] Frequency-sorted candidates come from the WALLET-
+    // VISIBLE list, not every category: a hidden category must not
+    // become the effectiveCategoryId fallback below. The fallback
+    // stays read-only (sub-category sort / suggestions); the
+    // v7.6.14 explicitCatObj gate still decides vehicle mode, so a
+    // fresh open with no category picked stays neutral even when
+    // the first visible category is vehicle-related.
+    const cats = visibleCategories.filter(
       (c) => c.type === type || c.id === 'cat_transfer' || (c.name && c.name.includes('ငွေလွှဲ')) || (c.nameEn && c.nameEn.toLowerCase().includes('transfer'))
     );
     const countMap = new Map<string, number>();
@@ -794,7 +819,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       if (countB !== countA) return countB - countA;
       return (lang === 'my' ? a.name : a.nameEn).localeCompare(lang === 'my' ? b.name : b.nameEn);
     });
-  }, [categories, type, allTransactions, lang]);
+  }, [visibleCategories, type, allTransactions, lang]);
 
   const currentCat = categories.find((c) => c.id === categoryId);
   const isCurrentTransferCat = Boolean(
@@ -2760,9 +2785,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         <ItemPriceHistoryModal isOpen={isShoppingPriceHistoryOpen} onClose={() => setIsShoppingPriceHistoryOpen(false)} transactions={allTransactions} categories={categories} wallets={wallets} lang={lang} />
       )}
 
-      <CategoryPickerModal isOpen={isCategoryPickerOpen} onClose={() => setIsCategoryPickerOpen(false)} categories={categories} selectedCategoryId={categoryId} selectedSubCategoryId={subCategoryId} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { handlePrimaryCategorySelect(catId, subId); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} allTransactions={allTransactions} />
+      <CategoryPickerModal isOpen={isCategoryPickerOpen} onClose={() => setIsCategoryPickerOpen(false)} categories={visibleCategories} selectedCategoryId={categoryId} selectedSubCategoryId={subCategoryId} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { handlePrimaryCategorySelect(catId, subId); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} allTransactions={allTransactions} />
       {/* [v7.6.07] Per-row picker for the split section. */}
-      <CategoryPickerModal isOpen={splitPickerRow !== null} onClose={() => setSplitPickerRow(null)} categories={categories} selectedCategoryId={splitPickerRow !== null ? (splitRows[splitPickerRow]?.categoryId || '') : ''} selectedSubCategoryId={splitPickerRow !== null ? (splitRows[splitPickerRow]?.subCategoryId || '') : ''} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { if (splitPickerRow !== null) handleSplitRowCategorySelect(splitPickerRow, catId, subId); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} allTransactions={allTransactions} />
+      <CategoryPickerModal isOpen={splitPickerRow !== null} onClose={() => setSplitPickerRow(null)} categories={visibleCategories} selectedCategoryId={splitPickerRow !== null ? (splitRows[splitPickerRow]?.categoryId || '') : ''} selectedSubCategoryId={splitPickerRow !== null ? (splitRows[splitPickerRow]?.subCategoryId || '') : ''} currentType={type} lang={lang} plan={plan} onSelect={(catId, subId) => { if (splitPickerRow !== null) handleSplitRowCategorySelect(splitPickerRow, catId, subId); }} onOpenUpgrade={onOpenUpgrade} onAddSubCategory={onAddSubCategory} onManageCategories={onManageCategories} allTransactions={allTransactions} />
 
       <FuelExpenseGuideModal isOpen={showFuelGuideModal} onClose={() => setShowFuelGuideModal(false)} lang={lang} />
     </div>

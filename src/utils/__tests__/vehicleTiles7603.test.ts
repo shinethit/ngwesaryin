@@ -341,10 +341,10 @@ describe('auto-select wiring (v7.6.03)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.30');
-    expect(CURRENT_BUILD_NUMBER).toBe(344);
-    expect(VERSION_JSON.version).toBe('v7.6.30');
-    expect(VERSION_JSON.buildNumber).toBe(344);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
+    expect(CURRENT_BUILD_NUMBER).toBe(345);
+    expect(VERSION_JSON.version).toBe('v7.6.31');
+    expect(VERSION_JSON.buildNumber).toBe(345);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -353,20 +353,20 @@ describe('Version bump to v7.6.27 (build 342)', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.30');
-    expect(entry.buildNumber).toBe(344);
+    expect(entry.version).toBe('v7.6.31');
+    expect(entry.buildNumber).toBe(345);
     expect(entry.releaseDate).toBe('2026-11-24');
-    expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်ကဏ္ဍ အလိုအလျောက်ဖြည့်ပေးခြင်း');
+    expect(entry.tag).toBe('feature');
+    expect(entry.titleMy).toBe('Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'ခွဲရေးတန်း အသစ်တိုးတိုင်း အရင်တန်းက ကဏ္ဍနဲ့ ကဏ္ဍခွဲကို အလိုအလျောက် ဖြည့်ပေးမည် — လိုမှ ပြန်ရွေးရုံပဲ',
+      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ',
     ]);
     expect(entry.changesEn).toEqual([
-      'A new split row auto-fills the previous row’s category and sub-category — re-pick only when it changes.',
+      'Each wallet can choose which categories it shows — hidden categories no longer appear when entering records for that wallet.',
     ]);
   });
 });

@@ -1098,6 +1098,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 exchangeRate: wallet.exchangeRate || 1,
                 sharedWith: normalizedSharedWith,
                 collaboratorPermissions: wallet.collaboratorPermissions || {},
+                // [v7.6.31] Explicit, even when []: merge:true +
+                // omission would resurrect a cleared denylist.
+                hiddenCategoryIds: [...(wallet.hiddenCategoryIds || [])],
                 updatedAt: new Date().toISOString(),
                 ...(wallet.initialBalance !== undefined ? { initialBalance: Number(wallet.initialBalance) } : {}),
                 ...(wallet.accountNumber ? { accountNumber: wallet.accountNumber.trim() } : {}),
@@ -1520,6 +1523,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 ...(sData.initialBalance !== undefined
                   ? { initialBalance: Number(sData.initialBalance) }
                   : {}),
+                // [v7.6.31] Same mirror rule: only overwrite the local
+                // denylist when the shared doc actually carries one
+                // (old docs have no field — a missing field must not
+                // wipe a locally-set list).
+                ...(sData.hiddenCategoryIds !== undefined
+                  ? { hiddenCategoryIds: Array.isArray(sData.hiddenCategoryIds) ? [...sData.hiddenCategoryIds] : [] }
+                  : {}),
               });
             } else if (isSharedToMe) {
               // [v7.5.56] Mirror subscribeIncomingSharedWallets exactly:
@@ -1540,6 +1550,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 currency: sData.currency || 'MMK',
                 exchangeRate: sData.exchangeRate || 1,
                 sharedWith: sharedList,
+                // [v7.6.31] Mirrored denylist from the shared doc.
+                hiddenCategoryIds: Array.isArray(sData.hiddenCategoryIds) ? [...sData.hiddenCategoryIds] : undefined,
                 ownerUid: sData.ownerUid || '',
                 ownerEmail: sData.ownerEmail || '',
                 ownerName: sData.ownerName || (sData.ownerEmail ? sData.ownerEmail.split('@')[0] : ''),
@@ -1565,6 +1577,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 currency: sData.currency || 'MMK',
                 exchangeRate: sData.exchangeRate || 1,
                 sharedWith: sharedList,
+                // [v7.6.31] Mirrored denylist from the shared doc.
+                hiddenCategoryIds: Array.isArray(sData.hiddenCategoryIds) ? [...sData.hiddenCategoryIds] : undefined,
                 ownerUid: sData.ownerUid || '',
                 ownerEmail: sData.ownerEmail || '',
                 ownerName: sData.ownerName || (sData.ownerEmail ? sData.ownerEmail.split('@')[0] : ''),

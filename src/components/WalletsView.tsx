@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { WalletCards, Plus, ArrowRightLeft, Lock, Edit2, Trash2, TrendingUp, Scale, UserPlus, Users, LogOut, Building2, CreditCard, Smartphone, Coins, PiggyBank, DollarSign, Globe, Landmark, ShieldCheck, ChevronDown, ChevronUp, Calculator, Crown } from 'lucide-react';
-import { PlanType, Wallet, WalletPermissions, Transaction } from '../types';
+import { PlanType, Wallet, WalletPermissions, Transaction, Category } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import {
   SUPPORTED_CURRENCIES,
@@ -26,6 +26,9 @@ import { useAuth } from '../context/AuthContext';
 interface WalletsViewProps {
   wallets: Wallet[];
   transactions?: Transaction[];
+  // [v7.6.31] All global categories — forwarded to WalletModal for
+  // the per-wallet visibility checklist. App owns this state.
+  categories?: Category[];
   plan: PlanType;
   maxFreeWallets: number;
   lang: 'my' | 'en';
@@ -69,6 +72,7 @@ const WALLET_ICONS_MAP: Record<string, React.ComponentType<{ className?: string 
 export const WalletsView: React.FC<WalletsViewProps> = ({
   wallets,
   transactions = [],
+  categories = [],
   plan,
   maxFreeWallets,
   lang,
@@ -1363,6 +1367,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
         walletToEdit={walletToEdit}
         onSaveWallet={handleSaveWallet}
         lang={lang}
+        categories={categories}
       />
 
       {/* Share Wallet Modal */}

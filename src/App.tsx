@@ -3014,6 +3014,7 @@ export default function App() {
             <WalletsView
               wallets={computedWallets}
               transactions={transactions}
+              categories={categories}
               plan={plan}
               maxFreeWallets={limits.maxWallets}
               lang={lang}

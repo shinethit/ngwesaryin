@@ -33,6 +33,10 @@ export interface SharedWalletPayload {
   // other sensitive field): the shared payload carries only what every
   // member needs to see. The field was removed from this payload type.
   sharedWith: string[];
+  // [v7.6.31] Per-wallet category denylist (Wallet.hiddenCategoryIds),
+  // mirrored so collaborators see the same entry-picker visibility
+  // the owner set. Absent/empty = all categories visible.
+  hiddenCategoryIds?: string[];
   collaboratorPermissions?: Record<string, import('../types').WalletPermissions>;
   // [v7.5.56] memberUids: lowercased member email → member uid. Lets
   // the owner resolve a member's email to a uid for ownership transfer.
@@ -228,6 +232,9 @@ export async function syncSharedWalletToCloud(
       exchangeRate: wallet.exchangeRate || 1,
       sharedWith: normalizedSharedWith,
       collaboratorPermissions: wallet.collaboratorPermissions || {},
+      // [v7.6.31] Explicit, even when []: merge:true + omission
+      // would resurrect a cleared denylist on the shared doc.
+      hiddenCategoryIds: [...(wallet.hiddenCategoryIds || [])],
       updatedAt: new Date().toISOString(),
     };
 
@@ -532,6 +539,9 @@ export function subscribeIncomingSharedWallets(
             exchangeRate: data.exchangeRate || 1,
             sharedWith: sharedList,
             collaboratorPermissions: data.collaboratorPermissions || {},
+            // [v7.6.31] Mirrored denylist — a collaborator's entry
+            // picker for this wallet hides the same categories.
+            hiddenCategoryIds: Array.isArray(data.hiddenCategoryIds) ? [...data.hiddenCategoryIds] : undefined,
             ownerUid: data.ownerUid || '',
             // [v7.5.56] Never fall back to the literal 'Partner' — use
             // the ownerEmail prefix (or the ownerEmail itself) so the

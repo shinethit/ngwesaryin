@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.30';
-export const CURRENT_BUILD_NUMBER = 344;
+export const CURRENT_APP_VERSION = 'v7.6.31';
+export const CURRENT_BUILD_NUMBER = 345;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.31',
+    buildNumber: 345,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း',
+    titleEn: 'Choose which categories each wallet shows',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်ပါပြီ — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် အဲဒီ Wallet မှာ စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ။ ကဏ္ဍတွေက အမြဲရှိနေပြီး တခြား Wallet တွေမှာ ဆက်ပေါ်နေပါမယ်။',
+    descriptionEn: 'Each wallet can now choose which categories it shows — hidden categories no longer appear when entering records for that wallet. Categories still exist globally and stay visible in other wallets.',
+    changesMy: [
+      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ',
+    ],
+    changesEn: [
+      'Each wallet can choose which categories it shows — hidden categories no longer appear when entering records for that wallet.',
+    ],
+  },
   {
     version: 'v7.6.30',
     buildNumber: 344,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getAmountDisplayMode } from '../utils/formatters';
 import {
   WalletCards,
@@ -15,7 +15,7 @@ import {
   X,
   TrendingUp,
 } from 'lucide-react';
-import { Wallet } from '../types';
+import { Wallet, Category } from '../types';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyInfo,
@@ -23,6 +23,7 @@ import {
   convertToMMK,
 } from '../utils/currency';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
+import { CategoryIcon } from './CategoryIcon';
 import {
   bootstrapExchangeRates,
   subscribeRates,
@@ -36,6 +37,11 @@ interface WalletModalProps {
   walletToEdit?: Wallet | null;
   onSaveWallet: (walletData: Omit<Wallet, 'id'> | Wallet) => void;
   lang: 'my' | 'en';
+  // [v7.6.31] All global categories, for the per-wallet visibility
+  // checklist below. Optional: call sites that do not pass it get
+  // no checklist (the save still writes hiddenCategoryIds: [] for
+  // a new wallet via the state default).
+  categories?: Category[];
 }
 
 const WALLET_COLORS = [
@@ -69,6 +75,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   walletToEdit,
   onSaveWallet,
   lang,
+  categories = [],
 }) => {
   const [name, setName] = useState('');
   const [nameEn, setNameEn] = useState('');
@@ -78,6 +85,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const [color, setColor] = useState('#10B981');
   const [icon, setIcon] = useState('wallet');
   const [includeInTotals, setIncludeInTotals] = useState<boolean>(true);
+  // [v7.6.31] Local checkbox state: category ids HIDDEN in this
+  // wallet (the denylist). [] = every category shown. Initialized
+  // from walletToEdit.hiddenCategoryIds on open / edit change in
+  // the effect below; never read back from the wallet afterwards.
+  const [hiddenCategoryIds, setHiddenCategoryIds] = useState<string[]>([]);
   // [v7.5.1] Live rate + manual override state.
   const [rateSnapshot, setRateSnapshot] = useState<RateSnapshot>(getRateSnapshot());
   const [overrideRate, setOverrideRate] = useState<boolean>(false);
@@ -115,6 +127,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         setColor(walletToEdit.color || '#10B981');
         setIcon(walletToEdit.icon || 'wallet');
         setIncludeInTotals(walletToEdit.includeInTotals !== false);
+        setHiddenCategoryIds([...(walletToEdit.hiddenCategoryIds || [])]);
         setFormError('');
         setLastLakhResult(null);
         setLakhMsg('');
@@ -127,6 +140,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         setColor('#10B981');
         setIcon('wallet');
         setIncludeInTotals(true);
+        setHiddenCategoryIds([]);
         setFormError('');
         setLastLakhResult(null);
         setLakhMsg('');
@@ -143,8 +157,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     }
   }, [isOpen, walletToEdit]);
 
-  if (!isOpen) return null;
-
+  // [v7.6.31 fix] No early return before this point: the checklist
+  // useMemo hooks below must run on EVERY render, closed or open —
+  // returning null above them changes the hook count when the modal
+  // opens and React throws error #310 (crash). The null return lives
+  // just before the JSX return instead.
   const handleCurrencyChange = (newCurr: string) => {
     setCurrency(newCurr);
     const currInfo = getCurrencyInfo(newCurr);
@@ -155,6 +172,31 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const parsedRate = parseFloat(exchangeRate) || 1;
   const convertedMMK = convertToMMK(parsedBalance, currency, parsedRate);
   const selectedCurrInfo = getCurrencyInfo(currency);
+
+  // [v7.6.31] Checklist source: every global category except
+  // cat_transfer (never hidden — the transfer form has no picker),
+  // grouped expense-then-income in the passed-in order. A category
+  // added later is checked by default: it is in no denylist until
+  // the owner unchecks it here.
+  const checklistCategories = useMemo(
+    () => categories.filter((c) => c.id !== 'cat_transfer'),
+    [categories],
+  );
+  const expenseChecklist = useMemo(
+    () => checklistCategories.filter((c) => c.type === 'expense'),
+    [checklistCategories],
+  );
+  const incomeChecklist = useMemo(
+    () => checklistCategories.filter((c) => c.type === 'income'),
+    [checklistCategories],
+  );
+  const hiddenCategoryIdSet = useMemo(() => new Set(hiddenCategoryIds), [hiddenCategoryIds]);
+  const shownCategoryCount = checklistCategories.length - checklistCategories.filter((c) => hiddenCategoryIdSet.has(c.id)).length;
+  const toggleCategoryHidden = (categoryId: string, hide: boolean) => {
+    setHiddenCategoryIds((prev) =>
+      hide ? [...new Set([...prev, categoryId])] : prev.filter((id) => id !== categoryId),
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,6 +248,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         color,
         icon,
         includeInTotals,
+        // [v7.6.31] ALWAYS written, even when []: the wallet save
+        // path uses merge:true, so omitting the field would
+        // resurrect the previous denylist after the user cleared it.
+        hiddenCategoryIds: [...hiddenCategoryIds],
       };
       onSaveWallet(updated);
     } else {
@@ -221,11 +267,17 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         icon,
         isDefault: false,
         includeInTotals,
+        // [v7.6.31] Explicit [] (nothing hidden) — see the edit
+        // branch note: merge:true must never resurrect a stale list.
+        hiddenCategoryIds: [...hiddenCategoryIds],
       };
       onSaveWallet(newWalletData);
     }
     onClose();
   };
+
+  // [v7.6.31] Early return AFTER all hooks (see note above).
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 touch-none overscroll-none animate-fadeIn">
@@ -619,6 +671,87 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* [v7.6.31] Per-wallet category visibility (denylist).
+              Uncheck a category to hide it from THIS wallet's
+              entry picker only — the category still exists
+              globally and in every other wallet. Sub-categories
+              follow their parent. The list scrolls inside the
+              modal so the section never overflows at 390px. */}
+          {checklistCategories.length > 0 && (
+            <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold text-slate-800 text-xs sm:text-sm">
+                    {lang === 'my' ? 'ဒီ Wallet မှာ ပြမယ့် Category' : 'Categories shown in this wallet'}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    {lang === 'my'
+                      ? 'မလိုတဲ့ Category ကို ဖြုတ်ထားရင် ဒီ Wallet မှာ စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ။ ကဏ္ဍတွေက အမြဲရှိနေပါမယ်။ ကဏ္ဍခွဲ (Sub-category) တွေက မိခင် ကဏ္ဍအတိုင်း လိုက်ပါတယ်။'
+                      : 'Uncheck a category to hide it when entering records for this wallet. Categories still exist globally. Sub-categories follow their parent category.'}
+                  </p>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0 whitespace-nowrap">
+                  {shownCategoryCount}/{checklistCategories.length}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHiddenCategoryIds([])}
+                  className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-all cursor-pointer"
+                >
+                  {lang === 'my' ? 'အားလုံး ရွေးမည်' : 'Select all'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHiddenCategoryIds(checklistCategories.map((c) => c.id))}
+                  className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-all cursor-pointer"
+                >
+                  {lang === 'my' ? 'အားလုံး ဖြုတ်မည်' : 'Clear all'}
+                </button>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto overflow-x-hidden overscroll-contain rounded-xl border border-slate-200 bg-white divide-y divide-slate-100">
+                {([
+                  { label: lang === 'my' ? 'ထွက်ငွေ' : 'Expense', cats: expenseChecklist },
+                  { label: lang === 'my' ? 'ဝင်ငွေ' : 'Income', cats: incomeChecklist },
+                ] as const).map((group) => (
+                  <div key={group.label}>
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-50 sticky top-0">
+                      {group.label}
+                    </div>
+                    {group.cats.map((cat) => {
+                      const isHidden = hiddenCategoryIdSet.has(cat.id);
+                      return (
+                        <label
+                          key={cat.id}
+                          className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-slate-50 min-w-0"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!isHidden}
+                            onChange={(e) => toggleCategoryHidden(cat.id, !e.target.checked)}
+                            className="w-4 h-4 accent-emerald-600 cursor-pointer shrink-0"
+                          />
+                          <span
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
+                            style={{ backgroundColor: cat.color || '#94A3B8' }}
+                          >
+                            <CategoryIcon name={cat.icon} className="w-4 h-4" />
+                          </span>
+                          <span className="text-xs font-semibold text-slate-800 truncate min-w-0">
+                            {lang === 'my' ? cat.name : cat.nameEn || cat.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Live Preview Card */}
           <div className="p-3.5 rounded-2xl text-white shadow-sm flex items-center justify-between" style={{ backgroundColor: color }}>

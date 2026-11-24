@@ -74,32 +74,32 @@ describe('anomaly trigger wording (v7.6.12)', () => {
   });
 });
 
-describe('Version bump to v7.6.23 (build 337)', () => {
+describe('Version bump to v7.6.24 (build 338)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
-    expect(CURRENT_BUILD_NUMBER).toBe(337);
-    expect(VERSION_JSON.version).toBe('v7.6.23');
-    expect(VERSION_JSON.buildNumber).toBe(337);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
+    expect(CURRENT_BUILD_NUMBER).toBe(338);
+    expect(VERSION_JSON.version).toBe('v7.6.24');
+    expect(VERSION_JSON.buildNumber).toBe(338);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.23');
-    expect(entry.buildNumber).toBe(337);
+    expect(entry.version).toBe('v7.6.24');
+    expect(entry.buildNumber).toBe(338);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း',
+      'Unit များ အားလုံးအတွက် မျှဝေခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Records header controls on a single row',
+      'Shared custom units for everyone',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
+      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
+      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
     );
   });
 
@@ -114,23 +114,23 @@ describe('Version bump to v7.6.23 (build 337)', () => {
   it('no mangled numbering anywhere in the version surfaces', () => {
     expect(CURRENT_APP_VERSION).not.toBe('v7.5.100');
     expect(VERSION_JSON.version).not.toBe('v7.5.100');
-    expect(CURRENT_APP_VERSION).not.toBe('v7.6.23'.replace(/3$/, ''));
-    expect(VERSION_JSON.version).not.toBe('v7.6.23'.replace(/3$/, ''));
+    expect(CURRENT_APP_VERSION).not.toBe('v7.6.24'.replace(/4$/, ''));
+    expect(VERSION_JSON.version).not.toBe('v7.6.24'.replace(/4$/, ''));
   });
 
-  it('the fix-script guard is raw string equality: accepts exactly 7.6.22/7.6.23, rejects the mangled form', () => {
-    const FROM_VERSION = '7.6.22';
-    const TO_VERSION = '7.6.23';
+  it('the fix-script guard is raw string equality: accepts exactly 7.6.23/7.6.24, rejects the mangled form', () => {
+    const FROM_VERSION = '7.6.23';
+    const TO_VERSION = '7.6.24';
     const guardFails = (pkgVersion: string): boolean =>
       pkgVersion !== FROM_VERSION && pkgVersion !== TO_VERSION;
     // The mangled form is built from TO_VERSION, never written as a
     // literal, so the shipped identity can never be confused with
     // it by a grep or by the guard.
-    const mangled = TO_VERSION.replace(/3$/, '');
+    const mangled = TO_VERSION.replace(/4$/, '');
     expect(mangled).not.toBe(TO_VERSION);
-    expect(TO_VERSION).toBe('7.6.23');
-    expect(guardFails('7.6.22')).toBe(false);
+    expect(TO_VERSION).toBe('7.6.24');
     expect(guardFails('7.6.23')).toBe(false);
+    expect(guardFails('7.6.24')).toBe(false);
     expect(guardFails(mangled)).toBe(true);
     expect(guardFails('')).toBe(true);
   });

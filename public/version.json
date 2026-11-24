@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.23",
-  "buildNumber": 337,
+  "version": "v7.6.24",
+  "buildNumber": 338,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်"
+    "ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်"
   ],
   "changesEn": [
-    "Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row."
+    "Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts."
   ]
 }

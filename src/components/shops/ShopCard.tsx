@@ -5,6 +5,7 @@ import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
 import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS, OTHER_MENU_UNIT, collectNewCustomUnits, menuUnitSelectOptions, normalizeMenuUnit, resolveSavedMenuUnit } from '../../utils/shopMenuUpdate';
+import { mergeSharedUnits } from '../../utils/sharedUnits';
 import { filterItemNameSuggestions } from '../../utils/shopItemSearch';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { normalizeMyanmarPhone } from './ShopModal';
@@ -29,6 +30,10 @@ interface ShopCardProps {
   // the user's own transactions, so an item that exists in another shop's
   // menu appears while typing. Optional: other call sites pass nothing.
   menuItemNames?: string[];
+  // [v7.6.24] Shared custom units from the public_units collection
+  // (ShopsView) — merged with the device-local list for the unit
+  // selects. Optional: other call sites pass nothing.
+  sharedUnits?: string[];
 }
 
 export const ShopCard: React.FC<ShopCardProps> = ({
@@ -44,6 +49,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   onDeletePricingItem,
   onReport,
   menuItemNames = [],
+  sharedUnits = [],
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isItemsExpanded, setIsItemsExpanded] = useState(false);
@@ -57,6 +63,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   // AddMaintenanceModal) and reappear as select options.
   const [newItemCustomUnit, setNewItemCustomUnit] = useState('');
   const [customUnits, setCustomUnits] = usePersistedState<string[]>('ngwe_custom_units', []);
+  // [v7.6.24] The ONE list the unit selects read: the device-local
+  // list merged with the shared public_units list (shared first).
+  const knownUnits = useMemo(() => mergeSharedUnits(customUnits, sharedUnits), [customUnits, sharedUnits]);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
 
   // [v7.5.86] Add-price suggestions from the shared menus — the datalist
@@ -564,7 +573,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                   aria-label={lang === 'my' ? 'ယူနစ်' : 'Unit'}
                   className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                 >
-                  {menuUnitSelectOptions(customUnits).map((u) => (
+                  {menuUnitSelectOptions(knownUnits).map((u) => (
                     <option key={u.value} value={u.value}>
                       {lang === 'my' ? u.labelMy : u.labelEn}
                     </option>
@@ -938,7 +947,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                   aria-label={lang === 'my' ? 'ယူနစ်' : 'Unit'}
                   className="w-full px-2.5 py-2.5 min-h-[44px] bg-slate-50 text-base border border-slate-200 rounded-lg outline-none text-slate-800 focus:bg-white"
                 >
-                  {menuUnitSelectOptions(customUnits).map((u) => (
+                  {menuUnitSelectOptions(knownUnits).map((u) => (
                     <option key={u.value} value={u.value}>
                       {lang === 'my' ? u.labelMy : u.labelEn}
                     </option>

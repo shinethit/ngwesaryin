@@ -18,6 +18,8 @@ import { FuelExpenseGuideModal } from './FuelExpenseGuideModal';
 import { FuelPriceChart } from './FuelPriceChart';
 import { TireVisualizer } from './TireVisualizer';
 import { usePersistedState } from '../../hooks/usePersistedState';
+import { auth } from '../../lib/firebase';
+import { publishSharedUnits } from '../../utils/sharedUnits';
 import { VehicleCostSummaryCard } from './VehicleCostSummaryCard';
 
 interface VehiclesViewProps {
@@ -41,6 +43,10 @@ interface VehiclesViewProps {
   plan?: PlanType;
   onOpenUpgradeModal?: () => void;
   lang: 'my' | 'en';
+  // [v7.6.24] Shared custom units from the public_units collection
+  // (App listener) — passed to AddMaintenanceModal for the row unit
+  // selects. Optional: other call sites pass nothing.
+  sharedUnits?: string[];
 }
 
 type SubTab = 'fuel' | 'maintenance' | 'tires';
@@ -66,6 +72,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   plan,
   onOpenUpgradeModal,
   lang,
+  sharedUnits = [],
 }) => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(() => vehicles[0]?.id || '');
   const [activeTab, setActiveTab] = useState<SubTab>('fuel');
@@ -1516,6 +1523,15 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         selectedVehicleId={currentVehicle?.id}
         lang={lang}
         vehicleMaintenance={vehicleMaintenanceLogs}
+        sharedUnits={sharedUnits}
+        // [v7.6.24] Share newly typed custom units with everyone
+        // (public_units): fire-and-forget via the shared writer;
+        // skipped without a signed-in uid — the same auth.currentUser
+        // pattern ShopsView's pricing handler uses.
+        onPublishCustomUnits={(units) => {
+          const u = auth.currentUser;
+          if (u) void publishSharedUnits(units, u.uid, u.email || u.displayName || 'User');
+        }}
       />
 
       <AddTirePressureModal

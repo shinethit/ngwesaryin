@@ -60,6 +60,7 @@ import {
   type StashedMenuCandidate,
 } from './utils/shopMenuUpdate';
 import { submitShopPriceAlert } from './utils/shopPriceAlerts';
+import { collectSharedUnits } from './utils/sharedUnits';
 import { LoginScreen } from './components/LoginScreen';
 import { FortuneLogo, LogoStyle } from './components/FortuneLogo';
 import { ClayFloatingCoinButton } from './components/ClayIllustrations';
@@ -345,6 +346,12 @@ export default function App() {
   // id+name listener above and as ShopsView's own subscription, so
   // the Firestore SDK shares the underlying stream (no extra reads).
   const [publicShopsFull, setPublicShopsFull] = useState<PublicShop[]>([]);
+  // [v7.6.24] Shared custom units (public_units): a unit typed once
+  // by anyone appears as a select option for everyone. Same
+  // bare-collection subscription as the public shops above, so the
+  // SDK shares the stream; the listener runs un-gated (guests read
+  // too — the rules allow get/list for everyone).
+  const [sharedUnits, setSharedUnits] = useState<string[]>([]);
   const [vehicles, setVehicles] = usePersistedState<Vehicle[]>('ngwe_vehicles', []);
   const [fuelLogs, setFuelLogs] = usePersistedState<FuelLog[]>('ngwe_fuel_logs', []);
   const [vehicleMaintenance, setVehicleMaintenance] = usePersistedState<VehicleMaintenance[]>('ngwe_vehicle_maintenance', []);
@@ -1653,6 +1660,24 @@ export default function App() {
       },
       () => {
         setPublicShopsFull([]);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // [v7.6.24] Shared custom units for the unit selects (see the
+  // publicShopsFull listener above for the pattern). On error the
+  // list stays empty and the selects fall back to the device-local
+  // list — no new error UI, no loading state.
+  useEffect(() => {
+    const q = query(collection(db, 'public_units'));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setSharedUnits(collectSharedUnits(snap.docs.map((d) => (d.data() as any).value)));
+      },
+      () => {
+        setSharedUnits([]);
       }
     );
     return () => unsub();
@@ -3386,6 +3411,7 @@ export default function App() {
             shops={shops}
             lang={lang}
             plan={plan}
+            sharedUnits={sharedUnits}
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
             onOpenSignIn={() => setIsAuthModalOpen(true)}
                 onAddShop={handleAddShop}
@@ -3403,6 +3429,7 @@ export default function App() {
             wallets={computedWallets}
             transactions={transactions}
             plan={plan}
+            sharedUnits={sharedUnits}
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
                 onSaveVehicle={(v) => handleSaveVehicle(v as Vehicle)}
             onDeleteVehicle={handleDeleteVehicle}
@@ -3552,6 +3579,7 @@ export default function App() {
         allTransactions={transactions}
         publicShops={publicShopsFull}
         shops={shops}
+        sharedUnits={sharedUnits}
         onShopNeedsDetails={handleShopNeedsDetails}
         onShopMenuUpdateCandidate={handleShopMenuUpdateCandidate}
         plan={plan}

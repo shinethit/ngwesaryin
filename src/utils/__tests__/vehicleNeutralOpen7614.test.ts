@@ -191,33 +191,33 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
   });
 });
 
-describe('Version bump to v7.6.23 (build 337)', () => {
-  it('current version is v7.6.23 / build 337 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
-    expect(CURRENT_BUILD_NUMBER).toBe(337);
-    expect(VERSION_JSON.version).toBe('v7.6.23');
-    expect(VERSION_JSON.buildNumber).toBe(337);
+describe('Version bump to v7.6.24 (build 338)', () => {
+  it('current version is v7.6.24 / build 338 in every surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
+    expect(CURRENT_BUILD_NUMBER).toBe(338);
+    expect(VERSION_JSON.version).toBe('v7.6.24');
+    expect(VERSION_JSON.buildNumber).toBe(338);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('top history entry is the v7.6.18 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.23');
-    expect(entry.buildNumber).toBe(337);
+    expect(entry.version).toBe('v7.6.24');
+    expect(entry.buildNumber).toBe(338);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း');
-    expect(entry.titleEn).toBe('Records header controls on a single row');
+    expect(entry.titleMy).toBe('Unit များ အားလုံးအတွက် မျှဝေခြင်း');
+    expect(entry.titleEn).toBe('Shared custom units for everyone');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
+      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
+      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
     ]);
   });
 });

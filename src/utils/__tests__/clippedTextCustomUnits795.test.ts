@@ -221,7 +221,9 @@ describe('Custom units: type + reappear (U1, U2, U3)', () => {
   it('all unit-select owners share the ngwe_custom_units key', () => {
     for (const src of [SHOPCARD_SRC, TXMODAL_SRC, MAINT_SRC]) {
       expect(src).toContain("'ngwe_custom_units'");
-      expect(src).toContain('menuUnitSelectOptions(customUnits)');
+      // [v7.6.24] selects read the merged list (local + shared),
+      // not the local list alone.
+      expect(src).toContain('menuUnitSelectOptions(knownUnits)');
     }
     // Row-based selects (TransactionModal / AddMaintenanceModal)
     // show the free-text input via the shared helper; ShopCard

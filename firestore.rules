@@ -317,6 +317,36 @@ service cloud.firestore {
     }
 
     // =========================================================
+    // 8b. /public_units/{unitId} — [v7.6.24] Shared custom units.
+    // A custom unit typed once by anyone appears as a select option
+    // for EVERYONE (same account on another device AND different
+    // accounts), like the Public shop list. Doc id = the
+    // encodeURIComponent'd NORMALIZED unit value (deterministic
+    // dedupe); fields: value, addedByUid, addedBy?, createdAt
+    // (Date.now() number). Anyone may read (guests included — the
+    // listener runs un-gated, like public_shops). A signed-in user
+    // may CREATE a unit with their own uid and a short non-empty
+    // value (1..20 chars — the spam bound; a longer typed unit
+    // simply stays local-only, the write fails silently). Units
+    // are immutable shared facts: there is NO owner-update path —
+    // a re-publish of an already-shared unit is evaluated as an
+    // update and is admin-only (it fails silently and harmlessly:
+    // the value is already there). Update/delete are admin-only.
+    // Spam model: same as public shops (one doc per value, no
+    // listing gate) — a junk unit costs one small doc and is
+    // removable only by an admin.
+    // =========================================================
+    match /public_units/{unitId} {
+      allow get, list: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.addedByUid == request.auth.uid
+        && request.resource.data.value is string
+        && request.resource.data.value.size() >= 1
+        && request.resource.data.value.size() <= 20;
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================
     // 8a. /shop_reports/{reportId} — [v7.5.81] Shop reports.
     // A signed-in user may report a shop (create) and read ONLY
     // their own reports; the Admin Panel (admin) reads all pending

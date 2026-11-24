@@ -241,12 +241,12 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.23 (build 337)', () => {
+describe('version pins rolled forward to v7.6.24 (build 338)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
-    expect(CURRENT_BUILD_NUMBER).toBe(337);
-    expect(VERSION_JSON.version).toBe('v7.6.23');
-    expect(VERSION_JSON.buildNumber).toBe(337);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
+    expect(CURRENT_BUILD_NUMBER).toBe(338);
+    expect(VERSION_JSON.version).toBe('v7.6.24');
+    expect(VERSION_JSON.buildNumber).toBe(338);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -255,14 +255,14 @@ describe('version pins rolled forward to v7.6.23 (build 337)', () => {
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.23');
-    expect(top.buildNumber).toBe(337);
+    expect(top.version).toBe('v7.6.24');
+    expect(top.buildNumber).toBe(338);
     expect(top.tag).toBe('fix');
     expect(top.changesMy).toEqual([
-      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
+      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
+      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

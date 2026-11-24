@@ -269,11 +269,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.23 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
-    expect(CURRENT_BUILD_NUMBER).toBe(337);
-    expect(VERSION_JSON.version).toBe('v7.6.23');
-    expect(VERSION_JSON.buildNumber).toBe(337);
+  it('the shipped identity is 7.6.24 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
+    expect(CURRENT_BUILD_NUMBER).toBe(338);
+    expect(VERSION_JSON.version).toBe('v7.6.24');
+    expect(VERSION_JSON.buildNumber).toBe(338);
   });
 });
 
@@ -301,28 +301,28 @@ describe('app update check detects 7.6.02 over 7.6.01 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.23 (build 337)', () => {
+describe('Version bump to v7.6.24 (build 338)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.23');
-    expect(CURRENT_BUILD_NUMBER).toBe(337);
-    expect(VERSION_JSON.version).toBe('v7.6.23');
-    expect(VERSION_JSON.buildNumber).toBe(337);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
+    expect(CURRENT_BUILD_NUMBER).toBe(338);
+    expect(VERSION_JSON.version).toBe('v7.6.24');
+    expect(VERSION_JSON.buildNumber).toBe(338);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.23');
-    expect(entry.buildNumber).toBe(337);
+    expect(entry.version).toBe('v7.6.24');
+    expect(entry.buildNumber).toBe(338);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('စာရင်းအပေါ် ခလုတ် ၃ ခု တတန်းတည်း ပြခြင်း');
-    expect(entry.titleEn).toBe('Records header controls on a single row');
+    expect(entry.titleMy).toBe('Unit များ အားလုံးအတွက် မျှဝေခြင်း');
+    expect(entry.titleEn).toBe('Shared custom units for everyone');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'စာရင်းအပေါ်က ခလုတ် ၃ ခု (ဈေးနှိုင်းယှဉ်၊ CSV ထုတ်ယူမည်၊ Wallet) ကို တတန်းတည်းဖြစ်အောင် ပြမည်',
+      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Show the three controls above the records list (Price Compare, CSV Export, wallet) on a single row.',
+      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
     );
   });
 

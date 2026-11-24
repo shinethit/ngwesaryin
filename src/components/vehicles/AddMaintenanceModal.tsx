@@ -7,6 +7,7 @@ import { parseMyanmarNumber } from '../../utils/myanmarDigits';
 // TransactionModal (per-row service type, price/qty/amount, unit).
 import { ROW_SERVICE_TYPES } from '../../utils/vehicleServiceRows';
 import { DEFAULT_MENU_UNIT, collectNewCustomUnits, customMenuUnitText, menuUnitNeedsCustomInput, menuUnitSelectOptions, resolveMenuUnitSelectValue, resolveSavedMenuUnit } from '../../utils/shopMenuUpdate';
+import { mergeSharedUnits } from '../../utils/sharedUnits';
 import { usePersistedState } from '../../hooks/usePersistedState';
 
 interface AddMaintenanceModalProps {
@@ -25,6 +26,14 @@ interface AddMaintenanceModalProps {
   selectedVehicleId?: string;
   lang: 'my' | 'en';
   vehicleMaintenance?: VehicleMaintenance[];
+  // [v7.6.24] Shared custom units from the public_units collection
+  // (VehiclesView) — merged with the device-local list for the row
+  // unit selects. Optional: other call sites pass nothing.
+  sharedUnits?: string[];
+  // [v7.6.24] Publish newly typed custom units to the shared list.
+  // Wired by VehiclesView (which owns the signed-in uid); the modal
+  // itself has no auth. Optional: no-op when absent.
+  onPublishCustomUnits?: (units: string[]) => void;
 }
 
 // [v7.5.93] One blank service row — serviceType defaults to the
@@ -52,6 +61,8 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   selectedVehicleId,
   lang,
   vehicleMaintenance = [],
+  sharedUnits = [],
+  onPublishCustomUnits,
 }) => {
   const [vehicleId, setVehicleId] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -77,6 +88,11 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   // [v7.5.95 U1/U2] Custom units typed via 'အခြား', shared with
   // ShopCard / TransactionModal (same storage key).
   const [customUnits, setCustomUnits] = usePersistedState<string[]>('ngwe_custom_units', []);
+  // [v7.6.24] The ONE list the row unit selects read: the
+  // device-local list merged with the shared public_units list
+  // (shared first). The local persist below still keys off
+  // `customUnits` alone, so the offline/guest fallback is unchanged.
+  const knownUnits = useMemo(() => mergeSharedUnits(customUnits, sharedUnits), [customUnits, sharedUnits]);
   const serviceRowsContainerRef = useRef<HTMLDivElement>(null);
   const newlyAddedRowIdRef = useRef<string | null>(null);
 
@@ -416,7 +432,12 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
     // options next time (same pattern as custom gas stations).
     if (rowsActive) {
       const newCustoms = collectNewCustomUnits(validServiceRows.map((r) => r.unit), customUnits);
-      if (newCustoms.length > 0) setCustomUnits((prev) => [...prev, ...newCustoms]);
+      if (newCustoms.length > 0) {
+        setCustomUnits((prev) => [...prev, ...newCustoms]);
+        // [v7.6.24] Share the new customs with everyone via the
+        // VehiclesView callback (the modal has no auth of its own).
+        onPublishCustomUnits?.(newCustoms);
+      }
     }
 
     onSave(payload);
@@ -517,11 +538,11 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
                       <select
-                        value={resolveMenuUnitSelectValue(row.unit, customUnits)}
+                        value={resolveMenuUnitSelectValue(row.unit, knownUnits)}
                         onChange={(e) => updateServiceRow(row.id || '', 'unit', e.target.value)}
                         className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none cursor-pointer"
                       >
-                        {menuUnitSelectOptions(customUnits).map((u) => (
+                        {menuUnitSelectOptions(knownUnits).map((u) => (
                           <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
                         ))}
                       </select>
@@ -529,7 +550,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
                     {/* [v7.5.95 U1] 'အခြား' / a custom unit reveals a
                         free-text input: a stored custom unit shows its
                         text prefilled; the typed text IS the saved unit. */}
-                    {menuUnitNeedsCustomInput(row.unit, customUnits) && (
+                    {menuUnitNeedsCustomInput(row.unit, knownUnits) && (
                       <input
                         type="text"
                         value={customMenuUnitText(row.unit)}

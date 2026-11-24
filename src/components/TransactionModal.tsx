@@ -36,6 +36,7 @@ import { isShopNameNeedingDetails, loadShopDetailDismissedKeys, type ShopDetails
 // [v7.5.95 U1] 'အခြား' reveals a free-text unit; typed units persist
 // under 'ngwe_custom_units' and reappear as select options.
 import { buildVehicleMenuCandidate, DEFAULT_MENU_UNIT, OTHER_MENU_UNIT, collectNewCustomUnits, customMenuUnitText, displayMenuUnit, menuUnitNeedsCustomInput, menuUnitSelectOptions, resolveMenuUnitSelectValue, resolveSavedMenuUnit } from '../utils/shopMenuUpdate';
+import { mergeSharedUnits, publishSharedUnits } from '../utils/sharedUnits';
 import { SERVICE_TYPE_CONFIG } from '../utils/vehicleAnalytics';
 // [v7.5.93] Per-row service types for multi-row vehicle service entries.
 import { ROW_SERVICE_TYPES, resolveVehicleServiceSubCategory } from '../utils/vehicleServiceRows';
@@ -74,6 +75,10 @@ interface TransactionModalProps {
   // id+name stubs — isShopNameNeedingDetails below needs the details
   // fields to suppress the prompt for a filled public shop.
   publicShops?: Array<{ id: string; name: string } & ShopDetailsLike>;
+  // [v7.6.24] Shared custom units from the public_units collection
+  // (App listener) — merged with the device-local list for the unit
+  // selects. Optional: other call sites pass nothing.
+  sharedUnits?: string[];
   vehicles?: Vehicle[];
   plan: PlanType;
   lang: 'my' | 'en';
@@ -114,6 +119,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   shops = [],
   publicShops = [],
   vehicles = [],
+  sharedUnits = [],
   plan,
   lang,
   onClose,
@@ -277,6 +283,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   // [v7.5.95 U2] Custom units typed via 'အခြား', shared with
   // ShopCard / AddMaintenanceModal (same storage key).
   const [customUnits, setCustomUnits] = usePersistedState<string[]>('ngwe_custom_units', []);
+  // [v7.6.24] The ONE list the unit selects read: the device-local
+  // list merged with the shared public_units list (shared first).
+  // The local persist below still keys off `customUnits` alone, so
+  // the offline/guest fallback is unchanged.
+  const knownUnits = useMemo(() => mergeSharedUnits(customUnits, sharedUnits), [customUnits, sharedUnits]);
 
   // Maintenance fields
   const [maintServiceType, setMaintServiceType] = useState<VehicleServiceType>('engine_oil');
@@ -1555,6 +1566,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const unitQtyCustomUnits = entryMode === 'unit_qty' ? [resolveSavedMenuUnit(unitQtyUnit)] : [];
     const newCustomUnits = collectNewCustomUnits([...validItems.map((i) => i.unit), ...unitQtyCustomUnits], customUnits);
     if (newCustomUnits.length > 0) setCustomUnits((prev) => [...prev, ...newCustomUnits]);
+    // [v7.6.24] Share the new customs with everyone (public_units,
+    // like the Public shop list): fire-and-forget, never throws,
+    // never gates the save; skipped without a signed-in uid.
+    if (newCustomUnits.length > 0 && user?.uid) {
+      void publishSharedUnits(newCustomUnits, user.uid, user.email || user.displayName || 'User');
+    }
 
     try {
       let vehicleLinkPayload: VehicleLinkData | undefined = undefined;
@@ -2582,11 +2599,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
                                 <select
-                                  value={resolveMenuUnitSelectValue(item.unit, customUnits)}
+                                  value={resolveMenuUnitSelectValue(item.unit, knownUnits)}
                                   onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
                                   className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
                                 >
-                                  {menuUnitSelectOptions(customUnits).map((u) => (
+                                  {menuUnitSelectOptions(knownUnits).map((u) => (
                                     <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
                                   ))}
                                 </select>
@@ -2595,7 +2612,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                                   free-text input: a stored custom unit shows
                                   its text prefilled; the typed text IS the
                                   saved unit and reappears next time. */}
-                              {menuUnitNeedsCustomInput(item.unit, customUnits) && (
+                              {menuUnitNeedsCustomInput(item.unit, knownUnits) && (
                                 <input
                                   type="text"
                                   value={customMenuUnitText(item.unit)}
@@ -2647,16 +2664,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
                   <select
-                    value={resolveMenuUnitSelectValue(unitQtyUnit, customUnits)}
+                    value={resolveMenuUnitSelectValue(unitQtyUnit, knownUnits)}
                     onChange={(e) => setUnitQtyUnit(e.target.value)}
                     className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
                   >
-                    {menuUnitSelectOptions(customUnits).map((u) => (
+                    {menuUnitSelectOptions(knownUnits).map((u) => (
                       <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
                     ))}
                   </select>
                 </div>
-                {menuUnitNeedsCustomInput(unitQtyUnit, customUnits) && (
+                {menuUnitNeedsCustomInput(unitQtyUnit, knownUnits) && (
                   <div className="px-4 py-3 border-b border-slate-100">
                     <input
                       type="text"
@@ -2711,11 +2728,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-bold text-slate-500 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
                           <select
-                            value={resolveMenuUnitSelectValue(item.unit, customUnits)}
+                            value={resolveMenuUnitSelectValue(item.unit, knownUnits)}
                             onChange={(e) => updateShoppingItem(item.id || '', 'unit', e.target.value)}
                             className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
                           >
-                            {menuUnitSelectOptions(customUnits).map((u) => (
+                            {menuUnitSelectOptions(knownUnits).map((u) => (
                               <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
                             ))}
                           </select>
@@ -2724,7 +2741,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                             free-text input: a stored custom unit shows
                             its text prefilled; the typed text IS the
                             saved unit and reappears next time. */}
-                        {menuUnitNeedsCustomInput(item.unit, customUnits) && (
+                        {menuUnitNeedsCustomInput(item.unit, knownUnits) && (
                           <input
                             type="text"
                             value={customMenuUnitText(item.unit)}

@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.23';
-export const CURRENT_BUILD_NUMBER = 337;
+export const CURRENT_APP_VERSION = 'v7.6.24';
+export const CURRENT_BUILD_NUMBER = 338;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.24',
+    buildNumber: 338,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Unit များ အားလုံးအတွက် မျှဝေခြင်း',
+    titleEn: 'Shared custom units for everyone',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်။',
+    descriptionEn: 'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
+    changesMy: [
+      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
+    ],
+    changesEn: [
+      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
+    ],
+  },
   {
     version: 'v7.6.23',
     buildNumber: 337,

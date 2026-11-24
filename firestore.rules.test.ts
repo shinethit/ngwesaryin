@@ -717,4 +717,75 @@ describe('Firestore Rules — shared wallet security', () => {
       trialClaimedAt: new Date().toISOString(),
     }));
   });
+
+  // ── v7.6.24 — Shared custom units (public_units) ──
+  // NOTE: same Java caveat as the v7.5.82/v7.5.92 tests above —
+  // written but UNRUN on this VM (no Java for the Firestore
+  // emulator).
+
+  const asGuest = () => testEnv.unauthenticatedContext().firestore();
+
+  const seedPublicUnit = async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'public_units', 'unit_1'), {
+        value: 'ဗူး',
+        addedByUid: OWNER_UID,
+        addedBy: OWNER_EMAIL,
+        createdAt: 1790000000000,
+      });
+    });
+  };
+
+  it('39. [v7.6.24] ANYONE (signed-in, other account, anonymous) CAN read public_units', async () => {
+    await seedPublicUnit();
+    await assertSucceeds(getDoc(doc(asOwner(), 'public_units', 'unit_1')));
+    await assertSucceeds(getDoc(doc(asOutsider(), 'public_units', 'unit_1')));
+    await assertSucceeds(getDoc(doc(asGuest(), 'public_units', 'unit_1')));
+    await assertSucceeds(getDocs(collection(asGuest(), 'public_units')));
+  });
+
+  it('40. [v7.6.24] Signed-in CAN create a unit with their own uid + valid value; wrong uid / empty / overlong / anonymous DENIED', async () => {
+    await assertSucceeds(setDoc(doc(asMember(), 'public_units', 'unit_2'), {
+      value: 'ဗူး',
+      addedByUid: MEMBER_UID,
+      addedBy: MEMBER_EMAIL,
+      createdAt: 1790000000000,
+    }));
+    // …but NOT with someone else's uid.
+    await assertFails(setDoc(doc(asMember(), 'public_units', 'unit_3'), {
+      value: 'ဗူး',
+      addedByUid: OWNER_UID,
+      addedBy: OWNER_EMAIL,
+      createdAt: 1790000000000,
+    }));
+    // …NOT with an empty value.
+    await assertFails(setDoc(doc(asMember(), 'public_units', 'unit_4'), {
+      value: '',
+      addedByUid: MEMBER_UID,
+      addedBy: MEMBER_EMAIL,
+      createdAt: 1790000000000,
+    }));
+    // …NOT with a value over 20 chars (ASCII: bytes == chars).
+    await assertFails(setDoc(doc(asMember(), 'public_units', 'unit_5'), {
+      value: 'a'.repeat(21),
+      addedByUid: MEMBER_UID,
+      addedBy: MEMBER_EMAIL,
+      createdAt: 1790000000000,
+    }));
+    // …and anonymous users cannot create at all.
+    await assertFails(setDoc(doc(asGuest(), 'public_units', 'unit_6'), {
+      value: 'ဗူး',
+      addedByUid: 'anon',
+      addedBy: 'anon',
+      createdAt: 1790000000000,
+    }));
+  });
+
+  it('41. [v7.6.24] Signed-in non-admin CANNOT update/delete a unit (even the adder); admin CAN', async () => {
+    await seedPublicUnit();
+    await assertFails(updateDoc(doc(asOwner(), 'public_units', 'unit_1'), { value: 'ထုပ်' }));
+    await assertFails(deleteDoc(doc(asOwner(), 'public_units', 'unit_1')));
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'public_units', 'unit_1'), { value: 'ထုပ်' }));
+    await assertSucceeds(deleteDoc(doc(asAdmin(), 'public_units', 'unit_1')));
+  });
 });

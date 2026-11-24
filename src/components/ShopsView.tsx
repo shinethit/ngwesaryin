@@ -38,6 +38,7 @@ import {
   computeMenuDiff,
   type ShopMenuStore,
 } from '../utils/shopMenuUpdate';
+import { publishSharedUnits } from '../utils/sharedUnits';
 
 interface ShopsViewProps {
   shops: ShopContact[];
@@ -50,6 +51,10 @@ interface ShopsViewProps {
   onAddShop: (shop: Omit<ShopContact, 'id' | 'userId' | 'createdAt'>) => Promise<boolean>;
   onUpdateShop: (shop: ShopContact) => Promise<boolean>;
   onDeleteShop: (id: string) => Promise<boolean>;
+  // [v7.6.24] Shared custom units from the public_units collection
+  // (App listener) — passed to ShopCard for the unit selects.
+  // Optional: other call sites pass nothing.
+  sharedUnits?: string[];
 }
 
 export const ShopsView: React.FC<ShopsViewProps> = ({
@@ -61,6 +66,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   onAddShop: onAddPrivateShop,
   onUpdateShop: onUpdatePrivateShop,
   onDeleteShop: onDeletePrivateShop,
+  sharedUnits = [],
 }) => {
   // Directory Type: 'public' (collaborative community) or 'private' (private directory)
   const [directoryType, setDirectoryType] = useState<'public' | 'private'>('public');
@@ -467,7 +473,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     // is nothing to write — report success without a pointless write.
     const currentItems = shop.items || [];
     const rows = computeMenuDiff(currentItems, [{ name, price, quantity: 1, unit }]);
-    if (rows.length === 0) return true;
+    if (rows.length === 0) {
+      // Identical line already on the menu — the unit may still
+      // predate sharing, so publish it too (idempotent by doc id).
+      if (currentUser) void publishSharedUnits([unit], currentUser.uid, contributorName);
+      return true;
+    }
     const updatedItems = buildUpdatedMenuItems(currentItems, rows, contributorName);
 
     // [v7.5.82] The write goes through applyShopMenuItems with an
@@ -484,6 +495,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         }),
     };
     const ok = await applyShopMenuItems(shop, isPublic, updatedItems, store);
+    // [v7.6.24] Share the unit with everyone (public_units, like the
+    // Public shop list): fire-and-forget, never throws, never gates
+    // the menu write; skipped without a signed-in uid (guests keep
+    // the local-only list).
+    if (ok && currentUser) void publishSharedUnits([unit], currentUser.uid, contributorName);
     if (!ok && isPublic) {
       // [v7.5.55 C4] Check the safe* return — only the shop's adder/admin
       // may update (rules), so a denied write must show an error instead
@@ -1945,6 +1961,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           isPublic={'addedBy' in shop}
                           lang={lang}
                           menuItemNames={allMenuItemNames}
+                          sharedUnits={sharedUnits}
                           viewMode="compact"
                           hasVoted={votedIds.includes(shop.id)}
                           onToggleVote={handleToggleVote}
@@ -1965,6 +1982,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           isPublic={'addedBy' in shop}
                           lang={lang}
                           menuItemNames={allMenuItemNames}
+                          sharedUnits={sharedUnits}
                           viewMode="grid"
                           hasVoted={votedIds.includes(shop.id)}
                           onToggleVote={handleToggleVote}
@@ -1991,6 +2009,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     isPublic={'addedBy' in shop}
                     lang={lang}
                     menuItemNames={allMenuItemNames}
+                    sharedUnits={sharedUnits}
                     viewMode="compact"
                     hasVoted={votedIds.includes(shop.id)}
                     onToggleVote={handleToggleVote}
@@ -2011,6 +2030,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     isPublic={'addedBy' in shop}
                     lang={lang}
                     menuItemNames={allMenuItemNames}
+                    sharedUnits={sharedUnits}
                     viewMode="grid"
                     hasVoted={votedIds.includes(shop.id)}
                     onToggleVote={handleToggleVote}

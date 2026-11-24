@@ -2073,6 +2073,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               )}
             </div>
 
+            {/* [v7.6.29] While splits are on, the top category picker
+                hides: the split rows ARE the category picks (row 1
+                stays the primary through the state sync — untouched).
+                Splits off -> the picker renders exactly as before. */}
+            {!(splitSectionVisible && splitEnabled) && (
             <button type="button" onClick={() => setIsCategoryPickerOpen(true)} className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left">
               {/* [v7.6.15] Icon/color from the EXPLICITLY picked category
                   only. selectedCatObj falls back to the first /
@@ -2096,6 +2101,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
+            )}
 
             {/* [v7.6.07] Split across categories — general
                 entries only. The toggle starts two rows (row 1 mirrors

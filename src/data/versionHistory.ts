@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.28';
-export const CURRENT_BUILD_NUMBER = 342;
+export const CURRENT_APP_VERSION = 'v7.6.29';
+export const CURRENT_BUILD_NUMBER = 343;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.29',
+    buildNumber: 343,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ခွဲရေးဖွင့်ချိန် ကဏ္ဍရွေးတန်းကို ဖျောက်ထားခြင်း',
+    titleEn: 'Hide the category picker while splitting',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ခွဲရေးဖွင့်ထားချိန်မှာ အပေါ်က ကဏ္ဍရွေးတဲ့ တန်းကို အလိုအလျောက် ဖျောက်ထားမည် — ကဏ္ဍကို ခွဲရေးတန်းတွေထဲမှာပဲ ရွေးရမည်။',
+    descriptionEn: 'While splits are on, the top category picker hides automatically — categories are picked in the split rows instead.',
+    changesMy: [
+      'ခွဲရေးဖွင့်ထားချိန်မှာ အပေါ်က ကဏ္ဍရွေးတဲ့ တန်းကို အလိုအလျောက် ဖျောက်ထားမည် — ကဏ္ဍကို ခွဲရေးတန်းတွေထဲမှာပဲ ရွေးရမည်',
+    ],
+    changesEn: [
+      'While splits are on, the top category picker is hidden automatically — pick categories in the split rows instead.',
+    ],
+  },
   {
     version: 'v7.6.28',
     buildNumber: 342,

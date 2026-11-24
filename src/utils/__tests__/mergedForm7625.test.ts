@@ -139,26 +139,26 @@ describe('merged form — one form, rows drive the total (v7.6.25)', () => {
 
 describe('version pins for v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.28');
-    expect(CURRENT_BUILD_NUMBER).toBe(342);
-    expect(VERSION_JSON.version).toBe('v7.6.28');
-    expect(VERSION_JSON.buildNumber).toBe(342);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.29');
+    expect(CURRENT_BUILD_NUMBER).toBe(343);
+    expect(VERSION_JSON.version).toBe('v7.6.29');
+    expect(VERSION_JSON.buildNumber).toBe(343);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.28');
-    expect(top.buildNumber).toBe(342);
+    expect(top.version).toBe('v7.6.29');
+    expect(top.buildNumber).toBe(343);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Calendar မှာ ကဏ္ဍနာမည်ပြခြင်းနဲ့ အိုင်ကွန်အသစ်များ');
-    expect(top.titleEn).toBe('Category names in Calendar and more icons');
+    expect(top.titleMy).toBe('ခွဲရေးဖွင့်ချိန် ကဏ္ဍရွေးတန်းကို ဖျောက်ထားခြင်း');
+    expect(top.titleEn).toBe('Hide the category picker while splitting');
     expect(top.changesMy).toEqual([
-      'Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်',
+      'ခွဲရေးဖွင့်ထားချိန်မှာ အပေါ်က ကဏ္ဍရွေးတဲ့ တန်းကို အလိုအလျောက် ဖျောက်ထားမည် — ကဏ္ဍကို ခွဲရေးတန်းတွေထဲမှာပဲ ရွေးရမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Calendar day detail shows both the category and sub-category names — category icons expanded and grouped by category.',
+      'While splits are on, the top category picker is hidden automatically — pick categories in the split rows instead.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

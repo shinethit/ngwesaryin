@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.28",
-  "buildNumber": 342,
+  "version": "v7.6.29",
+  "buildNumber": 343,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်"
+    "ခွဲရေးဖွင့်ထားချိန်မှာ အပေါ်က ကဏ္ဍရွေးတဲ့ တန်းကို အလိုအလျောက် ဖျောက်ထားမည် — ကဏ္ဍကို ခွဲရေးတန်းတွေထဲမှာပဲ ရွေးရမည်"
   ],
   "changesEn": [
-    "Calendar day detail shows both the category and sub-category names — category icons expanded and grouped by category."
+    "While splits are on, the top category picker is hidden automatically — pick categories in the split rows instead."
   ]
 }

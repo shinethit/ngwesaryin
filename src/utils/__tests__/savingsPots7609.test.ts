@@ -390,21 +390,21 @@ describe('placement and UI wiring (v7.6.09)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.28');
-    expect(CURRENT_BUILD_NUMBER).toBe(342);
-    expect(VERSION_JSON.version).toBe('v7.6.28');
-    expect(VERSION_JSON.buildNumber).toBe(342);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.29');
+    expect(CURRENT_BUILD_NUMBER).toBe(343);
+    expect(VERSION_JSON.version).toBe('v7.6.29');
+    expect(VERSION_JSON.buildNumber).toBe(343);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.28');
-    expect(entry.buildNumber).toBe(342);
+    expect(entry.version).toBe('v7.6.29');
+    expect(entry.buildNumber).toBe(343);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Calendar မှာ ကဏ္ဍနာမည်ပြခြင်းနဲ့ အိုင်ကွန်အသစ်များ');
+    expect(entry.titleMy).toBe('ခွဲရေးဖွင့်ချိန် ကဏ္ဍရွေးတန်းကို ဖျောက်ထားခြင်း');
     expect(entry.changesMy).toEqual([
-      'Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်',
+      'ခွဲရေးဖွင့်ထားချိန်မှာ အပေါ်က ကဏ္ဍရွေးတဲ့ တန်းကို အလိုအလျောက် ဖျောက်ထားမည် — ကဏ္ဍကို ခွဲရေးတန်းတွေထဲမှာပဲ ရွေးရမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Calendar day detail shows both the category and sub-category names — category icons expanded and grouped by category.',
+      'While splits are on, the top category picker is hidden automatically — pick categories in the split rows instead.',
     ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

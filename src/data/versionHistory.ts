@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.24';
-export const CURRENT_BUILD_NUMBER = 338;
+export const CURRENT_APP_VERSION = 'v7.6.25';
+export const CURRENT_BUILD_NUMBER = 339;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.25',
+    buildNumber: 339,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း',
+    titleEn: 'Single merged entry form',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)။',
+    descriptionEn: 'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
+    changesMy: [
+      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
+    ],
+    changesEn: [
+      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
+    ],
+  },
   {
     version: 'v7.6.24',
     buildNumber: 338,

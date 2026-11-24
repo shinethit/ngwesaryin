@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Boxes, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle, Store } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle, Store } from 'lucide-react';
 import {
   Category,
   PlanType,
@@ -209,45 +209,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const autoSelectedRef = React.useRef(false);
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const [entryMode, setEntryMode] = useState<'unit_qty' | 'shopping_list'>(
-    editTransaction?.unitPrice
-      ? 'unit_qty'
-      : editTransaction?.items && editTransaction.items.length > 0
-      ? 'shopping_list'
-      : 'unit_qty'
-  );
-
-  const [unitPrice, setUnitPrice] = useState<string>(
-    editTransaction?.unitPrice ? String(editTransaction.unitPrice) : ''
-  );
-  const [quantity, setQuantity] = useState<string>(
-    editTransaction?.quantity ? String(editTransaction.quantity) : '1'
-  );
-
-  // [v7.6.01] Unit for the unit_qty entry mode — the shopping-list
-  // rows each carry their own unit, but this mode had none (every
-  // save hardcoded DEFAULT_MENU_UNIT). The stored string is kept
-  // raw here, exactly like a shopping row's `item.unit`: the select
-  // helpers normalize old forms ('တစ်ခု' → 'ခု') at render time
-  // and resolveSavedMenuUnit normalizes at save time.
-  const [unitQtyUnit, setUnitQtyUnit] = useState<string>(
-    editTransaction?.unitPrice && editTransaction.items?.[0]?.unit
-      ? String(editTransaction.items[0].unit)
-      : DEFAULT_MENU_UNIT
-  );
-
   const [shoppingItems, setShoppingItems] = useState<TransactionItem[]>(
     editTransaction?.items && editTransaction.items.length > 0
       ? editTransaction.items
       : [{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]
   );
 
-  const [unitQtyLastEdited, setUnitQtyLastEdited] = useState<'price' | 'qty' | 'total' | null>(null);
   const shoppingLastEditedRef = useRef<Record<string, 'price' | 'qty' | 'amount'>>({});
-  const unitQtyAmountTimerRef = useRef<NodeJS.Timeout | null>(null);
   const shoppingAmountTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
-  // [v7.6.07] Split transactions (unit_qty / general only): when
+  // [v7.6.07] Split transactions (general entries only): when
   // on, the record's total is divided across these rows. Row 1 is
   // kept in sync with the primary category picker (two-way, one
   // source of truth). Restored from editTransaction.splits in the
@@ -361,10 +332,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
       if (editTransaction) {
         if (isNewlyOpened || isEditTxChanged) {
-          if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
           Object.values(shoppingAmountTimersRef.current).forEach(clearTimeout);
           shoppingAmountTimersRef.current = {};
-          setUnitQtyLastEdited(null);
           shoppingLastEditedRef.current = {};
           setType(editTransaction.type);
           setAmount(String(editTransaction.amount));
@@ -378,33 +347,29 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setWalletId(editTransaction.walletId || wallets[0]?.id || 'cash');
           setDate(getLocalDateString(editTransaction.date));
           const fullNote = editTransaction.note || '';
+          // [v7.6.25] One form: the name / extra-note split is computed
+          // once as locals — the same values feed itemName state AND
+          // the single-row restore below, so a legacy unit_qty record
+          // without items[] restores the exact name the old unit_qty
+          // branch showed.
+          let parsedItemName = '';
+          let parsedExtraNote = fullNote;
           if (editTransaction.items && editTransaction.items.length > 0) {
             if (editTransaction.unitPrice) {
-              setItemName(editTransaction.items[0].name || '');
-              setExtraNote(fullNote);
-            } else {
-              setItemName('');
-              setExtraNote(fullNote);
-            }
-          } else if (editTransaction.unitPrice) {
-            const match = fullNote.match(/^(.*) \((.*)\)$/);
-            if (match) {
-              setItemName(match[1].trim());
-              setExtraNote(match[2].trim());
-            } else {
-              setItemName(fullNote);
-              setExtraNote('');
+              parsedItemName = editTransaction.items[0].name || '';
             }
           } else {
             const match = fullNote.match(/^(.*) \((.*)\)$/);
             if (match) {
-              setItemName(match[1].trim());
-              setExtraNote(match[2].trim());
+              parsedItemName = match[1].trim();
+              parsedExtraNote = match[2].trim();
             } else {
-              setItemName(fullNote);
-              setExtraNote('');
+              parsedItemName = fullNote;
+              parsedExtraNote = '';
             }
           }
+          setItemName(parsedItemName);
+          setExtraNote(parsedExtraNote);
           // [v7.5.55] Prefill the shop name on edit — never clear it.
           setShopName(editTransaction.shopName || '');
           setShopInput(editTransaction.shopName || '');
@@ -505,38 +470,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             }
           }
 
-          if (editTransaction.unitPrice) {
-            setEntryMode('unit_qty');
-            setUnitPrice(String(editTransaction.unitPrice));
-            setQuantity(String(editTransaction.quantity || 1));
-            // [v7.6.01] Restore the saved unit from the unit_qty
-            // item — raw, like the shopping rows: an old stored
-            // 'တစ်ခု' opens as preset 'ခု', a custom unit opens as
-            // 'အခြား' with its text prefilled (v7.5.95 U1).
-            setUnitQtyUnit(editTransaction.items?.[0]?.unit || DEFAULT_MENU_UNIT);
-          } else if (editTransaction.items && editTransaction.items.length > 0) {
-            setEntryMode('shopping_list');
+          // [v7.6.25] One form: rows always restore from items[].
+          // A legacy unit_qty record WITHOUT items[] (unitPrice /
+          // quantity only) restores as ONE row with the same name,
+          // price, quantity and unit the old unit_qty branch showed
+          // (no stored unit -> the default unit, as before).
+          // [v7.6.04] An old direct entry (no items, no unitPrice,
+          // name folded into the note) restores as one row at qty 1
+          // with the amount as its price and the default unit (the
+          // note carries no unit).
+          if (editTransaction.items && editTransaction.items.length > 0) {
             // [v7.5.93] Saved rows carry no `id` (validItems drops it),
             // so stamp one per row — row updates match by id, and
             // several id-less rows would all update at once. The
             // serviceType (when saved) rides along untouched; a missing
             // one falls back to the visit's main type at save time.
             setShoppingItems(editTransaction.items.map((it, i) => ({ ...it, id: it.id || `item_${Date.now()}_${i}` })));
+          } else if (editTransaction.unitPrice) {
+            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: editTransaction.unitPrice, quantity: editTransaction.quantity || 1, amount: editTransaction.amount, unit: DEFAULT_MENU_UNIT }]);
           } else {
-            // [v7.6.04] An old direct entry (no items, no unitPrice,
-            // name folded into the note) opens as unit_qty: the name
-            // and extra text come from the shared note parse above,
-            // the amount becomes the unit price at qty 1, and the
-            // unit is the default (the note carries no unit).
-            setEntryMode('unit_qty');
-            setUnitPrice(String(editTransaction.amount));
-            setQuantity('1');
-            setUnitQtyUnit(DEFAULT_MENU_UNIT);
+            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: editTransaction.amount, quantity: 1, amount: editTransaction.amount, unit: DEFAULT_MENU_UNIT }]);
           }
           setNewSubName('');
         }
       } else if (isNewlyOpened) {
-        setUnitQtyLastEdited(null);
         shoppingLastEditedRef.current = {};
         const lastUsedWalletId = typeof localStorage !== 'undefined' ? localStorage.getItem('fortune_last_used_wallet_id') : null;
         let chosenWalletId =
@@ -643,10 +600,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setShopName('');
         setShopInput('');
         setPublishShopOptIn(false);
-        setEntryMode('unit_qty');
-        setUnitPrice('');
-        setQuantity('1');
-        setUnitQtyUnit(DEFAULT_MENU_UNIT);
         setShoppingItems([{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]);
         setSplitEnabled(false);
         setSplitRows([]);
@@ -675,46 +628,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [isOpen, editTransaction, initialType, initialWalletId, wallets, user, fuelLogs, vehicleMaintenance, tirePressureLogs]);
 
-  const computeUnitQtyThird = (edited: 'price' | 'qty' | 'total', pNum: number, qNum: number, tot: number) => {
-    const last = unitQtyLastEdited;
-    if (edited === 'price') {
-      if (last === 'qty') { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); }
-      else if (last === 'total') { if (pNum > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); }
-      else { if (qNum > 0) { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); } else if (pNum > 0 && tot > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); }
-    } else if (edited === 'qty') {
-      if (last === 'price') { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); }
-      else if (last === 'total') { if (qNum > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); }
-      else { if (pNum > 0) { const t = pNum * qNum; setAmount(t > 0 ? String(Number(t.toFixed(2))) : ''); } else if (qNum > 0 && tot > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); }
-    } else {
-      if (last === 'price') { if (pNum > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); }
-      else if (last === 'qty') { if (qNum > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); }
-      else { if (pNum > 0) setQuantity(String(Number((tot / pNum).toFixed(2)))); else if (qNum > 0) setUnitPrice(String(Number((tot / qNum).toFixed(2)))); else { setQuantity('1'); setUnitPrice(String(tot)); } }
-    }
-    setUnitQtyLastEdited(edited);
-  };
-
-  const handleUnitQtyChange = (field: 'price' | 'qty', val: string) => {
-    const p = field === 'price' ? val : unitPrice;
-    const q = field === 'qty' ? val : quantity;
-    const pNum = parseMyanmarNumber(p) || 0;
-    const qNum = parseMyanmarNumber(q) || 0;
-    const tot = parseMyanmarNumber(amount) || 0;
-    if (field === 'price') setUnitPrice(val); else setQuantity(val);
-    computeUnitQtyThird(field, pNum, qNum, tot);
-  };
-
-  const handleUnitQtyAmountChange = (amtStr: string) => {
-    setAmount(amtStr);
-    if (unitQtyAmountTimerRef.current) clearTimeout(unitQtyAmountTimerRef.current);
-    unitQtyAmountTimerRef.current = setTimeout(() => {
-      const tot = parseMyanmarNumber(amtStr) || 0;
-      if (tot <= 0) { setUnitQtyLastEdited('total'); return; }
-      const pNum = parseMyanmarNumber(unitPrice) || 0;
-      const qNum = parseMyanmarNumber(quantity) || 0;
-      computeUnitQtyThird('total', pNum, qNum, tot);
-    }, 500);
-  };
-
   const unifiedItemSuggestions = useMemo(() => {
     return getAllItemSuggestions(allTransactions, categories);
   }, [allTransactions, categories]);
@@ -724,6 +637,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const updated = prev.map((item) => {
         if (item.id === id) {
           const newItem = { ...item, [field]: val };
+          // [v7.6.25] One form: row-name typing filters the shared
+          // item-name datalist, as the old single-item input did.
+          if (field === 'name' && typeof val === 'string') setItemInput(val);
           if (field === 'name' && typeof val === 'string' && val.trim().length >= 1) {
             // [FIX] Only auto-switch if current category is not Vehicle related.
             const isVehCat = categoryId?.startsWith('cat_vehicle') || categoryId?.startsWith('cat_expense_car');
@@ -1245,7 +1161,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const latestPreviousPurchase = useMemo<MatchedPreviousPurchase | null>(() => {
     if (!isOpen || type !== 'expense' || !allTransactions || allTransactions.length === 0) return null;
-    if (entryMode === 'shopping_list' && shoppingItems.length > 1) return null;
+    if (shoppingItems.length > 1) return null;
     const currentTxId = editTransaction?.id;
     const cleanItemName = itemName.trim();
     const cleanItemNameLower = cleanItemName.toLowerCase();
@@ -1254,7 +1170,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const subNameLower = subName.toLowerCase();
     const pastExpenseTxs = allTransactions.filter((t) => t.id !== currentTxId && t.type === 'expense').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     if (pastExpenseTxs.length === 0) return null;
-    const targetItemName = entryMode === 'shopping_list' && shoppingItems[0]?.name?.trim() ? shoppingItems[0].name.trim() : cleanItemName;
+    const targetItemName = shoppingItems[0]?.name?.trim() ? shoppingItems[0].name.trim() : cleanItemName;
     const targetItemLower = targetItemName.toLowerCase();
     if (targetItemLower.length >= 1) {
       for (const tx of pastExpenseTxs) {
@@ -1303,9 +1219,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
     }
     return null;
-  }, [isOpen, type, allTransactions, editTransaction, entryMode, shoppingItems, itemName, subCategoryId, selectedCatObj, effectiveCategoryId, categories, unifiedItemSuggestions]);
+  }, [isOpen, type, allTransactions, editTransaction, shoppingItems, itemName, subCategoryId, selectedCatObj, effectiveCategoryId, categories, unifiedItemSuggestions]);
 
-  const currentEffectivePrice = useMemo(() => (entryMode === 'unit_qty' ? parseMyanmarNumber(unitPrice) || 0 : parseMyanmarNumber(amount) || 0), [entryMode, unitPrice, amount]);
+  // [v7.6.25] One form: the compared price is the single row's unit
+  // price (transfers and multi-row entries compare the total, as
+  // before — the hint is suppressed for multi-row lists anyway).
+  const currentEffectivePrice = useMemo(() => (entryModel === 'general' && !isTransferCategory && shoppingItems.length === 1 ? parseMyanmarNumber(shoppingItems[0].price as any) || 0 : parseMyanmarNumber(amount) || 0), [entryModel, isTransferCategory, shoppingItems, amount]);
 
   const priceComparison = useMemo(() => {
     if (!isOpen || !latestPreviousPurchase || currentEffectivePrice <= 0) return null;
@@ -1317,10 +1236,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const handleApplyPreviousPrice = () => {
     if (!latestPreviousPurchase) return;
     const p = latestPreviousPurchase.amount;
-    if (entryMode === 'unit_qty') {
-      setUnitPrice(String(p));
-      const q = parseMyanmarNumber(quantity) || 1;
-      setAmount(String(p * q));
+    // [v7.6.25] One form: applying a previous price sets the single
+    // row's price (the row math drives the total, as the old
+    // single-item branch did); transfers fall back to the total.
+    if (entryModel === 'general' && !isTransferCategory && shoppingItems.length === 1 && shoppingItems[0].id) {
+      updateShoppingItem(shoppingItems[0].id, 'price', String(p));
     } else {
       setAmount(String(p));
     }
@@ -1461,12 +1381,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   // [v7.6.07] Split-section helpers. The section is offered only
-  // for general unit_qty entries — never for shopping-list or
-  // vehicle entries, and never for transfers (a transfer's
-  // category is the transfer category itself).
-  const splitSectionVisible = entryModel === 'general' && entryMode === 'unit_qty' && !isTransferCategory;
-  // Live total for the remaining indicator: in unit_qty mode the
-  // shared amount input is driven by price × qty.
+  // for general non-transfer entries — never for vehicle entries,
+  // and never for transfers (a transfer's category is the transfer
+  // category itself). [v7.6.25] The unit_qty gate is gone: the one
+  // form's rows drive the shared amount input, so the remaining
+  // indicator reads the same row-sum total.
+  const splitSectionVisible = entryModel === 'general' && !isTransferCategory;
+  // Live total for the remaining indicator: the shared amount input
+  // is driven live by the item rows (updateShoppingItem).
   const splitTotalAmount = parseMyanmarNumber(amount) || 0;
   const splitRowsTotal = rowsToSplits(splitRows).reduce((sum, s) => sum + s.amount, 0);
   const splitRemaining = splitSectionVisible && splitEnabled ? splitRemainder(splitTotalAmount, rowsToSplits(splitRows)) : 0;
@@ -1551,20 +1473,21 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     // like a shopping list — the rows total IS the amount. (The shared
     // amount input is already driven live by updateShoppingItem, so this
     // recompute only re-asserts the same total at save time.)
-    const isMultiRow = entryMode === 'shopping_list' || (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal');
+    // [v7.6.25] One form: a general non-transfer entry's total IS
+    // its rows' total (transfers keep the typed amount — their rows
+    // never render; vehicle multi-row visits keep the rows total,
+    // as before).
+    const isTransferLike = isTransferCategory || subCategoryId === 'sub_tf_out' || subCategoryId === 'sub_tf_in';
+    const isMultiRow = (entryModel === 'general' && !isTransferLike) || (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal');
     if (isMultiRow && validItems.length > 0) {
       finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);
-    } else if (entryMode === 'unit_qty' && parseMyanmarNumber(unitPrice) > 0 && parseMyanmarNumber(quantity) > 0) {
-      finalAmount = parseMyanmarNumber(unitPrice) * parseMyanmarNumber(quantity);
     }
 
     // [v7.5.95 U2] Save typed custom units so they reappear as select
     // options next time (same pattern as custom gas stations).
-    // [v7.6.01] A custom unit typed in the unit_qty mode joins the
-    // same persisted list as the shopping rows (only in that mode —
-    // the state is stale in every other mode and must not leak in).
-    const unitQtyCustomUnits = entryMode === 'unit_qty' ? [resolveSavedMenuUnit(unitQtyUnit)] : [];
-    const newCustomUnits = collectNewCustomUnits([...validItems.map((i) => i.unit), ...unitQtyCustomUnits], customUnits);
+    // [v7.6.25] One form: the row units are the only source — the
+    // single row's unit joins the same list the rows always did.
+    const newCustomUnits = collectNewCustomUnits(validItems.map((i) => i.unit), customUnits);
     if (newCustomUnits.length > 0) setCustomUnits((prev) => [...prev, ...newCustomUnits]);
     // [v7.6.24] Share the new customs with everyone (public_units,
     // like the Public shop list): fire-and-forget, never throws,
@@ -1767,35 +1690,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         targetSubCategory = resolveVehicleServiceSubCategory(maintServiceType, targetSubCategory);
       }
 
-      let finalNote: string | undefined = undefined;
+      // [v7.6.25] One form: every branch saves the same note (the
+      // typed note only). Rows become the saved items for general
+      // non-transfer entries and multi-row vehicle visits; transfers
+      // save no items (their rows never render).
+      const isTransferTx = isTransferCategory || targetSubCategory === 'sub_tf_out' || targetSubCategory === 'sub_tf_in';
+      let finalNote: string | undefined = extraNote.trim() || undefined;
       let txItems: TransactionItem[] | undefined = undefined;
 
       if (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal') {
         // [v7.5.93] Multi-row visit: the rows ARE the transaction items
         // (each with its own serviceType) — the handler creates one
         // maintenance record per distinct row type from them.
-        finalNote = extraNote.trim() || undefined;
         txItems = validItems.length > 0 ? validItems : undefined;
-      } else if (entryModel === 'fuel' || entryModel === 'vehicle_service' || entryModel === 'tire_pressure') {
-        finalNote = extraNote.trim() || undefined;
-      } else if (entryMode === 'shopping_list') {
-        finalNote = extraNote.trim() || undefined;
+      } else if (entryModel === 'general' && !isTransferTx) {
         txItems = validItems.length > 0 ? validItems : undefined;
-      } else if (entryMode === 'unit_qty') {
-        finalNote = extraNote.trim() || undefined;
-        if (itemName.trim()) {
-          // [v7.5.82] A unit_qty entry has one item at one unit, so
-          // it can join the menu diff. [v7.6.01] The unit is the
-          // one picked in the form (normalized like the shopping
-          // rows) — no longer hardcoded to DEFAULT_MENU_UNIT.
-          txItems = [{ id: 'item_1', name: itemName.trim(), price: parseMyanmarNumber(unitPrice) || 0, quantity: parseMyanmarNumber(quantity) || 1, amount: finalAmount, unit: resolveSavedMenuUnit(unitQtyUnit) }];
-        }
       }
 
-      const isTransferTx = isTransferCategory || targetSubCategory === 'sub_tf_out' || targetSubCategory === 'sub_tf_in';
-
-      // [v7.6.07] Split slices: only for general unit_qty entries
-      // (never shopping-list / vehicle / transfer). When the section
+      // [v7.6.07] Split slices: only for general entries
+      // (never vehicle / transfer). When the section
       // is on, the slices must sum EXACTLY to the saved total —
       // otherwise the save is blocked with an inline error. When the
       // section is off (or every row was deleted) the `splits` key is
@@ -1803,7 +1716,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       // for a record that had splits, because a merge write would
       // otherwise keep the old slices (see shouldClearSplits).
       let validSplits: TransactionSplit[] | undefined = undefined;
-      if (entryModel === 'general' && entryMode === 'unit_qty' && splitEnabled && !isTransferTx && splitRows.length > 0) {
+      if (entryModel === 'general' && splitEnabled && !isTransferTx && splitRows.length > 0) {
         const built = rowsToSplits(splitRows);
         const splitError = validateSplits(built, finalAmount);
         if (splitError) {
@@ -1955,8 +1868,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         // [v7.6.07] Splits are written only when the section produced
         // valid slices; the key is absent otherwise (never undefined).
         ...(validSplits ? { splits: validSplits } : {}),
-        unitPrice: entryModel === 'general' && entryMode === 'unit_qty' && parseMyanmarNumber(unitPrice) > 0 ? parseMyanmarNumber(unitPrice) : undefined,
-        quantity: entryModel === 'general' && entryMode === 'unit_qty' && parseMyanmarNumber(quantity) > 0 ? parseMyanmarNumber(quantity) : undefined,
+        // [v7.6.25] One form: a single saved item keeps the
+        // unitPrice/quantity fields the list rendering branches on
+        // (TransactionsView's unitPrice rows); multi-item entries
+        // carry items[] only, as shopping-list saves always did.
+        unitPrice: entryModel === 'general' && !isTransferTx && validItems.length === 1 && validItems[0].price > 0 ? validItems[0].price : undefined,
+        quantity: entryModel === 'general' && !isTransferTx && validItems.length === 1 && validItems[0].quantity > 0 ? validItems[0].quantity : undefined,
       }, vehicleLinkPayload);
       // [v7.5.55] Close ONLY on a successful save. Validation returns
       // above (backfill cancel / double-entry / missing fields) keep the
@@ -2133,7 +2050,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   ) : <span className="text-slate-400">(Same)</span>}
                 </div>
               )}
-              {!(entryModel === "fuel" && vehicleId) && (
+              {/* [v7.6.25] One form: the quick-add buttons bump only
+                  the shared amount state, which the row sum
+                  overwrites at save time — so they are hidden for
+                  general non-transfer entries (transfers and
+                  vehicle models keep them). */}
+              {!(entryModel === "fuel" && vehicleId) && !(entryModel === "general" && !isTransferCategory) && (
                 <div className="flex justify-center gap-1.5 mt-2 flex-wrap">
                   <button type="button" onClick={() => handleAddAmount(1000)} className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-600">+1K</button>
                   <button type="button" onClick={() => handleAddAmount(10000)} className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[11px] font-bold text-slate-600">+10K</button>
@@ -2150,23 +2072,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </div>
               )}
             </div>
-
-            {/* [v7.5.60 S16] Entry-mode choices shown directly instead of
-                hiding behind the ✨ menu — a new user can find the
-                shopping list / unit×qty modes without guessing. */}
-            {entryModel === "general" && (
-              <div className="px-4 py-2 border-b border-slate-100">
-                <div className="text-[11px] font-bold text-slate-500 mb-1.5">{lang === 'my' ? 'ထည့်သွင်းပုံစံ:' : 'Entry mode:'}</div>
-                <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
-                  <button type="button" onClick={() => { setEntryMode("unit_qty"); setEntryModel("general"); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "unit_qty" ? "bg-indigo-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
-                    <Boxes className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ဈေး × အရေအတွက်' : 'Unit × Qty'}</span>
-                  </button>
-                  <button type="button" onClick={() => { setEntryMode("shopping_list"); setEntryModel("general"); }} className={"py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors " + (entryMode === "shopping_list" ? "bg-amber-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900")}>
-                    <ShoppingCart className="w-3.5 h-3.5" /><span>{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
 
             <button type="button" onClick={() => setIsCategoryPickerOpen(true)} className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-left">
               {/* [v7.6.15] Icon/color from the EXPLICITLY picked category
@@ -2192,7 +2097,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <span className="text-slate-300 text-xl shrink-0">›</span>
             </button>
 
-            {/* [v7.6.07] Split across categories — general unit_qty
+            {/* [v7.6.07] Split across categories — general
                 entries only. The toggle starts two rows (row 1 mirrors
                 the primary category); each row picks its own category
                 + amount, and the slices must sum exactly to the total
@@ -2644,50 +2549,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </>
             )}
 
-            {entryMode === "unit_qty" && entryModel === "general" && (
-              <>
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                  <input type="text" list="db-item-suggestions" autoComplete="off" value={itemName} onChange={(e) => { setItemName(e.target.value); setItemInput(e.target.value); }} placeholder={lang === 'my' ? 'ပစ္စည်းအမည် (ဥပမာ - ဆန်)' : 'Item name (e.g. Rice)'} className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none" />
-                </div>
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "ဈေးနှုန်း" : "Unit Price"}</span>
-                  <input type="text" inputMode="decimal" value={unitPrice} onChange={(e) => handleUnitQtyChange("price", e.target.value)} placeholder="0" className="flex-1 min-w-0 text-base font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
-                </div>
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === "my" ? "အရေအတွက်" : "Quantity"}</span>
-                  <input type="text" inputMode="decimal" value={quantity} onChange={(e) => handleUnitQtyChange("qty", e.target.value)} placeholder="1" className="flex-1 min-w-0 text-base font-bold bg-transparent border-0 focus:outline-none font-mono text-right" />
-                </div>
-                {/* [v7.6.01] Unit for the unit_qty mode — mirrors the
-                    shopping-list unit row: the same select helpers
-                    and the same 'အခြား' free-text reveal. */}
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-500 w-20 shrink-0">{lang === 'my' ? 'ယူနစ်' : 'Unit'}</span>
-                  <select
-                    value={resolveMenuUnitSelectValue(unitQtyUnit, knownUnits)}
-                    onChange={(e) => setUnitQtyUnit(e.target.value)}
-                    className="flex-1 min-w-0 min-h-[44px] text-sm font-bold bg-white border border-slate-200 rounded-lg px-2 focus:outline-none"
-                  >
-                    {menuUnitSelectOptions(knownUnits).map((u) => (
-                      <option key={u.value} value={u.value}>{lang === 'my' ? u.labelMy : u.labelEn}</option>
-                    ))}
-                  </select>
-                </div>
-                {menuUnitNeedsCustomInput(unitQtyUnit, knownUnits) && (
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <input
-                      type="text"
-                      value={customMenuUnitText(unitQtyUnit)}
-                      onChange={(e) => setUnitQtyUnit(e.target.value)}
-                      placeholder={lang === 'my' ? 'ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)' : 'Type a unit (e.g. per bottle)'}
-                      className="w-full min-h-[44px] text-sm font-bold bg-amber-50 border border-amber-200 rounded-lg px-2 focus:outline-none"
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            {entryMode === "shopping_list" && entryModel === "general" && (
+            {/* [v7.6.25] One form: the item rows below are the only
+                general entry UI — the old unit_qty branch (single
+                item + price + qty + unit) is deleted; its unit
+                select lives on every row now. Transfers never
+                render rows (their amount is the shared total). */}
+            {entryModel === "general" && !isTransferCategory && (
               <div className="px-3 py-3 border-b border-slate-100">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5"><ShoppingCart className="w-3.5 h-3.5" />{lang === 'my' ? 'ဈေးဝယ်စာရင်း' : 'Shopping List'}</span>

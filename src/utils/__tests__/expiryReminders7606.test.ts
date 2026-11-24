@@ -347,29 +347,29 @@ describe('expiry section wiring — modal + bell badge (v7.6.06)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.24 (build 338)', () => {
+describe('version pins rolled forward to v7.6.25 (build 339)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
-    expect(CURRENT_BUILD_NUMBER).toBe(338);
-    expect(VERSION_JSON.version).toBe('v7.6.24');
-    expect(VERSION_JSON.buildNumber).toBe(338);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
+    expect(CURRENT_BUILD_NUMBER).toBe(339);
+    expect(VERSION_JSON.version).toBe('v7.6.25');
+    expect(VERSION_JSON.buildNumber).toBe(339);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.24');
-    expect(top.buildNumber).toBe(338);
+    expect(top.version).toBe('v7.6.25');
+    expect(top.buildNumber).toBe(339);
     expect(top.releaseDate).toBe('2026-11-24');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Unit များ အားလုံးအတွက် မျှဝေခြင်း');
-    expect(top.titleEn).toBe('Shared custom units for everyone');
+    expect(top.titleMy).toBe('စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း');
+    expect(top.titleEn).toBe('Single merged entry form');
     expect(top.changesMy).toEqual([
-      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
+      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
     ]);
     expect(top.changesEn).toEqual([
-      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
+      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -1,9 +1,12 @@
-// [v7.6.04] The direct ("ပစ္စည်းအမည်") entry mode is removed:
-// only unit_qty + shopping_list remain. Source-text assertions (same
+// [v7.6.25] The two general entry modes are merged into ONE form:
+// item rows only, no mode pills, no entryMode state. The unit_qty
+// branch UI is deleted; its restore/save shape lives on in the rows
+// (a legacy unit_qty record restores as one row; a single saved row
+// still writes unitPrice/quantity). Source-text assertions (same
 // pattern as vehicleTiles7603.test.ts) — the components have no test
 // renderer in this repo (vitest node env, no testing-library). The
-// old-direct restore mapping and the unit_qty save shape are mirrored
-// exactly below; render behaviour is verified by renders.
+// row restore and the row save shape are mirrored exactly below;
+// render behaviour is verified by renders.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { DEFAULT_MENU_UNIT, resolveSavedMenuUnit } from '../shopMenuUpdate';
@@ -31,107 +34,149 @@ function parseNote(fullNote: string): { itemName: string; extraNote: string } {
   return { itemName: fullNote, extraNote: '' };
 }
 
-interface OldDirectTx {
+interface SavedRow {
+  name: string;
+  price: number;
+  quantity: number;
   amount: number;
-  note?: string;
-  items?: { name: string }[];
-  unitPrice?: number;
+  unit?: string;
+  serviceType?: string;
 }
 
-interface RestoredForm {
-  entryMode: 'unit_qty' | 'shopping_list';
-  itemName: string;
-  extraNote: string;
-  unitPrice: string;
-  quantity: string;
+interface LegacyTx {
+  amount: number;
+  note?: string;
+  items?: SavedRow[];
+  unitPrice?: number;
+  quantity?: number;
+}
+
+interface RestoredRow {
+  name: string;
+  price: number;
+  quantity: number;
+  amount: number;
   unit: string;
 }
 
-/** The v7.6.04 edit-restore dispatch, mirrored: an old direct entry
- * (no items, no unitPrice) opens as unit_qty with the amount as the
- * unit price at qty 1 and the default unit. */
-function restoreForEdit(tx: OldDirectTx): RestoredForm {
-  const { itemName, extraNote } = parseNote(tx.note || '');
-  if (tx.unitPrice) {
-    return {
-      entryMode: 'unit_qty',
-      itemName,
-      extraNote,
-      unitPrice: String(tx.unitPrice),
-      quantity: '1',
-      unit: DEFAULT_MENU_UNIT,
-    };
+interface RestoredForm {
+  rows: RestoredRow[];
+  itemName: string;
+  extraNote: string;
+}
+
+/** The v7.6.25 edit-restore, mirrored: rows restore from items[];
+ * a legacy unit_qty record without items[] restores as ONE row with
+ * the same name/price/qty/unit the old unit_qty branch showed; an
+ * old direct entry restores as one row at qty 1 with the amount as
+ * its price and the default unit. */
+function restoreForEdit(tx: LegacyTx): RestoredForm {
+  const fullNote = tx.note || '';
+  let parsedItemName = '';
+  let parsedExtraNote = fullNote;
+  if (tx.items && tx.items.length > 0) {
+    if (tx.unitPrice) {
+      parsedItemName = tx.items[0].name || '';
+    }
+  } else {
+    const parsed = parseNote(fullNote);
+    parsedItemName = parsed.itemName;
+    parsedExtraNote = parsed.extraNote;
   }
+  const itemName = parsedItemName;
+  const extraNote = tx.items && tx.items.length > 0 ? fullNote : parsedExtraNote;
   if (tx.items && tx.items.length > 0) {
     return {
-      entryMode: 'shopping_list',
-      itemName: '',
-      extraNote: tx.note || '',
-      unitPrice: '',
-      quantity: '1',
-      unit: DEFAULT_MENU_UNIT,
+      rows: tx.items.map((it) => ({
+        name: it.name,
+        price: it.price,
+        quantity: it.quantity,
+        amount: it.amount,
+        unit: it.unit || DEFAULT_MENU_UNIT,
+      })),
+      itemName: tx.unitPrice ? tx.items[0].name || '' : '',
+      extraNote,
+    };
+  }
+  if (tx.unitPrice) {
+    return {
+      rows: [{
+        name: parsedItemName,
+        price: tx.unitPrice,
+        quantity: tx.quantity || 1,
+        amount: tx.amount,
+        unit: DEFAULT_MENU_UNIT,
+      }],
+      itemName,
+      extraNote: parsedExtraNote,
     };
   }
   return {
-    entryMode: 'unit_qty',
+    rows: [{
+      name: parsedItemName,
+      price: tx.amount,
+      quantity: 1,
+      amount: tx.amount,
+      unit: DEFAULT_MENU_UNIT,
+    }],
     itemName,
-    extraNote,
-    unitPrice: String(tx.amount),
-    quantity: '1',
-    unit: DEFAULT_MENU_UNIT,
+    extraNote: parsedExtraNote,
   };
 }
 
-/** The unit_qty save fragment, mirrored: one item + unitPrice. */
-function saveUnitQty(
-  itemName: string,
-  unitPrice: number,
-  quantity: number,
-  unit: string,
-): {
+interface SavedShape {
   finalAmount: number;
-  txItems: { id: string; name: string; price: number; quantity: number; amount: number; unit: string }[] | undefined;
+  txItems: SavedRow[] | undefined;
   unitPrice: number | undefined;
   quantity: number | undefined;
-  finalNote: string | undefined;
-} {
-  const finalAmount = unitPrice * quantity;
-  const txItems = itemName.trim()
-    ? [{
-        id: 'item_1',
-        name: itemName.trim(),
-        price: unitPrice || 0,
-        quantity: quantity || 1,
-        amount: finalAmount,
-        unit: resolveSavedMenuUnit(unit),
-      }]
-    : undefined;
+}
+
+/** The merged save shape, mirrored: validItems (named rows with
+ * qty > 0, amount rebuilt as price x qty, unit normalized) drives
+ * the total; exactly one saved row also writes unitPrice/quantity. */
+function saveMerged(rows: RestoredRow[]): SavedShape {
+  const validItems = rows
+    .filter((i) => i.name.trim() && i.quantity > 0)
+    .map((i) => ({
+      name: i.name.trim(),
+      price: i.price || 0,
+      quantity: i.quantity || 1,
+      amount: (i.price || 0) * (i.quantity || 1),
+      unit: resolveSavedMenuUnit(i.unit),
+    }));
+  const finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);
   return {
     finalAmount,
-    txItems,
-    unitPrice: unitPrice > 0 ? unitPrice : undefined,
-    quantity: quantity > 0 ? quantity : undefined,
-    finalNote: undefined,
+    txItems: validItems.length > 0 ? validItems : undefined,
+    unitPrice: validItems.length === 1 && validItems[0].price > 0 ? validItems[0].price : undefined,
+    quantity: validItems.length === 1 && validItems[0].quantity > 0 ? validItems[0].quantity : undefined,
   };
 }
 
-function count(haystack: string, needle: string): number {
-  return haystack.split(needle).length - 1;
-}
-
-/** The mode switcher block: from its label to the category-picker
- * button that follows it (the category row's onClick). */
-function switcherBlock(): string {
-  const start = MODAL_SRC.indexOf('ထည့်သွင်းပုံစံ:');
+/** The merged rows block: from its JSX gate to the previous-price
+ * hint that follows it. */
+function rowsBlock(): string {
+  const start = MODAL_SRC.indexOf('entryModel === "general" && !isTransferCategory && (');
   expect(start).toBeGreaterThan(-1);
-  const end = MODAL_SRC.indexOf('setIsCategoryPickerOpen(true)', start);
+  const end = MODAL_SRC.indexOf('latestPreviousPurchase && currentEffectivePrice', start);
   expect(end).toBeGreaterThan(start);
   return MODAL_SRC.slice(start, end);
 }
 
-describe('direct entry mode removed — two modes only (v7.6.04)', () => {
-  it('the entryMode type is narrowed to unit_qty | shopping_list', () => {
-    expect(MODAL_SRC).toContain("useState<'unit_qty' | 'shopping_list'>");
+describe('merged entry form — one form only (v7.6.25)', () => {
+  it('no entryMode state, no unit_qty branch, no mode pills remain', () => {
+    expect(MODAL_SRC).not.toContain("useState<'unit_qty'");
+    // NOTE: 'entryMode' / 'setEntryMode' are substrings of
+    // 'entryModel' / 'setEntryModel' — pin the call/operator forms.
+    expect(MODAL_SRC).not.toContain('setEntryMode(');
+    expect(MODAL_SRC).not.toContain('entryMode ===');
+    expect(MODAL_SRC).not.toContain('handleUnitQtyChange');
+    expect(MODAL_SRC).not.toContain('unitQtyUnit');
+    expect(MODAL_SRC).not.toContain('Boxes');
+    expect(MODAL_SRC).not.toContain('ထည့်သွင်းပုံစံ:');
+    expect(MODAL_SRC).not.toContain('ဈေး × အရေအတွက်');
+    expect(MODAL_SRC).not.toContain("entryMode === 'unit_qty'");
+    expect(MODAL_SRC).not.toContain('entryMode === "shopping_list"');
   });
 
   it('no quoted direct literal remains anywhere in TransactionModal', () => {
@@ -139,38 +184,39 @@ describe('direct entry mode removed — two modes only (v7.6.04)', () => {
     expect(MODAL_SRC).not.toContain('QuickAddSub');
   });
 
-  it('the switcher renders exactly 2 pills: Unit x Qty + Shopping List', () => {
-    const block = switcherBlock();
-    expect(block).toContain('grid-cols-2');
-    expect(block).not.toContain('grid-cols-3');
-    // Exactly two pill onClicks (double-quoted calls live only in
-    // the switcher; the effect code uses single quotes).
-    expect(count(block, 'setEntryMode("')).toBe(2);
-    expect(block).toContain('setEntryMode("unit_qty")');
-    expect(block).toContain('setEntryMode("shopping_list")');
-    expect(block).toContain('ဈေး × အရေအတွက်');
+  it('the rows render for general non-transfer entries, with the Shopping List header', () => {
+    expect(MODAL_SRC).toContain('entryModel === "general" && !isTransferCategory && (');
+    const block = rowsBlock();
     expect(block).toContain('ဈေးဝယ်စာရင်း');
-    expect(block).not.toContain('ပစ္စည်းအမည်');
+    expect(block).toContain('resolveMenuUnitSelectValue(item.unit, knownUnits)');
+    expect(block).toContain('menuUnitSelectOptions(knownUnits)');
+    expect(block).toContain('menuUnitNeedsCustomInput(item.unit, knownUnits)');
+    expect(block).toContain('customMenuUnitText(item.unit)');
+    expect(block).toContain('ယူနစ် ရိုက်ထည့်ပါ');
+    expect(block).toContain('addShoppingItemRow()');
+    expect(block).toContain('removeShoppingItemRow(item.id || "")');
+    expect(block).toContain('autoGenerateShoppingNote');
   });
 
-  it('fresh open defaults to unit_qty and restore dispatch has no direct branch', () => {
-    // Restore dispatch: the unitPrice branch AND the old-direct
-    // else branch both set unit_qty, plus the fresh-open reset.
-    expect(count(MODAL_SRC, "setEntryMode('unit_qty')")).toBe(3);
-    expect(count(MODAL_SRC, "setEntryMode('shopping_list')")).toBe(1);
-    expect(MODAL_SRC).toContain('setUnitPrice(String(editTransaction.amount))');
+  it('fresh open resets to one blank row; restore dispatch keeps the [v7.6.04] marker', () => {
+    expect(MODAL_SRC).toContain("setShoppingItems([{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }])");
     expect(MODAL_SRC).toContain('[v7.6.04]');
+    expect(MODAL_SRC).toContain('[v7.6.25]');
   });
 
-  it('the direct save fold is gone; the unit_qty save branch is intact', () => {
+  it('the split section is offered for general non-transfer entries', () => {
+    expect(MODAL_SRC).toContain("const splitSectionVisible = entryModel === 'general' && !isTransferCategory;");
+    expect(MODAL_SRC).toContain("entryModel === 'general' && splitEnabled && !isTransferTx && splitRows.length > 0");
+  });
+
+  it('the direct save fold is gone; the merged save writes items + single-row unitPrice/quantity', () => {
     // The direct fold (name + extra folded into one note string)
     // is gone; the shared suggestions helper name is untouched.
     expect(MODAL_SRC).not.toContain('const cleanItem = itemName.trim()');
     expect(MODAL_SRC).not.toContain('`${cleanItem} (${cleanExtra})`');
     expect(MODAL_SRC).not.toContain('const cleanExtra = extraNote.trim()');
-    expect(MODAL_SRC).toContain(
-      "txItems = [{ id: 'item_1', name: itemName.trim()",
-    );
+    expect(MODAL_SRC).toContain('unitPrice: entryModel === \'general\' && !isTransferTx && validItems.length === 1');
+    expect(MODAL_SRC).toContain('quantity: entryModel === \'general\' && !isTransferTx && validItems.length === 1');
   });
 
   it('the lakh hint and the v7.6.03 vehicle tiles are untouched', () => {
@@ -180,58 +226,87 @@ describe('direct entry mode removed — two modes only (v7.6.04)', () => {
   });
 });
 
-describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
-  it('name in the note, no extra text: name restored, amount as unit price, qty 1', () => {
-    const r = restoreForEdit({ amount: 15000, note: 'ဆန်' });
-    expect(r.entryMode).toBe('unit_qty');
-    expect(r.itemName).toBe('ဆန်');
-    expect(r.extraNote).toBe('');
-    expect(r.unitPrice).toBe('15000');
-    expect(r.quantity).toBe('1');
-    expect(r.unit).toBe(DEFAULT_MENU_UNIT);
-  });
-
-  it('name + extra text in parens: extra text is kept as the note', () => {
-    const r = restoreForEdit({ amount: 8000, note: 'ဆန် (မနက်စာ)' });
-    expect(r.entryMode).toBe('unit_qty');
+describe('legacy records restore as one row (v7.6.25 mapping)', () => {
+  it('legacy unit_qty record without items[]: one row, same name/price/qty/default unit', () => {
+    const r = restoreForEdit({ amount: 15000, note: 'ဆန် (မနက်စာ)', unitPrice: 5000, quantity: 3 });
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]).toMatchObject({
+      name: 'ဆန်',
+      price: 5000,
+      quantity: 3,
+      amount: 15000,
+      unit: DEFAULT_MENU_UNIT,
+    });
     expect(r.itemName).toBe('ဆန်');
     expect(r.extraNote).toBe('မနက်စာ');
-    expect(r.unitPrice).toBe('8000');
-    expect(r.quantity).toBe('1');
   });
 
-  it('greedy paren parse: the last paren group is the extra text', () => {
-    const r = restoreForEdit({ amount: 5000, note: 'ဆန် (မနက်) (ည)' });
-    expect(r.itemName).toBe('ဆန် (မနက်)');
-    expect(r.extraNote).toBe('ည');
+  it('legacy unit_qty record with items[]: the saved row unit is kept', () => {
+    const r = restoreForEdit({
+      amount: 10000,
+      note: 'ဆန်',
+      unitPrice: 5000,
+      quantity: 2,
+      items: [{ name: 'ဆန်', price: 5000, quantity: 2, amount: 10000, unit: 'ဗူး' }],
+    });
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]).toMatchObject({ name: 'ဆန်', price: 5000, quantity: 2, unit: 'ဗူး' });
+    expect(r.itemName).toBe('ဆန်');
   });
 
-  it('empty note: blank name, amount still restored as the unit price', () => {
-    const r = restoreForEdit({ amount: 2000, note: '' });
-    expect(r.itemName).toBe('');
-    expect(r.extraNote).toBe('');
-    expect(r.unitPrice).toBe('2000');
-  });
-
-  it('saving the restored entry writes items[0] + unitPrice', () => {
-    const restored = restoreForEdit({ amount: 15000, note: 'ဆန် (မနက်စာ)' });
-    const saved = saveUnitQty(
-      restored.itemName,
-      Number(restored.unitPrice),
-      Number(restored.quantity),
-      restored.unit,
-    );
-    expect(saved.finalAmount).toBe(15000);
-    expect(saved.txItems).toHaveLength(1);
-    expect(saved.txItems?.[0]).toMatchObject({
+  it('old direct entry: one row at qty 1 with the amount as its price', () => {
+    const r = restoreForEdit({ amount: 15000, note: 'ဆန်' });
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]).toMatchObject({
       name: 'ဆန်',
       price: 15000,
       quantity: 1,
       amount: 15000,
       unit: DEFAULT_MENU_UNIT,
     });
-    expect(saved.unitPrice).toBe(15000);
-    expect(saved.quantity).toBe(1);
+    expect(r.itemName).toBe('ဆန်');
+    expect(r.extraNote).toBe('');
+  });
+
+  it('greedy paren parse: the last paren group is the extra text', () => {
+    const r = restoreForEdit({ amount: 5000, note: 'ဆန် (မနက်) (ည)' });
+    expect(r.itemName).toBe('ဆန် (မနက်)');
+    expect(r.extraNote).toBe('ည');
+    expect(r.rows[0].name).toBe('ဆန် (မနက်)');
+  });
+
+  it('empty note: blank name, amount still restored as the row price', () => {
+    const r = restoreForEdit({ amount: 2000, note: '' });
+    expect(r.itemName).toBe('');
+    expect(r.extraNote).toBe('');
+    expect(r.rows[0].price).toBe(2000);
+  });
+
+  it('saving the restored entry writes items[0] + unitPrice', () => {
+    const restored = restoreForEdit({ amount: 15000, note: 'ဆန် (မနက်စာ)', unitPrice: 5000, quantity: 3 });
+    const saved = saveMerged(restored.rows);
+    expect(saved.finalAmount).toBe(15000);
+    expect(saved.txItems).toHaveLength(1);
+    expect(saved.txItems?.[0]).toMatchObject({
+      name: 'ဆန်',
+      price: 5000,
+      quantity: 3,
+      amount: 15000,
+      unit: DEFAULT_MENU_UNIT,
+    });
+    expect(saved.unitPrice).toBe(5000);
+    expect(saved.quantity).toBe(3);
+  });
+
+  it('multi-row save: no unitPrice/quantity, total is the row sum', () => {
+    const saved = saveMerged([
+      { name: 'ဆန်', price: 5000, quantity: 2, amount: 10000, unit: 'ခု' },
+      { name: 'ဆီ', price: 3000, quantity: 1, amount: 3000, unit: 'လီတာ' },
+    ]);
+    expect(saved.finalAmount).toBe(13000);
+    expect(saved.txItems).toHaveLength(2);
+    expect(saved.unitPrice).toBeUndefined();
+    expect(saved.quantity).toBeUndefined();
   });
 
   it('stored data is unchanged until re-save: restore is display-only', () => {
@@ -241,28 +316,30 @@ describe('old direct entries restore into unit_qty (v7.6.04 mapping)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.24 (build 338)', () => {
+describe('version pins rolled forward to v7.6.25 (build 339)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
-    expect(CURRENT_BUILD_NUMBER).toBe(338);
-    expect(VERSION_JSON.version).toBe('v7.6.24');
-    expect(VERSION_JSON.buildNumber).toBe(338);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
+    expect(CURRENT_BUILD_NUMBER).toBe(339);
+    expect(VERSION_JSON.version).toBe('v7.6.25');
+    expect(VERSION_JSON.buildNumber).toBe(339);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
-  it('the top history entry carries the neutral-open entry, no Admin strings', () => {
+  it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.24');
-    expect(top.buildNumber).toBe(338);
+    expect(top.version).toBe('v7.6.25');
+    expect(top.buildNumber).toBe(339);
     expect(top.tag).toBe('fix');
+    expect(top.titleMy).toBe('စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း');
+    expect(top.titleEn).toBe('Single merged entry form');
     expect(top.changesMy).toEqual([
-      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
+      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
     ]);
     expect(top.changesEn).toEqual([
-      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
+      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -177,28 +177,28 @@ describe('select resolution for a stored တစ်- custom (v7.6.10)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.24 (build 338)', () => {
+describe('version pins rolled forward to v7.6.25 (build 339)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
-    expect(CURRENT_BUILD_NUMBER).toBe(338);
-    expect(VERSION_JSON.version).toBe('v7.6.24');
-    expect(VERSION_JSON.buildNumber).toBe(338);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
+    expect(CURRENT_BUILD_NUMBER).toBe(339);
+    expect(VERSION_JSON.version).toBe('v7.6.25');
+    expect(VERSION_JSON.buildNumber).toBe(339);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.24');
-    expect(entry.buildNumber).toBe(338);
+    expect(entry.version).toBe('v7.6.25');
+    expect(entry.buildNumber).toBe(339);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Unit များ အားလုံးအတွက် မျှဝေခြင်း');
-    expect(entry.titleEn).toBe('Shared custom units for everyone');
+    expect(entry.titleMy).toBe('စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း');
+    expect(entry.titleEn).toBe('Single merged entry form');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
+      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
+      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
     );
   });
 

@@ -1,8 +1,10 @@
-// [v7.6.01] Unit select in the Unit × Qty entry mode + the unit
-// beside price × quantity in saved-record details. Source-text
-// assertions (same pattern as unitRename797.test.ts) — the
-// components have no test renderer in this repo (vitest node env,
-// no testing-library); layout behaviour is verified by renders.
+// [v7.6.01] Unit select in the entry form + the unit beside price
+// × quantity in saved-record details. [v7.6.25] The two entry modes
+// are merged: the per-row unit select is now the ONLY unit UI (the
+// unit_qty branch is deleted). Source-text assertions (same pattern
+// as unitRename797.test.ts) — the components have no test renderer
+// in this repo (vitest node env, no testing-library); layout
+// behaviour is verified by renders.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
@@ -61,19 +63,20 @@ const VERSION_JSON = JSON.parse(
   readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
 );
 
-/** The unit_qty section: from its opening guard to the shopping-list section. */
-function unitQtySection(): string {
-  const start = MODAL_SRC.indexOf('entryMode === "unit_qty" && entryModel === "general"');
+/** The merged rows block: from its JSX gate to the previous-price
+ * hint that follows it. */
+function rowsSection(): string {
+  const start = MODAL_SRC.indexOf('entryModel === "general" && !isTransferCategory && (');
   expect(start).toBeGreaterThan(-1);
   const end = MODAL_SRC.indexOf(
-    'entryMode === "shopping_list" && entryModel === "general"',
+    'latestPreviousPurchase && currentEffectivePrice',
     start,
   );
   expect(end).toBeGreaterThan(start);
   return MODAL_SRC.slice(start, end);
 }
 
-describe('resolveSavedMenuUnit — the save normalization the unit_qty mode now shares (v7.6.01)', () => {
+describe('resolveSavedMenuUnit — the save normalization the merged form shares (v7.6.01)', () => {
   it('presets save canonicalized, customs save stripped of a leading number word, အခြား never stores', () => {
     expect(resolveSavedMenuUnit('ပါကင်')).toBe('ပါကင်');
     expect(resolveSavedMenuUnit('ကီလို')).toBe('ကီလို');
@@ -86,7 +89,7 @@ describe('resolveSavedMenuUnit — the save normalization the unit_qty mode now 
     expect(DEFAULT_MENU_UNIT).toBe('ခု');
   });
 
-  it('a custom unit typed in unit_qty mode joins the shared persisted list', () => {
+  it('a custom unit typed in a row joins the shared persisted list', () => {
     expect(collectNewCustomUnits(['ဗူး'], [])).toEqual(['ဗူး']);
     expect(collectNewCustomUnits(['ခု'], [])).toEqual([]);
     expect(collectNewCustomUnits(['ဗူး'], ['ဗူး'])).toEqual([]);
@@ -116,65 +119,49 @@ describe('resolveSavedMenuUnit — the save normalization the unit_qty mode now 
   });
 });
 
-describe('unit_qty entry mode carries its own unit state (v7.6.01)', () => {
-  it('state is declared beside unitPrice/quantity, defaulting to DEFAULT_MENU_UNIT', () => {
+describe('the merged form rows carry per-row units (v7.6.25)', () => {
+  it('no unit_qty state remains; a legacy record restores as one row with the default unit', () => {
+    expect(MODAL_SRC).not.toContain('unitQtyUnit');
+    expect(MODAL_SRC).not.toContain('handleUnitQtyChange');
+    expect(MODAL_SRC).not.toContain("useState<'unit_qty'");
+    // NOTE: 'setEntryMode' is a substring of 'setEntryModel' — pin
+    // the call form.
+    expect(MODAL_SRC).not.toContain('setEntryMode(');
     expect(MODAL_SRC).toContain(
-      'const [unitQtyUnit, setUnitQtyUnit] = useState<string>(',
+      'name: parsedItemName, price: editTransaction.unitPrice',
     );
     expect(MODAL_SRC).toContain(
-      'editTransaction?.unitPrice && editTransaction.items?.[0]?.unit',
+      "setShoppingItems([{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }])",
     );
-    expect(MODAL_SRC).toContain(': DEFAULT_MENU_UNIT');
   });
 
-  it('edit restore reads the saved item unit; fresh open resets to the default', () => {
-    expect(MODAL_SRC).toContain(
-      'setUnitQtyUnit(editTransaction.items?.[0]?.unit || DEFAULT_MENU_UNIT)',
-    );
-    expect(MODAL_SRC).toContain(
-      "setUnitPrice('');\n        setQuantity('1');\n        setUnitQtyUnit(DEFAULT_MENU_UNIT);",
-    );
-    // [v7.6.04] Two such calls now: the fresh-open reset below AND
-    // the old-direct edit restore, which maps the amount to the unit
-    // price at qty 1 with the default unit (the note carries no unit).
-    expect(MODAL_SRC.match(/setUnitQtyUnit\(DEFAULT_MENU_UNIT\)/g)).toHaveLength(2);
-  });
-
-  it('the unit row mirrors the shopping-list unit row, same helpers and reveal', () => {
-    const section = unitQtySection();
+  it('each row mirrors the old unit row, same helpers and reveal', () => {
+    const section = rowsSection();
     expect(section).toContain('ယူနစ်');
     expect(section).toContain(
-      'resolveMenuUnitSelectValue(unitQtyUnit, knownUnits)',
+      'resolveMenuUnitSelectValue(item.unit, knownUnits)',
     );
     expect(section).toContain('menuUnitSelectOptions(knownUnits)');
     expect(section).toContain(
-      'menuUnitNeedsCustomInput(unitQtyUnit, knownUnits)',
+      'menuUnitNeedsCustomInput(item.unit, knownUnits)',
     );
-    expect(section).toContain('customMenuUnitText(unitQtyUnit)');
+    expect(section).toContain('customMenuUnitText(item.unit)');
     expect(section).toContain('ယူနစ် ရိုက်ထည့်ပါ (ဥပမာ - ဗူး)');
-    expect(section).toContain('setUnitQtyUnit(e.target.value)');
-  });
-
-  it('save uses the normalized state unit — never the hardcoded default', () => {
-    expect(MODAL_SRC).toContain('unit: resolveSavedMenuUnit(unitQtyUnit)');
-    expect(MODAL_SRC).not.toContain('unit: DEFAULT_MENU_UNIT');
-  });
-
-  it('a custom unit_qty unit is collected into ngwe_custom_units, mode-gated', () => {
-    expect(MODAL_SRC).toContain(
-      "entryMode === 'unit_qty' ? [resolveSavedMenuUnit(unitQtyUnit)] : []",
-    );
-    expect(MODAL_SRC).toContain(
-      'collectNewCustomUnits([...validItems.map((i) => i.unit), ...unitQtyCustomUnits], customUnits)',
+    expect(section).toContain(
+      "updateShoppingItem(item.id || '', 'unit', e.target.value)",
     );
   });
 
-  it('handleUnitQtyChange is untouched — the unit does not affect amount math', () => {
+  it('save uses each row normalized unit — never a single state unit', () => {
+    expect(MODAL_SRC).toContain('unit: resolveSavedMenuUnit(i.unit)');
+    expect(MODAL_SRC).not.toContain('unit: resolveSavedMenuUnit(unitQtyUnit)');
+  });
+
+  it('a custom row unit is collected into ngwe_custom_units from the rows', () => {
     expect(MODAL_SRC).toContain(
-      "handleUnitQtyChange = (field: 'price' | 'qty', val: string)",
+      'collectNewCustomUnits(validItems.map((i) => i.unit), customUnits)',
     );
-    expect(MODAL_SRC).not.toContain('handleUnitQtyChange("unit"');
-    expect(MODAL_SRC).not.toContain("handleUnitQtyChange('unit'");
+    expect(MODAL_SRC).not.toContain('unitQtyCustomUnits');
   });
 
   it('the price-comparison block stays unit-agnostic (amounts only, no unit assumption)', () => {
@@ -279,8 +266,10 @@ describe('sweep — every sibling quantity display, dispositioned (v7.6.01)', ()
     expect(SHOPCARD_SRC).toContain('normalizeMenuUnit(unit)');
   });
 
-  it('mode-switcher label is a mode name, not data — unchanged', () => {
-    expect(MODAL_SRC).toContain('ဈေး × အရေအတွက်');
+  it('no mode-switcher label remains; the rows header is the only form label (v7.6.25)', () => {
+    expect(MODAL_SRC).not.toContain('ဈေး × အရေအတွက်');
+    expect(MODAL_SRC).not.toContain('ထည့်သွင်းပုံစံ:');
+    expect(MODAL_SRC).toContain('ဈေးဝယ်စာရင်း');
   });
 
   it('VehiclesView has no per-item × line', () => {
@@ -335,11 +324,11 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
     expect(guardFails('')).toBe(true);
   });
 
-  it('the shipped identity is 7.6.24 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
-    expect(CURRENT_BUILD_NUMBER).toBe(338);
-    expect(VERSION_JSON.version).toBe('v7.6.24');
-    expect(VERSION_JSON.buildNumber).toBe(338);
+  it('the shipped identity is 7.6.25 in every version surface', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
+    expect(CURRENT_BUILD_NUMBER).toBe(339);
+    expect(VERSION_JSON.version).toBe('v7.6.25');
+    expect(VERSION_JSON.buildNumber).toBe(339);
   });
 });
 
@@ -375,32 +364,32 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.24 (build 338)', () => {
+describe('Version bump to v7.6.25 (build 339)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.24');
-    expect(CURRENT_BUILD_NUMBER).toBe(338);
-    expect(VERSION_JSON.version).toBe('v7.6.24');
-    expect(VERSION_JSON.buildNumber).toBe(338);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.25');
+    expect(CURRENT_BUILD_NUMBER).toBe(339);
+    expect(VERSION_JSON.version).toBe('v7.6.25');
+    expect(VERSION_JSON.buildNumber).toBe(339);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.24');
-    expect(entry.buildNumber).toBe(338);
+    expect(entry.version).toBe('v7.6.25');
+    expect(entry.buildNumber).toBe(339);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'Unit များ အားလုံးအတွက် မျှဝေခြင်း',
+      'စာရင်းသွင်းပုံစံ တစ်ခုတည်း ပေါင်းခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Shared custom units for everyone',
+      'Single merged entry form',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ကိုယ်တိုင်ထည့်တဲ့ Unit တွေကို Public စာရင်းလို အားလုံးအတွက် မျှဝေမည် — တခြား Device နဲ့ တခြား Account တွေမှာလည်း အလိုအလျောက် ပေါ်မည်',
+      'စာရင်းသွင်းပုံစံကို တစ်ခုတည်း ပေါင်းလိုက်သည် — ပစ္စည်းတန်းများဖြင့် သွင်းပြီး လိုအပ်လျှင် အမျိုးအစားခွဲရေးနိုင်သည် (ပစ္စည်းအများကြီးလည်း ခွဲနိုင်ပြီ)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Share self-added units with everyone, like the Public list — they will appear automatically on other devices and other accounts.',
+      'The entry form is now a single form — enter items as rows and split across categories when needed (multi-item entries can be split too).',
     );
   });
 

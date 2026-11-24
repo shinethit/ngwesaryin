@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
-    expect(CURRENT_BUILD_NUMBER).toBe(341);
-    expect(VERSION_JSON.version).toBe('v7.6.27');
-    expect(VERSION_JSON.buildNumber).toBe(341);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.28');
+    expect(CURRENT_BUILD_NUMBER).toBe(342);
+    expect(VERSION_JSON.version).toBe('v7.6.28');
+    expect(VERSION_JSON.buildNumber).toBe(342);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.27');
-    expect(entry.buildNumber).toBe(341);
+    expect(entry.version).toBe('v7.6.28');
+    expect(entry.buildNumber).toBe(342);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('PDF စာရင်းရှင်းတမ်း ထုတ်ယူနိုင်ခြင်း');
-    expect(entry.titleEn).toBe('PDF statement export');
+    expect(entry.titleMy).toBe('Calendar မှာ ကဏ္ဍနာမည်ပြခြင်းနဲ့ အိုင်ကွန်အသစ်များ');
+    expect(entry.titleEn).toBe('Category names in Calendar and more icons');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

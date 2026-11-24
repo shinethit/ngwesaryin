@@ -270,10 +270,10 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
   });
 
   it('the shipped identity is 7.6.26 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
-    expect(CURRENT_BUILD_NUMBER).toBe(341);
-    expect(VERSION_JSON.version).toBe('v7.6.27');
-    expect(VERSION_JSON.buildNumber).toBe(341);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.28');
+    expect(CURRENT_BUILD_NUMBER).toBe(342);
+    expect(VERSION_JSON.version).toBe('v7.6.28');
+    expect(VERSION_JSON.buildNumber).toBe(342);
   });
 });
 
@@ -301,28 +301,28 @@ describe('app update check detects 7.6.02 over 7.6.01 (renumber)', () => {
   });
 });
 
-describe('Version bump to v7.6.27 (build 341)', () => {
+describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
-    expect(CURRENT_BUILD_NUMBER).toBe(341);
-    expect(VERSION_JSON.version).toBe('v7.6.27');
-    expect(VERSION_JSON.buildNumber).toBe(341);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.28');
+    expect(CURRENT_BUILD_NUMBER).toBe(342);
+    expect(VERSION_JSON.version).toBe('v7.6.28');
+    expect(VERSION_JSON.buildNumber).toBe(342);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.27');
-    expect(entry.buildNumber).toBe(341);
+    expect(entry.version).toBe('v7.6.28');
+    expect(entry.buildNumber).toBe(342);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('PDF စာရင်းရှင်းတမ်း ထုတ်ယူနိုင်ခြင်း');
-    expect(entry.titleEn).toBe('PDF statement export');
+    expect(entry.titleMy).toBe('Calendar မှာ ကဏ္ဍနာမည်ပြခြင်းနဲ့ အိုင်ကွန်အသစ်များ');
+    expect(entry.titleEn).toBe('Category names in Calendar and more icons');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ',
+      'Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list.',
+      'Calendar day detail shows both the category and sub-category names — category icons expanded and grouped by category.',
     );
   });
 

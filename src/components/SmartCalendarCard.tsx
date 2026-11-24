@@ -641,7 +641,11 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                               <CategoryIcon name={catIcon} className="w-3.5 h-3.5" />
                             </div>
                             <div className="min-w-0">
-                              <div className="font-bold text-slate-900 truncate">
+                              {/* [v7.6.28] Both names must stay readable: the
+                                  label wraps instead of truncating, so a
+                                  long "category · sub-category" is fully
+                                  shown and the amount column is untouched. */}
+                              <div className="font-bold text-slate-900 break-words leading-snug">
                                 {detailMainLabel}
                                 {txShared && (
                                   <span className="ml-1.5 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 whitespace-nowrap" title={txOwner ? `${lang === 'my' ? 'ပိုင်ရှင်' : 'Owner'}: ${txOwner}` : undefined}>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Crown, Lock, Plus, Sparkles, Edit2, Trash2, Tag, Layers, ArrowUpRight, ArrowDownLeft, Search, Check, X } from 'lucide-react';
 import { Category, PlanType, SubCategory, Transaction, TransactionType, UNBUDGETED_CATEGORY_ID } from '../types';
 import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
-import { CategoryIcon, AVAILABLE_CATEGORY_ICONS } from './CategoryIcon';
+import { CategoryIcon, CATEGORY_ICON_GROUPS } from './CategoryIcon';
 import { useSearchSeed } from '../hooks/useSearchSeed';
 import { safeGetItem } from '../utils/storage';
 
@@ -878,25 +878,35 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 <label className="block text-slate-700 font-semibold mb-1.5">
                   {lang === 'my' ? 'အိုင်ကွန် ရွေးချယ်ရန်:' : 'Select Icon:'}
                 </label>
-                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-36 overflow-y-auto overflow-x-hidden p-2 bg-slate-50 rounded-xl border border-slate-200">
-                  {AVAILABLE_CATEGORY_ICONS.map((iconName) => {
-                    const isSelected = catIcon === iconName;
-                    return (
-                      <button
-                        key={iconName}
-                        type="button"
-                        onClick={() => setCatIcon(iconName)}
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-                          isSelected
-                            ? 'bg-emerald-600 text-white shadow-xs scale-105'
-                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                        }`}
-                        title={iconName}
-                      >
-                        <CategoryIcon name={iconName} className="w-4 h-4" />
-                      </button>
-                    );
-                  })}
+                <div className="max-h-72 overflow-y-auto overflow-x-hidden p-2 space-y-3 bg-slate-50 rounded-xl border border-slate-200">
+                  {/* [v7.6.28] Icons grouped by category, with headings. */}
+                  {CATEGORY_ICON_GROUPS.map((group) => (
+                    <div key={group.key}>
+                      <div className="px-1 pb-1.5 text-xs font-bold text-slate-500">
+                        {lang === 'my' ? group.labelMy : group.labelEn}
+                      </div>
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                        {group.icons.map((iconName) => {
+                          const isSelected = catIcon === iconName;
+                          return (
+                            <button
+                              key={iconName}
+                              type="button"
+                              onClick={() => setCatIcon(iconName)}
+                              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                              }`}
+                              title={iconName}
+                            >
+                              <CategoryIcon name={iconName} className="w-4 h-4" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

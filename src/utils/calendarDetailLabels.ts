@@ -8,6 +8,9 @@
 // and the fuel line wins when a fuel log is linked — see
 // formatCalendarDetailItemsDetailed / resolveCalendarDetailLine.
 // The names-only formatCalendarDetailItems is unchanged.
+// [v7.6.28] The main line now shows BOTH names when a sub-category
+// exists — `category · sub-category` — so the parent category is
+// readable as text, not only via the row icon.
 import type { SubCategory, TransactionItem } from '../types';
 import { formatMMK } from './formatters';
 import { displayMenuUnit } from './shopMenuUpdate';
@@ -20,7 +23,10 @@ export function resolveCalendarDetailMainLabel(
 ): string {
   if (subCategoryId && category?.subCategories) {
     const sub = category.subCategories.find((s) => s.id === subCategoryId);
-    if (sub) return lang === 'my' ? sub.name : sub.nameEn || sub.name;
+    if (sub) {
+      const subName = lang === 'my' ? sub.name : sub.nameEn || sub.name;
+      return `${categoryName} · ${subName}`;
+    }
   }
   return categoryName;
 }

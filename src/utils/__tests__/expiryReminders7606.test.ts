@@ -347,29 +347,29 @@ describe('expiry section wiring — modal + bell badge (v7.6.06)', () => {
   });
 });
 
-describe('version pins rolled forward to v7.6.27 (build 341)', () => {
+describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
-    expect(CURRENT_BUILD_NUMBER).toBe(341);
-    expect(VERSION_JSON.version).toBe('v7.6.27');
-    expect(VERSION_JSON.buildNumber).toBe(341);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.28');
+    expect(CURRENT_BUILD_NUMBER).toBe(342);
+    expect(VERSION_JSON.version).toBe('v7.6.28');
+    expect(VERSION_JSON.buildNumber).toBe(342);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.27');
-    expect(top.buildNumber).toBe(341);
+    expect(top.version).toBe('v7.6.28');
+    expect(top.buildNumber).toBe(342);
     expect(top.releaseDate).toBe('2026-11-24');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('PDF စာရင်းရှင်းတမ်း ထုတ်ယူနိုင်ခြင်း');
-    expect(top.titleEn).toBe('PDF statement export');
+    expect(top.titleMy).toBe('Calendar မှာ ကဏ္ဍနာမည်ပြခြင်းနဲ့ အိုင်ကွန်အသစ်များ');
+    expect(top.titleEn).toBe('Category names in Calendar and more icons');
     expect(top.changesMy).toEqual([
-      'အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ',
+      'Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list.',
+      'Calendar day detail shows both the category and sub-category names — category icons expanded and grouped by category.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

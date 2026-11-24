@@ -149,15 +149,15 @@ describe('Records Add button removed, floating + kept (v7.5.96 Fix 3)', () => {
   });
 });
 
-describe('Version bump to v7.6.27 (build 341)', () => {
+describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.27');
-    expect(CURRENT_BUILD_NUMBER).toBe(341);
-    expect(VERSION_JSON.version).toBe('v7.6.27');
-    expect(VERSION_JSON.buildNumber).toBe(341);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.28');
+    expect(CURRENT_BUILD_NUMBER).toBe(342);
+    expect(VERSION_JSON.version).toBe('v7.6.28');
+    expect(VERSION_JSON.buildNumber).toBe(342);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.27');
-    expect(entry.buildNumber).toBe(341);
+    expect(entry.version).toBe('v7.6.28');
+    expect(entry.buildNumber).toBe(342);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

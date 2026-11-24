@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.27",
-  "buildNumber": 341,
+  "version": "v7.6.28",
+  "buildNumber": 342,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အစီရင်ခံစာကို PDF စာရင်းရှင်းတမ်းအဖြစ် ထုတ်ယူနိုင်သည် — ကဏ္ဍအလိုက် စုစုပေါင်း+%, ကဏ္ဍခွဲအလိုက် စုစုပေါင်း+% (ကဏ္ဍကို ၁၀၀% ယူ), အသေးစိတ်စာရင်း အပြည့်အစုံ"
+    "Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်"
   ],
   "changesEn": [
-    "Reports can be exported as a PDF statement — category totals with %, sub-category totals with % (parent category = 100%), and the full detailed list."
+    "Calendar day detail shows both the category and sub-category names — category icons expanded and grouped by category."
   ]
 }

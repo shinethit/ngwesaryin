@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.27';
-export const CURRENT_BUILD_NUMBER = 341;
+export const CURRENT_APP_VERSION = 'v7.6.28';
+export const CURRENT_BUILD_NUMBER = 342;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.28',
+    buildNumber: 342,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Calendar မှာ ကဏ္ဍနာမည်ပြခြင်းနဲ့ အိုင်ကွန်အသစ်များ',
+    titleEn: 'Category names in Calendar and more icons',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်။',
+    descriptionEn: 'Calendar day detail shows both the category and sub-category names — and many more icons, grouped by category.',
+    changesMy: [
+      'Calendar မှာ ကဏ္ဍနာမည်နဲ့ ကဏ္ဍခွဲနာမည် နှစ်ခုလုံး ပြမည် — ကဏ္ဍအလိုက် အိုင်ကွန်များ ပိုမိုစုံလင်စွာ ထည့်ပေးသည်',
+    ],
+    changesEn: [
+      'Calendar day detail shows both the category and sub-category names — category icons expanded and grouped by category.',
+    ],
+  },
   {
     version: 'v7.6.27',
     buildNumber: 341,

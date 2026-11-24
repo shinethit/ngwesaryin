@@ -18,22 +18,22 @@ const CAT = {
 };
 
 describe('resolveCalendarDetailMainLabel', () => {
-  it('resolves a matching sub-category in Myanmar', () => {
+  it('shows both the category and sub-category names in Myanmar', () => {
     expect(
       resolveCalendarDetailMainLabel('sub_veh_fuel', CAT, 'ယာဉ်', 'my'),
-    ).toBe('ဆီဖိုး');
+    ).toBe('ယာဉ် · ဆီဖိုး');
   });
 
-  it('resolves a matching sub-category in English', () => {
+  it('shows both the category and sub-category names in English', () => {
     expect(
       resolveCalendarDetailMainLabel('sub_veh_tire', CAT, 'Vehicle', 'en'),
-    ).toBe('Tire');
+    ).toBe('Vehicle · Tire');
   });
 
-  it('falls back to the English category name when nameEn is empty', () => {
+  it('falls back to the Myanmar sub-category name when nameEn is empty', () => {
     expect(
       resolveCalendarDetailMainLabel('sub_veh_parts', CAT, 'Vehicle', 'en'),
-    ).toBe('အပိုပစ္စည်း');
+    ).toBe('Vehicle · အပိုပစ္စည်း');
   });
 
   it('falls back to the category name when the sub-category id has no match', () => {

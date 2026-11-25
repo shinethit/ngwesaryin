@@ -261,27 +261,27 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
-    expect(CURRENT_BUILD_NUMBER).toBe(353);
-    expect(VERSION_JSON.version).toBe('v7.6.39');
-    expect(VERSION_JSON.buildNumber).toBe(353);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
+    expect(CURRENT_BUILD_NUMBER).toBe(354);
+    expect(VERSION_JSON.version).toBe('v7.6.40');
+    expect(VERSION_JSON.buildNumber).toBe(354);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.39');
-    expect(top.buildNumber).toBe(353);
+    expect(top.version).toBe('v7.6.40');
+    expect(top.buildNumber).toBe(354);
     expect(top.releaseDate).toBe('2026-11-25');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေ ကျစ်လစ်စေခြင်း');
-    expect(top.titleEn).toBe('Compact shop cards and buttons');
+    expect(top.titleMy).toBe('ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေ ပုံစံပြန်စီခြင်း');
+    expect(top.titleEn).toBe('Redesigned wallet and shop cards');
     expect(top.changesMy).toEqual([
-      'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Shop cards and buttons are now compact — every detail and button stays in place.',
+      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

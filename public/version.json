@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.39",
-  "buildNumber": 353,
+  "version": "v7.6.40",
+  "buildNumber": 354,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်"
+    "ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်"
   ],
   "changesEn": [
-    "Shop cards and buttons are now compact — every detail and button stays in place."
+    "Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place."
   ]
 }

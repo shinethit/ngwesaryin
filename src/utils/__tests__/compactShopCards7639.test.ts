@@ -32,17 +32,22 @@ const count = (src: string, needle: string) =>
 
 describe('Shop cards are compact (v7.6.39)', () => {
   it('the compact view uses the tightened padding and gaps', () => {
-    expect(SHOP_SRC).toContain('rounded-2xl p-3.5 shadow-sm');
+    expect(SHOP_SRC).toContain('rounded-2xl p-3 shadow-sm');
     expect(SHOP_SRC).toContain('w-10 h-10 rounded-2xl');
-    expect(SHOP_SRC).toContain('<div className="mt-2.5 space-y-1">');
+    // [v7.6.40] Address / phones / KPay share ONE details box.
+    expect(SHOP_SRC).toContain('<div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1">');
     expect(SHOP_SRC).toContain('bg-white p-2 rounded-xl border border-slate-200 space-y-1.5');
   });
 
   it('the grid view uses the tightened padding and gaps', () => {
-    expect(SHOP_SRC).toContain('<div className="p-4 pb-2.5">');
-    expect(SHOP_SRC).toContain('mt-2.5 p-2 bg-emerald-50');
-    expect(SHOP_SRC).toContain('w-full px-4 py-2.5 min-h-[44px]');
-    expect(SHOP_SRC).toContain('<div className="p-3 pt-0.5 space-y-2">');
+    // [v7.6.40] The name moved up into the badge row; the phone
+    // bar, accordion toggle, expanded section, and footer are
+    // tightened; KPay / address / notes share ONE details box.
+    expect(SHOP_SRC).toContain('<div className="p-3.5 pb-2">');
+    expect(SHOP_SRC).toContain('mt-2 p-1.5 bg-emerald-50');
+    expect(SHOP_SRC).toContain('w-full px-3.5 py-2.5 min-h-[44px]');
+    expect(SHOP_SRC).toContain('<div className="px-3 pt-0.5 pb-2.5 space-y-1.5">');
+    expect(SHOP_SRC).toContain('<div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1.5">');
   });
 
   it('the ShopsView card grids and compact lists are tightened', () => {
@@ -92,18 +97,18 @@ describe('Shop cards are compact (v7.6.39)', () => {
     expect(count(SHOPS_SRC, 'min-h-[44px]')).toBe(26);
   });
 
-  it('version pins roll to v7.6.39 / build 353', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
-    expect(CURRENT_BUILD_NUMBER).toBe(353);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.39');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(353);
-    expect(VERSION_JSON.version).toBe('v7.6.39');
-    expect(VERSION_JSON.buildNumber).toBe(353);
+  it('version pins roll to v7.6.40 / build 354', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
+    expect(CURRENT_BUILD_NUMBER).toBe(354);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.40');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(354);
+    expect(VERSION_JSON.version).toBe('v7.6.40');
+    expect(VERSION_JSON.buildNumber).toBe(354);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Shop cards and buttons are now compact — every detail and button stays in place.',
+      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
     );
   });
 });

@@ -269,24 +269,24 @@ describe('shared-wallet mirror + rules (v7.6.31)', () => {
   });
 });
 
-describe('Version bump to v7.6.39 (build 353)', () => {
+describe('Version bump to v7.6.40 (build 354)', () => {
   it('version surfaces agree on v7.6.31 / build 345', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
-    expect(CURRENT_BUILD_NUMBER).toBe(353);
-    expect(VERSION_JSON.version).toBe('v7.6.39');
-    expect(VERSION_JSON.buildNumber).toBe(353);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
+    expect(CURRENT_BUILD_NUMBER).toBe(354);
+    expect(VERSION_JSON.version).toBe('v7.6.40');
+    expect(VERSION_JSON.buildNumber).toBe(354);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.39');
-    expect(entry.buildNumber).toBe(353);
+    expect(entry.version).toBe('v7.6.40');
+    expect(entry.buildNumber).toBe(354);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Shop cards and buttons are now compact — every detail and button stays in place.',
+      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
     );
     expect([...entry.changesMy, ...entry.changesEn].join(' ')).not.toContain('Admin');
   });

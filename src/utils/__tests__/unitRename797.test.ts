@@ -350,17 +350,17 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
-    expect(CURRENT_BUILD_NUMBER).toBe(353);
-    expect(VERSION_JSON.version).toBe('v7.6.39');
-    expect(VERSION_JSON.buildNumber).toBe(353);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
+    expect(CURRENT_BUILD_NUMBER).toBe(354);
+    expect(VERSION_JSON.version).toBe('v7.6.40');
+    expect(VERSION_JSON.buildNumber).toBe(354);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.39');
-    expect(entry.buildNumber).toBe(353);
+    expect(entry.version).toBe('v7.6.40');
+    expect(entry.buildNumber).toBe(354);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေ ကျစ်လစ်စေခြင်း');
-    expect(entry.titleEn).toBe('Compact shop cards and buttons');
+    expect(entry.titleMy).toBe('ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေ ပုံစံပြန်စီခြင်း');
+    expect(entry.titleEn).toBe('Redesigned wallet and shop cards');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

@@ -35,12 +35,17 @@ describe('Wallet cards are compact (v7.6.37)', () => {
     expect(CARD_BLOCK).toContain('bg-white rounded-3xl p-3 border');
     expect(CARD_BLOCK).toContain('w-10 h-10 rounded-2xl');
     expect(CARD_BLOCK).toContain('w-5 h-5 text-white');
-    expect(CARD_BLOCK).toContain('<div className="mt-2.5">');
+    // [v7.6.40] Row A: the name moved up into the header row; the
+    // stacked info block is gone.
+    expect(CARD_BLOCK).toContain('<div className="flex items-start justify-between gap-3">');
+    expect(CARD_BLOCK).toContain('font-bold text-base text-slate-900 tracking-tight break-words min-w-0 flex-1');
     expect(CARD_BLOCK).toContain('flex-wrap mt-1">');
     expect(CARD_BLOCK).toContain('mt-2 pt-1.5 border-t border-slate-100');
-    expect(CARD_BLOCK).toContain('mt-3 pt-2.5 border-t border-slate-100 space-y-1.5');
+    // [v7.6.40] Row B: balance + flow + Reconcile share one row.
+    expect(CARD_BLOCK).toContain('mt-2 pt-2 border-t border-slate-100');
+    expect(CARD_BLOCK).toContain('flex flex-wrap items-baseline gap-x-2 gap-y-0.5');
     expect(CARD_BLOCK).toContain('text-xl font-black');
-    expect(CARD_BLOCK).toContain('p-1.5 bg-slate-50 rounded-xl');
+    expect(CARD_BLOCK).toContain('mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500');
     expect(CARD_BLOCK).toContain('<div className="pt-1">');
   });
 
@@ -54,9 +59,13 @@ describe('Wallet cards are compact (v7.6.37)', () => {
   });
 
   it('every number, label, badge, and button stays with identical behavior', () => {
-    // Balance + flow + foreign pill.
-    expect(CARD_BLOCK).toContain('လက်ကျန်ငွေ');
-    expect(CARD_BLOCK).toContain('Balance');
+    // Balance + flow + foreign pill. [v7.6.40] The separate
+    // "လက်ကျန်ငွေ" label row is gone by design (the balance stays
+    // unmistakable: big bold number + the currency flag in Row A),
+    // so the label strings must NOT appear in the card block — the
+    // balance itself and the flow line do.
+    expect(CARD_BLOCK).not.toContain('လက်ကျန်ငွေ');
+    expect(CARD_BLOCK).toContain('text-xl font-black');
     expect(CARD_BLOCK).toContain('ဒီလ');
     expect(CARD_BLOCK).toContain('This month');
     expect(CARD_BLOCK).toContain('1 {wallet.currency}');
@@ -89,18 +98,18 @@ describe('Wallet cards are compact (v7.6.37)', () => {
     expect(CARD_BLOCK).toContain('col-span-2 py-2 px-2');
   });
 
-  it('version pins roll to v7.6.39 / build 353', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
-    expect(CURRENT_BUILD_NUMBER).toBe(353);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.39');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(353);
-    expect(VERSION_JSON.version).toBe('v7.6.39');
-    expect(VERSION_JSON.buildNumber).toBe(353);
+  it('version pins roll to v7.6.40 / build 354', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
+    expect(CURRENT_BUILD_NUMBER).toBe(354);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.40');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(354);
+    expect(VERSION_JSON.version).toBe('v7.6.40');
+    expect(VERSION_JSON.buildNumber).toBe(354);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Shop cards and buttons are now compact — every detail and button stays in place.',
+      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
     );
   });
 });

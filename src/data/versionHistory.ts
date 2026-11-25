@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.39';
-export const CURRENT_BUILD_NUMBER = 353;
+export const CURRENT_APP_VERSION = 'v7.6.40';
+export const CURRENT_BUILD_NUMBER = 354;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.40',
+    buildNumber: 354,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေ ပုံစံပြန်စီခြင်း',
+    titleEn: 'Redesigned wallet and shop cards',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်လိုက်ပြီ — နာမည်၊ လက်ကျန်ငွေ၊ ဈေးနှုန်းတွေ၊ ဖုန်းနံပါတ်တွေနဲ့ ခလုတ်အကုန် ရှိနေတုန်းပဲ။ ကတ်ထဲက အပိုင်းတွေကို တစ်တန်းတည်း စုစည်းထားတာမို့ ကတ်တွေ ပိုတိုသွားတယ်။',
+    descriptionEn: 'Wallet and shop cards are redesigned to be visibly more compact — names, balances, prices, phone numbers, and every button stay in place. Card sections now share single rows, so the cards are much shorter.',
+    changesMy: [
+      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+    ],
+    changesEn: [
+      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
+    ],
+  },
   {
     version: 'v7.6.39',
     buildNumber: 353,

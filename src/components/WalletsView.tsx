@@ -891,10 +891,14 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   style={{ backgroundColor: wallet.color || '#6366F1' }}
                 />
 
+                {/* [v7.6.40] Row A: the wallet name moves UP into the
+                    header row beside the icon and currency flag — the
+                    stacked header / info blocks are gone. Badges flow
+                    on the row directly beneath. Nothing is removed. */}
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     {/* Icon & Currency Flag */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <div
                         className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xs"
                         style={{ backgroundColor: wallet.color || '#6366F1' }}
@@ -913,76 +917,14 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                       </span>
                     </div>
 
-                    {/* Actions Header */}
-                    <div className="flex items-center gap-1">
-                      {/* Collaborator: Only can leave the shared wallet. Cannot delete or edit. */}
-                      {wallet.isSharedFromOther || (activeWorkspaceId && activeWorkspaceId !== user?.uid) ? (
-                        <button
-                          onClick={() => requestDeleteWallet(wallet)}
-                          className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors flex items-center justify-center"
-                          title={lang === 'my' ? 'Shared Wallet မှ ထွက်ခွာမည် (Leave)' : 'Leave Shared Wallet'}
-                        >
-                          <LogOut className="w-4 h-4 text-amber-600" />
-                        </button>
-                      ) : (
-                        /* Owner: Has full rights to Share, Edit, and Delete */
-                        <>
-                          {/* Share Wallet Button & Permissions Setup */}
-                          <button
-                            onClick={() => setSelectedWalletForShare(wallet)}
-                            className={`min-w-9 min-h-9 p-2.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center ${
-                              wallet.sharedWith && wallet.sharedWith.length > 0
-                                ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
-                                : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
-                            }`}
-                            title={lang === 'my' ? 'Wallet မျှဝေမည် နှင့် ခွင့်ပြုချက်များ သတ်မှတ်မည်' : 'Share Wallet & Set Rights'}
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </button>
-
-                          {/* Edit Wallet Modal Button */}
-                          <button
-                            onClick={() => handleOpenEditWallet(wallet)}
-                            className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors flex items-center justify-center"
-                            title={lang === 'my' ? 'အကောင့် ပြင်ဆင်မည်' : 'Edit Wallet'}
-                          >
-                            <Edit2 className="w-4 h-4 text-slate-600" />
-                          </button>
-
-                          {/* Delete Wallet Button */}
-                          <button
-                            onClick={() => requestDeleteWallet(wallet)}
-                            className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors flex items-center justify-center"
-                            title={
-                              wallet.sharedWith && wallet.sharedWith.length > 0
-                                ? (lang === 'my' ? 'Shared Wallet အပြီးဖျက်မည်' : 'Delete Shared Wallet')
-                                : (lang === 'my' ? 'အကောင့် ဖျက်မည်' : 'Delete Wallet')
-                            }
-                          >
-                            <Trash2 className="w-4 h-4 text-rose-500" />
-                          </button>
-
-                          {/* [v7.5.56] Transfer ownership — owner only, and
-                              only for wallets shared with someone. */}
-                          {wallet.sharedWith && wallet.sharedWith.length > 0 && onTransferOwnership && (
-                            <button
-                              onClick={() => handleTransferOwnershipClick(wallet)}
-                              className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors flex items-center justify-center"
-                              title={lang === 'my' ? 'ပိုင်ဆိုင်မှု လွှဲပြောင်းမည်' : 'Transfer ownership'}
-                            >
-                              <Crown className="w-4 h-4 text-amber-600" />
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Wallet Info */}
-                  <div className="mt-2.5">
-                    <h3 className="font-bold text-base text-slate-900 tracking-tight break-words">
+                    <h3 className="font-bold text-base text-slate-900 tracking-tight break-words min-w-0 flex-1">
                       {lang === 'my' ? wallet.name : wallet.nameEn || wallet.name}
                     </h3>
+
+                  </div>
+
+                  {/* [v7.6.40] Badges + actions share one wrapping row under the header — the name keeps the full header width. */}
+                  <div>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       {wallet.isDefault && (
                         <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -1041,6 +983,69 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                           </span>
                         </span>
                       )}
+                      {/* Actions — at the end of the badges row, so the name keeps the full header width. */}
+                      <div className="flex items-center gap-1 shrink-0 ml-auto">
+                        {/* Collaborator: Only can leave the shared wallet. Cannot delete or edit. */}
+                        {wallet.isSharedFromOther || (activeWorkspaceId && activeWorkspaceId !== user?.uid) ? (
+                          <button
+                            onClick={() => requestDeleteWallet(wallet)}
+                            className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors flex items-center justify-center"
+                            title={lang === 'my' ? 'Shared Wallet မှ ထွက်ခွာမည် (Leave)' : 'Leave Shared Wallet'}
+                          >
+                            <LogOut className="w-4 h-4 text-amber-600" />
+                          </button>
+                        ) : (
+                          /* Owner: Has full rights to Share, Edit, and Delete */
+                          <>
+                            {/* Share Wallet Button & Permissions Setup */}
+                            <button
+                              onClick={() => setSelectedWalletForShare(wallet)}
+                              className={`min-w-9 min-h-9 p-2.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center ${
+                                wallet.sharedWith && wallet.sharedWith.length > 0
+                                  ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
+                                  : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
+                              }`}
+                              title={lang === 'my' ? 'Wallet မျှဝေမည် နှင့် ခွင့်ပြုချက်များ သတ်မှတ်မည်' : 'Share Wallet & Set Rights'}
+                            >
+                              <UserPlus className="w-4 h-4" />
+                            </button>
+
+                            {/* Edit Wallet Modal Button */}
+                            <button
+                              onClick={() => handleOpenEditWallet(wallet)}
+                              className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors flex items-center justify-center"
+                              title={lang === 'my' ? 'အကောင့် ပြင်ဆင်မည်' : 'Edit Wallet'}
+                            >
+                              <Edit2 className="w-4 h-4 text-slate-600" />
+                            </button>
+
+                            {/* Delete Wallet Button */}
+                            <button
+                              onClick={() => requestDeleteWallet(wallet)}
+                              className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors flex items-center justify-center"
+                              title={
+                                wallet.sharedWith && wallet.sharedWith.length > 0
+                                  ? (lang === 'my' ? 'Shared Wallet အပြီးဖျက်မည်' : 'Delete Shared Wallet')
+                                  : (lang === 'my' ? 'အကောင့် ဖျက်မည်' : 'Delete Wallet')
+                              }
+                            >
+                              <Trash2 className="w-4 h-4 text-rose-500" />
+                            </button>
+
+                            {/* [v7.5.56] Transfer ownership — owner only, and
+                                only for wallets shared with someone. */}
+                            {wallet.sharedWith && wallet.sharedWith.length > 0 && onTransferOwnership && (
+                              <button
+                                onClick={() => handleTransferOwnershipClick(wallet)}
+                                className="min-w-9 min-h-9 p-2.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 cursor-pointer transition-colors flex items-center justify-center"
+                                title={lang === 'my' ? 'ပိုင်ဆိုင်မှု လွှဲပြောင်းမည်' : 'Transfer ownership'}
+                              >
+                                <Crown className="w-4 h-4 text-amber-600" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1082,39 +1087,25 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   })()}
                 </div>
 
-              {/* Balance & Rate Section */}
-              <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                    {lang === 'my' ? 'လက်ကျန်ငွေ' : 'Balance'}
-                  </span>
-                  {/* [v7.5.56] Reconcile is hidden for collaborators
-                      without both add rights (finding 28). */}
-                  {canReconcile && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenReconcileModal(wallet.id)}
-                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer hover:underline"
-                      title="Reconcile this wallet balance"
-                    >
-                      <Scale className="w-3 h-3 text-indigo-600" />
-                      <span>{lang === 'my' ? 'စာရင်းညှိမည်' : 'Reconcile'}</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Primary Balance in Wallet's Native Currency
-                    [v7.5.60 S-40] MMK wallets DISPLAY in lakhs (input stays
-                    full kyat); exact kyat is the title tooltip. Foreign
-                    wallets keep their own currency format. */}
-                <div
-                  className="text-xl font-black text-slate-900 tracking-tight"
-                  title={(wallet.currency || 'MMK') === 'MMK' ? formatMMK(wallet.balance) : undefined}
-                >
-                  {(wallet.currency || 'MMK') === 'MMK'
-                    ? formatLakhs(wallet.balance, lang)
-                    : formatCurrency(wallet.balance, wallet.currency)}
-                </div>
+              {/* [v7.6.40] Balance & Rate — Row B: the balance, the
+                  this-month flow, and Reconcile share ONE row. The
+                  separate label row above the balance is gone — the
+                  balance stays unmistakable (big bold number + the
+                  currency flag in Row A). */}
+              <div className="mt-2 pt-2 border-t border-slate-100">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  {/* Primary Balance in Wallet's Native Currency
+                      [v7.5.60 S-40] MMK wallets DISPLAY in lakhs (input stays
+                      full kyat); exact kyat is the title tooltip. Foreign
+                      wallets keep their own currency format. */}
+                  <div
+                    className="text-xl font-black text-slate-900 tracking-tight leading-tight"
+                    title={(wallet.currency || 'MMK') === 'MMK' ? formatMMK(wallet.balance) : undefined}
+                  >
+                    {(wallet.currency || 'MMK') === 'MMK'
+                      ? formatLakhs(wallet.balance, lang)
+                      : formatCurrency(wallet.balance, wallet.currency)}
+                  </div>
 
                 {/* [v7.5.56] This-month flow (compact single line) —
                     stats are stored in MMK (converted before summing),
@@ -1133,33 +1124,48 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   const fmtFlow = (v: number) =>
                     code === 'MMK' ? formatLakhs(v, lang) : formatCurrency(v, code);
                   return (
-                    <div className="flex items-center gap-2 text-[11px] font-mono flex-wrap">
+                    <>
                       <span className="text-slate-400 font-sans text-[10px]">
                         {lang === 'my' ? 'ဒီလ' : 'This month'}
                       </span>
                       {inflow > 0 && (
-                        <span className="text-emerald-600 font-bold" title={code === 'MMK' ? formatMMK(inflow) : undefined}>↗ +{fmtFlow(inflow)}</span>
+                        <span className="text-emerald-600 font-bold font-mono text-[11px]" title={code === 'MMK' ? formatMMK(inflow) : undefined}>↗ +{fmtFlow(inflow)}</span>
                       )}
                       {outflow > 0 && (
-                        <span className="text-rose-600 font-bold" title={code === 'MMK' ? formatMMK(outflow) : undefined}>↘ -{fmtFlow(outflow)}</span>
+                        <span className="text-rose-600 font-bold font-mono text-[11px]" title={code === 'MMK' ? formatMMK(outflow) : undefined}>↘ -{fmtFlow(outflow)}</span>
                       )}
-                      <span className={'font-bold ' + (net >= 0 ? 'text-emerald-700' : 'text-rose-700')} title={code === 'MMK' ? formatMMK(net) : undefined}>
+                      <span className={'font-bold font-mono text-[11px] ' + (net >= 0 ? 'text-emerald-700' : 'text-rose-700')} title={code === 'MMK' ? formatMMK(net) : undefined}>
                         = {net >= 0 ? '+' : '-'}{fmtFlow(Math.abs(net))}
                       </span>
-                    </div>
+                    </>
                   );
                 })()}
+                  {/* [v7.5.56] Reconcile is hidden for collaborators
+                      without both add rights (finding 28). */}
+                  {canReconcile && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenReconcileModal(wallet.id)}
+                      className="ml-auto shrink-0 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer hover:underline"
+                      title="Reconcile this wallet balance"
+                    >
+                      <Scale className="w-3 h-3 text-indigo-600" />
+                      <span>{lang === 'my' ? 'စာရင်းညှိမည်' : 'Reconcile'}</span>
+                    </button>
+                  )}
+                </div>
 
-                {/* Converted MMK & Exchange Rate Pill if Currency !== 'MMK' */}
+                {/* [v7.6.40] Converted MMK & exchange rate — an inline
+                    line under Row B (was a grey pill box). Same text,
+                    same values. */}
                 {isForeign && (
-                  <div className="p-1.5 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1 text-slate-600 font-medium">
-                      <TrendingUp className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                      <span>1 {wallet.currency} = {effectiveRate.toLocaleString()} Ks</span>
-                    </div>
-                    <div className="font-bold text-emerald-700">
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                    <TrendingUp className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span>1 {wallet.currency} = {effectiveRate.toLocaleString()} Ks</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="font-bold text-emerald-700">
                       ≈ {convertedBalance.toLocaleString()} MMK
-                    </div>
+                    </span>
                   </div>
                 )}
 

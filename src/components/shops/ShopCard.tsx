@@ -247,8 +247,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
     return (
       // [v7.5.80] Card polish — soft shadow for lift, crisper icon tile,
       // bolder name, one tidy icon-button row (see actions below).
-      <div className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-3.5 shadow-sm transition-all hover:shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-3 shadow-sm transition-all hover:shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
           {/* Shop identity */}
           <div className="flex items-start gap-2.5 min-w-0">
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ring-1 ring-black/5 shadow-2xs ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
@@ -412,12 +412,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           </div>
         </div>
 
-        {/* [v7.5.55 C32] Compact view: address, secondary phones, KPay —
-            same info as the grid view. */}
+        {/* [v7.6.40] Compact view details — address, secondary
+            phones, and KPay share ONE bordered box with compact
+            lines (were separate boxes). Same info, same buttons. */}
         {(primaryAddress || secondaryPhones.length > 0 || shop.kpayNumber) && (
-          <div className="mt-2.5 space-y-1">
+          <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1">
             {primaryAddress && (
-              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2 rounded-xl border border-slate-200">
+              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed">
                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                 <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
               </div>
@@ -455,7 +456,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </div>
             )}
             {shop.kpayNumber && (
-              <div className="px-3 py-1 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs text-indigo-950 font-semibold min-w-0">
                   <span className="px-1.5 py-0.2 bg-indigo-600 text-white rounded text-[10px] font-black shrink-0">
                     KPay
@@ -481,7 +482,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* Compact View Items expansion */}
         {isItemsExpanded && (
-          <div className="mt-2.5 pt-2.5 border-t border-slate-200 space-y-2">
+          <div className="mt-2 pt-2 border-t border-slate-200 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-slate-600">
               <span className="font-bold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -622,10 +623,16 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       {/* Category-tint accent strip */}
       <div className={`h-1.5 ${tagMeta?.bgColor || 'bg-slate-100'}`} aria-hidden="true" />
       {/* CARD TOP HEADER */}
-      <div className="p-4 pb-2.5">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          {/* Category Pill with Icon */}
-          <div className="flex items-center gap-2 flex-wrap">
+      {/* [v7.6.40] Name + badges share ONE wrapping row — the name
+          moves up beside the category pill instead of sitting on its
+          own line below the badges. Nothing is removed. */}
+      <div className="p-3.5 pb-2">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <h3 className="font-extrabold text-slate-900 text-base tracking-tight leading-normal break-words min-w-0">
+              {shop.name}
+            </h3>
+            {/* Category Pill with Icon */}
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${
                 tagMeta?.bgColor || 'bg-slate-100'
@@ -694,11 +701,6 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           </div>
         </div>
 
-        {/* Shop Name */}
-        <h3 className="font-extrabold text-slate-900 text-base tracking-tight leading-normal break-words">
-          {shop.name}
-        </h3>
-
         {/* Location Subtext */}
         {locationString && (
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 font-medium">
@@ -709,7 +711,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* PRIMARY PHONE CALL BAR */}
         {primaryPhone && (
-          <div className="mt-2.5 p-2 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
+          <div className="mt-2 p-1.5 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
             <a
               href={`tel:${primaryPhone}`}
               className="flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-bold text-xs transition-colors min-w-0 min-h-[44px] py-1"
@@ -778,42 +780,44 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           </div>
         )}
 
-        {/* KPAY INFORMATION PILL */}
-        {shop.kpayNumber && (
-          <div className="mt-2 px-3 py-1 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs text-indigo-950 font-semibold min-w-0">
-              <span className="px-1.5 py-0.2 bg-indigo-600 text-white rounded text-[10px] font-black shrink-0">
-                KPay
-              </span>
-              <span className="truncate">{normalizedKpay || shop.kpayNumber}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleCopyText(`kpay-${shop.id}`, normalizedKpay || shop.kpayNumber || '')}
-              className="min-h-[44px] min-w-[44px] p-2.5 hover:bg-indigo-100 text-indigo-600 rounded-md transition-colors cursor-pointer shrink-0 flex items-center justify-center"
-              title={lang === 'my' ? 'KPay နံပါတ်ကူးမည်' : 'Copy KPay'}
-            >
-              {copiedId === `kpay-${shop.id}` ? (
-                <Check className="w-3.5 h-3.5 text-indigo-600" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* ADDRESS */}
-        {primaryAddress && (
-          <div className="mt-2 text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2 rounded-xl border border-slate-200">
-            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-            <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
-          </div>
-        )}
-
-        {/* GENERAL NOTES */}
-        {shop.generalNotes && (
-          <div className="mt-1.5 text-xs text-slate-600 bg-amber-50/40 p-1.5 rounded-xl border border-amber-100/60 italic line-clamp-2">
-            📝 {shop.generalNotes}
+        {/* [v7.6.40] Details — KPay, address, and notes share ONE
+            bordered box with compact lines (were three separate
+            boxes). Same text, same copy button. */}
+        {(shop.kpayNumber || primaryAddress || shop.generalNotes) && (
+          <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1.5">
+            {shop.kpayNumber && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs text-indigo-950 font-semibold min-w-0">
+                  <span className="px-1.5 py-0.2 bg-indigo-600 text-white rounded text-[10px] font-black shrink-0">
+                    KPay
+                  </span>
+                  <span className="truncate">{normalizedKpay || shop.kpayNumber}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyText(`kpay-${shop.id}`, normalizedKpay || shop.kpayNumber || '')}
+                  className="min-h-[44px] min-w-[44px] p-2.5 hover:bg-indigo-100 text-indigo-600 rounded-md transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                  title={lang === 'my' ? 'KPay နံပါတ်ကူးမည်' : 'Copy KPay'}
+                >
+                  {copiedId === `kpay-${shop.id}` ? (
+                    <Check className="w-3.5 h-3.5 text-indigo-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            )}
+            {primaryAddress && (
+              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
+              </div>
+            )}
+            {shop.generalNotes && (
+              <div className="text-xs text-slate-600 italic line-clamp-2">
+                📝 {shop.generalNotes}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -823,7 +827,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         <button
           type="button"
           onClick={() => setIsItemsExpanded(!isItemsExpanded)}
-          className="w-full px-4 py-2.5 min-h-[44px] flex items-center justify-between text-xs font-bold text-slate-700 hover:bg-slate-100/70 transition-colors cursor-pointer"
+          className="w-full px-3.5 py-2.5 min-h-[44px] flex items-center justify-between text-xs font-bold text-slate-700 hover:bg-slate-100/70 transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -848,9 +852,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         </button>
 
         {isItemsExpanded && (
-          <div className="p-3 pt-0.5 space-y-2">
+          <div className="px-3 pt-0.5 pb-2.5 space-y-1.5">
             {/* Disclaimer */}
-            <div className="p-1.5 bg-rose-50 border border-rose-100 rounded-xl text-[10px] text-rose-800 flex items-start gap-1.5 leading-relaxed">
+            <div className="p-1 bg-rose-50 border border-rose-100 rounded-xl text-[10px] text-rose-800 flex items-start gap-1.5 leading-relaxed">
               <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0 mt-0.5" />
               <span>
                 {lang === 'my'
@@ -983,7 +987,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       </div>
 
       {/* CARD FOOTER ACTIONS */}
-      <div className="p-2.5 bg-slate-50/50 border-t border-slate-200 flex items-center justify-between gap-2 text-xs">
+      <div className="p-2 bg-slate-50/50 border-t border-slate-200 flex items-center justify-between gap-2 text-xs">
         {/* Contributor Attribution */}
         {isPublic && pub && (
           <div className="flex items-center gap-1 text-[11px] text-slate-400 truncate max-w-[130px]" title={pub.addedBy}>

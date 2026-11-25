@@ -341,10 +341,10 @@ describe('auto-select wiring (v7.6.03)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
-    expect(CURRENT_BUILD_NUMBER).toBe(349);
-    expect(VERSION_JSON.version).toBe('v7.6.35');
-    expect(VERSION_JSON.buildNumber).toBe(349);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.36');
+    expect(CURRENT_BUILD_NUMBER).toBe(350);
+    expect(VERSION_JSON.version).toBe('v7.6.36');
+    expect(VERSION_JSON.buildNumber).toBe(350);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -353,20 +353,20 @@ describe('Version bump to v7.6.27 (build 342)', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.35');
-    expect(entry.buildNumber).toBe(349);
+    expect(entry.version).toBe('v7.6.36');
+    expect(entry.buildNumber).toBe(350);
     expect(entry.releaseDate).toBe('2026-11-25');
-    expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('နေရာအပိုယူနေတဲ့ ကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(entry.tag).toBe('fix');
+    expect(entry.titleMy).toBe('PDF စာရင်းရှင်းတမ်း — A4၊ chart များနှင့် iOS ပြင်ဆင်မှု');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Cards that wasted space across the whole app are now compact — every number and button stays in place.',
+      'The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too.',
     ]);
   });
 });

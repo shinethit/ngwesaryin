@@ -261,27 +261,27 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
-    expect(CURRENT_BUILD_NUMBER).toBe(349);
-    expect(VERSION_JSON.version).toBe('v7.6.35');
-    expect(VERSION_JSON.buildNumber).toBe(349);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.36');
+    expect(CURRENT_BUILD_NUMBER).toBe(350);
+    expect(VERSION_JSON.version).toBe('v7.6.36');
+    expect(VERSION_JSON.buildNumber).toBe(350);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.35');
-    expect(top.buildNumber).toBe(349);
+    expect(top.version).toBe('v7.6.36');
+    expect(top.buildNumber).toBe(350);
     expect(top.releaseDate).toBe('2026-11-25');
-    expect(top.tag).toBe('feature');
-    expect(top.titleMy).toBe('နေရာအပိုယူနေတဲ့ ကတ်တွေ ကျစ်လစ်စေခြင်း');
-    expect(top.titleEn).toBe('Compact cards across the whole app');
+    expect(top.tag).toBe('fix');
+    expect(top.titleMy).toBe('PDF စာရင်းရှင်းတမ်း — A4၊ chart များနှင့် iOS ပြင်ဆင်မှု');
+    expect(top.titleEn).toBe('PDF statement: A4 pages, charts, and the iOS fix');
     expect(top.changesMy).toEqual([
-      'အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Cards that wasted space across the whole app are now compact — every number and button stays in place.',
+      'The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

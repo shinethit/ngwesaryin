@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
-    expect(CURRENT_BUILD_NUMBER).toBe(349);
-    expect(VERSION_JSON.version).toBe('v7.6.35');
-    expect(VERSION_JSON.buildNumber).toBe(349);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.36');
+    expect(CURRENT_BUILD_NUMBER).toBe(350);
+    expect(VERSION_JSON.version).toBe('v7.6.36');
+    expect(VERSION_JSON.buildNumber).toBe(350);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.35');
-    expect(entry.buildNumber).toBe(349);
-    expect(entry.changesMy[0]).toBe('အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်');
+    expect(entry.version).toBe('v7.6.36');
+    expect(entry.buildNumber).toBe(350);
+    expect(entry.changesMy[0]).toBe('PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

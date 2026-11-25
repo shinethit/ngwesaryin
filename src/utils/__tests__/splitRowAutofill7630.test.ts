@@ -125,22 +125,22 @@ describe('addSplitRow wiring (v7.6.30)', () => {
 
 describe('Version bump to v7.6.30 (build 344)', () => {
   it('version surfaces agree on v7.6.30 / build 344', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
-    expect(CURRENT_BUILD_NUMBER).toBe(349);
-    expect(VERSION_JSON.version).toBe('v7.6.35');
-    expect(VERSION_JSON.buildNumber).toBe(349);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.36');
+    expect(CURRENT_BUILD_NUMBER).toBe(350);
+    expect(VERSION_JSON.version).toBe('v7.6.36');
+    expect(VERSION_JSON.buildNumber).toBe(350);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.35');
-    expect(entry.buildNumber).toBe(349);
+    expect(entry.version).toBe('v7.6.36');
+    expect(entry.buildNumber).toBe(350);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Cards that wasted space across the whole app are now compact — every number and button stays in place.',
+      'The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too.',
     );
   });
 

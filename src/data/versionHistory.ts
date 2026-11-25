@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.35';
-export const CURRENT_BUILD_NUMBER = 349;
+export const CURRENT_APP_VERSION = 'v7.6.36';
+export const CURRENT_BUILD_NUMBER = 350;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.36',
+    buildNumber: 350,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'PDF စာရင်းရှင်းတမ်း — A4၊ chart များနှင့် iOS ပြင်ဆင်မှု',
+    titleEn: 'PDF statement: A4 pages, charts, and the iOS fix',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'PDF စာရင်းရှင်းတမ်းကို A4 စာမျက်နှာဖြင့် ထုတ်နိုင်ပြီ — ဝင်ငွေ/ထွက်ငွေ/လက်ကျန်ကို pie chart နဲ့၊ ကဏ္ဍတွေကို bar chart နဲ့ ပြမယ်။ အသေးစိတ်စာရင်းကို ကဏ္ဍ → ကဏ္ဍခွဲ → ရက်စွဲ အလိုက် စီထားတယ်။ iPhone မှာ Home Screen က ဖွင့်ထားရင်လည်း စာရင်းရှင်းတမ်းကို ကြည့်ပြီး Browser ကနေ Print လုပ်နိုင်အောင် ပြင်ထားတယ်။',
+    descriptionEn: 'The PDF statement now prints on A4 pages — income, expense and balance as a pie chart and categories as a bar chart. The detail list is grouped category → sub-category → date. On iPhone, the statement can be viewed from the installed app and printed from the browser.',
+    changesMy: [
+      'PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်',
+    ],
+    changesEn: [
+      'The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too.',
+    ],
+  },
   {
     version: 'v7.6.35',
     buildNumber: 349,

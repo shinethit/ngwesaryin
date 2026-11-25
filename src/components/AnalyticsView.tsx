@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { BarChart3, Wallet, ShoppingBag } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, ShopContact, PublicShop } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
@@ -7,6 +7,15 @@ import { convertToMMK } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { buildStatementData, type StatementData } from '../utils/statementData';
 import { StatementPrintView } from './StatementPrintView';
+import { StatementPrintPreview } from './StatementPrintPreview';
+import {
+  clearStatementPreview,
+  isPrintBlockedEnvironment,
+  isPrintPreviewHash,
+  loadStatementPreview,
+  readPrintEnvironment,
+  saveStatementPreview,
+} from '../utils/printFallback';
 import { useAuth } from '../context/AuthContext';
 import { ItemPriceAnalyticsView } from './ItemPriceAnalyticsView';
 
@@ -101,6 +110,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   );
   const [statementEnd, setStatementEnd] = useState(() => getLocalDateString(new Date()));
   const [printData, setPrintData] = useState<StatementData | null>(null);
+  // [v7.6.36] iOS standalone fallback: the statement shown
+  // full-screen when window.print() cannot open a print sheet.
+  const [printPreview, setPrintPreview] = useState<{
+    data: StatementData;
+    lang: 'my' | 'en';
+    walletScopeLabel: string;
+  } | null>(null);
 
   const statementBounds = useMemo(() => {
     const now = new Date();
@@ -116,23 +132,26 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     return monthBounds(now);
   }, [statementPeriod, statementStart, statementEnd]);
 
-  // [v7.6.27] Print only after the portal has painted, and unmount it
-  // once the print dialog closes (afterprint fires on cancel too).
-  // The data is built from live state at click time — never a stale
-  // snapshot.
+  // [v7.6.36] Print-preview restore: a statement link opened in a
+  // real browser tab restores the saved preview and attempts to
+  // print (best-effort — the preview's Print button is the
+  // fallback if the attempt is ignored). Every tab view mounts
+  // on boot, so this runs even when Reports is not the active tab.
   useEffect(() => {
-    if (!printData) return;
-    let cancelled = false;
-    const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!cancelled && typeof window.print === 'function') window.print();
-      });
+    if (typeof window === 'undefined') return;
+    if (!isPrintPreviewHash(window.location.hash)) return;
+    const saved = loadStatementPreview();
+    if (!saved) return;
+    setPrintPreview({
+      data: saved.data,
+      lang: saved.lang,
+      walletScopeLabel: saved.walletScopeLabel,
     });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-    };
-  }, [printData]);
+    const timer = window.setTimeout(() => {
+      if (typeof window.print === 'function') window.print();
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const onAfterPrint = () => setPrintData(null);
@@ -170,17 +189,38 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
   // [v7.6.27] Build the statement from live state at click time:
   // included-wallet scope + the statement period only.
+  // [v7.6.36] iOS standalone has no print sheet, so window.print()
+  // is a silent no-op there: show the full-screen preview instead.
+  // Otherwise mount the portal synchronously (flushSync) and call
+  // window.print() in the SAME tap gesture — the old double-rAF
+  // effect detached the call from the gesture, which iOS Safari
+  // ignores even in browser mode.
   const handlePrintStatement = () => {
-    setPrintData(
-      buildStatementData({
-        transactions: scopedTransactions,
-        categories,
-        convertAmount: (tx, amount) => sharedConvertTxToMMK(walletMap, wallets, tx, amount),
-        start: statementBounds.start,
-        end: statementBounds.end,
+    const data = buildStatementData({
+      transactions: scopedTransactions,
+      categories,
+      convertAmount: (tx, amount) => sharedConvertTxToMMK(walletMap, wallets, tx, amount),
+      start: statementBounds.start,
+      end: statementBounds.end,
+      lang,
+    });
+    const scopeLabel =
+      lang === 'my'
+        ? `ပါဝင်သည့် ပိုက်ဆံအိတ် ${scopedWallets.length} ခု`
+        : `Included wallets: ${scopedWallets.length}`;
+    if (isPrintBlockedEnvironment(readPrintEnvironment())) {
+      saveStatementPreview({
+        data,
         lang,
-      }),
-    );
+        walletScopeLabel: scopeLabel,
+        savedAt: Date.now(),
+      });
+      setPrintData(null);
+      setPrintPreview({ data, lang, walletScopeLabel: scopeLabel });
+      return;
+    }
+    flushSync(() => setPrintData(data));
+    if (typeof window.print === 'function') window.print();
   };
 
   const totalIncome = scopedTransactions
@@ -578,6 +618,32 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           </div>,
           document.body,
         )}
+
+      {/* [v7.6.36] iOS standalone print preview (see handlePrintStatement). */}
+      {printPreview && (
+        <StatementPrintPreview
+          data={printPreview.data}
+          lang={printPreview.lang}
+          walletScopeLabel={printPreview.walletScopeLabel}
+          onPrint={() => {
+            if (typeof window.print === 'function') window.print();
+          }}
+          onClose={() => {
+            clearStatementPreview();
+            setPrintPreview(null);
+            if (
+              typeof window !== 'undefined' &&
+              isPrintPreviewHash(window.location.hash)
+            ) {
+              window.history.replaceState(
+                null,
+                '',
+                window.location.pathname + window.location.search,
+              );
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

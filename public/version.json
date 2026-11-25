@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.35",
-  "buildNumber": 349,
+  "version": "v7.6.36",
+  "buildNumber": 350,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်"
+    "PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်"
   ],
   "changesEn": [
-    "Cards that wasted space across the whole app are now compact — every number and button stays in place."
+    "The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too."
   ]
 }

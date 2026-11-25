@@ -152,9 +152,235 @@
    portal (#ngwe-print-root, a direct child of <body>) stays hidden
    on screen; in print every other top-level node is hidden and only
    the statement prints, in normal flow so the browser paginates it.
-   No app chrome, no modals, no floating bar in the printout. */
+   No app chrome, no modals, no floating bar in the printout.
+   [v7.6.36] @page forces A4 (browsers default to Letter, which is
+   what users saw). The statement styles live OUTSIDE @media print
+   (scoped under .stmt) so the iOS standalone preview overlay
+   (#ngwe-preview-root, v7.6.36) renders identically on screen;
+   in print the overlay's fixed positioning is neutralised and its
+   toolbar (.stmt-no-print) is hidden. */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
 #ngwe-print-root {
   display: none;
+}
+
+.stmt {
+  color: #000;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.stmt .stmt-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.stmt .stmt-meta {
+  margin: 0 0 12px;
+  color: #444;
+}
+
+.stmt .stmt-heading {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 16px 0 6px;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.stmt .stmt-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 8px;
+}
+
+.stmt .stmt-table th,
+.stmt .stmt-table td {
+  border-bottom: 1px solid #bbb;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.stmt .stmt-table thead {
+  display: table-header-group;
+}
+
+.stmt .stmt-table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.stmt .stmt-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.stmt .stmt-nowrap {
+  white-space: nowrap;
+}
+
+.stmt .stmt-income {
+  color: #047857;
+}
+
+.stmt .stmt-expense {
+  color: #be123c;
+}
+
+.stmt .stmt-group-row th {
+  background: #eee;
+  font-weight: 700;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.stmt .stmt-subhead-row th {
+  background: #f8fafc;
+  font-weight: 700;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.stmt .stmt-empty {
+  color: #444;
+  margin: 0 0 8px;
+}
+
+.stmt .stmt-split {
+  color: #444;
+}
+
+/* [v7.6.36] Donut chart (income vs expense; balance = centre label). */
+.stmt .stmt-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 8px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.stmt .stmt-donut {
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.stmt .stmt-donut-balance {
+  font-size: 10px;
+  font-weight: 800;
+  fill: #000;
+}
+
+.stmt .stmt-donut-label {
+  font-size: 8px;
+  fill: #444;
+}
+
+.stmt .stmt-legend {
+  flex: 1;
+  min-width: 0;
+}
+
+.stmt .stmt-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.stmt .stmt-legend-row:last-child {
+  border-bottom: none;
+}
+
+.stmt .stmt-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.stmt .stmt-dot-income {
+  background: #047857;
+}
+
+.stmt .stmt-dot-expense {
+  background: #be123c;
+}
+
+.stmt .stmt-dot-balance {
+  background: #94a3b8;
+}
+
+.stmt .stmt-legend-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.stmt .stmt-legend-row .stmt-num {
+  min-width: 52px;
+}
+
+/* [v7.6.36] Horizontal bar chart (categories + sub-categories). */
+.stmt .stmt-bars-note {
+  color: #444;
+  margin: 0 0 8px;
+}
+
+.stmt .stmt-bar-group {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin: 0 0 6px;
+}
+
+.stmt .stmt-bar-row {
+  margin: 0 0 4px;
+}
+
+.stmt .stmt-bar-row.stmt-bar-sub {
+  margin-left: 16px;
+}
+
+.stmt .stmt-bar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.stmt .stmt-bar-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.stmt .stmt-bar-sub .stmt-bar-name {
+  font-weight: 400;
+}
+
+.stmt .stmt-bar-track {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.stmt .stmt-bar-fill {
+  height: 100%;
+  background: #059669;
+  border-radius: 9999px;
+}
+
+.stmt .stmt-bar-fill-sub {
+  background: #6ee7b7;
 }
 
 @media print {
@@ -163,96 +389,27 @@
     background: #fff !important;
   }
 
-  body > *:not(#ngwe-print-root) {
+  body > *:not(#ngwe-print-root):not(#ngwe-preview-root) {
     display: none !important;
   }
 
   #ngwe-print-root {
     display: block !important;
-    color: #000;
-    background: #fff;
-    font-size: 12px;
-    line-height: 1.45;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  #ngwe-print-root .stmt-title {
-    font-size: 18px;
-    font-weight: 800;
-    margin: 0 0 4px;
+  #ngwe-preview-root {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  #ngwe-print-root .stmt-meta {
-    margin: 0 0 12px;
-    color: #444;
-  }
-
-  #ngwe-print-root .stmt-heading {
-    font-size: 14px;
-    font-weight: 800;
-    margin: 16px 0 6px;
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-
-  #ngwe-print-root .stmt-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0 0 8px;
-  }
-
-  #ngwe-print-root .stmt-table th,
-  #ngwe-print-root .stmt-table td {
-    border-bottom: 1px solid #bbb;
-    padding: 4px 6px;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  #ngwe-print-root .stmt-table thead {
-    display: table-header-group;
-  }
-
-  #ngwe-print-root .stmt-table tr {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  #ngwe-print-root .stmt-num {
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  #ngwe-print-root .stmt-nowrap {
-    white-space: nowrap;
-  }
-
-  #ngwe-print-root .stmt-income {
-    color: #047857;
-  }
-
-  #ngwe-print-root .stmt-expense {
-    color: #be123c;
-  }
-
-  #ngwe-print-root .stmt-cat-row th,
-  #ngwe-print-root .stmt-cat-row td {
-    font-weight: 700;
-  }
-
-  #ngwe-print-root .stmt-date-row th {
-    background: #eee;
-    font-weight: 700;
-  }
-
-  #ngwe-print-root .stmt-empty {
-    color: #444;
-    margin: 0 0 8px;
-  }
-
-  #ngwe-print-root .stmt-split {
-    color: #444;
+  .stmt-no-print {
+    display: none !important;
   }
 }
 

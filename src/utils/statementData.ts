@@ -69,6 +69,100 @@ export function percentOf(part: number, whole: number): number | null {
   return Math.round((part / whole) * 100);
 }
 
+/** Income-vs-expense shares of the total money flow, for the
+    statement pie/donut chart (v7.6.36). The balance is NOT a
+    slice — it is income minus expense — so only two shares
+    exist; the balance is shown as the chart's centre label. */
+export function flowShares(
+  income: number,
+  expense: number,
+): { incomeShare: number; expenseShare: number } {
+  const total = income + expense;
+  if (!(total > 0)) return { incomeShare: 0, expenseShare: 0 };
+  return { incomeShare: income / total, expenseShare: expense / total };
+}
+
+export interface StatementDetailGroup {
+  /** Resolved display name of the sub-category; the General label
+      when the record has no sub-category. */
+  subName: string;
+  rows: StatementDetailRow[];
+}
+
+export interface StatementCategoryGroup {
+  /** Resolved display name of the category. */
+  categoryName: string;
+  subs: StatementDetailGroup[];
+}
+
+/** Group detail rows category → sub-category → records (v7.6.36).
+    Category order follows the bar-chart section (data.categories,
+    total desc); categories that appear only in the detail list
+    (income categories — the chart is expense-only) follow after,
+    ordered by their group total desc. Sub-category order follows
+    the chart's sub order for charted categories, otherwise group
+    total desc. Records keep the date-ascending order of
+    data.details within each sub-group (the sort is stable and
+    rows are appended in details order). */
+export function groupStatementDetails(
+  data: Pick<StatementData, 'categories' | 'details'>,
+  generalLabel: string,
+): StatementCategoryGroup[] {
+  const chartOrder = new Map<string, number>();
+  const chartSubs = new Map<string, string[]>();
+  data.categories.forEach((cat, i) => {
+    chartOrder.set(cat.name, i);
+    chartSubs.set(cat.name, cat.subs.map((s) => s.name));
+  });
+
+  const byCat = new Map<string, Map<string, StatementDetailRow[]>>();
+  for (const row of data.details) {
+    let subs = byCat.get(row.categoryName);
+    if (!subs) {
+      subs = new Map();
+      byCat.set(row.categoryName, subs);
+    }
+    const subKey = row.subName ?? generalLabel;
+    const rows = subs.get(subKey);
+    if (rows) rows.push(row);
+    else subs.set(subKey, [row]);
+  }
+
+  const sum = (rows: StatementDetailRow[]) =>
+    rows.reduce((s, r) => s + r.amount, 0);
+
+  const groups: StatementCategoryGroup[] = Array.from(byCat.entries()).map(
+    ([categoryName, subs]) => {
+      const chartSubOrder = chartSubs.get(categoryName);
+      const subGroups: StatementDetailGroup[] = Array.from(subs.entries()).map(
+        ([subName, rows]) => ({ subName, rows }),
+      );
+      subGroups.sort((a, b) => {
+        if (chartSubOrder) {
+          const ai = chartSubOrder.indexOf(a.subName);
+          const bi = chartSubOrder.indexOf(b.subName);
+          if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        }
+        return sum(b.rows) - sum(a.rows) || a.subName.localeCompare(b.subName);
+      });
+      return { categoryName, subs: subGroups };
+    },
+  );
+
+  groups.sort((a, b) => {
+    const ai = chartOrder.get(a.categoryName);
+    const bi = chartOrder.get(b.categoryName);
+    if (ai !== undefined || bi !== undefined) {
+      return (ai === undefined ? 999 : ai) - (bi === undefined ? 999 : bi);
+    }
+    const at = a.subs.reduce((s, g) => s + sum(g.rows), 0);
+    const bt = b.subs.reduce((s, g) => s + sum(g.rows), 0);
+    return bt - at || a.categoryName.localeCompare(b.categoryName);
+  });
+
+  return groups;
+}
+
 function generalLabel(lang: 'my' | 'en'): string {
   return lang === 'my' ? 'အထွေထွေ' : 'General';
 }

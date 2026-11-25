@@ -10,8 +10,16 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   buildStatementData,
+  flowShares,
+  groupStatementDetails,
   percentOf,
 } from '../statementData';
+import {
+  isIOS,
+  isPrintBlockedEnvironment,
+  STATEMENT_PREVIEW_HASH,
+  STATEMENT_PREVIEW_KEY,
+} from '../printFallback';
 import type { Category, Transaction } from '../../types';
 import {
   VERSION_HISTORY,
@@ -28,6 +36,14 @@ const PRINT_VIEW_SRC = readFileSync(
   'utf8',
 );
 const CSS_SRC = readFileSync(new URL('../../index.css', import.meta.url), 'utf8');
+const FALLBACK_SRC = readFileSync(
+  new URL('../printFallback.ts', import.meta.url),
+  'utf8',
+);
+const PREVIEW_SRC = readFileSync(
+  new URL('../../components/StatementPrintPreview.tsx', import.meta.url),
+  'utf8',
+);
 const PACKAGE_JSON = readFileSync(
   new URL('../../../package.json', import.meta.url),
   'utf8',
@@ -338,18 +354,33 @@ describe('statement print wiring (v7.6.27)', () => {
     expect(ANALYTICS_SRC).toContain('statementPeriod');
   });
 
-  it('the print view renders totals, category %, sub %, and the split marker', () => {
+  it('the print view renders the donut, the bars, the regrouped detail, and the split marker', () => {
     expect(PRINT_VIEW_SRC).toContain('စာရင်းရှင်းတမ်း');
     expect(PRINT_VIEW_SRC).toContain('Statement');
     expect(PRINT_VIEW_SRC).toContain('ခွဲရေး');
     expect(PRINT_VIEW_SRC).toContain('formatMMK');
+    expect(PRINT_VIEW_SRC).toContain('stmt-donut');
+    expect(PRINT_VIEW_SRC).toContain('stmt-bar-fill');
+    expect(PRINT_VIEW_SRC).toContain('stmt-group-row');
+    expect(PRINT_VIEW_SRC).toContain('stmt-subhead-row');
+    expect(PRINT_VIEW_SRC).toContain('groupStatementDetails');
+    expect(PRINT_VIEW_SRC).toContain('flowShares');
+    expect(PRINT_VIEW_SRC).not.toContain('stmt-totals');
+    expect(PRINT_VIEW_SRC).not.toContain('stmt-cat-row');
+    expect(PRINT_VIEW_SRC).not.toContain('stmt-date-row');
   });
 
-  it('print CSS hides app chrome and shows only the statement', () => {
+  it('print CSS hides app chrome, shows only the statement, and forces A4', () => {
     expect(CSS_SRC).toContain('@media print');
     expect(CSS_SRC).toContain('body > *:not(#ngwe-print-root)');
     expect(CSS_SRC).toContain('#ngwe-print-root');
     expect(CSS_SRC).toContain('break-inside: avoid');
+    expect(CSS_SRC).toContain('@page');
+    expect(CSS_SRC).toContain('size: A4');
+    expect(CSS_SRC).toContain('#ngwe-preview-root');
+    expect(CSS_SRC).toContain('stmt-no-print');
+    expect(CSS_SRC).toContain('stmt-bar-fill');
+    expect(CSS_SRC).toContain('stmt-donut-balance');
   });
 
   it('adds no PDF/image library dependency', () => {
@@ -357,32 +388,164 @@ describe('statement print wiring (v7.6.27)', () => {
     expect(PACKAGE_JSON).not.toContain('html2canvas');
     expect(PACKAGE_JSON).not.toContain('html-to-image');
   });
+
+  it('prints synchronously in the tap gesture and falls back on iOS standalone', () => {
+    expect(ANALYTICS_SRC).toContain('flushSync');
+    expect(ANALYTICS_SRC).toContain('isPrintBlockedEnvironment');
+    expect(ANALYTICS_SRC).toContain('StatementPrintPreview');
+    expect(ANALYTICS_SRC).toContain('saveStatementPreview');
+    expect(ANALYTICS_SRC).toContain('isPrintPreviewHash');
+    expect(FALLBACK_SRC).toContain('display-mode: standalone');
+    expect(FALLBACK_SRC).toContain('navigator.standalone');
+    expect(PREVIEW_SRC).toContain('ngwe-preview-root');
+    expect(PREVIEW_SRC).toContain('Open in browser');
+    expect(PREVIEW_SRC).toContain('Browser မှာ ဖွင့်မည်');
+    expect(PREVIEW_SRC).toContain('stmt-no-print');
+  });
 });
 
-// ---------- Version bump to v7.6.27 (build 342) ----------
+describe('flowShares (v7.6.36)', () => {
+  it('splits the flow between income and expense only', () => {
+    expect(flowShares(300, 100)).toEqual({ incomeShare: 0.75, expenseShare: 0.25 });
+    expect(flowShares(500, 0)).toEqual({ incomeShare: 1, expenseShare: 0 });
+    expect(flowShares(0, 400)).toEqual({ incomeShare: 0, expenseShare: 1 });
+  });
 
-describe('Version bump to v7.6.27 (build 342)', () => {
+  it('is zeroed when there is no flow — never NaN', () => {
+    expect(flowShares(0, 0)).toEqual({ incomeShare: 0, expenseShare: 0 });
+  });
+});
+
+describe('groupStatementDetails (v7.6.36)', () => {
+  const general = 'အထွေထွေ';
+  function grouped() {
+    const data = buildStatementData({
+      transactions: [
+        tx({ id: 'f1', amount: 300, date: '2026-11-02', category: 'cat_food', subCategoryId: 'sub_meals' }),
+        tx({ id: 'f2', amount: 100, date: '2026-11-01', category: 'cat_food', subCategoryId: 'sub_snack' }),
+        tx({ id: 'f3', amount: 50, date: '2026-11-03', category: 'cat_food' }),
+        tx({ id: 's1', amount: 200, date: '2026-11-02', category: 'cat_shopping' }),
+        tx({ id: 'i1', type: 'income', amount: 900, date: '2026-11-01', category: 'cat_salary' }),
+        tx({ id: 'i2', type: 'income', amount: 100, date: '2026-11-04', category: 'cat_salary' }),
+      ],
+      categories: CATEGORIES,
+      convertAmount: IDENTITY,
+      start: null,
+      end: null,
+      lang: 'my',
+    });
+    return groupStatementDetails(data, general);
+  }
+
+  it('orders categories by chart order, then income-only categories by total desc', () => {
+    const groups = grouped();
+    expect(groups.map((g) => g.categoryName)).toEqual([
+      'အစားအသောက်',
+      'ဈေးဝယ်',
+      'လစာ',
+    ]);
+  });
+
+  it('orders sub-categories by chart order and groups missing subs under General', () => {
+    const groups = grouped();
+    const food = groups[0];
+    expect(food.subs.map((s) => s.subName)).toEqual(['အစားအစာ', 'သွားရည်စာ', 'အထွေထွေ']);
+    expect(food.subs[2].rows.map((r) => r.id)).toEqual(['f3']);
+  });
+
+  it('keeps records date-ascending inside each sub-group', () => {
+    const groups = grouped();
+    const salary = groups[2];
+    expect(salary.subs).toHaveLength(1);
+    expect(salary.subs[0].subName).toBe('အထွေထွေ');
+    expect(salary.subs[0].rows.map((r) => r.id)).toEqual(['i1', 'i2']);
+  });
+
+  it('keeps every detail row exactly once', () => {
+    const groups = grouped();
+    const ids = groups.flatMap((g) => g.subs.flatMap((s) => s.rows.map((r) => r.id)));
+    expect(ids.sort()).toEqual(['f1', 'f2', 'f3', 'i1', 'i2', 's1']);
+  });
+});
+
+describe('iOS print fallback detection (v7.6.36)', () => {
+  const base = {
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+    maxTouchPoints: 5,
+    hasPrintFunction: true,
+  };
+
+  it('blocks print for iOS standalone (display-mode and legacy flag)', () => {
+    expect(isPrintBlockedEnvironment({ ...base, standalone: false, displayModeStandalone: true })).toBe(true);
+    expect(isPrintBlockedEnvironment({ ...base, standalone: true, displayModeStandalone: false })).toBe(true);
+  });
+
+  it('does not block iOS Safari browser mode', () => {
+    expect(isPrintBlockedEnvironment({ ...base, standalone: false, displayModeStandalone: false })).toBe(false);
+  });
+
+  it('does not block Android standalone or desktop', () => {
+    expect(
+      isPrintBlockedEnvironment({
+        userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36',
+        standalone: false,
+        displayModeStandalone: true,
+        maxTouchPoints: 5,
+        hasPrintFunction: true,
+      }),
+    ).toBe(false);
+    expect(
+      isPrintBlockedEnvironment({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36',
+        standalone: false,
+        displayModeStandalone: false,
+        maxTouchPoints: 0,
+        hasPrintFunction: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('blocks when there is no print function at all', () => {
+    expect(
+      isPrintBlockedEnvironment({ ...base, standalone: false, displayModeStandalone: false, hasPrintFunction: false }),
+    ).toBe(true);
+  });
+
+  it('treats iPadOS desktop-mode UAs as iOS', () => {
+    expect(isIOS({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15', maxTouchPoints: 5 })).toBe(true);
+    expect(isIOS({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15', maxTouchPoints: 0 })).toBe(false);
+  });
+
+  it('uses a stable storage key and hash for the restore link', () => {
+    expect(STATEMENT_PREVIEW_KEY).toBe('ngwe_statement_preview');
+    expect(STATEMENT_PREVIEW_HASH).toBe('#ngwe-print-preview');
+  });
+});
+
+// ---------- Version bump to v7.6.36 (build 350) ----------
+
+describe('Version bump to v7.6.36 (build 350)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
-    expect(CURRENT_BUILD_NUMBER).toBe(349);
-    expect(VERSION_JSON.version).toBe('v7.6.35');
-    expect(VERSION_JSON.buildNumber).toBe(349);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.36');
+    expect(CURRENT_BUILD_NUMBER).toBe(350);
+    expect(VERSION_JSON.version).toBe('v7.6.36');
+    expect(VERSION_JSON.buildNumber).toBe(350);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.35');
-    expect(entry.buildNumber).toBe(349);
+    expect(entry.version).toBe('v7.6.36');
+    expect(entry.buildNumber).toBe(350);
     expect(entry.releaseDate).toBe('2026-11-25');
-    expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('နေရာအပိုယူနေတဲ့ ကတ်တွေ ကျစ်လစ်စေခြင်း');
-    expect(entry.titleEn).toBe('Compact cards across the whole app');
+    expect(entry.tag).toBe('fix');
+    expect(entry.titleMy).toBe('PDF စာရင်းရှင်းတမ်း — A4၊ chart များနှင့် iOS ပြင်ဆင်မှု');
+    expect(entry.titleEn).toBe('PDF statement: A4 pages, charts, and the iOS fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Cards that wasted space across the whole app are now compact — every number and button stays in place.',
+      'The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too.',
     );
   });
 

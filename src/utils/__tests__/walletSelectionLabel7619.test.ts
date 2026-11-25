@@ -181,26 +181,26 @@ describe('Records header chip wiring (v7.6.19)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
-    expect(CURRENT_BUILD_NUMBER).toBe(358);
-    expect(VERSION_JSON.version).toBe('v7.6.44');
-    expect(VERSION_JSON.buildNumber).toBe(358);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
+    expect(CURRENT_BUILD_NUMBER).toBe(359);
+    expect(VERSION_JSON.version).toBe('v7.6.45');
+    expect(VERSION_JSON.buildNumber).toBe(359);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.44');
-    expect(entry.buildNumber).toBe(358);
+    expect(entry.version).toBe('v7.6.45');
+    expect(entry.buildNumber).toBe(359);
     expect(entry.releaseDate).toBe('2026-11-25');
-    expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဆိုင်အားလုံး Menu ပြန် Update နှင့် ပြင်ဆင်ချက်များ');
-    expect(entry.titleEn).toBe('Refresh all menus, plus typing, signup and display fixes');
+    expect(entry.tag).toBe('feature');
+    expect(entry.titleMy).toBe('မှတ်တမ်းစာရင်း ဒီဇိုင်းအသစ်နှင့် စာရင်းရှင်းတမ်း ပြင်ဆင်ချက်များ');
+    expect(entry.titleEn).toBe('Records redesign and statement fixes');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(10);
-    expect(entry.changesEn).toHaveLength(10);
+    expect(entry.changesMy).toHaveLength(8);
+    expect(entry.changesEn).toHaveLength(8);
     expect(entry.changesMy[0]).toBe(
-      'ဆိုင်အားလုံးရဲ့ Menu ကို တစ်ခါနှိပ်နဲ့ ပြန် Update လုပ်လို့ရပြီ (Menu အားလုံး ပြန် Update ခလုတ်)',
+      'စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      'All shop menus can be re-checked with one tap (Refresh All Menus button)',
+      'The statement now shows fuel and maintenance details (vehicle, litres, price, shop) again — records without a note no longer fall back to the bare category name',
     );
   });
 

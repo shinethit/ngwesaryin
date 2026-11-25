@@ -102,7 +102,7 @@ import { getAnomalyAlerts } from './utils/anomalyAlerts';
 import { getSplitAttribution, splitAmountMatching, attributeItemsToShops } from './utils/transactionSplits';
 import { getAllItemSuggestions } from './utils/itemIntelligence';
 // [v7.6.15] Fuel-log join for the Records rows + search-hit detail view.
-import { findFuelLogForTransaction } from './utils/fuelRowLine';
+import { findFuelLogForTransaction, findMaintenanceLogForTransaction } from './utils/fuelRowLine';
 import { getLocalDateString } from './utils/dateUtils';
 import { mergeAndCleanCategories } from './utils/categoryCleanUp';
 import {
@@ -3323,7 +3323,10 @@ export default function App() {
               onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
                     cloudTxIds={cloudTxIds}
                     fuelLogs={fuelLogs}
+                    maintenanceLogs={vehicleMaintenance}
                     onRefreshSync={handleFullManualSync}
+                    // [v7.6.45] Balance card's Reports button.
+                    onSelectTab={setActiveTab}
             />
             <AdBanner
               plan={plan}
@@ -3539,6 +3542,11 @@ export default function App() {
                         // in the donut's expanded panel opens the
                         // same read-only view as a search hit.
                         onSelectTransaction={(t) => setViewingTransaction(t)}
+                        // [v7.6.45] Statement detail fallback: the
+                        // Reports statement resolves note-less
+                        // fuel/maintenance rows from these logs.
+                        fuelLogs={fuelLogs}
+                        maintenanceLogs={vehicleMaintenance}
                         // [v7.5.75] Deep-link: which of the three split
                         // sections to show. 'budget' → Budget,
                         // 'compare' → Compare Price, everything else
@@ -4029,6 +4037,7 @@ export default function App() {
         wallets={computedWallets}
         lang={lang}
         fuelLog={viewingTransaction ? findFuelLogForTransaction(fuelLogs, viewingTransaction.id) : undefined}
+        maintenanceLog={viewingTransaction ? findMaintenanceLogForTransaction(vehicleMaintenance, viewingTransaction.id) : undefined}
         onClose={() => setViewingTransaction(null)}
         onEdit={(tx) => handleOpenEditTx(tx)}
       />

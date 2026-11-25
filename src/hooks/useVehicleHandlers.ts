@@ -18,6 +18,9 @@ import {
   resolvePerTypeTitle,
   resolveVehicleServiceSubCategory,
 } from '../utils/vehicleServiceRows';
+// [v7.6.45] Single vehicle-name rule (no "Starex ()" when the plate
+// is empty) + the shared fuel auto-note builder.
+import { buildFuelAutoNote, formatVehicleDisplayName } from '../utils/vehicleNames';
 
 interface UseVehicleHandlersParams {
   user: { uid: string } | null;
@@ -229,7 +232,7 @@ export function useVehicleHandlers({
   const handleSaveFuelLog = (logData: FuelLog) => {
     const logId = logData.id || `fuel_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const targetVehicle = vehicles.find((v) => v.id === logData.vehicleId);
-    const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
+    const vehicleName = formatVehicleDisplayName(targetVehicle);
     const txId = logData.transactionId || `tx_fuel_${logId}`;
     // [v7.2.4] note ?? '' so Firestore merge actually clears cleared notes
     const log: FuelLog = { ...logData, id: logId, transactionId: txId, note: logData.note ?? '', createdAt: logData.createdAt || Date.now(), updatedAt: Date.now(), version: (logData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };
@@ -261,9 +264,10 @@ export function useVehicleHandlers({
         walletId: log.walletId,
         date: log.date,
         // [v7.2.3] Preserve user note as-is; fall back to auto summary.
+        // [v7.6.45] Shared builder — same string, explicit grouping.
         note: log.note
           ? log.note
-          : `[ဆီထည့်စရိတ်] ${vehicleName} - ${log.liters.toLocaleString()} L @ ${log.pricePerLiter.toLocaleString()} Ks${log.gasStation ? ` (${log.gasStation})` : ''}`,
+          : buildFuelAutoNote({ vehicleName, liters: log.liters, pricePerLiter: log.pricePerLiter, gasStation: log.gasStation }) || `[ဆီထည့်စရိတ်] ${vehicleName}`,
         createdAt: log.createdAt || Date.now(),
         updatedAt: Date.now(),
         version: 1,
@@ -357,7 +361,7 @@ export function useVehicleHandlers({
     const { items: incomingItems, ...maintInput } = maintData;
     const maintId = maintInput.id || `maint_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const targetVehicle = vehicles.find((v) => v.id === maintInput.vehicleId);
-    const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
+    const vehicleName = formatVehicleDisplayName(targetVehicle);
     const txId = maintInput.transactionId || `tx_maint_${maintId}`;
     // [v7.5.93] Multi-row visit: group the valid rows by their OWN
     // service type (same filter as the modal — name required, qty >
@@ -608,7 +612,7 @@ export function useVehicleHandlers({
   const handleSaveTirePressure = (logData: TirePressureLog) => {
     const tireId = logData.id || `tire_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const targetVehicle = vehicles.find((v) => v.id === logData.vehicleId);
-    const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
+    const vehicleName = formatVehicleDisplayName(targetVehicle);
     const txId = logData.transactionId || `tx_tire_${tireId}`;
     // [v7.2.4] note ?? '' so Firestore merge actually clears cleared notes
     const log: TirePressureLog = { ...logData, id: tireId, transactionId: txId, note: logData.note ?? '', createdAt: logData.createdAt || Date.now(), updatedAt: Date.now(), version: (logData.version || 0) + 1, lastEditedBy: user?.uid || 'guest' };

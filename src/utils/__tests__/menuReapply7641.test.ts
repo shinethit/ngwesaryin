@@ -146,19 +146,19 @@ describe('menu re-apply button wiring (v7.6.41 B)', () => {
 
 describe('Version bump to v7.6.42 (build 356)', () => {
   it('version surfaces agree on v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
-    expect(CURRENT_BUILD_NUMBER).toBe(358);
-    expect(VERSION_JSON.version).toBe('v7.6.44');
-    expect(VERSION_JSON.buildNumber).toBe(358);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
+    expect(CURRENT_BUILD_NUMBER).toBe(359);
+    expect(VERSION_JSON.version).toBe('v7.6.45');
+    expect(VERSION_JSON.buildNumber).toBe(359);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.44');
-    expect(entry.buildNumber).toBe(358);
+    expect(entry.version).toBe('v7.6.45');
+    expect(entry.buildNumber).toBe(359);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
   });
 
   it('the changelog covers the global menu refresh with zero Admin strings', () => {
-    const entry = VERSION_HISTORY[0];
+    const entry = VERSION_HISTORY.find((e) => e.version === 'v7.6.44')!;
     expect(entry.changesMy.join(' ')).toContain('Menu အားလုံး');
     expect(entry.changesMy.join(' ')).toContain('ဆိုင်အလိုက်');
     expect(entry.changesMy.join(' ')).toContain('အတည်ပြုမှ');

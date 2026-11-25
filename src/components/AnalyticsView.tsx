@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { BarChart3, Wallet, ShoppingBag } from 'lucide-react';
-import { BudgetConfig, Category, Debt, PlanType, Transaction, Wallet as WalletType, ShopContact, PublicShop } from '../types';
+import { BudgetConfig, Category, Debt, FuelLog, PlanType, Transaction, VehicleMaintenance, Wallet as WalletType, ShopContact, PublicShop } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { convertToMMK } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { buildStatementData, type StatementData } from '../utils/statementData';
+// [v7.6.45] Statement-period bounds (Day/Week/Quarter/Year presets).
+import { statementPeriodBounds, type StatementPeriodId } from '../utils/statementPeriod';
 import { StatementPrintView } from './StatementPrintView';
 import { StatementPrintPreview } from './StatementPrintPreview';
 import {
@@ -68,6 +70,10 @@ interface AnalyticsViewProps {
   // rows are display-only. The donut never renders for guests (the
   // App-level lock card covers the whole tab), so no new lock.
   onSelectTransaction?: (t: Transaction) => void;
+  // [v7.6.45] Vehicle logs for the statement's display-time detail
+  // fallback (note-less fuel/maintenance rows). Optional.
+  fuelLogs?: FuelLog[];
+  maintenanceLogs?: VehicleMaintenance[];
 }
 
 type SubTab = 'reports' | 'budget' | 'compare';
@@ -78,6 +84,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   onAddBudget, onUpdateBudget, onDeleteBudget,
   onOpenUpgradeModal, onSelectTab, initialSubTab,
   menuPublicShops, menuPrivateShops, onCreatePotTransfer, onSelectTransaction,
+  fuelLogs, maintenanceLogs,
 }) => {
   const [subTab, setSubTab] = useState<SubTab>(initialSubTab ?? 'reports');
   // [v7.5.75] The single mounted instance follows the top-level tab:
@@ -103,8 +110,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   // belongs ONLY to the printed statement, so the other cards keep
   // their all-time totals untouched. Default: the current month, the
   // usual "၁ လတာ စာရင်းရှင်းတမ်း".
-  type StatementPeriod = 'thisMonth' | 'lastMonth' | 'all' | 'custom';
-  const [statementPeriod, setStatementPeriod] = useState<StatementPeriod>('thisMonth');
+  const [statementPeriod, setStatementPeriod] = useState<StatementPeriodId>('thisMonth');
   const [statementStart, setStatementStart] = useState(() =>
     getLocalDateString(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
   );
@@ -119,17 +125,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   } | null>(null);
 
   const statementBounds = useMemo(() => {
+    // [v7.6.45] Bounds math lives in utils/statementPeriod (pure,
+    // unit-tested); this memo is a thin wrapper over it.
     const now = new Date();
-    const monthBounds = (d: Date) => ({
-      start: getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1)),
-      end: getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
-    });
-    if (statementPeriod === 'all') return { start: null as string | null, end: null as string | null };
-    if (statementPeriod === 'lastMonth') {
-      return monthBounds(new Date(now.getFullYear(), now.getMonth() - 1, 1));
-    }
-    if (statementPeriod === 'custom') return { start: statementStart, end: statementEnd };
-    return monthBounds(now);
+    return statementPeriodBounds(statementPeriod, now, { start: statementStart, end: statementEnd });
   }, [statementPeriod, statementStart, statementEnd]);
 
   // [v7.6.36] Print-preview restore: a statement link opened in a
@@ -203,6 +202,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       start: statementBounds.start,
       end: statementBounds.end,
       lang,
+      fuelLogs,
+      maintenanceLogs,
     });
     const scopeLabel =
       lang === 'my'
@@ -337,6 +338,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                 [
                   ['thisMonth', lang === 'my' ? 'ဒီလ' : 'This month'],
                   ['lastMonth', lang === 'my' ? 'ပြီးခဲ့တဲ့လ' : 'Last month'],
+                  ['day', lang === 'my' ? 'ဒီနေ့' : 'Today'],
+                  ['week', lang === 'my' ? 'ဒီအပတ်' : 'This week'],
+                  ['quarter', lang === 'my' ? 'ဒီသုံးလပတ်' : 'This quarter'],
+                  ['year', lang === 'my' ? 'ဒီနှစ်' : 'This year'],
                   ['all', lang === 'my' ? 'အချိန်အားလုံး' : 'All time'],
                   ['custom', lang === 'my' ? 'စိတ်ကြိုက်' : 'Custom'],
                 ] as const

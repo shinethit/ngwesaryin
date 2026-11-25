@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Edit2, Lock } from 'lucide-react';
-import { Category, FuelLog, Transaction, Wallet } from '../types';
+import { Category, FuelLog, Transaction, VehicleMaintenance, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { CategoryIcon } from './CategoryIcon';
@@ -20,6 +20,11 @@ interface TransactionDetailModalProps {
       join, resolved by the caller). Optional: without it the view
       renders exactly as before, including the bare litres row. */
   fuelLog?: FuelLog | null;
+  /** [v7.6.45] The VehicleMaintenance record linked to this record
+      (transactionId join, resolved by the caller) — the parallel of
+      fuelLog, for the odometer row on maintenance records. Optional:
+      without it the view renders exactly as before. */
+  maintenanceLog?: VehicleMaintenance | null;
   /** Same edit permission the list row's pencil uses. When false the
       Edit button is replaced by the lock note — the permission gate
       in the edit handler still applies when the button is shown. */
@@ -67,6 +72,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   wallets,
   lang,
   fuelLog,
+  maintenanceLog,
   canEdit = true,
   onClose,
   onEdit,
@@ -94,6 +100,16 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   // [v7.6.15] One-line fuel summary for fuel records; '' when no log
   // is linked, so non-fuel records render byte-identically.
   const fuelLine = formatFuelRowLine(fuelLog);
+  // [v7.6.45] Odometer row for vehicle records: the linked fuel or
+  // maintenance log's reading (fuel wins if both are ever linked —
+  // a record is one or the other in practice). 0 / missing means
+  // "not recorded" and shows no row, never "0 km".
+  const odometerKm =
+    (fuelLog?.odometer ?? 0) > 0
+      ? fuelLog!.odometer
+      : (maintenanceLog?.odometer ?? 0) > 0
+        ? maintenanceLog!.odometer
+        : 0;
 
   const handleEdit = () => {
     onClose();
@@ -235,6 +251,17 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             <div className="flex items-center justify-between gap-3">
               <span className="text-slate-500 text-xs">{lang === 'my' ? 'ဆီ (လီတာ):' : 'Fuel (litres):'}</span>
               <span className="font-mono font-semibold text-slate-900">{tx.fuelLiters}</span>
+            </div>
+          )}
+
+          {/* [v7.6.45] Odometer (linked vehicle log only): 'မိုင်တာ' is
+              AddFuelModal's wording. Placed with the fuel rows so
+              every vehicle-related popup shows it; other popups are
+              unchanged. */}
+          {odometerKm > 0 && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-slate-500 text-xs">{lang === 'my' ? 'မိုင်တာ:' : 'Odometer:'}</span>
+              <span className="font-mono font-semibold text-slate-900">{odometerKm.toLocaleString('en-US')} km</span>
             </div>
           )}
 

@@ -261,45 +261,41 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
-    expect(CURRENT_BUILD_NUMBER).toBe(358);
-    expect(VERSION_JSON.version).toBe('v7.6.44');
-    expect(VERSION_JSON.buildNumber).toBe(358);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
+    expect(CURRENT_BUILD_NUMBER).toBe(359);
+    expect(VERSION_JSON.version).toBe('v7.6.45');
+    expect(VERSION_JSON.buildNumber).toBe(359);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.44');
-    expect(top.buildNumber).toBe(358);
+    expect(top.version).toBe('v7.6.45');
+    expect(top.buildNumber).toBe(359);
     expect(top.releaseDate).toBe('2026-11-25');
-    expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('ဆိုင်အားလုံး Menu ပြန် Update နှင့် ပြင်ဆင်ချက်များ');
-    expect(top.titleEn).toBe('Refresh all menus, plus typing, signup and display fixes');
+    expect(top.tag).toBe('feature');
+    expect(top.titleMy).toBe('မှတ်တမ်းစာရင်း ဒီဇိုင်းအသစ်နှင့် စာရင်းရှင်းတမ်း ပြင်ဆင်ချက်များ');
+    expect(top.titleEn).toBe('Records redesign and statement fixes');
     expect(top.changesMy).toEqual([
-      'ဆိုင်အားလုံးရဲ့ Menu ကို တစ်ခါနှိပ်နဲ့ ပြန် Update လုပ်လို့ရပြီ (Menu အားလုံး ပြန် Update ခလုတ်)',
-      'ပြောင်းမယ့်ဈေးတွေကို ဆိုင်အလိုက် တစ်စုတည်း ပြပြီး အတည်ပြုမှ သိမ်းသည် — မလိုတဲ့ အတန်းကို ဖြုတ်ထားလို့ရသည်',
-      'တစ်ဆိုင်ချင်းခလုတ်လည်း ဆက်ရှိပြီး အများပြင်ဆိုင်တွေကို အကောင့်ဝင်ပြီးမှသာ ပြန် Update လုပ်နိုင်သည်',
-      'စကားဝှက်တိုနေရင် အင်္ဂလိပ်စာ အမှားအစား ဗမာလိုပြပြီး စာပြန်ရိုက်တာနဲ့ အမှားပျောက်သွားမည်',
-      'ဘယ်နေရာမှာစာရိုက်ရိုက် ထစ်တာကို ပြင်ပြီးပါပြီ — ရှာဖွေရေးအကွက်များ ပိုမြန်လာမည်',
-      'အမျိုးအစားကို ကိုယ်တိုင်ရွေးပြီးရင် ပစ္စည်းနာမည် ရိုက်လို့ အမျိုးအစား အလိုအလျောက် ပြောင်းမသွားတော့ပါ',
-      'Cloud Sync မအောင်မြင်ရင် အင်္ဂလိပ်စာ နည်းပညာစာအစား ဗမာလို ရိုးရိုးရှင်းရှင်း ပြမည်',
-      'ဖုန်းအကျယ် 360px မှာ အပေါ်ဆုံး Premium သက်တမ်းပြကွက် ဖုံးမသွားအောင် ပြင်ပြီးပါပြီ',
-      'ယာဉ်ပြုပြင်မှတ်တမ်း အမျိုးအစားထဲမှာ ပန်ကာကြိုး (Fan Belt) အသစ် ထည့်ပေးထားသည် — ၆၀,၀၀၀ ကီလိုမီတာ သို့မဟုတ် ၄ နှစ် ရောက်ရင် သတိပေးမည်',
-      'ယာဉ်ပြုပြင်မှတ်တမ်းမှာ ဝန်ဆောင်မှုအမျိုးအစား အသစ် ၄ မျိုး ထပ်ထည့်ထားသည် — တိုင်မင်ကြိုး (၉၀,၀၀၀ ကီလိုမီတာ/၅ နှစ်)၊ ဆီစစ်၊ ဘရိတ်ဆီနှင့် ဝိုင်ပါ (အချိန်နဲ့သာ သတိပေးမည်)',
+      'စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ',
+      'ယာဉ်နံပါတ်ပြား မရှိတဲ့ ယာဉ်နာမည်မှာ အလွတ်ကွင်းစကွင်း () မပါတော့ပါ',
+      'မှတ်တမ်း အသေးစိတ် Pop Up မှာ မိုင်တာဖတ်အား (km) ကို ထည့်ပြပေးပါပြီ',
+      'မှတ်တမ်းစာရင်း Tab အပေါ်မှာ ဒီလလက်ကျန် ကတ်အသစ် — လအစလက်ကျန်၊ လအဆုံးလက်ကျန်၊ အသားတင်၊ ပိုက်ဆံအိတ် ရွေးချယ်မှု၊ လက်ကျန်ဝှက်ရန် မျက်လုံး၊ အစီရင်ခံစာနှင့် ပြက္ခဒိန် ခလုတ်များ',
+      'မှတ်တမ်းများကို တစ်ရက်ချင်းစီ ကတ်အလိုက် ပြပေးပါပြီ — အချက်အလက် အားလုံး အပြည့်အစုံပါဝင်ပါသည်',
+      'ကဏ္ဍအလိုက် အိုင်ကွန်အရောင်များ ကွဲပြားအောင် ပြင်ဆင်ပေးပါပြီ (ကိုယ်တိုင်သတ်မှတ်ထားတဲ့ အရောင်တွေကို မထိပါ)',
+      'မှတ်တမ်း ပြက္ခဒိန်မှာ ဝင်+ထွက် နှစ်ခုလုံး သို့မဟုတ် အသားတင်သာ ရွေးချယ်ပြနိုင်ပါပြီ — ရက်တစ်ရက်ကို နှိပ်ရင် အဲဒီနေ့စာရင်းချည်း စစ်ကြည့်နိုင်ပါသည်',
+      'စာရင်းရှင်းတမ်း ကာလမှာ ဒီနေ့၊ ဒီအပတ်၊ ဒီသုံးလပတ်၊ ဒီနှစ် တို့ကို ထည့်ပေးပါပြီ',
     ]);
     expect(top.changesEn).toEqual([
-      'All shop menus can be re-checked with one tap (Refresh All Menus button)',
-      'Price changes are shown grouped by shop in one review prompt — confirm to apply, untick any line to exclude it',
-      'The per-shop button stays, and public shop menus still need sign-in to update',
-      'A short password on sign-up now shows the Burmese message instead of the browser English bubble, and the error clears as soon as you type',
-      'Typing lag is fixed everywhere — search boxes stay responsive even with many records',
-      'Once you pick a category yourself, typing an item name no longer switches the category away',
-      'Cloud sync failures now show a short plain message instead of raw technical English text',
-      'The top Premium remaining-days pill no longer gets covered on narrow 360px phones',
-      'Vehicle maintenance now has a Fan Belt service type — reminders come at 60,000 km or 4 years',
-      'Four more vehicle service types: Timing Belt (90,000 km / 5 years), Fuel Filter, Brake Fluid, and time-only Wiper Blades',
+      'The statement now shows fuel and maintenance details (vehicle, litres, price, shop) again — records without a note no longer fall back to the bare category name',
+      'A vehicle without a plate number no longer shows empty parentheses () after its name',
+      'The record detail pop-up now shows the odometer reading (km)',
+      'New this-month balance card at the top of the Records tab — opening balance, closing balance, net, wallet picker, hide-balance eye, and Report and Calendar buttons',
+      'Records are now shown one card per day — with every detail kept, nothing removed',
+      'Category icon colours are now distinct per category (colours you set yourself are untouched)',
+      'The Records calendar can show in + out together or net only — tap a day to filter the list to that day',
+      'The statement period picker gains Today, This week, This quarter, and This year',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

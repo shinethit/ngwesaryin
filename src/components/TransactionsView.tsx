@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart } from 'lucide-react';
-import { Category, FuelLog, PlanType, Transaction, Wallet, DataScope } from '../types';
+import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, ChevronDown, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart, Eye, EyeOff } from 'lucide-react';
+import { Category, FuelLog, PlanType, Transaction, VehicleMaintenance, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -16,7 +16,7 @@ import { useSearchSeed } from '../hooks/useSearchSeed';
 import { syncQueue } from '../lib/syncQueue';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
-import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, isSharedWallet } from '../utils/walletBalance';
+import { buildWalletMap, convertTxToMMK, getMatchingWalletIds, isWalletMatch, isTransferTransaction, isSharedWallet } from '../utils/walletBalance';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 // [v7.6.07] Split badge on collapsed rows.
 import { hasSplits, splitShopGroups } from '../utils/transactionSplits';
@@ -31,13 +31,16 @@ import {
 import { DebouncedSearchInput } from './DebouncedSearchInput';
 // [v7.6.15] Fuel line on Records rows (fuel type / litres / station
 // from the linked FuelLog).
-import { findFuelLogForTransaction, formatFuelRowLine } from '../utils/fuelRowLine';
+import { findFuelLogForTransaction, findMaintenanceLogForTransaction, formatFuelRowLine } from '../utils/fuelRowLine';
 // [v7.6.16] Filter-notice gate: the amber banner shows only when a
 // non-wallet filter is active (a wallet-only pick is a scope
 // choice, not a "missing records" warning).
 import { shouldShowFilterNotice } from '../utils/filterNotice';
 // [v7.6.19] Selected-wallet label for the Records header chip.
 import { getWalletSelectionLabel } from '../utils/walletSelectionLabel';
+// [v7.6.45] Records-top calendar (Part E) + display-time tile colours (Part D).
+import { RecordsCalendar } from './RecordsCalendar';
+import { getCategoryTileColor } from '../utils/categoryTileColor';
 
 export type TimeFilterType =
   | 'all'
@@ -66,9 +69,17 @@ interface TransactionsViewProps {
   // reaches its linked FuelLog via FuelLog.transactionId (see
   // utils/fuelRowLine). Optional: without it no fuel line renders.
   fuelLogs?: FuelLog[];
+  // [v7.6.45] Maintenance logs for the detail view's odometer row:
+  // the parallel of fuelLogs. Optional: without it no maintenance
+  // odometer renders.
+  maintenanceLogs?: VehicleMaintenance[];
   // [v7.5.55] Full cloud refresh for the sync-detail modal (e.g. App's
   // manual sync). Optional: without it the modal retries via syncQueue.
   onRefreshSync?: () => void | Promise<void>;
+  // [v7.6.45] Tab switch for the balance card's Reports button
+  // (App passes setActiveTab; 'analytics' is the Reports tab id).
+  // Optional: without it the button is not rendered.
+  onSelectTab?: (tab: string) => void;
 }
 
 const formatLocalizedDate = (dateStr: string, lang: 'my' | 'en'): string => {
@@ -101,6 +112,39 @@ const formatLocalizedDate = (dateStr: string, lang: 'my' | 'en'): string => {
     : `${day} ${monthName} ${year} (${dayName})`;
 };
 
+// [v7.6.45] Day-card header parts: big date numeral + weekday +
+// month/year, from the same weekday/month names as
+// formatLocalizedDate above (duplicated lists are the established
+// pattern in this codebase — see TransactionDetailModal). Dateless
+// or malformed dates fall back to a neutral header.
+const splitDayCardParts = (
+  dateStr: string,
+  lang: 'my' | 'en',
+): { dayNum: string; weekday: string; monthYear: string } => {
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return { dayNum: '•', weekday: '', monthYear: dateStr };
+  const year = parseInt(parts[0], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const d = new Date(year, monthIdx, day);
+  if (isNaN(d.getTime())) return { dayNum: '•', weekday: '', monthYear: dateStr };
+  const daysMy = ['တနင်္ဂနွေ', 'တနင်္လာ', 'အင်္ဂါ', 'ဗုဒ္ဓဟူး', 'ကြာသပတေး', 'သောကြာ', 'စနေ'];
+  const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthsMy = [
+    'ဇန်နဝါရီ', 'ဖေဖော်ဝါရီ', 'မတ်', 'ဧပြီ', 'မေ', 'ဇွန်',
+    'ဇူလိုင်', 'သြဂုတ်', 'စက်တင်ဘာ', 'အောက်တိုဘာ', 'နိုဝင်ဘာ', 'ဒီဇင်ဘာ',
+  ];
+  const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return {
+    dayNum: String(day),
+    weekday: lang === 'my' ? daysMy[d.getDay()] : daysEn[d.getDay()],
+    monthYear:
+      lang === 'my'
+        ? `${monthsMy[monthIdx]} ${year}`
+        : `${monthsEn[monthIdx]} ${year}`,
+  };
+};
+
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
   transactions,
   categories,
@@ -115,7 +159,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   onOpenUpgradeModal,
   cloudTxIds,
   fuelLogs = [],
+  maintenanceLogs = [],
   onRefreshSync,
+  onSelectTab,
 }) => {
   const { user } = useAuth();
   // [v7.5.56] Working All / ကိုယ်ပိုင် / မျှဝေထား filter (finding 25):
@@ -172,6 +218,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   // (or the row's explicit pencil button, unchanged).
   const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
   const [selectedTxForSyncModal, setSelectedTxForSyncModal] = useState<Transaction | null>(null);
+  // [v7.6.45] Records-top balance card + calendar (Parts D/E).
+  // selectedDay filters the list to one day (calendar tap; tap
+  // again clears). calendarOpen defaults to false so the first
+  // viewport stays compact. balanceHidden masks the card amounts.
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [balanceHidden, setBalanceHidden] = useState(false);
   // [v7.5.55] Delete confirmation (inline dialog — this app has no shared
   // ConfirmModal component; native window.confirm is no longer used).
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
@@ -256,7 +309,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   // so typing does not reset it on every keystroke)
   React.useEffect(() => {
     setVisibleDays(30);
-  }, [typeFilter, timeFilter, debouncedSearchTerm, selectedCategory, selectedWallet, selectedWalletIds, effectiveDataScope]);
+  }, [typeFilter, timeFilter, debouncedSearchTerm, selectedCategory, selectedWallet, selectedWalletIds, effectiveDataScope, selectedDay]);
 
   // [v7.5.56] A scope change invalidates the wallet pick: a personal
   // wallet selected under "Shared" would otherwise show nothing.
@@ -402,6 +455,18 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       .map((entry) => entry.tx);
   }, [searchIndex, effectiveDataScope, personalWalletIds, sharedWalletIds, personalWallets, sharedWallets, typeFilter, selectedCategory, selectedWallet, selectedWalletIds, wallets, walletMap, timeFilter, specificDate, startDate, endDate, debouncedSearchTerm, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthPrefix, lastMonthPrefix]);
 
+  // [v7.6.45] Day drill-down (Parts D/E): the calendar tap filters
+  // the LIST to one day. It composes with every filter above but is
+  // kept OUT of `filtered` itself — the summary table and the
+  // calendar aggregate the day-free scope, so tapping a day never
+  // zeroes the calendar cells or the summary totals. The selected
+  // day always has its own visible clear chip (below), and every
+  // "clear filters" reset clears it too.
+  const visibleFiltered = useMemo(
+    () => (selectedDay ? filtered.filter((t) => t.date === selectedDay) : filtered),
+    [filtered, selectedDay],
+  );
+
   // Filtered Totals (excluding internal transfers when viewing all wallets to match Dashboard, including when viewing specific wallet)
   const isSingleWalletFilter =
     selectedWallet !== 'all' ||
@@ -450,7 +515,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       }
     >();
 
-    filtered.forEach((t) => {
+    // [v7.6.45] Day-filtered list (see visibleFiltered above).
+    visibleFiltered.forEach((t) => {
       const dateKey = t.date || 'Unknown Date';
       if (!map.has(dateKey)) {
         map.set(dateKey, {
@@ -489,7 +555,51 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     });
 
     return groups;
-  }, [filtered]);
+  }, [visibleFiltered, walletMap, isSingleWalletFilter]);
+
+  // [v7.6.45] Records balance card (Part D): this month's opening /
+  // closing / net for the RECORDS wallet scope — the wallet pick
+  // when one is made, otherwise the wallets of the active data
+  // scope. The search text, category and time filters do NOT move
+  // the balance (they filter the list, not the money), and the
+  // Dashboard hero scope is never used here: the two filters stay
+  // independent. Formula = FinancialSummaryTable's: opening is the
+  // current wallet balance minus the month's net, closing is
+  // opening + inflow − outflow. Conversion uses the Analytics
+  // converter (convertTxToMMK) so multi-currency records match the
+  // Reports totals. Transfers are excluded (they are not in/out).
+  const balanceScopeWallets = useMemo(() => {
+    if (selectedWalletIds.length > 0 && selectedWalletIds.length < wallets.length) {
+      return wallets.filter((w) => selectedWalletIds.includes(w.id));
+    }
+    if (selectedWallet !== 'all') {
+      return wallets.filter((w) => isWalletMatch(w, selectedWallet));
+    }
+    return visibleWalletsInFilter;
+  }, [wallets, selectedWalletIds, selectedWallet, visibleWalletsInFilter]);
+
+  const monthBalance = useMemo(() => {
+    let opening = 0;
+    let inflow = 0;
+    let outflow = 0;
+    for (const w of balanceScopeWallets) {
+      let wIn = 0;
+      let wOut = 0;
+      for (const t of transactions) {
+        if (!t.date || !t.date.startsWith(currentMonthPrefix)) continue;
+        if (!isWalletMatch(w, t.walletId)) continue;
+        if (isTransferTransaction(t)) continue;
+        const amt = convertTxToMMK(walletMap, wallets, t);
+        if (t.type === 'income') wIn += amt;
+        else if (t.type === 'expense') wOut += amt;
+      }
+      opening += convertToMMK(Number(w.balance) || 0, w.currency, w.exchangeRate) - (wIn - wOut);
+      inflow += wIn;
+      outflow += wOut;
+    }
+    const net = inflow - outflow;
+    return { opening, inflow, outflow, net, closing: opening + net };
+  }, [balanceScopeWallets, transactions, currentMonthPrefix, walletMap, wallets]);
 
   // [v7.5.55] Real sync refresh for the sync-detail modal: retry any
   // queued writes, then run the parent's full cloud refresh when provided.
@@ -557,6 +667,115 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   return (
     <div className="space-y-3">
       {/* [v7.6.42] space-y-3 — measured first-viewport waste, gaps only. */}
+      {/* [v7.6.45] Records balance card (Part D) — Records tab ONLY,
+          never the Dashboard hero. Compact navy: the title, wallet
+          pill and eye share the top row (no dead space); the
+          balance is ~22px (deliberately not large); opening /
+          closing / net sit on one compact row. The calendar
+          (Part E) opens inline below, default hidden. Amounts use
+          the lakh format with the exact kyat in the tooltip, like
+          the rows below. */}
+      <div className="rounded-3xl bg-[#1E3A5F] text-white px-3.5 py-3 sm:px-4 shadow-[0_10px_28px_rgba(30,58,95,0.25)] space-y-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-bold text-sky-200 truncate">
+            {lang === 'my' ? 'လက်ကျန် · ဒီလ' : 'Balance · This month'}
+          </span>
+          <div className="ml-auto flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltersExpandedPersist(!filtersExpanded)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
+              title={lang === 'my' ? 'ပိုက်ဆံအိတ် ရွေးချယ်ရန် Filter ဖွင့်မည်' : 'Open filters to choose wallets'}
+            >
+              <span>
+                {lang === 'my'
+                  ? `ပိုက်ဆံအိတ် ${balanceScopeWallets.length} ခု`
+                  : balanceScopeWallets.length === 1
+                    ? '1 wallet'
+                    : `${balanceScopeWallets.length} wallets`}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setBalanceHidden(!balanceHidden)}
+              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors cursor-pointer"
+              aria-label={lang === 'my' ? (balanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (balanceHidden ? 'Show balance' : 'Hide balance')}
+              title={lang === 'my' ? (balanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (balanceHidden ? 'Show balance' : 'Hide balance')}
+            >
+              {balanceHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="text-[22px] leading-tight font-extrabold font-mono"
+          title={formatMMK(monthBalance.closing)}
+        >
+          {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-[11px]">
+          <div className="min-w-0">
+            <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
+            <div className="font-mono font-bold truncate" title={formatMMK(monthBalance.opening)}>
+              {balanceHidden ? '••••' : formatLakhs(monthBalance.opening, lang)}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
+            <div className="font-mono font-bold truncate" title={formatMMK(monthBalance.closing)}>
+              {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
+            <div
+              className={`font-mono font-bold truncate ${monthBalance.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}
+              title={formatMMK(monthBalance.net)}
+            >
+              {balanceHidden ? '••••' : `${monthBalance.net >= 0 ? '+' : ''}${formatLakhs(monthBalance.net, lang)}`}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-0.5">
+          {onSelectTab && (
+            <button
+              type="button"
+              onClick={() => onSelectTab('analytics')}
+              className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
+            >
+              {lang === 'my' ? 'အစီရင်ခံစာ' : 'Reports'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setCalendarOpen(!calendarOpen)}
+            aria-expanded={calendarOpen}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            {calendarOpen
+              ? (lang === 'my' ? 'ပြက္ခဒိန် ဝှက်မည်' : 'Hide calendar')
+              : (lang === 'my' ? 'ပြက္ခဒိန် ပြမည်' : 'Show calendar')}
+          </button>
+        </div>
+
+        {calendarOpen && (
+          <div className="bg-white text-slate-900 rounded-2xl p-2.5 sm:p-3">
+            <RecordsCalendar
+              transactions={filtered}
+              wallets={wallets}
+              lang={lang}
+              selectedDay={selectedDay}
+              onSelectDay={setSelectedDay}
+              includeTransfers={isSingleWalletFilter}
+            />
+          </div>
+        )}
+      </div>
+
       {/* [v7.5.73] Title card REMOVED — actions only, one slim row,
           no card background. The record count moved to the summary line. */}
       <div className="flex min-w-0 items-center gap-2 py-0.5">
@@ -710,7 +929,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             {(debouncedSearchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || selectedWalletIds.length > 0 || effectiveDataScope !== 'all') && (
-              <button type="button" onClick={() => { setDebouncedSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); setEffectiveDataScope('all'); }} className="text-xs text-rose-600 hover:underline font-bold px-2.5 py-2.5 leading-relaxed cursor-pointer bg-rose-50 rounded-lg">↺</button>
+              <button type="button" onClick={() => { setDebouncedSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); setEffectiveDataScope('all'); setSelectedDay(null); }} className="text-xs text-rose-600 hover:underline font-bold px-2.5 py-2.5 leading-relaxed cursor-pointer bg-rose-50 rounded-lg">↺</button>
             )}
             <button type="button" onClick={() => setShowSummaryTable(!showSummaryTable)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 sm:py-2.5 leading-relaxed rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0">
               {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းမည်' : '➖ Compact') : (lang === 'my' ? '📊 Table' : '📊 Table')}
@@ -783,6 +1002,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               setSelectedWallet('all');
               setSelectedWalletIds([]);
               setEffectiveDataScope('all');
+              setSelectedDay(null);
             }}
             className="px-2.5 py-1 rounded-lg bg-amber-200/80 hover:bg-amber-300/80 text-amber-950 font-bold transition-all shrink-0 cursor-pointer text-[11px]"
           >
@@ -791,9 +1011,25 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
       )}
 
-      {/* Transactions List (3D Clay Card) */}
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/90 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
-        {filtered.length === 0 ? (
+      {/* [v7.6.45] Selected-day chip: the calendar tap always leaves
+          a visible way back, even with the calendar closed. */}
+      {selectedDay && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-900">
+          <Calendar className="w-4 h-4 shrink-0" />
+          <span className="min-w-0 truncate">{formatLocalizedDate(selectedDay, lang)}</span>
+          <button
+            type="button"
+            onClick={() => setSelectedDay(null)}
+            className="ml-auto shrink-0 px-2 py-1 rounded-lg bg-white hover:bg-indigo-100 border border-indigo-200 cursor-pointer"
+          >
+            ✕ {lang === 'my' ? 'ဖြုတ်မည်' : 'Clear'}
+          </button>
+        </div>
+      )}
+
+      {/* Transactions List — one card per day (Part D, v7.6.45). */}
+      {visibleFiltered.length === 0 ? (
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/90 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
           <div className="py-5 text-center text-slate-400 space-y-2 px-4">
             <Tag className="w-10 h-10 mx-auto text-slate-300" />
             <p className="text-sm font-medium text-slate-600">
@@ -814,6 +1050,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   setSelectedWallet('all');
                   setSelectedWalletIds([]);
                   setEffectiveDataScope('all');
+                  setSelectedDay(null);
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer shadow-xs"
               >
@@ -826,10 +1063,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               </p>
             )}
           </div>
+          </div>
         ) : (
-          <div className="divide-y divide-slate-200/90">
+          <div className="space-y-3">
             {groupedByDate.slice(0, visibleDays).map((group) => {
-              const formattedDate = formatLocalizedDate(group.date, lang);
+              const dayParts = splitDayCardParts(group.date, lang);
               // [v7.5.62] The wallet pill is only informative when a
               // day's rows use more than one wallet — when every row
               // uses the same wallet it just repeats the same name.
@@ -850,45 +1088,33 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 .map(([id]) => id);
               const defaultWalletId = majorityWalletIds.length === 1 ? majorityWalletIds[0] : null;
               return (
-                <div key={group.date} className="bg-white">
-                  {/* Daily Date Header with Subtotals */}
-                  <div className="bg-slate-100/95 px-4 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-y border-slate-200/80 sticky top-0 z-10 backdrop-blur-md">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                      <span className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight">
-                        {formattedDate}
+                <div key={group.date} className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/90 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
+                  {/* [v7.6.45] Day header: big numeral + weekday +
+                      month/year + day net + count chip (one card
+                      per day). The old sticky header with in/out/net
+                      badges is replaced; the rows below are
+                      unchanged, and the day's in/out stay visible in
+                      the summary bar above. */}
+                  <div className="px-4 sm:px-5 pt-3 pb-2 flex items-center justify-between gap-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-[26px] leading-none font-extrabold text-slate-900 shrink-0">
+                        {dayParts.dayNum}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-bold text-slate-900 truncate">{dayParts.weekday}</span>
+                        <span className="block text-[11px] text-slate-500 truncate">{dayParts.monthYear}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`font-mono font-bold text-xs sm:text-sm ${group.net >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}
+                        title={formatMMK(group.net)}
+                      >
+                        {group.net >= 0 ? '+' : ''}{formatLakhs(group.net, lang)}
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
                         {group.transactions.length} {lang === 'my' ? 'ခု' : 'items'}
                       </span>
-                    </div>
-
-                    {/* Daily Inflow / Outflow / Net Badges */}
-                    <div className="flex items-center gap-2 text-xs flex-wrap font-mono font-bold">
-                      {group.totalIncome > 0 && (
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] flex items-center gap-1">
-                          <span>{lang === 'my' ? 'ဝင်:' : 'In:'}</span>
-                          <span title={formatMMK(group.totalIncome)}>+{formatLakhs(group.totalIncome, lang)}</span>
-                        </span>
-                      )}
-                      {group.totalExpense > 0 && (
-                        <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] flex items-center gap-1">
-                          <span>{lang === 'my' ? 'ထွက်:' : 'Out:'}</span>
-                          <span title={formatMMK(group.totalExpense)}>-{formatLakhs(group.totalExpense, lang)}</span>
-                        </span>
-                      )}
-                      {group.totalIncome > 0 && group.totalExpense > 0 && (
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] border flex items-center gap-1 ${
-                          group.net >= 0
-                            ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300'
-                            : 'bg-rose-100/90 text-rose-900 border-rose-300'
-                        }`}>
-                          <span className="font-sans text-[10px] opacity-85">{lang === 'my' ? 'အသားတင်:' : 'Net:'}</span>
-                          <span title={formatMMK(group.net)}>{group.net >= 0 ? '+' : ''}{formatLakhs(group.net, lang)}</span>
-                        </span>
-                      )}
                     </div>
                   </div>
 
@@ -992,7 +1218,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div
                               className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-[2px_3px_8px_rgba(0,0,0,0.12),inset_1px_1px_2px_rgba(255,255,255,0.6)]"
-                              style={{ backgroundColor: cat?.color || (isIncome ? '#10B981' : '#EF4444') }}
+                              style={{ backgroundColor: getCategoryTileColor(cat, isIncome) }}
                             >
                               <CategoryIcon name={cat?.icon || 'Tag'} className="w-5 h-5" />
                             </div>
@@ -1277,9 +1503,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 </div>
               );
             })}
-          </div>
+        </div>
         )}
-      </div>
 
       {/* Load More Button (when more days exist) */}
       {groupedByDate.length > visibleDays && (
@@ -1367,6 +1592,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         wallets={wallets}
         lang={lang}
         fuelLog={viewingTx ? findFuelLogForTransaction(fuelLogs, viewingTx.id) : undefined}
+        maintenanceLog={viewingTx ? findMaintenanceLogForTransaction(maintenanceLogs, viewingTx.id) : undefined}
         canEdit={(() => {
           if (!viewingTx) return true;
           const w = walletMap.get(viewingTx.walletId);

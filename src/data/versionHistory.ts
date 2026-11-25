@@ -16,10 +16,43 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.44';
-export const CURRENT_BUILD_NUMBER = 358;
+export const CURRENT_APP_VERSION = 'v7.6.45';
+export const CURRENT_BUILD_NUMBER = 359;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.45',
+    buildNumber: 359,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'မှတ်တမ်းစာရင်း ဒီဇိုင်းအသစ်နှင့် စာရင်းရှင်းတမ်း ပြင်ဆင်ချက်များ',
+    titleEn: 'Records redesign and statement fixes',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'မှတ်တမ်းစာရင်း Tab အပေါ်ပိုင်းကို ဒီဇိုင်းအသစ်နဲ့ ပြင်လိုက်တယ် — ဒီလလက်ကျန် (လအစ၊ လအဆုံး၊ အသားတင်) ကို ပိုက်ဆံအိတ်အလိုက် ကြည့်နိုင်ပြီး၊ ပြက္ခဒိန်ကနေ ရက်တစ်ရက်ချင်း စစ်နိုင်တယ်။ မှတ်တမ်းတွေကို တစ်ရက်ချင်း ကတ်အလိုက် ပြတော့ ဖတ်ရပိုလွယ်သွားမယ်။ စာရင်းရှင်းတမ်းမှာလည်း ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ်ကို ပြန်မြင်ရပြီး၊ ကာလကို ဒီနေ့/ဒီအပတ်/ဒီသုံးလပတ်/ဒီနှစ် ရွေးလို့ရပြီ။',
+    descriptionEn: 'The top of the Records tab is redesigned — a this-month balance card (opening, closing, net) scoped by wallet, a calendar you can open to drill into one day, and one card per day so records are easier to scan, with every detail kept. The statement shows fuel and maintenance details again, and its period picker gains Today, This week, This quarter, and This year.',
+    changesMy: [
+      'စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ',
+      'ယာဉ်နံပါတ်ပြား မရှိတဲ့ ယာဉ်နာမည်မှာ အလွတ်ကွင်းစကွင်း () မပါတော့ပါ',
+      'မှတ်တမ်း အသေးစိတ် Pop Up မှာ မိုင်တာဖတ်အား (km) ကို ထည့်ပြပေးပါပြီ',
+      'မှတ်တမ်းစာရင်း Tab အပေါ်မှာ ဒီလလက်ကျန် ကတ်အသစ် — လအစလက်ကျန်၊ လအဆုံးလက်ကျန်၊ အသားတင်၊ ပိုက်ဆံအိတ် ရွေးချယ်မှု၊ လက်ကျန်ဝှက်ရန် မျက်လုံး၊ အစီရင်ခံစာနှင့် ပြက္ခဒိန် ခလုတ်များ',
+      'မှတ်တမ်းများကို တစ်ရက်ချင်းစီ ကတ်အလိုက် ပြပေးပါပြီ — အချက်အလက် အားလုံး အပြည့်အစုံပါဝင်ပါသည်',
+      'ကဏ္ဍအလိုက် အိုင်ကွန်အရောင်များ ကွဲပြားအောင် ပြင်ဆင်ပေးပါပြီ (ကိုယ်တိုင်သတ်မှတ်ထားတဲ့ အရောင်တွေကို မထိပါ)',
+      'မှတ်တမ်း ပြက္ခဒိန်မှာ ဝင်+ထွက် နှစ်ခုလုံး သို့မဟုတ် အသားတင်သာ ရွေးချယ်ပြနိုင်ပါပြီ — ရက်တစ်ရက်ကို နှိပ်ရင် အဲဒီနေ့စာရင်းချည်း စစ်ကြည့်နိုင်ပါသည်',
+      'စာရင်းရှင်းတမ်း ကာလမှာ ဒီနေ့၊ ဒီအပတ်၊ ဒီသုံးလပတ်၊ ဒီနှစ် တို့ကို ထည့်ပေးပါပြီ',
+    ],
+    changesEn: [
+      'The statement now shows fuel and maintenance details (vehicle, litres, price, shop) again — records without a note no longer fall back to the bare category name',
+      'A vehicle without a plate number no longer shows empty parentheses () after its name',
+      'The record detail pop-up now shows the odometer reading (km)',
+      'New this-month balance card at the top of the Records tab — opening balance, closing balance, net, wallet picker, hide-balance eye, and Report and Calendar buttons',
+      'Records are now shown one card per day — with every detail kept, nothing removed',
+      'Category icon colours are now distinct per category (colours you set yourself are untouched)',
+      'The Records calendar can show in + out together or net only — tap a day to filter the list to that day',
+      'The statement period picker gains Today, This week, This quarter, and This year',
+    ],
+  },
   {
     version: 'v7.6.44',
     buildNumber: 358,

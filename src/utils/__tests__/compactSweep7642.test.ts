@@ -116,7 +116,7 @@ describe('Groups 3–4 — Dashboard and Records stacks (v7.6.42)', () => {
 
   it('Records root, group headers, rows and expanded filter panel are tightened', () => {
     expect(TXN_SRC).toContain('<div className="space-y-3">');
-    expect(TXN_SRC).toContain('py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5');
+    expect(TXN_SRC).toContain('px-4 sm:px-5 pt-3 pb-2 flex items-center justify-between gap-3 border-b border-slate-100');
     expect(TXN_SRC).toContain('p-3 sm:p-3.5 sm:px-6 hover:bg-slate-50/80');
     expect(TXN_SRC).toContain('pt-1 sm:pt-1.5 border-t border-slate-100');
     // v7.6.41 split display untouched by the spacing pass.
@@ -198,16 +198,16 @@ describe('Group 8 — Debts, Vehicles, Data, Categories, Notifications (v7.6.42)
 
 describe('Version pins roll to v7.6.42 / build 356', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
-    expect(CURRENT_BUILD_NUMBER).toBe(358);
-    expect(VERSION_JSON.version).toBe('v7.6.44');
-    expect(VERSION_JSON.buildNumber).toBe(358);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
+    expect(CURRENT_BUILD_NUMBER).toBe(359);
+    expect(VERSION_JSON.version).toBe('v7.6.45');
+    expect(VERSION_JSON.buildNumber).toBe(359);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.44');
-    expect(top.buildNumber).toBe(358);
+    expect(top.version).toBe('v7.6.45');
+    expect(top.buildNumber).toBe(359);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(10);
-    expect(top.changesEn.length).toBe(10);
+    expect(top.changesMy.length).toBe(8);
+    expect(top.changesEn.length).toBe(8);
   });
 });

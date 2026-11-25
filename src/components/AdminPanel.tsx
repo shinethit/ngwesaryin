@@ -36,7 +36,7 @@ import { logAdminAction, subscribeAdminAuditLog, AdminAuditLogEntry } from '../l
 import { parseShopImportFile, previewShopImport, mapShopRow, shopDedupeKey, firstPhoneOf } from '../lib/shopImport';
 import type { ShopImportPreview } from '../lib/shopImport';
 import { QuotaDashboard } from './QuotaDashboard';
-import { X, Copy, CheckCircle, Trash2, Eraser, Plus, RefreshCw, Key, Megaphone, AlertTriangle, FileText, Edit2, Check, Users, Search, Clock, Sparkles, ShieldCheck, UserCheck, Crown, Phone, Send, CreditCard, Save, Globe, Smartphone, Tablet, Monitor, Eye, Activity, TrendingUp, PieChart, Wallet as WalletIcon, ArrowUpRight, Sliders, Calendar, Flame, Database, ArrowUpDown, ArrowUp, ArrowDown, Store, Upload } from 'lucide-react';
+import { X, Copy, CheckCircle, Trash2, Eraser, Plus, RefreshCw, Key, Megaphone, AlertTriangle, FileText, Edit2, Check, Users, Search, Clock, Sparkles, ShieldCheck, UserCheck, Crown, Phone, Send, CreditCard, Save, Globe, Smartphone, Tablet, Monitor, Eye, Activity, TrendingUp, PieChart, Wallet as WalletIcon, ArrowUpRight, Sliders, Calendar, Flame, ArrowUpDown, ArrowUp, ArrowDown, Store, Upload } from 'lucide-react';
 
 interface ActivationCode {
   code: string;
@@ -164,8 +164,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [shopPriceAlerts, setShopPriceAlerts] = useState<ShopPriceAlert[]>([]);
   const [shopPriceAlertsLoading, setShopPriceAlertsLoading] = useState(true);
   const [shopPriceAlertsError, setShopPriceAlertsError] = useState<string | null>(null);
-  // [wallet-backfill] Prevents double-clicks during the users↔cloud wallet sync
-  const [isBackfillingWallets, setIsBackfillingWallets] = useState(false);
 
   // [v7.5.71 shop import] JSON file import into public_shops
   const [shopImportPreview, setShopImportPreview] = useState<ShopImportPreview | null>(null);
@@ -210,6 +208,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [contactSavedSnapshot, setContactSavedSnapshot] = useState<ContactInfo>(DEFAULT_CONTACT_INFO);
   const [contactLoadError, setContactLoadError] = useState<string | null>(null);
   const isContactDirty = JSON.stringify(contactForm) !== JSON.stringify(contactSavedSnapshot);
+  // [v7.6.45] Broadcast-draft dirty check, the parallel of
+  // isContactDirty: a typed title/content or an edit in progress
+  // counts as unsaved work for the panel-close guard below.
+  const isBroadcastDraftDirty =
+    msgTitle.trim() !== '' || msgContent.trim() !== '' || editingMsgId !== null;
   const [contactSaving, setContactSaving] = useState(false);
   // [v7.5.64 C-03] True only after a successful contact-info load.
   // (Save-button gating is a separate worker's job.)
@@ -531,6 +534,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   }, []);
 
+  // [v7.6.45] Headline visitor total, refreshed on demand: the
+  // 60s timer in the listeners effect below and the Analytics
+  // tab's Refresh button call this same query. On failure the
+  // previous value stays (the display falls back to the deduped
+  // count). It recounts the TOTAL only — the visitor list itself
+  // is a live listener and is not re-fetched here.
+  const refreshVisitorsTotalCount = useCallback(() => {
+    getVisitorsTotalCount()
+      .then((count) => setVisitorsTotalCount(count))
+      .catch((err) => console.warn('Could not load total visitor count:', err));
+  }, []);
+
   // Real-time Firestore Listeners and Admin Bootstrapping
   useEffect(() => {
     if (!isOpen || !isAdmin) return;
@@ -658,11 +673,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     // total must come from here. Refresh every 60s; on failure leave
     // the previous value (the display falls back to the deduped count).
     // NOT re-fetched on every list update — that would spam count queries.
-    const refreshVisitorsTotalCount = () => {
-      getVisitorsTotalCount()
-        .then((count) => setVisitorsTotalCount(count))
-        .catch((err) => console.warn('Could not load total visitor count:', err));
-    };
     refreshVisitorsTotalCount();
     const visitorsTotalCountTimer = setInterval(refreshVisitorsTotalCount, 60000);
 
@@ -689,7 +699,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setShopReportsLoading(false);
     }, (err) => {
       console.warn('Realtime shop reports sync notice:', err);
-      setShopReportsError(lang === 'my' ? 'ဆိုင်အကြောင်း Report များ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပြီး Refresh နှိပ်ပါ' : 'Could not load shop reports — check connection / permissions and tap Refresh.');
+      setShopReportsError(lang === 'my' ? 'ဆိုင်အကြောင်း Report များ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not load shop reports — check connection / permissions.');
       setShopReportsLoading(false);
     });
 
@@ -705,7 +715,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setShopPriceAlertsLoading(false);
     }, (err) => {
       console.warn('Realtime shop price alerts sync notice:', err);
-      setShopPriceAlertsError(lang === 'my' ? 'ဈေးနှုန်း Alert များ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပြီး Refresh နှိပ်ပါ' : 'Could not load price alerts — check connection / permissions and tap Refresh.');
+      setShopPriceAlertsError(lang === 'my' ? 'ဈေးနှုန်း Alert များ ဆွဲယူ၍ မရပါ — အင်တာနက်/ခွင့်ပြုချက်ကို စစ်ဆေးပါ' : 'Could not load price alerts — check connection / permissions.');
       setShopPriceAlertsLoading(false);
     });
 
@@ -773,7 +783,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       unsubSystemWallets();
       unsubSystemCats();
     };
-  }, [isOpen, isAdmin, user, loadSystemWideData]);
+  }, [isOpen, isAdmin, user, loadSystemWideData, refreshVisitorsTotalCount]);
 
   // Combined categories map across defaults, system-wide custom categories, and current categories
   const allMergedCategories = useMemo(() => {
@@ -2275,6 +2285,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     });
   }, [deduplicatedVisitors, visitorFilter, visitorSearch]);
 
+  // [v7.6.45] Active-visitor count for the filter pill (same
+  // 10-minute recency rule as the 'active' filter above): the
+  // other three pills show counts, this one did not.
+  const activeVisitorsCount = useMemo(
+    () => deduplicatedVisitors.filter((v) => Date.now() - v.lastActiveAt < 10 * 60 * 1000).length,
+    [deduplicatedVisitors],
+  );
+
   // [v7.5.64 C-23] Broadcast search — same pattern as visitor search
   // (title / content / type).
   const filteredMessages = useMemo(() => {
@@ -2642,8 +2660,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn overflow-hidden">
       <div className="bg-white rounded-2xl sm:rounded-3xl max-w-5xl w-full p-3 sm:p-6 shadow-2xl border border-slate-200 relative max-h-[96vh] sm:max-h-[94vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 pb-2 sm:pb-4 border-b border-slate-100 shrink-0">
-          <div>
+        <div className="flex items-start justify-between gap-2 sm:gap-4 pb-2 sm:pb-4 border-b border-slate-100 shrink-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2.5">
               <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight">
                 Admin Control Center
@@ -2666,9 +2684,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             onClick={() => {
               // [v7.5.55 E16] Dirty-check: closing with unsaved contact edits asks first.
               if (activeTab === 'contact_info' && isContactDirty && !window.confirm(lang === 'my' ? 'ဆက်သွယ်ရန် အချက်အလက် အပြောင်းအလဲများ မသိမ်းရသေးပါ — ပိတ်မည်လား။' : 'Contact changes are not saved yet — close anyway?')) return;
+              // [v7.6.45] Same guard for a half-written broadcast draft
+              // (closing unmounts the panel and discards the draft).
+              if (activeTab === 'broadcast' && isBroadcastDraftDirty && !window.confirm(lang === 'my' ? 'ကြေညာချက် အကြမ်း မသိမ်းရသေးပါ — ပိတ်မည်လား။' : 'Broadcast draft is not saved yet — close anyway?')) return;
               onClose();
             }}
-            className="p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors self-end sm:self-auto cursor-pointer"
+            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -2700,7 +2721,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             type="button"
             data-tab="quota"
             onClick={() => setActiveTab('quota')}
-            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 relative ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer text-center whitespace-nowrap shrink-0 relative ${
               activeTab === 'quota'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -2949,7 +2970,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               {/* [v7.5.64 A-03 / v7.5.65] Unique visitors, not sessions.
                   The value is the true total via an aggregate count query
                   (falls back to the deduped latest-500 count while loading). */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-1">
+              <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-2xs space-y-1">
                 <div className="flex items-center justify-between text-slate-500">
                   <span className="text-[11px] font-bold uppercase tracking-wider">
                     {lang === 'my' ? 'ဝင်ရောက်သူ စုစုပေါင်း' : 'Unique Visitors'}
@@ -3422,20 +3443,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                 </div>
 
-                {/* Quick Broadcast Notice Counter */}
+                {/* Quick Broadcast Notice Counter — count only: the
+                    Quick Shortcuts card below already navigates to the
+                    Broadcast tab, so this counter keeps no button. */}
                 <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-xs text-indigo-900 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Megaphone className="w-4 h-4 text-indigo-600" />
                     <span>{messages.filter(m => m.isActive).length} {lang === 'my' ? 'ခု ကြေညာထားဆဲ' : 'active broadcasts'}</span>
                   </div>
-                  <button
-                    type="button"
-                    data-tab="broadcast"
-            onClick={() => setActiveTab('broadcast')}
-                    className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer"
-                  >
-                    {lang === 'my' ? 'ကြည့်ရန် →' : 'View →'}
-                  </button>
                 </div>
               </div>
             </div>
@@ -3939,8 +3954,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             {/* Filter Pills & Live Search */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              {/* Filter Pills */}
+              {/* Filter Pills — the four code-status pills show only
+                  in the codes views; in the Users view only the
+                  Users pill stays (plus the shared search), so the
+                  users directory is not topped by a second, wrong
+                  filter row. The Users pill is the way back. */}
               <div className="flex flex-wrap items-center gap-1.5">
+                {statusFilter !== 'users' && (
+                <>
                 <button
                   type="button"
                   onClick={() => setStatusFilter('all')}
@@ -3995,6 +4016,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   {expiredCodesCount})
                 </button>
 
+                </>
+                )}
                 <button
                   type="button"
                   onClick={() => setStatusFilter('users')}
@@ -5037,7 +5060,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 3: CONTACT US & PAYMENT CONFIGURATION */}
         {activeTab === 'contact_info' && (
-          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-4 space-y-5 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
             <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -5271,13 +5294,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 4: VISITOR & COUNTRY ANALYTICS */}
         {activeTab === 'analytics' && (
-          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-5 pr-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
             {analyticsError && (
               <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 text-xs font-bold text-rose-900 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{analyticsError}</span>
               </div>
             )}
+            {/* [v7.6.45] Headline-total recount: the visitor list is
+                a live listener, but the aggregate total refreshes
+                on a 60s timer — this re-runs the same count query
+                on demand. It does not reload the list. */}
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={refreshVisitorsTotalCount}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+                title={lang === 'my' ? 'ဝင်ကြည့်သူ စုစုပေါင်းကို အခုပြန်ရေတွက်မည်' : 'Recount the total visitor count now'}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                {lang === 'my' ? 'စုစုပေါင်း အသစ်ယူမည်' : 'Refresh total'}
+              </button>
+            </div>
             {/* Top Stat Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-4 rounded-2xl shadow-sm space-y-1">
@@ -5583,7 +5621,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      🟢 {lang === 'my' ? 'ယခု ဝင်နေသူ' : 'Active'}
+                      🟢 {lang === 'my' ? 'ယခု ဝင်နေသူ' : 'Active'} ({activeVisitorsCount})
                     </button>
                   </div>
                 </div>
@@ -5945,7 +5983,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setShowTxManagerModal(false)}
+                onClick={() => { setModalVisibleCount(100); setShowTxManagerModal(false); }}
                 className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
@@ -6450,7 +6488,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setShowTxManagerModal(false)}
+                onClick={() => { setModalVisibleCount(100); setShowTxManagerModal(false); }}
                 className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer shrink-0 whitespace-nowrap"
               >
                 {lang === 'my' ? 'ပိတ်မည်' : 'Close'}

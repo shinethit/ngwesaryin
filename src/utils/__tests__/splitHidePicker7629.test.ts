@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
-    expect(CURRENT_BUILD_NUMBER).toBe(358);
-    expect(VERSION_JSON.version).toBe('v7.6.44');
-    expect(VERSION_JSON.buildNumber).toBe(358);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
+    expect(CURRENT_BUILD_NUMBER).toBe(359);
+    expect(VERSION_JSON.version).toBe('v7.6.45');
+    expect(VERSION_JSON.buildNumber).toBe(359);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.44');
-    expect(entry.buildNumber).toBe(358);
-    expect(entry.changesMy[0]).toBe('ဆိုင်အားလုံးရဲ့ Menu ကို တစ်ခါနှိပ်နဲ့ ပြန် Update လုပ်လို့ရပြီ (Menu အားလုံး ပြန် Update ခလုတ်)');
+    expect(entry.version).toBe('v7.6.45');
+    expect(entry.buildNumber).toBe(359);
+    expect(entry.changesMy[0]).toBe('စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

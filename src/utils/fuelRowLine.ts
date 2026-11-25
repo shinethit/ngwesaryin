@@ -7,7 +7,7 @@
 // already use. Never match by date / amount / vehicle: two fills on
 // one day at one station would collide. When no log is linked the
 // line is '' and the row renders exactly as before.
-import type { FuelLog } from '../types';
+import type { FuelLog, VehicleMaintenance } from '../types';
 
 /** The FuelLog linked to a transaction, or undefined when none is. */
 export function findFuelLogForTransaction(
@@ -16,6 +16,18 @@ export function findFuelLogForTransaction(
 ): FuelLog | undefined {
   if (!fuelLogs) return undefined;
   return fuelLogs.find((f) => f.transactionId === transactionId);
+}
+
+// [v7.6.45] The maintenance parallel of the fuel finder: the
+// VehicleMaintenance record linked to a transaction (same
+// transactionId join, never date/amount matching). Used by the
+// record detail view's odometer row and by both of its callers.
+export function findMaintenanceLogForTransaction(
+  maintenanceLogs: VehicleMaintenance[] | undefined,
+  transactionId: string,
+): VehicleMaintenance | undefined {
+  if (!maintenanceLogs) return undefined;
+  return maintenanceLogs.find((m) => m.transactionId === transactionId);
 }
 
 /**

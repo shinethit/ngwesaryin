@@ -14,6 +14,9 @@ import { isWalletMatch, isSharedWallet } from '../utils/walletBalance';
 // omitted `splits` field, so had-splits → now-none edits write
 // `splits: []` (see shouldClearSplits) instead of omitting the key.
 import { shouldClearSplits } from '../utils/transactionSplits';
+// [v7.6.45] Single vehicle-name rule (no "Starex ()" when the plate
+// is empty) + the shared fuel auto-note builder.
+import { buildFuelAutoNote, formatVehicleDisplayName } from '../utils/vehicleNames';
 import {
   saveSharedWalletTransaction,
   deleteSharedWalletTransaction,
@@ -349,7 +352,33 @@ export function useTransactionHandlers({
     onCreated?: (tx: Transaction) => void
   ): boolean => {
     const cleanAmount = Math.abs(Number(newTx.amount) || 0);
-    const sanitizedTx = { ...newTx, amount: cleanAmount };
+    let sanitizedTx = { ...newTx, amount: cleanAmount };
+
+    // [v7.6.45] Entry-form fuel saves must not lose the note: the
+    // VehiclesView handler stamps an auto-summary when the user types
+    // no note, but this path kept the empty note — so a note-less fuel
+    // transaction fell back to the bare category name in the
+    // statement. Stamp the same summary here; user-typed notes are
+    // preserved as-is. The display-time fallback in statementData
+    // covers older note-less saves.
+    if (
+      !sanitizedTx.note?.trim() &&
+      vehicleLinkData?.logType === 'fuel' &&
+      sanitizedTx.type === 'expense'
+    ) {
+      const liters = vehicleLinkData.liters || 0;
+      const autoNote = buildFuelAutoNote({
+        vehicleName: formatVehicleDisplayName(
+          vehicles.find((v) => v.id === vehicleLinkData.vehicleId),
+        ),
+        liters,
+        pricePerLiter:
+          vehicleLinkData.pricePerLiter ||
+          (liters > 0 ? Math.round(cleanAmount / liters) : 0),
+        gasStation: vehicleLinkData.gasStation,
+      });
+      if (autoNote) sanitizedTx = { ...sanitizedTx, note: autoNote };
+    }
 
     if (editingTransaction) {
       const editWallet = wallets.find((w) => isWalletMatch(w, editingTransaction.walletId));
@@ -839,7 +868,7 @@ export function useTransactionHandlers({
     // transactionId). The + form bypasses the amount > 0 gate for this.
     if (vehicleLinkData?.logType === 'tire' && cleanAmount === 0) {
       const targetVehicle = vehicles.find((v) => v.id === vehicleLinkData.vehicleId);
-      const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
+      const vehicleName = formatVehicleDisplayName(targetVehicle);
       const odo = vehicleLinkData.odometer || targetVehicle?.currentOdometer || 0;
       const tireId = `tire_${Date.now()}`;
       const tireLog: TirePressureLog = {
@@ -928,7 +957,7 @@ export function useTransactionHandlers({
     // ==========================================
     if (vehicleLinkData && vehicleLinkData.vehicleId && sanitizedTx.type === 'expense') {
       const targetVehicle = vehicles.find((v) => v.id === vehicleLinkData.vehicleId);
-      const vehicleName = targetVehicle ? `${targetVehicle.name} (${targetVehicle.plateNumber})` : 'Vehicle';
+      const vehicleName = formatVehicleDisplayName(targetVehicle);
       const odo = vehicleLinkData.odometer || targetVehicle?.currentOdometer || 0;
 
       if (vehicleLinkData.logType === 'fuel') {

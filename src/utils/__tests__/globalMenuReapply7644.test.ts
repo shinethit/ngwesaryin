@@ -197,19 +197,19 @@ describe('global button + combined modal wiring (v7.6.44)', () => {
   });
 });
 
-describe('Version pins roll to v7.6.44 / build 358', () => {
+describe('Version pins roll to v7.6.45 / build 359', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
-    expect(CURRENT_BUILD_NUMBER).toBe(358);
-    expect(VERSION_JSON.version).toBe('v7.6.44');
-    expect(VERSION_JSON.buildNumber).toBe(358);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
+    expect(CURRENT_BUILD_NUMBER).toBe(359);
+    expect(VERSION_JSON.version).toBe('v7.6.45');
+    expect(VERSION_JSON.buildNumber).toBe(359);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.44');
-    expect(top.buildNumber).toBe(358);
+    expect(top.version).toBe('v7.6.45');
+    expect(top.buildNumber).toBe(359);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(10);
-    expect(top.changesEn.length).toBe(10);
+    expect(top.changesMy.length).toBe(8);
+    expect(top.changesEn.length).toBe(8);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

@@ -104,17 +104,17 @@ describe('Shop cards are compact (v7.6.39)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
-    expect(CURRENT_BUILD_NUMBER).toBe(358);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.44');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(358);
-    expect(VERSION_JSON.version).toBe('v7.6.44');
-    expect(VERSION_JSON.buildNumber).toBe(358);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
+    expect(CURRENT_BUILD_NUMBER).toBe(359);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.45');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(359);
+    expect(VERSION_JSON.version).toBe('v7.6.45');
+    expect(VERSION_JSON.buildNumber).toBe(359);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ဆိုင်အားလုံးရဲ့ Menu ကို တစ်ခါနှိပ်နဲ့ ပြန် Update လုပ်လို့ရပြီ (Menu အားလုံး ပြန် Update ခလုတ်)',
+      'စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'All shop menus can be re-checked with one tap (Refresh All Menus button)',
+      'The statement now shows fuel and maintenance details (vehicle, litres, price, shop) again — records without a note no longer fall back to the bare category name',
     );
   });
 });

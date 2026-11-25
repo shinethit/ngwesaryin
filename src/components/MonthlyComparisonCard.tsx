@@ -511,7 +511,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
 
       {/* Recharts Bar Chart Area */}
       {prevMonthTotal === 0 && thisMonthTotal === 0 ? (
-        <div className="py-10 text-center rounded-xl bg-slate-50/60 border border-dashed border-slate-200 space-y-2">
+        <div className="py-4 text-center rounded-xl bg-slate-50/60 border border-dashed border-slate-200 space-y-2">
           <Calendar className="w-8 h-8 text-slate-300 mx-auto" />
           <p className="text-xs text-slate-500 font-medium">
             {lang === 'my'

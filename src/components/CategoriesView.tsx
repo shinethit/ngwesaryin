@@ -463,7 +463,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         {/* [v7.5.60 S8] Empty state — the old code rendered a blank page
             when the search matched nothing. */}
         {filteredCategories.length === 0 && (
-          <div className="md:col-span-2 py-12 text-center bg-white rounded-2xl border border-slate-200 space-y-3 px-4">
+          <div className="md:col-span-2 py-5 text-center bg-white rounded-2xl border border-slate-200 space-y-3 px-4">
             <Search className="w-10 h-10 mx-auto text-slate-300" />
             <p className="text-sm font-medium text-slate-600">
               {searchQuery.trim()

@@ -732,7 +732,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
       : 'past year';
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-4 animate-fadeIn">
       {limitNotice && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start justify-between gap-3">
           <p className="text-sm text-amber-900 leading-relaxed">
@@ -746,7 +746,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
         </div>
       )}
       {/* Top Banner & Introduction */}
-      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-2xs">
@@ -1223,9 +1223,9 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
 
         {/* [v7.5.88] Chart + purchase table (order-3 on mobile).
             Desktop: col 5, row 2 — under the metric cards. */}
-        <div className="order-3 lg:col-start-5 lg:col-span-8 lg:row-start-2 space-y-6">
+        <div className="order-3 lg:col-start-5 lg:col-span-8 lg:row-start-2 space-y-4">
           {/* Chart Display Box */}
-          <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -1447,7 +1447,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
           </div>
 
           {/* Detailed Chronological Purchase Records Table for Selected Items */}
-          <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-3">
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-indigo-600" />
@@ -1463,7 +1463,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
             </div>
 
             {selectedItemsPurchaseLogs.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs">
+              <div className="py-4 text-center text-slate-400 text-xs">
                 {lang === 'my'
                   ? 'ပစ္စည်းများကို အပေါ်က စာရင်းမှ ရွေးချယ်ပြီး မှတ်တမ်းအသေးစိတ်ကို ကြည့်ရှုနိုင်ပါသည်'
                   : 'Select items from the catalog to inspect their purchase history'}

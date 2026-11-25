@@ -609,12 +609,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {lang === 'my' ? 'အမြန် ဝင်ရောက်ရန်' : 'Quick Access'}
           </h3>
         </div>
-        {/* [v7.5.75] Was the v7.5.60 M4 note saying Data/Shops live here — they now live in the sidebar. */}
-        <p className="text-[11px] text-slate-500 font-medium px-1 mb-1.5">
-          {lang === 'my'
-            ? 'ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ ဈေးနှုန်း နှိုင်းယှဉ် စတာတွေ ဒီမှာရှိပါတယ်'
-            : 'Budgets, reports, price comparison and more live here'}
-        </p>
+        {/* [v7.6.35] Quick-Access intro paragraph removed — the labelled tiles below say it. */}
 
         <div className="grid grid-cols-3 gap-1.5">
           {/* 1. Budget */}

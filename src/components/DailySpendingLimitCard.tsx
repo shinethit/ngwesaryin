@@ -130,9 +130,6 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
             <h3 className="font-bold text-xs sm:text-sm text-slate-900">
               {lang === 'my' ? 'ယနေ့အသုံးစရိတ် ကန့်သတ်ချက် (Daily Limit)' : 'Daily Spending Limit'}
             </h3>
-            <p className="text-[11px] text-slate-500 font-medium">
-              {lang === 'my' ? 'ယနေ့ တစ်နေ့တာ ကုန်ကျစရိတ်များကို ထိန်းချုပ်ပါ' : 'Monitor daily burn rate and budget'}
-            </p>
           </div>
         </div>
 

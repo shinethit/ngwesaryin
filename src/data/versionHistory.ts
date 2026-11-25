@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.34';
-export const CURRENT_BUILD_NUMBER = 348;
+export const CURRENT_APP_VERSION = 'v7.6.35';
+export const CURRENT_BUILD_NUMBER = 349;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.35',
+    buildNumber: 349,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'နေရာအပိုယူနေတဲ့ ကတ်တွေ ကျစ်လစ်စေခြင်း',
+    titleEn: 'Compact cards across the whole app',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Cloud Sync အခြေအနေအပါအဝင် အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေ၊ ကွက်လပ်တွေကို ကျစ်လစ်အောင် ပြင်လိုက်ပြီ — ဂဏန်းတွေ၊ ခလုတ်တွေနဲ့ အချက်အလက်အားလုံး ရှိနေတုန်းပဲ။ ဒေတာစီမံခန့်ခွဲမှု စာမျက်နှာမှာ ထပ်နေတဲ့ အရေအတွက်ကတ်လေးတွေကိုလည်း ဖြုတ်လိုက်ပြီ။',
+    descriptionEn: 'Cards and gaps that wasted space across the whole app — including the Cloud Sync status — are now compact. Every number, button and detail stays in place, and the duplicated count tiles on the Data Management screen are gone.',
+    changesMy: [
+      'အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+    ],
+    changesEn: [
+      'Cards that wasted space across the whole app are now compact — every number and button stays in place.',
+    ],
+  },
   {
     version: 'v7.6.34',
     buildNumber: 348,

@@ -57,7 +57,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
       className={`relative overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 via-white to-amber-50 shadow-2xs ${className}`}
       id={`ad-unit-${slot}`}
     >
-      <div className="p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="p-3 sm:p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
             <Crown className="w-5 h-5" />

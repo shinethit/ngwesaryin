@@ -36,7 +36,7 @@ describe('Price Compare v7.5.88 — answer first, row tap opens the card', () =>
     // Three direct grid children with explicit desktop placement.
     expect(COMPARE_SRC).toContain('order-1 lg:col-start-5 lg:col-span-8 lg:row-start-1');
     expect(COMPARE_SRC).toContain('order-2 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:col-span-4');
-    expect(COMPARE_SRC).toContain('order-3 lg:col-start-5 lg:col-span-8 lg:row-start-2 space-y-6');
+    expect(COMPARE_SRC).toContain('order-3 lg:col-start-5 lg:col-span-8 lg:row-start-2 space-y-4');
     // No leftover single right column wrapping cards + chart + table.
     expect(COMPARE_SRC).not.toContain('RIGHT COLUMN: Chart, Summary Metric Cards');
   });
@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.34');
-    expect(CURRENT_BUILD_NUMBER).toBe(348);
-    expect(VERSION_JSON.version).toBe('v7.6.34');
-    expect(VERSION_JSON.buildNumber).toBe(348);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
+    expect(CURRENT_BUILD_NUMBER).toBe(349);
+    expect(VERSION_JSON.version).toBe('v7.6.35');
+    expect(VERSION_JSON.buildNumber).toBe(349);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.34');
-    expect(entry.buildNumber).toBe(348);
-    expect(entry.releaseDate).toBe('2026-11-24');
-    expect(entry.tag).toBe('fix');
-    expect(entry.tagLabelMy).toBe('Bug Fix');
-    expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('Offline ဖြစ်နေချိန်မှာလည်း ဒေတာတွေ ဖွင့်ကြည့်နိုင်ခြင်း');
-    expect(entry.titleEn).toBe('Data stays visible offline');
+    expect(entry.version).toBe('v7.6.35');
+    expect(entry.buildNumber).toBe(349);
+    expect(entry.releaseDate).toBe('2026-11-25');
+    expect(entry.tag).toBe('feature');
+    expect(entry.tagLabelMy).toBe('Feature အသစ်');
+    expect(entry.tagLabelEn).toBe('New Feature');
+    expect(entry.titleMy).toBe('နေရာအပိုယူနေတဲ့ ကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(entry.titleEn).toBe('Compact cards across the whole app');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

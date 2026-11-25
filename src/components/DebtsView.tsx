@@ -227,9 +227,9 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
@@ -355,7 +355,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       {/* KPI Cards: Receivable vs Payable */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Receivable (ရရန်ရှိ) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
@@ -385,7 +385,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
         </div>
 
         {/* Payable (ပေးရန်ရှိ) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-100">
@@ -470,7 +470,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       {/* Debts List */}
       <div className="space-y-4">
         {filteredDebts.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400 space-y-2">
+          <div className="bg-white p-5 text-center rounded-2xl border border-slate-200 text-slate-400 space-y-2">
             <HandCoins className="w-12 h-12 mx-auto text-slate-300" />
             <p className="text-sm font-medium text-slate-600">
               {lang === 'my' ? 'ဤကဏ္ဍတွင် အကြွေးမှတ်တမ်း မရှိသေးပါ' : 'No debt records in this category.'}

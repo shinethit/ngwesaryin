@@ -1360,7 +1360,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         </div>
 
         {/* Directory Switcher + View Mode — SAME ROW */}
-        <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+        <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
           {/* Directory Tabs */}
           <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/60 flex-1 min-w-0 max-w-xs">
             <button
@@ -1413,7 +1413,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       {/* 2. LOCKED SCREEN FOR PRIVATE LIST                                     */}
       {/* --------------------------------------------------------------------- */}
       {directoryType === 'private' && plan !== 'premium' ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto shadow-xs space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 text-center max-w-lg mx-auto shadow-xs space-y-3">
           <div className="w-14 h-14 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-center mx-auto text-amber-600 shadow-2xs">
             <Lock className="w-7 h-7" />
           </div>
@@ -1792,7 +1792,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   : `${itemResults.length} results`}
               </p>
               {loadingPublic && directoryType === 'public' ? (
-                <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 text-center space-y-2">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto animate-pulse">
                     <Store className="w-6 h-6" />
                   </div>
@@ -1806,7 +1806,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   </p>
                 </div>
               ) : !debouncedItemQuery.trim() ? (
-                <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 text-center space-y-2">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
                     <Search className="w-6 h-6" />
                   </div>
@@ -1820,7 +1820,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   </p>
                 </div>
               ) : itemResults.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 text-center space-y-2">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                     <Search className="w-6 h-6" />
                   </div>
@@ -1881,7 +1881,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               )}
             </div>
           ) : loadingPublic && directoryType === 'public' ? (
-            <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 text-center space-y-2">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto animate-pulse">
                 <Store className="w-6 h-6" />
               </div>
@@ -1895,7 +1895,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </p>
             </div>
           ) : visibleShops.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-3">
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 text-center space-y-2">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Store className="w-6 h-6" />
               </div>
@@ -1934,7 +1934,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             </div>
           ) : sortMode === 'group-category' && sortedAndGrouped.groups ? (
             // GROUPED VIEW
-            <div className="space-y-5">
+            <div className="space-y-4">
               {(batchedGroups ?? []).map((group) => (
                 <div key={group.key} className="space-y-2.5">
                   {/* Group Header */}

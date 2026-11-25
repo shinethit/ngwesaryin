@@ -110,7 +110,7 @@ export const QuotaExceededNotificationBanner: React.FC<QuotaExceededNotification
   if (!hasQuotaError && !successMsg && !errorMsg) return null;
 
   return (
-    <div className="w-full bg-rose-600 text-white px-4 py-3 shadow-md border-b border-rose-700 animate-fadeIn">
+    <div className="w-full bg-rose-600 text-white px-4 py-2 shadow-md border-b border-rose-700 animate-fadeIn">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3 text-left">
           <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">

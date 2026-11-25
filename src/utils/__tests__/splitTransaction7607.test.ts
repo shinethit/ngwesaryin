@@ -461,26 +461,26 @@ describe('splits cleared on edit (D1: merge writes keep an omitted field)', () =
 });
 
 describe('Version bump to v7.6.27 (build 342)', () => {  it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.34');
-    expect(CURRENT_BUILD_NUMBER).toBe(348);
-    expect(VERSION_JSON.version).toBe('v7.6.34');
-    expect(VERSION_JSON.buildNumber).toBe(348);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
+    expect(CURRENT_BUILD_NUMBER).toBe(349);
+    expect(VERSION_JSON.version).toBe('v7.6.35');
+    expect(VERSION_JSON.buildNumber).toBe(349);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.34');
-    expect(entry.buildNumber).toBe(348);
-    expect(entry.releaseDate).toBe('2026-11-24');
-    expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Offline ဖြစ်နေချိန်မှာလည်း ဒေတာတွေ ဖွင့်ကြည့်နိုင်ခြင်း');
-    expect(entry.titleEn).toBe('Data stays visible offline');
+    expect(entry.version).toBe('v7.6.35');
+    expect(entry.buildNumber).toBe(349);
+    expect(entry.releaseDate).toBe('2026-11-25');
+    expect(entry.tag).toBe('feature');
+    expect(entry.titleMy).toBe('နေရာအပိုယူနေတဲ့ ကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(entry.titleEn).toBe('Compact cards across the whole app');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ',
+      'အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Existing data stays visible while offline, and records added offline are no longer lost.',
+      'Cards that wasted space across the whole app are now compact — every number and button stays in place.',
     );
   });
 

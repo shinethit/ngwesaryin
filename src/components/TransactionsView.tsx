@@ -560,7 +560,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     (plan === 'guest' || plan === 'free') && monthTxCount >= maxFreeTransactions;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* [v7.5.73] Title card REMOVED — actions only, one slim row,
           no card background. The record count moved to the summary line. */}
       <div className="flex min-w-0 items-center gap-2 py-0.5">
@@ -795,7 +795,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       {/* Transactions List (3D Clay Card) */}
       <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/90 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
         {filtered.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 space-y-3 px-4">
+          <div className="py-5 text-center text-slate-400 space-y-2 px-4">
             <Tag className="w-10 h-10 mx-auto text-slate-300" />
             <p className="text-sm font-medium text-slate-600">
               {transactions.length > 0

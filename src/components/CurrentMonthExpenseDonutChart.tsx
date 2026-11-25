@@ -179,9 +179,6 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
             <h3 className="font-bold text-xs sm:text-sm text-slate-900">
               {lang === 'my' ? `ယခုလ (${currentMonthName}) ထွက်ငွေ အမျိုးအစားခွဲ Donut ဇယား` : `Current Month (${currentMonthName}) Expense Donut Chart`}
             </h3>
-            <p className="text-[11px] text-slate-500 font-medium">
-              {lang === 'my' ? 'ငွေကြေး အများဆုံး သုံးစွဲနေသည့် ကဏ္ဍများကို ရှင်းလင်းစွာ လေ့လာပါ' : 'Visual breakdown of where your money is spent this month'}
-            </p>
           </div>
         </div>
         <button
@@ -195,7 +192,7 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
       </div>
 
       {categoryBreakdown.length === 0 ? (
-        <div className="py-8 text-center text-slate-400 text-xs space-y-2">
+        <div className="py-4 text-center text-slate-400 text-xs space-y-2">
           <Tag className="w-8 h-8 mx-auto text-slate-300" />
           <p>{lang === 'my' ? 'ယခုလအတွက် ထွက်ငွေ မှတ်တမ်း မရှိသေးပါ။' : 'No expense records for the current month yet.'}</p>
         </div>

@@ -240,7 +240,7 @@ export const MonthlySavingsTarget: React.FC<MonthlySavingsTargetProps> = ({
       <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 bg-[#A78BFA]/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-1/4 -mb-12 w-56 h-56 bg-[#2DD4BF]/15 rounded-full blur-2xl pointer-events-none" />
 
-      <div className="relative p-5 sm:p-7 z-10 space-y-5">
+      <div className="relative p-4 sm:p-5 z-10 space-y-4">
         {/* Top Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">

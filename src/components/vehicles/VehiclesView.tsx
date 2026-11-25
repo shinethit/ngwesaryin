@@ -392,8 +392,8 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   // Handle empty state
   if (activeVehicles.length === 0) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-8 text-white shadow-xl text-center space-y-5">
+      <div className="space-y-4 max-w-5xl mx-auto">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-5 text-white shadow-xl text-center space-y-3">
           <div className="w-16 h-16 bg-white/10 rounded-3xl flex items-center justify-center mx-auto backdrop-blur-md text-amber-300">
             <Car className="w-8 h-8" />
           </div>
@@ -423,7 +423,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
         {/* Quick Features Preview */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+          <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
             <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Fuel className="w-5 h-5" />
             </div>
@@ -437,7 +437,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+          <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
             <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Wrench className="w-5 h-5" />
             </div>
@@ -451,7 +451,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+          <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
             <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
               <Disc className="w-5 h-5" />
             </div>
@@ -489,7 +489,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   const vehicleLimit = DEFAULT_PLAN_LIMITS[plan ?? 'free']?.maxVehicles ?? 1;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-4 max-w-6xl mx-auto">
       {/* Free Tier Notice Banner if not Premium */}
       {plan !== 'premium' && (
         <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200/90 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
@@ -796,12 +796,12 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
       {/* TAB CONTENT 1: FUEL & MILEAGE */}
       {activeTab === 'fuel' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Fuel Price Trend Chart */}
           <FuelPriceChart logs={vehicleFuelLogs} lang={lang} />
 
           {/* Fuel Logs Table / Cards */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+          <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <h4 className="font-bold text-slate-800 text-sm">
@@ -826,7 +826,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </div>
 
             {enrichedFuel.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 rounded-2xl">
+              <div className="px-4 py-4 text-center bg-slate-50 rounded-2xl">
                 <p className="text-xs text-slate-500">
                   {lang === 'my'
                     ? 'ဆီထည့်မှတ်တမ်းများ မရှိသေးပါ။ "+ ဆီထည့်စာရင်း" ခလုတ်ကို နှိပ်၍ စတင်မှတ်နိုင်ပါသည်။'
@@ -964,9 +964,9 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
       {/* TAB CONTENT 2: MAINTENANCE & SPARE PART LIFESPAN */}
       {activeTab === 'maintenance' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Health Overview Cards */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+          <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div>
               <h4 className="font-bold text-slate-800 text-sm">
                 {lang === 'my'
@@ -1157,7 +1157,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           </div>
 
           {/* Maintenance Logs List */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+          <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <h4 className="font-bold text-slate-800 text-sm">
@@ -1184,7 +1184,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </div>
 
             {maintenanceLifespans.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 rounded-2xl">
+              <div className="px-4 py-4 text-center bg-slate-50 rounded-2xl">
                 <p className="text-xs text-slate-500">
                   {lang === 'my'
                     ? 'ပြုပြင်/အပိုပစ္စည်းလဲလှယ်မှု မှတ်တမ်းများ မရှိသေးပါ။'
@@ -1319,7 +1319,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
 
       {/* TAB CONTENT 3: TIRES & PRESSURE */}
       {activeTab === 'tires' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Tire Visualizer */}
           <TireVisualizer
             vehicle={currentVehicle}
@@ -1332,17 +1332,12 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           />
 
           {/* Tire Logs History */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+          <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <h4 className="font-bold text-slate-800 text-sm">
                   {lang === 'my' ? 'တာယာ လေပေါင်စစ်ဆေးမှု မှတ်တမ်းများ' : 'Tire Check History'}
                 </h4>
-                <p className="text-xs text-slate-500">
-                  {lang === 'my'
-                    ? 'ယခင် စစ်ဆေးခဲ့သော ရက်စွဲနှင့် PSI မှတ်တမ်းများ'
-                    : 'Historical pressure readings'}
-                </p>
               </div>
 
               <button
@@ -1357,7 +1352,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
             </div>
 
             {vehicleTireLogs.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 rounded-2xl">
+              <div className="px-4 py-4 text-center bg-slate-50 rounded-2xl">
                 <p className="text-xs text-slate-500">
                   {lang === 'my'
                     ? 'တာယာ လေပေါင်ချိန် မှတ်တမ်းများ မရှိသေးပါ။'

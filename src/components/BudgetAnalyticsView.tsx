@@ -280,7 +280,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Top Segmented Sub-Tab Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs">
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
@@ -431,13 +431,6 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
           <span className="font-black px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-900">
             {budgets.length} / {plan !== 'premium' ? `${maxBudgetCategories} (${plan === 'guest' ? 'Guest' : 'Free Plan'})` : '∞ (Premium)'}
           </span>
-          {plan !== 'premium' && (
-            <span className="text-[11px] text-slate-500">
-              {lang === 'my'
-                ? `(${plan === 'guest' ? 'Guest' : 'Free'} အဆင့်တွင် ဘတ်ဂျက်ကဏ္ဍ အများဆုံး ${maxBudgetCategories} ခု သတ်မှတ်နိုင်ပါသည်)`
-                : `(${plan === 'guest' ? 'Guest' : 'Free'} plan supports up to ${maxBudgetCategories} categories)`}
-            </span>
-          )}
         </div>
 
         {plan !== 'premium' ? (
@@ -518,9 +511,6 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
           <div className="text-2xl font-bold text-slate-900 mt-1" title={formatMMK(totalBudgetLimit)}>
             {formatLakhs(totalBudgetLimit, lang)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            {budgets.length} {lang === 'my' ? 'ကဏ္ဍပေါင်းချုပ်' : 'categories combined'}
-          </p>
         </div>
 
         {/* Total Actual Spent */}
@@ -633,13 +623,10 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
               ? `${formatMonthLabel(selectedMonth)} အတွက် ဘတ်ဂျက်ကဏ္ဍများ`
               : `Budget Categories for ${formatMonthLabel(selectedMonth)}`}
           </h2>
-          <span className="text-xs text-slate-500">
-            {budgets.length} {lang === 'my' ? 'ကဏ္ဍ' : 'categories'}
-          </span>
         </div>
 
         {budgets.length === 0 ? (
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-3">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
               <PieChart className="w-6 h-6" />
             </div>
@@ -687,7 +674,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                 return (
                   <div
                     key={budget.categoryId}
-                    className={`bg-white p-5 rounded-2xl border transition-all shadow-xs flex flex-col justify-between ${
+                    className={`bg-white p-4 rounded-2xl border transition-all shadow-xs flex flex-col justify-between ${
                       isOver
                         ? 'border-rose-300 ring-1 ring-rose-200'
                         : isNear
@@ -817,7 +804,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                       </div>
 
                       {/* Amounts Display */}
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                         <div>
                           <span className="text-slate-400 block text-[11px]">
                             {lang === 'my' ? 'သုံးစွဲပြီးငွေ:' : 'Actual Spent:'}
@@ -922,7 +909,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                     </div>
 
                     {/* Card Actions Footer */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
                       <div className="text-[11px] text-slate-400">
                         {budget.calcType === 'percentage' && (
                           <span>

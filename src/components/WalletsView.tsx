@@ -642,7 +642,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
       {/* Expandable Exchange Rates & Quick Converter Panel */}
       {showExchangeRatesPanel && (
-        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
@@ -848,7 +848,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
       {/* Wallets Grid */}
       {displayedWallets.length === 0 ? (
-        <div className="p-8 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+        <div className="px-4 py-5 text-center bg-white rounded-3xl border border-dashed border-slate-200">
           <p className="text-sm font-semibold text-slate-500">
             {walletFilter === 'excluded'
               ? (lang === 'my' ? 'စုစုပေါင်းထဲ မရောဘဲ သီးသန့်ထားသော အကောင့် မရှိသေးပါ' : 'No wallets excluded from totals')
@@ -856,7 +856,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayedWallets.map((wallet) => {
             const IconComp = WALLET_ICONS_MAP[wallet.icon] || WalletCards;
             const currInfo = getCurrencyInfo(wallet.currency || 'MMK');
@@ -883,7 +883,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             return (
               <div
                 key={wallet.id}
-                className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
+                className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
               >
                 {/* Colored Accent Top Strip */}
                 <div

@@ -752,12 +752,12 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Control Panel: Mode Selector, Date Picker, and Wallet Filter */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-7">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
         {/* Free Plan Restrictive Notice Banner */}
         {plan !== 'premium' && (
-          <div className="mb-5 bg-amber-50/90 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="mb-3 bg-amber-50/90 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-start sm:items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
                 <Lock className="w-4 h-4" />
@@ -786,7 +786,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-6 border-b border-slate-100">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-3 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -1310,8 +1310,8 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       </div>
 
       {/* Visual Comparison: Top Categories Chart */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-7">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <div>
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-indigo-600" />
@@ -1356,7 +1356,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         </div>
 
         {displayedCategoryComparisons.length === 0 ? (
-          <div className="py-12 text-center text-slate-400">
+          <div className="py-5 text-center text-slate-400">
             <Info className="w-8 h-8 mx-auto mb-2 text-slate-300" />
             <p className="text-xs">
               {lang === 'my'
@@ -1472,8 +1472,8 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       </div>
 
       {/* Detailed Category-by-Category & Sub-Category Comparison Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-7">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold text-slate-900">
@@ -1584,7 +1584,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         {/* Table representation: Category or Sub-Category */}
         {comparisonLevel === 'category' ? (
           filteredCategoryList.length === 0 ? (
-            <div className="py-10 text-center text-slate-400 text-xs">
+            <div className="py-4 text-center text-slate-400 text-xs">
               {lang === 'my' ? 'ကိုက်ညီသော ကဏ္ဍ ရှာမတွေ့ပါ' : 'No matching categories found.'}
             </div>
           ) : (
@@ -1827,7 +1827,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         ) : (
           /* Sub-Category Full Table */
           filteredSubCategoryList.length === 0 ? (
-            <div className="py-10 text-center text-slate-400 text-xs">
+            <div className="py-4 text-center text-slate-400 text-xs">
               {lang === 'my' ? 'ကိုက်ညီသော ကဏ္ဍခွဲ ရှာမတွေ့ပါ' : 'No matching sub-categories found.'}
             </div>
           ) : (

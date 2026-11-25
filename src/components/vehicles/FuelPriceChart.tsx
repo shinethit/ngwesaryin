@@ -88,7 +88,7 @@ export const FuelPriceChart: React.FC<FuelPriceChartProps> = ({ logs, lang }) =>
 
   if (sorted.length === 0) {
     return (
-      <div className="p-8 text-center bg-slate-50 border border-slate-200/80 rounded-3xl">
+      <div className="px-4 py-4 text-center bg-slate-50 border border-slate-200/80 rounded-3xl">
         <p className="text-sm text-slate-500">
           {lang === 'my'
             ? 'ဆီဈေးနှုန်း အတက်အကျ ပြသရန် ဆီထည့်မှတ်တမ်းများ မရှိသေးပါ'

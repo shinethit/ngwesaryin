@@ -148,9 +148,6 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
             <h3 className="font-bold text-xs sm:text-sm text-slate-900">
               {lang === 'my' ? 'လွန်ခဲ့သော ၆ လအတွင်း အမျိုးအစားအလိုက် ထွက်ငွေ Trends' : '6-Month Spending Trends Across Categories'}
             </h3>
-            <p className="text-[11px] text-slate-500 font-medium">
-              {lang === 'my' ? 'အချိန်ကာလအလိုက် ငွေကြေးသုံးစွဲမှု တိုးတက်ခြင်း/လျော့နည်းခြင်း လမ်းကြောင်း' : 'Visualize financial growth or decline over the last 6 months'}
-            </p>
           </div>
         </div>
 
@@ -175,7 +172,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
 
       {/* Recharts Line Chart */}
       {totalSixMonthExpense === 0 ? (
-        <div className="py-10 text-center text-slate-500 text-xs space-y-2 rounded-xl bg-slate-50 border border-dashed border-slate-200">
+        <div className="py-4 text-center text-slate-500 text-xs space-y-2 rounded-xl bg-slate-50 border border-dashed border-slate-200">
           <p className="font-bold text-slate-700">
             {lang === 'my' ? 'လွန်ခဲ့သော ၆ လအတွင်း ထွက်ငွေ မှတ်တမ်း မရှိသေးပါ' : 'No expense records in the last 6 months yet'}
           </p>

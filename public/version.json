@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.34",
-  "buildNumber": 348,
+  "version": "v7.6.35",
+  "buildNumber": 349,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ"
+    "အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်"
   ],
   "changesEn": [
-    "Existing data stays visible while offline, and records added offline are no longer lost."
+    "Cards that wasted space across the whole app are now compact — every number and button stays in place."
   ]
 }

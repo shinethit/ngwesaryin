@@ -139,26 +139,26 @@ describe('merged form — one form, rows drive the total (v7.6.25)', () => {
 
 describe('version pins for v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.34');
-    expect(CURRENT_BUILD_NUMBER).toBe(348);
-    expect(VERSION_JSON.version).toBe('v7.6.34');
-    expect(VERSION_JSON.buildNumber).toBe(348);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.35');
+    expect(CURRENT_BUILD_NUMBER).toBe(349);
+    expect(VERSION_JSON.version).toBe('v7.6.35');
+    expect(VERSION_JSON.buildNumber).toBe(349);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.34');
-    expect(top.buildNumber).toBe(348);
-    expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Offline ဖြစ်နေချိန်မှာလည်း ဒေတာတွေ ဖွင့်ကြည့်နိုင်ခြင်း');
-    expect(top.titleEn).toBe('Data stays visible offline');
+    expect(top.version).toBe('v7.6.35');
+    expect(top.buildNumber).toBe(349);
+    expect(top.tag).toBe('feature');
+    expect(top.titleMy).toBe('နေရာအပိုယူနေတဲ့ ကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(top.titleEn).toBe('Compact cards across the whole app');
     expect(top.changesMy).toEqual([
-      'Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ',
+      'အက်ပ်တစ်ခုလုံးမှာ နေရာအပိုယူနေတဲ့ ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Existing data stays visible while offline, and records added offline are no longer lost.',
+      'Cards that wasted space across the whole app are now compact — every number and button stays in place.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

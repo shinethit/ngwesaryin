@@ -2857,7 +2857,7 @@ export default function App() {
 
       {/* <PlanBanner /> Removed to save space as per user request */}
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <React.Suspense fallback={
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-2">
             <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -2865,7 +2865,7 @@ export default function App() {
           </div>
         }>
         <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <Dashboard
               transactions={transactions}
               debts={debts}
@@ -2897,7 +2897,7 @@ export default function App() {
         </div>
 
         <div className={activeTab === 'transactions' ? '' : 'hidden'}>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <TransactionsView
               transactions={transactions}
               categories={categories}
@@ -2924,7 +2924,7 @@ export default function App() {
         </div>
 
         <div className={activeTab === 'categories' ? '' : 'hidden'}>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <CategoriesView
               categories={categories}
               plan={plan}
@@ -2948,7 +2948,7 @@ export default function App() {
         </div>
         <div className={activeTab === 'education' ? '' : 'hidden'}><EducationView lang={lang} /></div>
         <div className={activeTab === 'debts' ? '' : 'hidden'}>
-          <div className="space-y-6">
+          <div className="space-y-4">
             {plan === 'guest' || !limits.hasDebts ? (
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs max-w-lg mx-auto my-6">
                 <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto text-2xl border border-amber-200 shadow-inner">
@@ -3010,7 +3010,7 @@ export default function App() {
         </div>
 
         <div className={activeTab === 'wallets' ? '' : 'hidden'}>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <WalletsView
               wallets={computedWallets}
               transactions={transactions}
@@ -3060,7 +3060,7 @@ export default function App() {
             and legacy 'budgets' too, so no existing navigation
             breaks. */}
         <div className={(activeTab === 'analytics' || activeTab === 'budgets' || activeTab === 'reports' || activeTab === 'budget' || activeTab === 'compare') ? '' : 'hidden'}>
-          <div className="space-y-6">
+          <div className="space-y-4">
             {plan === 'guest' || !limits.hasBudgets ? (
               <>
               {/* [v7.6.09] The lock covers Analysis / Compare Price /

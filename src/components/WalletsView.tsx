@@ -467,28 +467,21 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   }, [calcAmount, calcRateNumber]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+    <div className="space-y-4">
+      {/* Header — compact single row [v7.6.33] */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white px-3.5 py-3 sm:px-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
             {lang === 'my' ? 'ပိုက်ဆံအိတ်များနှင့် ဘဏ်အကောင့်များ' : 'Wallets & Bank Accounts'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-normal">
-            {lang === 'my'
-              ? 'ငွေသား၊ KPay၊ WavePay၊ ဘဏ်အကောင့်များနှင့် နိုင်ငံခြားငွေ (USD, THB, SGD) စာရင်းများ စီမံပါ'
-              : 'Manage Cash, Mobile Pay, Banks, and Foreign Currencies with real-time exchange rates'}
-          </p>
           {/* [v7.5.60 S-43] Usage is ALWAYS visible, not only at the
               limit — "ပိုက်ဆံအိတ် ၁/၂ ခု" like the budget quota chip.
               Shared-from-other wallets don't count toward the limit. */}
-          <div className="mt-2">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-              {plan === 'premium'
-                ? (lang === 'my' ? `ပိုက်ဆံအိတ် ${wallets.filter((w) => !w.isSharedFromOther).length} ခု` : `${wallets.filter((w) => !w.isSharedFromOther).length} wallets`)
-                : (lang === 'my' ? `ပိုက်ဆံအိတ် ${wallets.filter((w) => !w.isSharedFromOther).length}/${maxFreeWallets} ခု` : `Wallets ${wallets.filter((w) => !w.isSharedFromOther).length}/${maxFreeWallets}`)}
-            </span>
-          </div>
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap">
+            {plan === 'premium'
+              ? (lang === 'my' ? `ပိုက်ဆံအိတ် ${wallets.filter((w) => !w.isSharedFromOther).length} ခု` : `${wallets.filter((w) => !w.isSharedFromOther).length} wallets`)
+              : (lang === 'my' ? `ပိုက်ဆံအိတ် ${wallets.filter((w) => !w.isSharedFromOther).length}/${maxFreeWallets} ခု` : `Wallets ${wallets.filter((w) => !w.isSharedFromOther).length}/${maxFreeWallets}`)}
+          </span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
@@ -548,8 +541,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       )}
 
       {/* Total Net Assets Banner */}
-      <div className="bg-slate-900 p-6 rounded-3xl text-white shadow-md border border-slate-800 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-md border border-slate-800 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs uppercase tracking-wider font-semibold text-emerald-400">
@@ -577,7 +570,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
             {/* [v7.5.56] "Of which shared" line on the banner total. */}
             {hasSharedWallets && (
-              <div className="mt-1.5 text-xs font-semibold text-indigo-300" title={formatMMK(totalSharedIncludedMMK)}>
+              <div className="mt-1 text-xs font-semibold text-indigo-300" title={formatMMK(totalSharedIncludedMMK)}>
                 🤝{' '}
                 {lang === 'my'
                   ? `ယင်းအထဲက မျှဝေထားသော အကောင့်: ${formatLakhs(totalSharedIncludedMMK, lang)}`
@@ -587,7 +580,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
             {/* If some wallets are excluded, show separate breakdown badge */}
             {excludedWallets.length > 0 && (
-              <div className="mt-2 flex items-center gap-2 flex-wrap text-xs">
+              <div className="mt-1.5 flex items-center gap-2 flex-wrap text-xs">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold" title={formatMMK(totalExcludedMMK)}>
                   <span>🚫</span>
                   <span>
@@ -605,7 +598,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             )}
 
             {/* Currency breakdown tags */}
-            <div className="flex items-center gap-2 flex-wrap mt-3">
+            <div className="flex items-center gap-2 flex-wrap mt-2">
               {Object.entries(currencyBreakdown).map(([code, data]) => {
                 const info = getCurrencyInfo(code);
                 return (

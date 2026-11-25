@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
-    expect(CURRENT_BUILD_NUMBER).toBe(346);
-    expect(VERSION_JSON.version).toBe('v7.6.32');
-    expect(VERSION_JSON.buildNumber).toBe(346);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
+    expect(CURRENT_BUILD_NUMBER).toBe(347);
+    expect(VERSION_JSON.version).toBe('v7.6.33');
+    expect(VERSION_JSON.buildNumber).toBe(347);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.32');
-    expect(entry.buildNumber).toBe(346);
+    expect(entry.version).toBe('v7.6.33');
+    expect(entry.buildNumber).toBe(347);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('feature');
     expect(entry.tagLabelMy).toBe('Feature အသစ်');
     expect(entry.tagLabelEn).toBe('New Feature');
-    expect(entry.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
-    expect(entry.titleEn).toBe('Tap the donut rows to see category details');
+    expect(entry.titleMy).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(entry.titleEn).toBe('Compact headers and stat strips');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

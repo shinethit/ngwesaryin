@@ -350,17 +350,17 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
-    expect(CURRENT_BUILD_NUMBER).toBe(346);
-    expect(VERSION_JSON.version).toBe('v7.6.32');
-    expect(VERSION_JSON.buildNumber).toBe(346);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
+    expect(CURRENT_BUILD_NUMBER).toBe(347);
+    expect(VERSION_JSON.version).toBe('v7.6.33');
+    expect(VERSION_JSON.buildNumber).toBe(347);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.32');
-    expect(entry.buildNumber).toBe(346);
+    expect(entry.version).toBe('v7.6.33');
+    expect(entry.buildNumber).toBe(347);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
-    expect(entry.titleEn).toBe('Tap the donut rows to see category details');
+    expect(entry.titleMy).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(entry.titleEn).toBe('Compact headers and stat strips');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

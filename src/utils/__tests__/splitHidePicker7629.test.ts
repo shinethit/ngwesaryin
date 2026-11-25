@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
-    expect(CURRENT_BUILD_NUMBER).toBe(346);
-    expect(VERSION_JSON.version).toBe('v7.6.32');
-    expect(VERSION_JSON.buildNumber).toBe(346);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
+    expect(CURRENT_BUILD_NUMBER).toBe(347);
+    expect(VERSION_JSON.version).toBe('v7.6.33');
+    expect(VERSION_JSON.buildNumber).toBe(347);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.32');
-    expect(entry.buildNumber).toBe(346);
-    expect(entry.changesMy[0]).toBe('Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်');
+    expect(entry.version).toBe('v7.6.33');
+    expect(entry.buildNumber).toBe(347);
+    expect(entry.changesMy[0]).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

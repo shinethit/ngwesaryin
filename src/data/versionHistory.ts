@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.32';
-export const CURRENT_BUILD_NUMBER = 346;
+export const CURRENT_APP_VERSION = 'v7.6.33';
+export const CURRENT_BUILD_NUMBER = 347;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.33',
+    buildNumber: 347,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေ ကျစ်လစ်စေခြင်း',
+    titleEn: 'Compact headers and stat strips',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ကဏ္ဍ၊ ပိုက်ဆံအိတ်၊ ဒေတာနဲ့ ဘတ်ဂျက် စာမျက်နှာတွေမှာ ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်လိုက်ပြီ — ဂဏန်းတွေ၊ ခလုတ်တွေနဲ့ အချက်အလက်အားလုံး ရှိနေတုန်းပဲ၊ နေရာပိုသက်သာသွားမယ်။',
+    descriptionEn: 'The Categories, Wallets, Data Management and Budget screens now use compact header rows and single-line stat strips — every number, button and detail stays in place, just with less wasted space.',
+    changesMy: [
+      'ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+    ],
+    changesEn: [
+      'Header cards and stat tiles are now compact — every number and button stays in place.',
+    ],
+  },
   {
     version: 'v7.6.32',
     buildNumber: 346,

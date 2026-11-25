@@ -390,21 +390,21 @@ describe('placement and UI wiring (v7.6.09)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
-    expect(CURRENT_BUILD_NUMBER).toBe(346);
-    expect(VERSION_JSON.version).toBe('v7.6.32');
-    expect(VERSION_JSON.buildNumber).toBe(346);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
+    expect(CURRENT_BUILD_NUMBER).toBe(347);
+    expect(VERSION_JSON.version).toBe('v7.6.33');
+    expect(VERSION_JSON.buildNumber).toBe(347);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.32');
-    expect(entry.buildNumber).toBe(346);
+    expect(entry.version).toBe('v7.6.33');
+    expect(entry.buildNumber).toBe(347);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
+    expect(entry.titleMy).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေ ကျစ်လစ်စေခြင်း');
     expect(entry.changesMy).toEqual([
-      'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်',
+      'ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut.',
+      'Header cards and stat tiles are now compact — every number and button stays in place.',
     ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

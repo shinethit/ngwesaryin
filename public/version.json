@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.32",
-  "buildNumber": 346,
+  "version": "v7.6.33",
+  "buildNumber": 347,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်"
+    "ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်"
   ],
   "changesEn": [
-    "Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut."
+    "Header cards and stat tiles are now compact — every number and button stays in place."
   ]
 }

@@ -55,24 +55,17 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-4 sm:py-6 space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md shadow-slate-900/10">
-              <Database className="w-6 h-6 text-emerald-400" />
+    <div className="max-w-4xl mx-auto py-4 sm:py-6 space-y-4">
+      {/* Header — compact single row [v7.6.33] */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3.5">
+        <div className="flex items-center justify-between flex-wrap gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-md shadow-slate-900/10 shrink-0">
+              <Database className="w-5 h-5 text-emerald-400" />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900">
-                {lang === 'my' ? 'ဒေတာ စီမံခန့်ခွဲမှု (Data Management)' : 'Data Management & Reset'}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                {lang === 'my'
-                  ? 'သင့်စာရင်းဒေတာများကို သိမ်းဆည်းခြင်း၊ အသစ်ပြန်စတင်ခြင်းနှင့် သန့်ရှင်းရေးပြုလုပ်ခြင်း'
-                  : 'Manage local datasets, backup or restore files, and reset records safely.'}
-              </p>
-            </div>
+            <h1 className="text-lg sm:text-xl font-black text-slate-900">
+              {lang === 'my' ? 'ဒေတာ စီမံခန့်ခွဲမှု (Data Management)' : 'Data Management & Reset'}
+            </h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -89,77 +82,49 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           </div>
         </div>
 
-        {/* Live Stored Data Counts Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mt-6 pt-6 border-t border-slate-100">
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-            <span className="text-slate-400 block text-[11px] font-medium">
-              {lang === 'my' ? 'စာရင်းမှတ်တမ်း' : 'Transactions'}
-            </span>
-            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
-              {transactions.length}
-            </span>
+        {/* Live Stored Data Counts Strip — all seven counts on one line [v7.6.33] */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100 text-xs sm:text-sm">
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'စာရင်းမှတ်တမ်း' : 'Transactions'}</span>
+            <span className="font-bold text-slate-900 text-base">{transactions.length}</span>
             <span className="text-[10px] text-slate-400">records</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-            <span className="text-slate-400 block text-[11px] font-medium">
-              {lang === 'my' ? 'အကြွေးစာရင်း' : 'Debts'}
-            </span>
-            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
-              {debts.length}
-            </span>
+          </span>
+          <span aria-hidden="true" className="text-slate-300">·</span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'အကြွေးစာရင်း' : 'Debts'}</span>
+            <span className="font-bold text-slate-900 text-base">{debts.length}</span>
             <span className="text-[10px] text-slate-400">entries</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-            <span className="text-slate-400 block text-[11px] font-medium">
-              {lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets'}
-            </span>
-            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
-              {wallets.length}
-            </span>
+          </span>
+          <span aria-hidden="true" className="text-slate-300">·</span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets'}</span>
+            <span className="font-bold text-slate-900 text-base">{wallets.length}</span>
             <span className="text-[10px] text-slate-400">accounts</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-            <span className="text-slate-400 block text-[11px] font-medium">
-              {lang === 'my' ? 'ကဏ္ဍများ' : 'Categories'}
-            </span>
-            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
-              {categories.length}
-            </span>
+          </span>
+          <span aria-hidden="true" className="text-slate-300">·</span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ကဏ္ဍများ' : 'Categories'}</span>
+            <span className="font-bold text-slate-900 text-base">{categories.length}</span>
             <span className="text-[10px] text-slate-400">categories</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-            <span className="text-slate-400 block text-[11px] font-medium">
-              {lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်ချက်' : 'Budgets'}
-            </span>
-            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
-              {budgets.length}
-            </span>
+          </span>
+          <span aria-hidden="true" className="text-slate-300">·</span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်ချက်' : 'Budgets'}</span>
+            <span className="font-bold text-slate-900 text-base">{budgets.length}</span>
             <span className="text-[10px] text-slate-400">targets</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-            <span className="text-slate-400 block text-[11px] font-medium">
-              {lang === 'my' ? 'ယာဉ်များ' : 'Vehicles'}
-            </span>
-            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
-              {vehicles.length}
-            </span>
+          </span>
+          <span aria-hidden="true" className="text-slate-300">·</span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ယာဉ်များ' : 'Vehicles'}</span>
+            <span className="font-bold text-slate-900 text-base">{vehicles.length}</span>
             <span className="text-[10px] text-slate-400">vehicles</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-            <span className="text-slate-400 block text-[11px] font-medium">
-              {lang === 'my' ? 'ဆိုင်များ' : 'Shops'}
-            </span>
-            <span className="font-bold text-slate-900 text-lg mt-0.5 block">
-              {shops.length}
-            </span>
+          </span>
+          <span aria-hidden="true" className="text-slate-300">·</span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ဆိုင်များ' : 'Shops'}</span>
+            <span className="font-bold text-slate-900 text-base">{shops.length}</span>
             <span className="text-[10px] text-slate-400">shops</span>
-          </div>
+          </span>
         </div>
       </div>
 

@@ -336,23 +336,16 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         />
       ) : (
         <>
-          {/* Header & Controls */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  {lang === 'my' ? 'လစဉ် ဘတ်ဂျက် စီမံခန့်ခွဲမှု' : 'Monthly Budget Management'}
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                  <PieChart className="w-3.5 h-3.5 text-indigo-600" />
-                  {lang === 'my' ? 'ဘတ်ဂျက် ထိန်းချုပ်စနစ်' : 'Budget Control'}
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                {lang === 'my'
-                  ? 'ဝင်ငွေ၏ ရာခိုင်နှုန်း (%) သို့မဟုတ် သတ်မှတ်ငွေပမာဏ (MMK) ဖြင့် ကဏ္ဍအလိုက် ပိုက်ဆံအိတ်နှင့် ချိတ်ဆက်ကန့်သတ်ပါ'
-                  : 'Limit expenses by % of income or fixed amount, linked to specific wallets'}
-              </p>
+          {/* Header & Controls — compact single row [v7.6.33] */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white px-3.5 py-3 sm:px-4 rounded-2xl border border-slate-200 shadow-xs">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900">
+                {lang === 'my' ? 'လစဉ် ဘတ်ဂျက် စီမံခန့်ခွဲမှု' : 'Monthly Budget Management'}
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                <PieChart className="w-3.5 h-3.5 text-indigo-600" />
+                {lang === 'my' ? 'ဘတ်ဂျက် ထိန်းချုပ်စနစ်' : 'Budget Control'}
+              </span>
             </div>
 
             {/* Month selector & Add budget button */}

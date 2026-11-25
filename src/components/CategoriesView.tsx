@@ -283,36 +283,27 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
-                <span>{lang === 'my' ? 'ကဏ္ဍများနှင့် ကဏ္ဍခွဲများ' : 'Categories & Sub-Categories'}</span>
-                {isPremium ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
-                    <Crown className="w-3 h-3 fill-white" />
-                    Premium Unlocked
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
-                    <Lock className="w-3 h-3 text-slate-500" />
-                    Free View Only
-                  </span>
-                )}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                {lang === 'my'
-                  ? 'ဝင်ငွေ၊ ထွက်ငွေ အဓိကကဏ္ဍ (Category) နှင့် ကဏ္ဍခွဲ (Sub-Category) များကို စနစ်တကျ စီမံခန့်ခွဲပါ'
-                  : 'Manage parent categories and granular sub-categories for income & expense tracking'}
-              </p>
-            </div>
+    <div className="space-y-4">
+      {/* Header — compact single row [v7.6.33] */}
+      <div className="bg-white px-3.5 py-3 sm:px-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
+            <Layers className="w-5 h-5" />
           </div>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
+            <span>{lang === 'my' ? 'ကဏ္ဍများနှင့် ကဏ္ဍခွဲများ' : 'Categories & Sub-Categories'}</span>
+            {isPremium ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
+                <Crown className="w-3 h-3 fill-white" />
+                Premium Unlocked
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap shrink-0">
+                <Lock className="w-3 h-3 text-slate-500" />
+                Free View Only
+              </span>
+            )}
+          </h1>
         </div>
 
         {/* Action Button */}
@@ -381,40 +372,27 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         </div>
       )}
 
-      {/* Stats Summary Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            {lang === 'my' ? 'ကဏ္ဍ စုစုပေါင်း' : 'Total Categories'}
-          </span>
-          <span className="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5 block">
-            {categories.length} {lang === 'my' ? 'ခု' : 'items'}
-          </span>
-        </div>
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            {lang === 'my' ? 'ကဏ္ဍခွဲ စုစုပေါင်း' : 'Total Sub-Categories'}
-          </span>
-          <span className="text-lg sm:text-xl font-extrabold text-emerald-700 mt-0.5 block">
-            {totalSubCategoriesCount} {lang === 'my' ? 'ခု' : 'items'}
-          </span>
-        </div>
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            {lang === 'my' ? 'ထွက်ငွေ ကဏ္ဍများ' : 'Expense Categories'}
-          </span>
-          <span className="text-lg sm:text-xl font-extrabold text-rose-600 mt-0.5 block">
-            {categories.filter((c) => c.type === 'expense').length} {lang === 'my' ? 'ခု' : 'items'}
-          </span>
-        </div>
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            {lang === 'my' ? 'ဝင်ငွေ ကဏ္ဍများ' : 'Income Categories'}
-          </span>
-          <span className="text-lg sm:text-xl font-extrabold text-emerald-600 mt-0.5 block">
-            {categories.filter((c) => c.type === 'income').length} {lang === 'my' ? 'ခု' : 'items'}
-          </span>
-        </div>
+      {/* Stats Summary Strip — all four counts on one line [v7.6.33] */}
+      <div className="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+        <span className="inline-flex items-baseline gap-1">
+          <span className="font-extrabold text-slate-900">{categories.length}</span>
+          <span className="font-medium text-slate-500">{lang === 'my' ? 'ကဏ္ဍ စုစုပေါင်း' : 'Total Categories'}</span>
+        </span>
+        <span aria-hidden="true" className="text-slate-300">·</span>
+        <span className="inline-flex items-baseline gap-1">
+          <span className="font-extrabold text-emerald-700">{totalSubCategoriesCount}</span>
+          <span className="font-medium text-slate-500">{lang === 'my' ? 'ကဏ္ဍခွဲ စုစုပေါင်း' : 'Total Sub-Categories'}</span>
+        </span>
+        <span aria-hidden="true" className="text-slate-300">·</span>
+        <span className="inline-flex items-baseline gap-1">
+          <span className="font-extrabold text-rose-600">{categories.filter((c) => c.type === 'expense').length}</span>
+          <span className="font-medium text-slate-500">{lang === 'my' ? 'ထွက်ငွေ ကဏ္ဍများ' : 'Expense Categories'}</span>
+        </span>
+        <span aria-hidden="true" className="text-slate-300">·</span>
+        <span className="inline-flex items-baseline gap-1">
+          <span className="font-extrabold text-emerald-600">{categories.filter((c) => c.type === 'income').length}</span>
+          <span className="font-medium text-slate-500">{lang === 'my' ? 'ဝင်ငွေ ကဏ္ဍများ' : 'Income Categories'}</span>
+        </span>
       </div>
 
       {/* Filter Tabs and Search Bar */}

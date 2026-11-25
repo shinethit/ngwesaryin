@@ -261,27 +261,27 @@ describe('price comparison carries per-record units (v7.6.05c)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
-    expect(CURRENT_BUILD_NUMBER).toBe(346);
-    expect(VERSION_JSON.version).toBe('v7.6.32');
-    expect(VERSION_JSON.buildNumber).toBe(346);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
+    expect(CURRENT_BUILD_NUMBER).toBe(347);
+    expect(VERSION_JSON.version).toBe('v7.6.33');
+    expect(VERSION_JSON.buildNumber).toBe(347);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.32');
-    expect(top.buildNumber).toBe(346);
+    expect(top.version).toBe('v7.6.33');
+    expect(top.buildNumber).toBe(347);
     expect(top.releaseDate).toBe('2026-11-24');
     expect(top.tag).toBe('feature');
-    expect(top.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
-    expect(top.titleEn).toBe('Tap the donut rows to see category details');
+    expect(top.titleMy).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(top.titleEn).toBe('Compact headers and stat strips');
     expect(top.changesMy).toEqual([
-      'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်',
+      'ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut.',
+      'Header cards and stat tiles are now compact — every number and button stays in place.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

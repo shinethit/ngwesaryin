@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
-    expect(CURRENT_BUILD_NUMBER).toBe(345);
-    expect(VERSION_JSON.version).toBe('v7.6.31');
-    expect(VERSION_JSON.buildNumber).toBe(345);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
+    expect(CURRENT_BUILD_NUMBER).toBe(346);
+    expect(VERSION_JSON.version).toBe('v7.6.32');
+    expect(VERSION_JSON.buildNumber).toBe(346);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.31');
-    expect(entry.buildNumber).toBe(345);
-    expect(entry.changesMy[0]).toBe('Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ');
+    expect(entry.version).toBe('v7.6.32');
+    expect(entry.buildNumber).toBe(346);
+    expect(entry.changesMy[0]).toBe('Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

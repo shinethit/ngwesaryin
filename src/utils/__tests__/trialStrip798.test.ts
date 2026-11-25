@@ -263,17 +263,17 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
-    expect(CURRENT_BUILD_NUMBER).toBe(345);
-    expect(VERSION_JSON.version).toBe('v7.6.31');
-    expect(VERSION_JSON.buildNumber).toBe(345);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
+    expect(CURRENT_BUILD_NUMBER).toBe(346);
+    expect(VERSION_JSON.version).toBe('v7.6.32');
+    expect(VERSION_JSON.buildNumber).toBe(346);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.31');
-    expect(entry.buildNumber).toBe(345);
+    expect(entry.version).toBe('v7.6.32');
+    expect(entry.buildNumber).toBe(346);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('feature');
     expect(entry.titleMy).toBe(
-      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း',
+      'Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);

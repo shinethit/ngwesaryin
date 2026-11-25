@@ -139,26 +139,26 @@ describe('merged form — one form, rows drive the total (v7.6.25)', () => {
 
 describe('version pins for v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
-    expect(CURRENT_BUILD_NUMBER).toBe(345);
-    expect(VERSION_JSON.version).toBe('v7.6.31');
-    expect(VERSION_JSON.buildNumber).toBe(345);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
+    expect(CURRENT_BUILD_NUMBER).toBe(346);
+    expect(VERSION_JSON.version).toBe('v7.6.32');
+    expect(VERSION_JSON.buildNumber).toBe(346);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.31');
-    expect(top.buildNumber).toBe(345);
+    expect(top.version).toBe('v7.6.32');
+    expect(top.buildNumber).toBe(346);
     expect(top.tag).toBe('feature');
-    expect(top.titleMy).toBe('Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း');
-    expect(top.titleEn).toBe('Choose which categories each wallet shows');
+    expect(top.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
+    expect(top.titleEn).toBe('Tap the donut rows to see category details');
     expect(top.changesMy).toEqual([
-      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ',
+      'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Each wallet can choose which categories it shows — hidden categories no longer appear when entering records for that wallet.',
+      'Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

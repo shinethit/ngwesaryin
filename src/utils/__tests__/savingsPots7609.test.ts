@@ -390,21 +390,21 @@ describe('placement and UI wiring (v7.6.09)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
-    expect(CURRENT_BUILD_NUMBER).toBe(345);
-    expect(VERSION_JSON.version).toBe('v7.6.31');
-    expect(VERSION_JSON.buildNumber).toBe(345);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
+    expect(CURRENT_BUILD_NUMBER).toBe(346);
+    expect(VERSION_JSON.version).toBe('v7.6.32');
+    expect(VERSION_JSON.buildNumber).toBe(346);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.31');
-    expect(entry.buildNumber).toBe(345);
+    expect(entry.version).toBe('v7.6.32');
+    expect(entry.buildNumber).toBe(346);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း');
+    expect(entry.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
     expect(entry.changesMy).toEqual([
-      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ',
+      'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Each wallet can choose which categories it shows — hidden categories no longer appear when entering records for that wallet.',
+      'Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut.',
     ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

@@ -193,31 +193,31 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
-    expect(CURRENT_BUILD_NUMBER).toBe(345);
-    expect(VERSION_JSON.version).toBe('v7.6.31');
-    expect(VERSION_JSON.buildNumber).toBe(345);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
+    expect(CURRENT_BUILD_NUMBER).toBe(346);
+    expect(VERSION_JSON.version).toBe('v7.6.32');
+    expect(VERSION_JSON.buildNumber).toBe(346);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('top history entry is the v7.6.18 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.31');
-    expect(entry.buildNumber).toBe(345);
+    expect(entry.version).toBe('v7.6.32');
+    expect(entry.buildNumber).toBe(346);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း');
-    expect(entry.titleEn).toBe('Choose which categories each wallet shows');
+    expect(entry.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
+    expect(entry.titleEn).toBe('Tap the donut rows to see category details');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ',
+      'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Each wallet can choose which categories it shows — hidden categories no longer appear when entering records for that wallet.',
+      'Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut.',
     ]);
   });
 });

@@ -53,6 +53,12 @@ interface AnalyticsViewProps {
   // creation callback down to SavingsPots. Optional so the Budget
   // sub-tab keeps working if a caller passes neither.
   onCreatePotTransfer?: (tx: Omit<Transaction, 'id' | 'createdAt'>) => string | null;
+  // [v7.6.32] Donut drill-down: tapping a record in the donut's
+  // expanded category panel opens the read-only detail view (App
+  // threads setViewingTransaction). Optional; absent = the record
+  // rows are display-only. The donut never renders for guests (the
+  // App-level lock card covers the whole tab), so no new lock.
+  onSelectTransaction?: (t: Transaction) => void;
 }
 
 type SubTab = 'reports' | 'budget' | 'compare';
@@ -62,7 +68,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   plan, lang, maxBudgetCategories,
   onAddBudget, onUpdateBudget, onDeleteBudget,
   onOpenUpgradeModal, onSelectTab, initialSubTab,
-  menuPublicShops, menuPrivateShops, onCreatePotTransfer,
+  menuPublicShops, menuPrivateShops, onCreatePotTransfer, onSelectTransaction,
 }) => {
   const [subTab, setSubTab] = useState<SubTab>(initialSubTab ?? 'reports');
   // [v7.5.75] The single mounted instance follows the top-level tab:
@@ -445,6 +451,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             categories={categories}
             wallets={wallets}
             lang={lang}
+            onSelectTransaction={onSelectTransaction}
           />
 
           {/* Trend Line Chart */}

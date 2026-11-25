@@ -73,9 +73,14 @@ describe('view-first records (v7.6.11)', () => {
     // Scope the negative assertion to the onSelectTransaction
     // handler: handleOpenEditTx is still used elsewhere in App
     // (the list's edit prop and the view's Edit button).
-    const start = APP_SRC.indexOf('onSelectTransaction=');
-    expect(start).toBeGreaterThan(-1);
-    const end = APP_SRC.indexOf('onSelectWallet=', start);
+    // [v7.6.32] Anchor on the search handler's own comment: a
+    // second onSelectTransaction prop (the donut drill-down, in the
+    // AnalyticsView JSX above) now precedes it, so a bare indexOf
+    // would slice the wrong handler.
+    const anchor = APP_SRC.indexOf('[v7.6.11] View-first: a search hit opens');
+    expect(anchor).toBeGreaterThan(-1);
+    const start = APP_SRC.lastIndexOf('onSelectTransaction=', anchor);
+    const end = APP_SRC.indexOf('onSelectWallet=', anchor);
     const handler = APP_SRC.slice(start, end);
     expect(handler).not.toContain('handleOpenEditTx');
     expect(handler).toContain('setViewingTransaction(t)');
@@ -97,26 +102,26 @@ describe('view-first records (v7.6.11)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.31');
-    expect(CURRENT_BUILD_NUMBER).toBe(345);
-    expect(VERSION_JSON.version).toBe('v7.6.31');
-    expect(VERSION_JSON.buildNumber).toBe(345);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.32');
+    expect(CURRENT_BUILD_NUMBER).toBe(346);
+    expect(VERSION_JSON.version).toBe('v7.6.32');
+    expect(VERSION_JSON.buildNumber).toBe(346);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.31');
-    expect(entry.buildNumber).toBe(345);
+    expect(entry.version).toBe('v7.6.32');
+    expect(entry.buildNumber).toBe(346);
     expect(entry.releaseDate).toBe('2026-11-24');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category ရွေးနိုင်ခြင်း');
-    expect(entry.titleEn).toBe('Choose which categories each wallet shows');
+    expect(entry.titleMy).toBe('Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း');
+    expect(entry.titleEn).toBe('Tap the donut rows to see category details');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'Wallet တစ်ခုချင်းစီမှာ ပြမယ့် Category တွေကို ရွေးနိုင်သည် — မလိုတဲ့ Category တွေကို ဖြုတ်ထားရင် စာရင်းသွင်းတဲ့အခါ မပေါ်တော့ပါ',
+      'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Each wallet can choose which categories it shows — hidden categories no longer appear when entering records for that wallet.',
+      'Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut.',
     );
   });
 

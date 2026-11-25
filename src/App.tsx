@@ -3124,6 +3124,10 @@ export default function App() {
                         menuPublicShops={publicShopsFull}
                         menuPrivateShops={shops}
                         onCreatePotTransfer={handleCreatePotTransfer}
+                        // [v7.6.32] Donut drill-down: a record tapped
+                        // in the donut's expanded panel opens the
+                        // same read-only view as a search hit.
+                        onSelectTransaction={(t) => setViewingTransaction(t)}
                         // [v7.5.75] Deep-link: which of the three split
                         // sections to show. 'budget' → Budget,
                         // 'compare' → Compare Price, everything else

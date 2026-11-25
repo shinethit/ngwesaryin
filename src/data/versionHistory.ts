@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.31';
-export const CURRENT_BUILD_NUMBER = 345;
+export const CURRENT_APP_VERSION = 'v7.6.32';
+export const CURRENT_BUILD_NUMBER = 346;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.32',
+    buildNumber: 346,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Donut နှိပ်ပြီး ကဏ္ဍအသေးစိတ် ကြည့်နိုင်ခြင်း',
+    titleEn: 'Tap the donut rows to see category details',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်လိုက်ရင် အဲဒီကဏ္ဍရဲ့ ကဏ္ဍခွဲခွဲဝေမှုနဲ့ ဒီလစာရင်းတွေ ဖြန့်ပြမယ် — စာရင်းတစ်ခုကို နှိပ်ရင် အသေးစိတ်ပါ ကြည့်နိုင်သည်။ Donut ဘေးမှာလည်း ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြထားသည်။',
+    descriptionEn: 'Tapping a category row below the donut now expands its sub-category split and this month’s records — tap a record to see its details. Large donut slices also get a callout label (value + %) beside the chart.',
+    changesMy: [
+      'Donut အောက်က ကဏ္ဍတန်းတွေကို နှိပ်ပြီး ကဏ္ဍခွဲနဲ့ စာရင်းတွေ ကြည့်နိုင်သည် — Donut ဘေးမှာ ကြီးတဲ့ အပိုင်းတွေကို Label (တန်ဖိုး + %) တပ်ပြမည်',
+    ],
+    changesEn: [
+      'Donut category rows are now tappable — expand one to see its sub-categories and records; large slices get a label (value + %) beside the donut.',
+    ],
+  },
   {
     version: 'v7.6.31',
     buildNumber: 345,

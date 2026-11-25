@@ -489,10 +489,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
   const vehicleLimit = DEFAULT_PLAN_LIMITS[plan ?? 'free']?.maxVehicles ?? 1;
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto">
+    <div className="space-y-3 max-w-6xl mx-auto">
       {/* Free Tier Notice Banner if not Premium */}
       {plan !== 'premium' && (
-        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200/90 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
           <div className="flex items-center gap-2.5 text-amber-950 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
               <Crown className="w-4 h-4 text-amber-600" />
@@ -520,7 +520,7 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
       )}
 
       {/* Top Bar: Vehicle Selector & Quick Actions (compact 2-row) */}
-      <div className="bg-white p-2.5 sm:p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+      <div className="bg-white p-2 sm:p-2.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-1.5">
         {/* Row 1: Vehicle + Edit/Delete + Info + Plan Badge */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 flex items-center justify-center text-amber-400 shadow-md shrink-0">

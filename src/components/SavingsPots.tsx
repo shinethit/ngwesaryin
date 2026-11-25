@@ -315,7 +315,7 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang, wallets, categor
     const isEntering = entryPotId === pot.id;
     const historyOpen = expandedHistory[pot.id] === true;
     return (
-      <div key={pot.id} data-pot-id={pot.id} data-pot-name={pot.name} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+      <div key={pot.id} data-pot-id={pot.id} data-pot-name={pot.name} className="rounded-2xl border border-slate-200 bg-white p-3.5 space-y-2.5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h4 className="font-bold text-sm text-slate-900 truncate">{pot.name}</h4>
@@ -578,7 +578,7 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang, wallets, categor
   };
 
   return (
-    <div id="savings-pots-section" className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+    <div id="savings-pots-section" className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200">
@@ -616,7 +616,7 @@ export const SavingsPots: React.FC<SavingsPotsProps> = ({ lang, wallets, categor
       )}
 
       {showCreate && (
-        <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="space-y-1.5 rounded-2xl border border-slate-200 bg-white p-3.5">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-600">{lang === 'my' ? 'အိုးအမည်' : 'Pot name'}</label>
             <input

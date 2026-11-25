@@ -25,7 +25,7 @@ const VERSION_JSON = JSON.parse(
 
 describe('Data Management Cloud Sync slim row (v7.6.35)', () => {
   it('the section is one slim card: compact padding, slim heading, no intro paragraph', () => {
-    expect(DM_SRC).toContain('px-4 py-3.5');
+    expect(DM_SRC).toContain('px-3.5 py-3');
     expect(DM_SRC).toContain('Cloud Sync အခြေအနေ');
     expect(DM_SRC).toContain('Cloud Sync Status');
     expect(DM_SRC).not.toContain('p-6 sm:p-8');
@@ -103,34 +103,34 @@ describe('Data Management Cloud Sync slim row (v7.6.35)', () => {
     expect(DM_SRC).toContain('Premium နှင့် Activation Code');
     expect(DM_SRC).toContain('Activation Code ထည့်မည် / အဆင့်မြှင့်မည်');
     // Remaining cards use compact padding
-    expect(DM_SRC).toContain('p-4 sm:p-5');
-    expect(DM_SRC).toContain('px-4 py-3.5');
+    expect(DM_SRC).toContain('p-3.5 sm:p-4');
+    expect(DM_SRC).toContain('px-3.5 py-3');
   });
 });
 
 // ---------- Version bump to v7.6.41 (build 355) ----------
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
-    expect(CURRENT_BUILD_NUMBER).toBe(355);
-    expect(VERSION_JSON.version).toBe('v7.6.41');
-    expect(VERSION_JSON.buildNumber).toBe(355);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
+    expect(CURRENT_BUILD_NUMBER).toBe(356);
+    expect(VERSION_JSON.version).toBe('v7.6.42');
+    expect(VERSION_JSON.buildNumber).toBe(356);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.41');
-    expect(entry.buildNumber).toBe(355);
+    expect(entry.version).toBe('v7.6.42');
+    expect(entry.buildNumber).toBe(356);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Per-row split shops, menu re-apply, and crash fixes');
+    expect(entry.titleMy).toBe('မျက်နှာပြင်တိုင်း အဖွဲ့ခွဲ စစ်ဆေးပြီး ကျစ်လစ်အောင် ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('App-wide compaction sweep, checked group by group');
     expect(entry.changesMy).toEqual([
-      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
-      'ဆိုင် Menu ကို ဆိုင်ကတ်ကနေ ပြန် Update လုပ်လို့ရပြီ',
-      'ဆိုင်အချက်အလက်ဖြည့်တုန်း crash ဖြစ်တာနဲ့ စာရိုက်ထစ်တာကို ပြင်သည်',
+      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
+      'ဆိုင်ကတ်တွေမှာ နာမည်အရှည်ကြီးလည်း အပြည့်မြင်ရအောင် ပြင်ဆင်ခြင်း/ဖျက်ခြင်း ခလုတ်တွေကို ကတ်အောက်ခြေကို ရွှေ့သည်',
+      'Dashboard၊ စာရင်း၊ ပိုက်ဆံအိတ်၊ ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ အကြွေး၊ ယာဉ်၊ ဒေတာစီမံခန့်ခွဲမှုနဲ့ အသိပေးချက်မျက်နှာပြင်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Each split row can pick its own shop; records with different shops show one line per shop',
-      'Shop menus can be re-applied from the shop card',
-      'Fixed the crash while filling shop info and the typing lag',
+      'Shops header and filter panel compacted — less space before the first shop card',
+      'Shop cards: long names keep full width; edit/delete moved to the card footer',
+      'Dashboard, Records, Wallets, Budget, Analytics, Debts, Vehicles, Data Management and Notifications compacted — no info or button removed',
     ]);
   });
 
@@ -204,7 +204,7 @@ describe('Records and Debts density (v7.6.35)', () => {
 
   it('Debts gaps and cards are compact; badge, quota chip and description stay (D3/F-De4 left alone)', () => {
     expect(DEBT_SRC).not.toContain('space-y-6');
-    expect(DEBT_SRC).toContain('p-4 sm:p-5');
+    expect(DEBT_SRC).toContain('p-3.5 sm:p-4');
     expect(DEBT_SRC).toContain('ခု လက်ကျန်');
     expect(DEBT_SRC).toContain('သူများဆီက ရရန်ရှိငွေနှင့် သူများကို ပြန်ပေးရန်ရှိငွေများကို အကြေဆပ်သည်အထိ မှတ်တမ်းတင်ပါ');
     expect(DEBT_SRC).toContain('Track loans, customer credits, and personal debts with installment tracking');
@@ -260,7 +260,7 @@ describe('Budget density and removed duplicates (v7.6.35)', () => {
 
   it('budget cards, amounts and footer are compact; Edit/Delete stay', () => {
     expect(BUDGET_SRC).not.toContain('space-y-6');
-    expect(BUDGET_SRC).toContain('bg-white p-4 rounded-2xl border');
+    expect(BUDGET_SRC).toContain('bg-white p-3.5 rounded-2xl border');
     expect(BUDGET_SRC).toContain('ပြင်ဆင်မည်');
     expect(BUDGET_SRC).toContain('ဖျက်မည်');
   });
@@ -270,11 +270,11 @@ describe('Spending Comparison density (v7.6.35)', () => {
   it('panels, gaps and empty states are compact; Free notice wording stays', () => {
     expect(SPEND_SRC).not.toContain('space-y-6');
     expect(SPEND_SRC).not.toContain('p-5 sm:p-7');
-    expect(SPEND_SRC).toContain('p-4 sm:p-5');
+    expect(SPEND_SRC).toContain('p-3.5 sm:p-4');
     expect(SPEND_SRC).toContain('py-5 text-center');
     expect(SPEND_SRC).toContain('bg-amber-50/90');
     expect(SPEND_SRC).toContain('Free Plan Restrictive Notice Banner');
-    expect(SPEND_SRC).toContain('mb-3 bg-amber-50/90');
+    expect(SPEND_SRC).toContain('mb-2.5 bg-amber-50/90');
   });
 });
 
@@ -319,7 +319,7 @@ describe('Categories, Wallets and banners (v7.6.35)', () => {
     expect(WALLET_SRC).toContain('px-4 py-5 text-center');
     expect(WALLET_SRC).not.toContain('sm:gap-6');
     expect(WALLET_SRC).toContain('bg-white rounded-3xl p-3 border');
-    expect(WALLET_SRC).toContain('p-4 space-y-3');
+    expect(WALLET_SRC).toContain('p-3.5 space-y-2.5');
     expect(WALLET_SRC).toContain('စုစုပေါင်း ဘဏ္ဍာငွေ လက်ကျန် (ကျပ်ဖြင့်)');
   });
 

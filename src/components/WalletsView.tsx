@@ -467,9 +467,10 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   }, [calcAmount, calcRateNumber]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* [v7.6.42] space-y-3 — re-measured after v7.6.40; gaps only. */}
       {/* Header — compact single row [v7.6.33] */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white px-3.5 py-3 sm:px-4 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2.5 sm:px-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
         <div className="flex flex-wrap items-center gap-2.5 min-w-0">
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
             {lang === 'my' ? 'ပိုက်ဆံအိတ်များနှင့် ဘဏ်အကောင့်များ' : 'Wallets & Bank Accounts'}
@@ -541,8 +542,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       )}
 
       {/* Total Net Assets Banner */}
-      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-md border border-slate-800 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-slate-900 p-3.5 sm:p-4 rounded-2xl text-white shadow-md border border-slate-800 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs uppercase tracking-wider font-semibold text-emerald-400">
@@ -642,8 +643,8 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
       {/* Expandable Exchange Rates & Quick Converter Panel */}
       {showExchangeRatesPanel && (
-        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
                 <TrendingUp className="w-4 h-4" />
@@ -796,7 +797,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       )}
 
       {/* Wallets Filter & Quick Stats (All, Included in Totals, Excluded) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-fit flex-wrap">
           <button
             type="button"

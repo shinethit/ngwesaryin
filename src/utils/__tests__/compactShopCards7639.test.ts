@@ -43,11 +43,13 @@ describe('Shop cards are compact (v7.6.39)', () => {
     // [v7.6.40] The name moved up into the badge row; the phone
     // bar, accordion toggle, expanded section, and footer are
     // tightened; KPay / address / notes share ONE details box.
-    expect(SHOP_SRC).toContain('<div className="p-3.5 pb-2">');
-    expect(SHOP_SRC).toContain('mt-2 p-1.5 bg-emerald-50');
+    // [v7.6.42] Header padding and the phone/details/expanded
+    // margins tightened one more step.
+    expect(SHOP_SRC).toContain('<div className="p-3 pb-2">');
+    expect(SHOP_SRC).toContain('mt-1.5 p-1.5 bg-emerald-50');
     expect(SHOP_SRC).toContain('w-full px-3.5 py-2.5 min-h-[44px]');
-    expect(SHOP_SRC).toContain('<div className="px-3 pt-0.5 pb-2.5 space-y-1.5">');
-    expect(SHOP_SRC).toContain('<div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1.5">');
+    expect(SHOP_SRC).toContain('<div className="px-3 pt-0.5 pb-2 space-y-1.5">');
+    expect(SHOP_SRC).toContain('<div className="mt-1.5 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1.5">');
   });
 
   it('the ShopsView card grids and compact lists are tightened', () => {
@@ -97,18 +99,18 @@ describe('Shop cards are compact (v7.6.39)', () => {
     expect(count(SHOPS_SRC, 'min-h-[44px]')).toBe(26);
   });
 
-  it('version pins roll to v7.6.41 / build 355', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
-    expect(CURRENT_BUILD_NUMBER).toBe(355);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.41');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(355);
-    expect(VERSION_JSON.version).toBe('v7.6.41');
-    expect(VERSION_JSON.buildNumber).toBe(355);
+  it('version pins roll to v7.6.42 / build 356', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
+    expect(CURRENT_BUILD_NUMBER).toBe(356);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.42');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(356);
+    expect(VERSION_JSON.version).toBe('v7.6.42');
+    expect(VERSION_JSON.buildNumber).toBe(356);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
+      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Each split row can pick its own shop; records with different shops show one line per shop',
+      'Shops header and filter panel compacted — less space before the first shop card',
     );
   });
 });

@@ -752,12 +752,12 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Control Panel: Mode Selector, Date Picker, and Wallet Filter */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-3.5 sm:p-4">
         {/* Free Plan Restrictive Notice Banner */}
         {plan !== 'premium' && (
-          <div className="mb-3 bg-amber-50/90 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="mb-2.5 bg-amber-50/90 border border-amber-200 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-start sm:items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
                 <Lock className="w-4 h-4" />
@@ -786,7 +786,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-3 border-b border-slate-100">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-2.5 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -851,7 +851,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         </div>
 
         {/* Date Selector Row */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
           {/* Mode Switch: Month vs Custom Range */}
           <div className="md:col-span-3">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
@@ -1101,9 +1101,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       </div>
 
       {/* Overview Cards: Total Expense, Total Income, Savings & Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Total Expense Comparison */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -1156,7 +1156,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         </div>
 
         {/* Total Income Comparison */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -1209,7 +1209,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
         </div>
 
         {/* Net Savings Comparison */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -1310,7 +1310,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       </div>
 
       {/* Visual Comparison: Top Categories Chart */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-3.5 sm:p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <div>
             <div className="flex items-center gap-2">
@@ -1365,7 +1365,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {chartCategoryComparisons.map((c) => {
               const widthPctA = maxBarAmount > 0 ? (c.amountA / maxBarAmount) * 100 : 0;
               const widthPctB = maxBarAmount > 0 ? (c.amountB / maxBarAmount) * 100 : 0;
@@ -1472,7 +1472,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
       </div>
 
       {/* Detailed Category-by-Category & Sub-Category Comparison Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-3.5 sm:p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-2">

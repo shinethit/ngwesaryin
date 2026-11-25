@@ -55,9 +55,9 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-4 sm:py-6 space-y-4">
+    <div className="max-w-4xl mx-auto py-3 sm:py-4 space-y-3">
       {/* Header — compact single row [v7.6.33] */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3.5">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3">
         <div className="flex items-center justify-between flex-wrap gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-md shadow-slate-900/10 shrink-0">
@@ -129,7 +129,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       </div>
 
       {/* [v7.2.9] Cloud Sync Status — Cloud vs Local breakdown; compact slim row [v7.6.35] */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3.5">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-3.5 py-3">
         <div className="flex items-center gap-2 mb-2.5">
           <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
             <Cloud className="w-4 h-4" />
@@ -206,7 +206,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       </div>
 
       {/* Main Operations Card (Danger Zone / Clear All Data) */}
-      <div className="bg-white rounded-3xl border border-rose-200/80 shadow-sm p-4 sm:p-5 relative overflow-hidden">
+      <div className="bg-white rounded-3xl border border-rose-200/80 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full blur-3xl -z-10 pointer-events-none" />
 
         <div className="flex items-center gap-2.5 mb-2">
@@ -224,7 +224,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             : 'Permanently deletes all transactions, active debts, budget plans, and custom categories. Retains a clean default Cash wallet for a fresh start.'}
         </p>
 
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div className="text-xs text-rose-900">
@@ -252,7 +252,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       </div>
 
       {/* Backup & Restore Card [v7.6.35: compact padding] */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-5">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-3.5 sm:p-4">
         <div className="flex items-center gap-2.5 mb-2">
           <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
             <Download className="w-4 h-4" />
@@ -274,7 +274,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             type="button"
             id="btn-export-backup"
             onClick={onExportJson}
-            className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 active:scale-95 transition-all text-left flex items-start gap-3 cursor-pointer group"
+            className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 active:scale-95 transition-all text-left flex items-start gap-3 cursor-pointer group"
           >
             <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
               <Download className="w-4 h-4" />
@@ -298,7 +298,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             type="button"
             id="btn-export-csv"
             onClick={handleExportCsv}
-            className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 active:scale-95 transition-all text-left flex items-start gap-3 cursor-pointer group"
+            className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 active:scale-95 transition-all text-left flex items-start gap-3 cursor-pointer group"
           >
             <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
               <Download className="w-4 h-4" />
@@ -316,7 +316,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
 
           <label
             id="lbl-import-backup"
-            className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 active:scale-95 transition-all text-left flex items-start gap-3 cursor-pointer group"
+            className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 active:scale-95 transition-all text-left flex items-start gap-3 cursor-pointer group"
           >
             <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
               <Upload className="w-4 h-4" />
@@ -340,7 +340,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       </div>
 
       {/* Premium & Activation Code Card [v7.6.35: compact padding] */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm px-4 py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm px-3.5 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">

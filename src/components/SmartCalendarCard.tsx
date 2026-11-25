@@ -293,7 +293,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   return (
     // [v7.5.75] Tighter outer padding/gaps so Home is shorter; calendar
     // cells, month switcher (min-h-11 tap targets) and all content unchanged.
-    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-3 sm:p-4 space-y-3">
+    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-3 sm:p-3.5 space-y-2.5">
       {/* Header & Month Navigator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -544,7 +544,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
 
       {/* Selected Day Details Card with Clean Structured Table */}
       {selectedDayStr && (
-        <div className="bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 rounded-2xl p-4 border border-indigo-200/90 shadow-2xs space-y-3.5">
+        <div className="bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 rounded-2xl p-3.5 border border-indigo-200/90 shadow-2xs space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-2.5">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <span className="font-black text-xs sm:text-sm text-indigo-950 font-mono bg-white px-2.5 py-1 rounded-xl border border-indigo-200 shadow-2xs min-w-0 leading-snug">

@@ -50,7 +50,7 @@ function block(src: string, start: string, end: string): string {
 describe('Categories compact header + stat strip (v7.6.33)', () => {
   it('the header is one slim row: icon + title + badge + the same two actions, no description', () => {
     const head = block(CAT_SRC, 'Header — compact single row', 'Free Plan Lock Notice');
-    expect(head).toContain('px-3.5 py-3');
+    expect(head).toContain('px-3 py-2.5');
     expect(head).toContain('ကဏ္ဍများနှင့် ကဏ္ဍခွဲများ');
     expect(head).toContain('Categories & Sub-Categories');
     expect(head).toContain('Premium Unlocked');
@@ -81,7 +81,7 @@ describe('Categories compact header + stat strip (v7.6.33)', () => {
 describe('Wallets compact header + tightened banner (v7.6.33)', () => {
   it('the header is one slim row: title + count chip + Rates + Add, no description', () => {
     const head = block(WAL_SRC, 'Header — compact single row', 'Total Net Assets Banner');
-    expect(head).toContain('px-3.5 py-3');
+    expect(head).toContain('px-3 py-2.5');
     expect(head).toContain('ပိုက်ဆံအိတ်များနှင့် ဘဏ်အကောင့်များ');
     expect(head).toContain('Wallets & Bank Accounts');
     expect(head).toContain('ပိုက်ဆံအိတ်');
@@ -93,7 +93,7 @@ describe('Wallets compact header + tightened banner (v7.6.33)', () => {
 
   it('the dark balance banner keeps every line and both buttons, only tighter', () => {
     const banner = block(WAL_SRC, 'Total Net Assets Banner', 'Expandable Exchange Rates');
-    expect(banner).toContain('p-4 sm:p-5 rounded-2xl');
+    expect(banner).toContain('p-3.5 sm:p-4 rounded-2xl');
     expect(banner).toContain('စာရင်းညှိမည်');
     expect(banner).toContain('ငွေလွှဲမည်');
     expect(banner).toContain('ယင်းအထဲက မျှဝေထားသော အကောင့်');
@@ -138,7 +138,7 @@ describe('Data Management compact header + counts strip (v7.6.33)', () => {
 describe('Budget header compacted, the rest of the sweep left alone (v7.6.33)', () => {
   it('the Budget header is one slim row with every control kept, no description', () => {
     const head = block(BUD_SRC, 'Header & Controls — compact single row', 'Plan & Category Quota Indicator');
-    expect(head).toContain('px-3.5 py-3');
+    expect(head).toContain('px-3 py-2.5');
     expect(head).toContain('လစဉ် ဘတ်ဂျက် စီမံခန့်ခွဲမှု');
     expect(head).toContain('Monthly Budget Management');
     expect(head).toContain('ဘတ်ဂျက် ထိန်းချုပ်စနစ်');
@@ -161,26 +161,26 @@ describe('Budget header compacted, the rest of the sweep left alone (v7.6.33)', 
 
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
-    expect(CURRENT_BUILD_NUMBER).toBe(355);
-    expect(VERSION_JSON.version).toBe('v7.6.41');
-    expect(VERSION_JSON.buildNumber).toBe(355);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
+    expect(CURRENT_BUILD_NUMBER).toBe(356);
+    expect(VERSION_JSON.version).toBe('v7.6.42');
+    expect(VERSION_JSON.buildNumber).toBe(356);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.41');
-    expect(entry.buildNumber).toBe(355);
+    expect(entry.version).toBe('v7.6.42');
+    expect(entry.buildNumber).toBe(356);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Per-row split shops, menu re-apply, and crash fixes');
+    expect(entry.titleMy).toBe('မျက်နှာပြင်တိုင်း အဖွဲ့ခွဲ စစ်ဆေးပြီး ကျစ်လစ်အောင် ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('App-wide compaction sweep, checked group by group');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(3);
     expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
+      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Each split row can pick its own shop; records with different shops show one line per shop',
+      'Shops header and filter panel compacted — less space before the first shop card',
     );
   });
 

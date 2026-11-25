@@ -280,13 +280,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* [v7.5.75] Section switcher — each button now switches the
           top-level tab (Reports / Budget / Compare Price) via
           goToSubTab, so the sidebar highlight stays in sync. */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-1.5 flex gap-1">
+      <div className="bg-white rounded-2xl border border-slate-200 p-1 flex gap-1">
         <button type="button" onClick={() => goToSubTab('reports')}
-          className={'flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
+          className={'flex-1 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
             (subTab === 'reports'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-50')}>
@@ -294,7 +294,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           {lang === 'my' ? '📊 အစီရင်ခံစာ' : '📊 Reports'}
         </button>
         <button type="button" onClick={() => goToSubTab('budget')}
-          className={'flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
+          className={'flex-1 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
             (subTab === 'budget'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-50')}>
@@ -304,7 +304,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         {/* [v7.5.60 M-04] Compare Price is its own tab now — it is not a
             budget, so it no longer hides under the Budget tab. */}
         <button type="button" onClick={() => goToSubTab('compare')}
-          className={'flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
+          className={'flex-1 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' +
             (subTab === 'compare'
               ? 'bg-amber-600 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-50')}>
@@ -325,10 +325,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
       {/* REPORTS SUB-TAB */}
       {subTab === 'reports' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* [v7.6.27] Statement period + Print/PDF. Statement-scoped
               only — the cards below keep their all-time totals. */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-3 space-y-2">
+          <div className="bg-white rounded-2xl border border-slate-200 p-2.5 space-y-1.5">
             <div className="text-xs font-bold text-slate-700">
               {lang === 'my' ? 'စာရင်းရှင်းတမ်း ကာလ' : 'Statement period'}
             </div>
@@ -459,8 +459,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           />
 
           {/* Income vs Expense Ratio */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200">
-            <h3 className="font-bold text-sm text-slate-900 mb-3">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200">
+            <h3 className="font-bold text-sm text-slate-900 mb-2.5">
               {lang === 'my' ? 'ဝင်ငွေနှင့် ထွက်ငွေ အချိုး' : 'Income vs Expense Ratio'}
             </h3>
             {totalIncome + totalExpense > 0 ? (
@@ -538,7 +538,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
       {/* BUDGET SUB-TAB */}
       {subTab === 'budget' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <MonthlySavingsTarget
             income={currentMonthIncome}
             expense={currentMonthExpense}

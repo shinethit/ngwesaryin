@@ -1326,15 +1326,15 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const selectedRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === selectedStateRegionFilter);
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto">
+    <div className="space-y-3 max-w-7xl mx-auto">
       {/* --------------------------------------------------------------------- */}
       {/* 1. COMPACT HEADER                                                     */}
       {/* --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 px-4 py-3 shadow-xs">
+      <div className="bg-white rounded-2xl border border-slate-200/80 px-3 py-2.5 shadow-xs">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* Left: Title */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
               <Store className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -1365,7 +1365,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         </div>
 
         {/* Directory Switcher + View Mode — SAME ROW */}
-        <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+        <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap">
           {/* Directory Tabs */}
           <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/60 flex-1 min-w-0 max-w-xs">
             <button
@@ -1445,7 +1445,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           {/* ----------------------------------------------------------------- */}
           {/* 3. COMPACT SEARCH + FILTER BAR                                    */}
           {/* ----------------------------------------------------------------- */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs space-y-2.5">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-2.5 shadow-xs space-y-2">
             {/* [v7.5.86] Search-mode toggle — shop names (default, unchanged)
                 or item names across every shop's menu (စျေးစုံစမ်းခြင်း:
                 everyone's prices in one place, cheapest first). */}
@@ -1611,24 +1611,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </div>
             </div>
 
-            {/* [v7.5.91 D4] Needs-details filter chip — hidden in item
-                mode (it applies to shop results only). Toggles the
-                filter; the amber state matches the card marker. */}
-            <div className={searchMode === 'item' ? 'hidden' : 'flex items-center gap-2'}>
-              <button
-                type="button"
-                onClick={() => setShowNeedsDetailsOnly((v) => !v)}
-                aria-pressed={showNeedsDetailsOnly}
-                className={`min-h-[44px] px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  showNeedsDetailsOnly
-                    ? 'bg-amber-100 border-amber-300 text-amber-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {lang === 'my' ? '⚠️ အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ' : '⚠️ Shops missing details'}
-              </button>
-            </div>
-
+            {/* [v7.6.42] Needs-details chip lives in the count row below
+                (was its own 44px row) — same toggle, same amber state. */}
             {/* Row 3: Expandable Location Panel */}
             {searchMode === 'shop' && isLocationFilterExpanded && (
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 animate-fade-in">
@@ -1744,6 +1728,20 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     ? `တွေ့ရှိ ${visibleShops.length} ဆိုင်`
                     : `${visibleShops.length} shops`}
                 </span>
+                {/* [v7.5.91 D4] Needs-details filter chip — toggles the
+                    filter; the amber state matches the card marker. */}
+                <button
+                  type="button"
+                  onClick={() => setShowNeedsDetailsOnly((v) => !v)}
+                  aria-pressed={showNeedsDetailsOnly}
+                  className={`min-h-[44px] px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    showNeedsDetailsOnly
+                      ? 'bg-amber-100 border-amber-300 text-amber-800'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {lang === 'my' ? '⚠️ အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ' : '⚠️ Shops missing details'}
+                </button>
                 {selectedStateRegionFilter !== 'all' && (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[10px] font-bold border border-emerald-100">
                     📍 {selectedStateRegionFilter.replace('တိုင်းဒေသကြီး', '').replace('ပြည်နယ်', '').trim()}

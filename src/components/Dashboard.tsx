@@ -410,7 +410,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     // [v7.5.75] Tighter vertical rhythm (space-y-2.5, was 3.5) so more
     // of Home is visible without scrolling; no content removed.
-    <div className="space-y-2.5">
+    // [v7.6.42] space-y-2 — measured first-viewport waste, gaps only.
+    <div className="space-y-2">
       {/* [v7.5.98] Trial strip FIRST, before HEADER: the 3-month free
           Premium offer is visible the moment Home loads. Renders null
           for Premium / claimed / over-30-day accounts. */}
@@ -522,8 +523,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* HERO — [v7.5.68 R1] amount/advice leading loosened so Burmese descenders clear the pill below. [v7.5.75] p-5→p-4 and tighter mt gaps; amount size, leading and all info unchanged. */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-4 text-white shadow-md">
+      {/* HERO — [v7.5.68 R1] amount/advice leading loosened so Burmese descenders clear the pill below. [v7.5.75] p-5→p-4 and tighter mt gaps; amount size, leading and all info unchanged. [v7.6.42] p-4→p-3.5, badge/period mt tightened; amount leading untouched. */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-3.5 text-white shadow-md">
         <div className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">
           {lang === 'my' ? 'စုစုပေါင်း လက်ကျန်' : 'Total Balance'}
         </div>
@@ -540,7 +541,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <button
           type="button"
           onClick={() => setIsHealthModalOpen(true)}
-          className="mt-1.5 flex flex-col items-start gap-1 text-left cursor-pointer group"
+          className="mt-1 flex flex-col items-start gap-1 text-left cursor-pointer group"
           title={lang === 'my' ? 'ငွေကြေးကျန်းမာမှု အသေးစိတ်ကြည့်ရန် နှိပ်ပါ' : 'Tap to view financial health details'}
         >
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${heroHasNoData ? 'bg-slate-500 text-white border border-slate-400' : heroHealth.theme.badgeBg}`}>
@@ -569,7 +570,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         )}
         {/* [v7.5.60 S1] Period label for the income/expense/net row. */}
-        <div className="text-[11px] font-semibold text-slate-400 mt-2">
+        <div className="text-[11px] font-semibold text-slate-400 mt-1.5">
           {periodLabel} · {lang === 'my' ? 'ဝင်ငွေ / ထွက်ငွေ' : 'Income / Expense'}
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs flex-wrap">
@@ -602,7 +603,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* [v7.3.1] QUICK ACCESS GRID — 6 tab shortcuts [v7.5.68 R2] taller tiles + relaxed label leading so Burmese labels are not cut at the tile edge. [v7.5.75] Rebuilt: Budget / Report / Price Compare split out of the old combined Reports & Budget tile; Data + Shops moved to the sidebar; Plans tile relabelled ဈေးနှုန်း. Tiles compacted (py-2, w-7 icon) to save Home space — still ≥40px tall, easy to tap. */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-2">
+      <div className="bg-white rounded-2xl border border-slate-200 p-1.5">
         <div className="flex items-center justify-between mb-1 px-1">
           <h3 className="font-bold text-[12px] text-slate-900 flex items-center gap-1.5">
             <span className="text-[14px]">⚡</span>
@@ -611,10 +612,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
         {/* [v7.6.35] Quick-Access intro paragraph removed — the labelled tiles below say it. */}
 
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-3 gap-1">
           {/* 1. Budget */}
           <button type="button" onClick={() => onSelectTab('budget')}
-            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
               <Wallet className="w-3.5 h-3.5" />
             </div>
@@ -625,7 +626,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           {/* 2. Reports */}
           <button type="button" onClick={() => onSelectTab('reports')}
-            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 border border-cyan-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 border border-cyan-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-7 h-7 rounded-lg bg-cyan-600 text-white flex items-center justify-center shadow-xs">
               <BarChart3 className="w-3.5 h-3.5" />
             </div>
@@ -636,7 +637,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           {/* 3. Price Compare */}
           <button type="button" onClick={() => onSelectTab('compare')}
-            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-7 h-7 rounded-lg bg-orange-500 text-white flex items-center justify-center shadow-xs">
               <Scale className="w-3.5 h-3.5" />
             </div>
@@ -647,7 +648,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           {/* 4. Education */}
           <button type="button" onClick={() => onSelectTab('education')}
-            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-xs">
               <GraduationCap className="w-3.5 h-3.5" />
             </div>
@@ -658,7 +659,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           {/* 5. Feedback */}
           <button type="button" onClick={() => onSelectTab('feedback')}
-            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-7 h-7 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-xs">
               <MessageCircle className="w-3.5 h-3.5" />
             </div>
@@ -669,7 +670,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           {/* 6. Plans — [v7.5.75] relabelled အစီအစဉ် → ဈေးနှုန်း; [v7.5.88] ဈေးနှုန်း → Premium ဈေးနှုန်း (the standalone 'ဈေးနှုန်း' read as Price Compare); still opens the Plans/pricing page, NOT Price Comparison. */}
           <button type="button" onClick={() => onSelectTab('plans')}
-            className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
+            className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/70 transition-all active:scale-95 cursor-pointer">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-xs">
               <Crown className="w-3.5 h-3.5" />
             </div>

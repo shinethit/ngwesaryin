@@ -793,7 +793,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Top Header */}
-        <div className="px-5 py-4 bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-inner">
               <Bell className="w-5 h-5 text-amber-300 animate-bounce" />
@@ -971,7 +971,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         </div>
 
         {/* Notification List Container */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-h-[250px]">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 space-y-2.5 min-h-[250px]">
           {/* [v7.6.06] Expiry-reminder section — overdue first (red),
               then expiring soon (amber), in helper order. Shown on
               the All tab and the Expiry tab; hidden under the other

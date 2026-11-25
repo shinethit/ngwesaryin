@@ -283,9 +283,10 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* [v7.6.42] space-y-3 — gaps only, no content change. */}
       {/* Header — compact single row [v7.6.33] */}
-      <div className="bg-white px-3.5 py-3 sm:px-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+      <div className="bg-white px-3 py-2.5 sm:px-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
             <Layers className="w-5 h-5" />
@@ -345,7 +346,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
       {/* Free Plan Lock Notice */}
       {!isPremium && (
-        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200 p-4 sm:p-5 rounded-2xl shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200 p-3.5 sm:p-4 rounded-2xl shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
               <Crown className="w-5 h-5 text-amber-600" />
@@ -396,7 +397,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
       </div>
 
       {/* Filter Tabs and Search Bar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         {/* Type Toggle Tabs */}
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
           <button

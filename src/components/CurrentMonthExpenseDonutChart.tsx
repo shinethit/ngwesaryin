@@ -169,7 +169,7 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
   }, [lang]);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-4">
+    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-3.5 sm:p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
@@ -197,7 +197,7 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
           <p>{lang === 'my' ? 'ယခုလအတွက် ထွက်ငွေ မှတ်တမ်း မရှိသေးပါ။' : 'No expense records for the current month yet.'}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
           {/* Donut Chart Visual (SVG) */}
           <div className="md:col-span-5 flex flex-col items-center justify-center py-2 relative">
             <div className="w-44 h-44 sm:w-48 sm:h-48 relative flex items-center justify-center">

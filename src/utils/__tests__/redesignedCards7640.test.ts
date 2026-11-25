@@ -103,15 +103,17 @@ describe('Redesigned wallet cards (v7.6.40)', () => {
 });
 
 describe('Redesigned shop cards (v7.6.40)', () => {
-  it('the grid view name shares its row with the badges', () => {
+  it('the grid view name keeps full width; only the vote button shares its row', () => {
     // The old separate "Shop Name" block is gone; the name is the
     // first child of the wrapping badge row, and it wraps instead
-    // of truncating away.
+    // of truncating away. [v7.6.42] Edit/delete moved to the footer
+    // row: the header actions narrowed long names to 3 lines.
     expect(SHOP_SRC).not.toContain('{/* Shop Name */}');
     expect(SHOP_SRC).toContain(
       '<h3 className="font-extrabold text-slate-900 text-base tracking-tight leading-normal break-words min-w-0">',
     );
-    expect(SHOP_SRC).toContain('<div className="p-3.5 pb-2">');
+    expect(SHOP_SRC).toContain('<div className="p-3 pb-2">');
+    expect(SHOP_SRC).toContain('Edit/delete moved here from the header row');
   });
 
   it('KPay, address, and notes share ONE details box in both views', () => {
@@ -147,21 +149,21 @@ describe('Redesigned shop cards (v7.6.40)', () => {
   it('no tap target shrinks below the settled 44px', () => {
     expect(count(SHOP_SRC, 'min-h-[44px]')).toBe(38);
     expect(SHOP_SRC).toContain('w-full px-3.5 py-2.5 min-h-[44px]');
-    expect(SHOP_SRC).toContain('mt-2 p-1.5 bg-emerald-50');
+    expect(SHOP_SRC).toContain('mt-1.5 p-1.5 bg-emerald-50');
   });
 
-  it('version pins roll to v7.6.41 / build 355', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
-    expect(CURRENT_BUILD_NUMBER).toBe(355);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.41');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(355);
-    expect(VERSION_JSON.version).toBe('v7.6.41');
-    expect(VERSION_JSON.buildNumber).toBe(355);
+  it('version pins roll to v7.6.42 / build 356', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
+    expect(CURRENT_BUILD_NUMBER).toBe(356);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.42');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(356);
+    expect(VERSION_JSON.version).toBe('v7.6.42');
+    expect(VERSION_JSON.buildNumber).toBe(356);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
+      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Each split row can pick its own shop; records with different shops show one line per shop',
+      'Shops header and filter panel compacted — less space before the first shop card',
     );
   });
 });

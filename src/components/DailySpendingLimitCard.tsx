@@ -114,7 +114,7 @@ export const DailySpendingLimitCard: React.FC<DailySpendingLimitCardProps> = ({
   };
 
   return (
-    <div className={`rounded-3xl border p-4 sm:p-5 shadow-xs transition-all space-y-3.5 ${
+    <div className={`rounded-3xl border p-3.5 sm:p-4 shadow-xs transition-all space-y-3 ${
       isOverBudget
         ? 'bg-gradient-to-br from-rose-50/90 via-white to-rose-50/40 border-rose-300 shadow-[0_4px_20px_rgba(239,68,68,0.12)]'
         : 'bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 border-emerald-300 shadow-[0_4px_20px_rgba(16,185,129,0.08)]'

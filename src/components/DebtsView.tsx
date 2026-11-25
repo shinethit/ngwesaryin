@@ -227,9 +227,10 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* [v7.6.42] space-y-3 — gaps only, no content change. */}
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
@@ -271,7 +272,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
 
       {/* Limit Notice if Free and close to limit */}
       {isAtLimit && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-900 font-medium min-w-0">
             <Lock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
@@ -290,7 +291,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       )}
 
       {/* Wallet Filter Selector Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs space-y-1.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
             <CreditCard className="w-4 h-4 text-amber-600" />
@@ -353,9 +354,9 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       </div>
 
       {/* KPI Cards: Receivable vs Payable */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Receivable (ရရန်ရှိ) */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
@@ -385,7 +386,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
         </div>
 
         {/* Payable (ပေးရန်ရှိ) */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-100">
@@ -468,9 +469,9 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
       </div>
 
       {/* Debts List */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filteredDebts.length === 0 ? (
-          <div className="bg-white p-5 text-center rounded-2xl border border-slate-200 text-slate-400 space-y-2">
+          <div className="bg-white p-4 text-center rounded-2xl border border-slate-200 text-slate-400 space-y-2">
             <HandCoins className="w-12 h-12 mx-auto text-slate-300" />
             <p className="text-sm font-medium text-slate-600">
               {lang === 'my' ? 'ဤကဏ္ဍတွင် အကြွေးမှတ်တမ်း မရှိသေးပါ' : 'No debt records in this category.'}
@@ -518,7 +519,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
                 }`}
               >
                 {/* Header Row */}
-                <div className="p-4 sm:p-5">
+                <div className="p-3.5 sm:p-4">
                   <div className="flex items-center justify-between gap-3">
                     {/* Left: Person & Consolidated Info */}
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -741,7 +742,7 @@ export const DebtsView: React.FC<DebtsViewProps> = ({
 
                 {/* Expanded Repayment History Accordion */}
                 {isExpanded && (
-                  <div className="bg-slate-50/90 border-t border-slate-200/80 p-4 space-y-2.5">
+                  <div className="bg-slate-50/90 border-t border-slate-200/80 p-3.5 space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       {lang === 'my' ? 'အရစ်ကျ ပြန်ဆပ်ထားသော မှတ်တမ်းများ' : 'Installment Repayment History'}
                     </h4>

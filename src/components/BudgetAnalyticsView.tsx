@@ -280,9 +280,9 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Top Segmented Sub-Tab Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-2 rounded-2xl border border-slate-200/90 shadow-2xs">
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
           <button
             type="button"
@@ -337,7 +337,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
       ) : (
         <>
           {/* Header & Controls — compact single row [v7.6.33] */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white px-3.5 py-3 sm:px-4 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white px-3 py-2.5 sm:px-3.5 rounded-2xl border border-slate-200 shadow-xs">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
               <h1 className="text-lg sm:text-xl font-bold text-slate-900">
                 {lang === 'my' ? 'လစဉ် ဘတ်ဂျက် စီမံခန့်ခွဲမှု' : 'Monthly Budget Management'}
@@ -453,11 +453,11 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
       {/* Financial Health Status Banner (with 7-tier gamified color scale) */}
       <div
         onClick={() => setIsHealthModalOpen(true)}
-        className={`p-4 sm:p-4.5 rounded-2xl border transition-all cursor-pointer shadow-xs active:scale-98 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${healthResult.theme.cardBg} ${healthResult.theme.cardBorder} ${healthResult.theme.glowEffect}`}
+        className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer shadow-xs active:scale-98 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${healthResult.theme.cardBg} ${healthResult.theme.cardBorder} ${healthResult.theme.glowEffect}`}
         title={lang === 'my' ? 'ငွေကြေးကျန်းမာမှု အသေးစိတ်ကြည့်ရန် နှိပ်ပါ' : 'Click to view Financial Health breakdown'}
       >
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs text-xl ${healthResult.theme.iconBg}`}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-xs text-xl ${healthResult.theme.iconBg}`}>
             {healthResult.emoji}
           </div>
           <div className="min-w-0">
@@ -485,9 +485,9 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
       </div>
 
       {/* Monthly Financial Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Income Reference */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
             <span>{lang === 'my' ? 'ယခုလ ဝင်ငွေ (ရောထားသော ပိုက်ဆံအိတ်များ)' : 'Monthly Income (Included Wallets)'}</span>
             <Percent className="w-4 h-4 text-emerald-500" />
@@ -503,7 +503,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         </div>
 
         {/* Total Budget Limit */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
             <span>{lang === 'my' ? 'စုစုပေါင်း ဘတ်ဂျက်' : 'Total Budget Cap'}</span>
             <PieChart className="w-4 h-4 text-indigo-500" />
@@ -514,7 +514,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         </div>
 
         {/* Total Actual Spent */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
             <span>{lang === 'my' ? 'ဘတ်ဂျက်အတွင်း သုံးစွဲပြီး' : 'Budgeted Spent'}</span>
             <TrendingDown className="w-4 h-4 text-rose-500" />
@@ -530,7 +530,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
         </div>
 
         {/* Budget Balance */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
             <span>{lang === 'my' ? 'ဘတ်ဂျက် လက်ကျန်ငွေ' : 'Budget Remaining'}</span>
             {totalBudgetLimit - totalBudgetSpent >= 0 ? (
@@ -558,7 +558,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
 
       {/* [v7.5.60 N-17] % budgets total over 100% of monthly income. */}
       {totalPercentBudgets > 100 && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs">
+        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs">
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <span className="font-bold text-amber-900">
@@ -577,7 +577,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
 
       {/* Unbudgeted categories warning banner if no general pool configured */}
       {!hasGeneralBudget && unbudgetedSpentWithoutGeneral > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
@@ -616,7 +616,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
       )}
 
       {/* Budget Categories Grid */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-slate-900">
             {lang === 'my'
@@ -646,7 +646,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {budgetCalculations.map(
               ({
                 budget,
@@ -674,7 +674,7 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                 return (
                   <div
                     key={budget.categoryId}
-                    className={`bg-white p-4 rounded-2xl border transition-all shadow-xs flex flex-col justify-between ${
+                    className={`bg-white p-3.5 rounded-2xl border transition-all shadow-xs flex flex-col justify-between ${
                       isOver
                         ? 'border-rose-300 ring-1 ring-rose-200'
                         : isNear
@@ -687,12 +687,12 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           {isGeneral ? (
-                            <div className="w-11 h-11 rounded-xl bg-slate-800 text-white flex items-center justify-center shadow-xs shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center shadow-xs shrink-0">
                               <Layers className="w-5 h-5" />
                             </div>
                           ) : (
                             <div
-                              className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
+                              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
                               style={{ backgroundColor: cat?.color || '#6366F1' }}
                             >
                               <CategoryIcon

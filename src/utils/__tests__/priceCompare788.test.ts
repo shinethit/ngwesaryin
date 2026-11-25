@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
-    expect(CURRENT_BUILD_NUMBER).toBe(355);
-    expect(VERSION_JSON.version).toBe('v7.6.41');
-    expect(VERSION_JSON.buildNumber).toBe(355);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
+    expect(CURRENT_BUILD_NUMBER).toBe(356);
+    expect(VERSION_JSON.version).toBe('v7.6.42');
+    expect(VERSION_JSON.buildNumber).toBe(356);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.41');
-    expect(entry.buildNumber).toBe(355);
+    expect(entry.version).toBe('v7.6.42');
+    expect(entry.buildNumber).toBe(356);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Per-row split shops, menu re-apply, and crash fixes');
+    expect(entry.titleMy).toBe('မျက်နှာပြင်တိုင်း အဖွဲ့ခွဲ စစ်ဆေးပြီး ကျစ်လစ်အောင် ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('App-wide compaction sweep, checked group by group');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

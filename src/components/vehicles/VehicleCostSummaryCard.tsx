@@ -114,7 +114,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
     filteredTire.some((l) => l.syncToExpense === false);
 
   return (
-    <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
+    <div className="bg-white p-2.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
       {/* Header + Preset Chips */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
@@ -153,7 +153,7 @@ export const VehicleCostSummaryCard: React.FC<VehicleCostSummaryCardProps> = ({
 
       {/* Custom Date Pickers */}
       {preset === 'custom' && (
-        <div className="grid grid-cols-2 gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+        <div className="grid grid-cols-2 gap-2.5 p-2.5 bg-slate-50 rounded-2xl border border-slate-200/80">
           <div>
             <label className="block text-[10px] font-bold text-slate-600 mb-1">
               {lang === 'my' ? 'စတင်' : 'From'}

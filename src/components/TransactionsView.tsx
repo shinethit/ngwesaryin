@@ -577,7 +577,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     (plan === 'guest' || plan === 'free') && monthTxCount >= maxFreeTransactions;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* [v7.6.42] space-y-3 — measured first-viewport waste, gaps only. */}
       {/* [v7.5.73] Title card REMOVED — actions only, one slim row,
           no card background. The record count moved to the summary line. */}
       <div className="flex min-w-0 items-center gap-2 py-0.5">
@@ -656,7 +657,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
         {/* [v7.5.73] Full filter panel — same controls in the same order as before. */}
         {filtersExpanded && (
-        <div className="space-y-1.5 sm:space-y-2 pt-1.5 sm:pt-2 border-t border-slate-100">
+        <div className="space-y-1.5 sm:space-y-2 pt-1 sm:pt-1.5 border-t border-slate-100">
           {/* Row 1: Wallet */}
           <div className="flex-1 min-w-[200px]">
             {/* [v7.5.56] Lists only the wallets of the active scope
@@ -670,7 +671,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
 
         {/* Row 2: Scope + Summary Toggle + Time + Category + Table Toggle */}
-        <div className="flex flex-wrap items-center gap-2 pt-1.5 sm:pt-2 border-t border-slate-100">
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 sm:pt-1.5 border-t border-slate-100">
           {/* [v7.5.56] All / ကိုယ်ပိုင် / မျှဝေထား filter (finding 25) —
               wires the existing dataScope logic to real UI. Only shown
               when shared wallets exist. */}
@@ -870,7 +871,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               return (
                 <div key={group.date} className="bg-white">
                   {/* Daily Date Header with Subtotals */}
-                  <div className="bg-slate-100/95 px-4 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-y border-slate-200/80 sticky top-0 z-10 backdrop-blur-md">
+                  <div className="bg-slate-100/95 px-4 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-y border-slate-200/80 sticky top-0 z-10 backdrop-blur-md">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0">
                         <Calendar className="w-4 h-4" />
@@ -997,7 +998,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         <div
                           key={`${t.id}::${groupIdx}`}
                           onClick={() => setViewingTx(t)}
-                          className="p-3.5 sm:p-4 sm:px-6 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                          className="p-3 sm:p-3.5 sm:px-6 hover:bg-slate-50/80 transition-colors cursor-pointer"
                           title={lang === 'my' ? 'နှိပ်၍ ကြည့်မည်' : 'Tap to view'}
                         >
                           {/* [v7.5.95 T1] Header line only — the expanded

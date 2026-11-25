@@ -180,7 +180,7 @@ describe('Itemised shopping table shows names in full (T1)', () => {
   it('table is hoisted out of the flex-1 middle column (T1 top-up)', () => {
     // The row shell is a plain block; the header line is the inner flex.
     expect(TRANSACTIONS_SRC).toContain(
-      'className="p-3.5 sm:p-4 sm:px-6 hover:bg-slate-50/80 transition-colors cursor-pointer"',
+      'className="p-3 sm:p-3.5 sm:px-6 hover:bg-slate-50/80 transition-colors cursor-pointer"',
     );
     expect(TRANSACTIONS_SRC).toContain(
       '<div className="flex items-center justify-between gap-3">',

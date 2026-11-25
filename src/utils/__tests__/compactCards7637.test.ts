@@ -98,18 +98,18 @@ describe('Wallet cards are compact (v7.6.37)', () => {
     expect(CARD_BLOCK).toContain('col-span-2 py-2 px-2');
   });
 
-  it('version pins roll to v7.6.41 / build 355', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
-    expect(CURRENT_BUILD_NUMBER).toBe(355);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.41');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(355);
-    expect(VERSION_JSON.version).toBe('v7.6.41');
-    expect(VERSION_JSON.buildNumber).toBe(355);
+  it('version pins roll to v7.6.42 / build 356', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
+    expect(CURRENT_BUILD_NUMBER).toBe(356);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.42');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(356);
+    expect(VERSION_JSON.version).toBe('v7.6.42');
+    expect(VERSION_JSON.buildNumber).toBe(356);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
+      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Each split row can pick its own shop; records with different shops show one line per shop',
+      'Shops header and filter panel compacted — less space before the first shop card',
     );
   });
 });

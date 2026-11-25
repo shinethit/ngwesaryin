@@ -648,9 +648,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       {/* [v7.6.40] Name + badges share ONE wrapping row — the name
           moves up beside the category pill instead of sitting on its
           own line below the badges. Nothing is removed. */}
-      <div className="p-3.5 pb-2">
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
+      <div className="p-3 pb-2">
+        {/* [v7.6.42] Edit/delete moved to the footer row: the header
+            actions narrowed long names (226px) to 3 lines (+22px vs
+            v7.6.39). The name + pills now take the full row width;
+            only the vote button (public shops) stays beside them. */}
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
             <h3 className="font-extrabold text-slate-900 text-base tracking-tight leading-normal break-words min-w-0">
               {shop.name}
             </h3>
@@ -683,9 +687,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             {detailsChip}
           </div>
 
-          {/* Upvote & Action Menu */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {isPublic && pub && (
+          {/* Vote only — edit/delete live in the footer row (v7.6.42). */}
+          {isPublic && pub && (
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => onToggleVote(pub)}
@@ -699,28 +703,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 <ThumbsUp className={`w-3 h-3 ${hasVoted ? 'fill-white' : ''}`} />
                 <span>{votesCount > 0 ? votesCount : ''}</span>
               </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => onOpenEdit(shop)}
-              className="min-h-[44px] min-w-[44px] p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
-              title={lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-            </button>
-
-            {canDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(shop.id, shop.name)}
-                className="min-h-[44px] min-w-[44px] p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
-                title={lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Location Subtext */}
@@ -733,7 +717,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* PRIMARY PHONE CALL BAR */}
         {primaryPhone && (
-          <div className="mt-2 p-1.5 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
+          <div className="mt-1.5 p-1.5 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
             <a
               href={`tel:${primaryPhone}`}
               className="flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-bold text-xs transition-colors min-w-0 min-h-[44px] py-1"
@@ -806,7 +790,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             bordered box with compact lines (were three separate
             boxes). Same text, same copy button. */}
         {(shop.kpayNumber || primaryAddress || shop.generalNotes) && (
-          <div className="mt-2 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1.5">
+          <div className="mt-1.5 bg-slate-50 rounded-xl border border-slate-200 p-2 space-y-1.5">
             {shop.kpayNumber && (
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs text-indigo-950 font-semibold min-w-0">
@@ -874,7 +858,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         </button>
 
         {isItemsExpanded && (
-          <div className="px-3 pt-0.5 pb-2.5 space-y-1.5">
+          <div className="px-3 pt-0.5 pb-2 space-y-1.5">
             {/* Disclaimer */}
             <div className="p-1 bg-rose-50 border border-rose-100 rounded-xl text-[10px] text-rose-800 flex items-start gap-1.5 leading-relaxed">
               <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0 mt-0.5" />
@@ -1036,7 +1020,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         )}
 
         {!isPublic && (
-          <div className="text-[11px] text-amber-700 font-medium">
+          <div className="text-[11px] text-amber-700 font-medium truncate min-w-0">
             ⭐️ {lang === 'my' ? 'ကိုယ်ပိုင်မှတ်တမ်း' : 'Private'}
           </div>
         )}
@@ -1085,6 +1069,29 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </>
             )}
           </button>
+
+          {/* [v7.6.42] Edit/delete moved here from the header row: the
+              header actions narrowed long shop names to 3 lines. Same
+              handlers, same 44px targets, always visible, no extra tap. */}
+          <button
+            type="button"
+            onClick={() => onOpenEdit(shop)}
+            className="min-h-[44px] min-w-[44px] p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 flex items-center justify-center cursor-pointer"
+            title={lang === 'my' ? 'ပြင်ဆင်မည်' : 'Edit'}
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(shop.id, shop.name)}
+              className="min-h-[44px] min-w-[44px] p-2.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-slate-200 flex items-center justify-center cursor-pointer"
+              title={lang === 'my' ? 'ဖျက်မည်' : 'Delete'}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
 
           {/* [v7.5.81] Report — public shops only, never for the adder or
               the admin (they already have edit/delete). The contributor

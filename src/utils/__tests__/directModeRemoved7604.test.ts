@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
-    expect(CURRENT_BUILD_NUMBER).toBe(355);
-    expect(VERSION_JSON.version).toBe('v7.6.41');
-    expect(VERSION_JSON.buildNumber).toBe(355);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
+    expect(CURRENT_BUILD_NUMBER).toBe(356);
+    expect(VERSION_JSON.version).toBe('v7.6.42');
+    expect(VERSION_JSON.buildNumber).toBe(356);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,20 +330,20 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.41');
-    expect(top.buildNumber).toBe(355);
+    expect(top.version).toBe('v7.6.42');
+    expect(top.buildNumber).toBe(356);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း');
-    expect(top.titleEn).toBe('Per-row split shops, menu re-apply, and crash fixes');
+    expect(top.titleMy).toBe('မျက်နှာပြင်တိုင်း အဖွဲ့ခွဲ စစ်ဆေးပြီး ကျစ်လစ်အောင် ပြင်ဆင်ခြင်း');
+    expect(top.titleEn).toBe('App-wide compaction sweep, checked group by group');
     expect(top.changesMy).toEqual([
-      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
-      'ဆိုင် Menu ကို ဆိုင်ကတ်ကနေ ပြန် Update လုပ်လို့ရပြီ',
-      'ဆိုင်အချက်အလက်ဖြည့်တုန်း crash ဖြစ်တာနဲ့ စာရိုက်ထစ်တာကို ပြင်သည်',
+      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
+      'ဆိုင်ကတ်တွေမှာ နာမည်အရှည်ကြီးလည်း အပြည့်မြင်ရအောင် ပြင်ဆင်ခြင်း/ဖျက်ခြင်း ခလုတ်တွေကို ကတ်အောက်ခြေကို ရွှေ့သည်',
+      'Dashboard၊ စာရင်း၊ ပိုက်ဆံအိတ်၊ ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ အကြွေး၊ ယာဉ်၊ ဒေတာစီမံခန့်ခွဲမှုနဲ့ အသိပေးချက်မျက်နှာပြင်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Each split row can pick its own shop; records with different shops show one line per shop',
-      'Shop menus can be re-applied from the shop card',
-      'Fixed the crash while filling shop info and the typing lag',
+      'Shops header and filter panel compacted — less space before the first shop card',
+      'Shop cards: long names keep full width; edit/delete moved to the card footer',
+      'Dashboard, Records, Wallets, Budget, Analytics, Debts, Vehicles, Data Management and Notifications compacted — no info or button removed',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

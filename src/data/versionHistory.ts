@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.41';
-export const CURRENT_BUILD_NUMBER = 355;
+export const CURRENT_APP_VERSION = 'v7.6.42';
+export const CURRENT_BUILD_NUMBER = 356;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.42',
+    buildNumber: 356,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'မျက်နှာပြင်တိုင်း အဖွဲ့ခွဲ စစ်ဆေးပြီး ကျစ်လစ်အောင် ပြင်ဆင်ခြင်း',
+    titleEn: 'App-wide compaction sweep, checked group by group',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'မျက်နှာပြင်တိုင်းကို အဖွဲ့ခွဲပြီး သေချာစစ်သည် — ဆိုင်ရှာဖွေမှုအပိုင်း၊ ဆိုင်ကတ်များ၊ Dashboard၊ စာရင်း၊ ပိုက်ဆံအိတ်၊ ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ အကြွေး၊ ယာဉ်၊ ဒေတာစီမံခန့်ခွဲမှုနဲ့ အသိပေးချက်များ။ နေရာအပိုယူနေတဲ့ အပိုင်းတွေကို ကျစ်လစ်အောင် ပြင်ပြီး အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်။ ဆိုင်ကတ်မှာ နာမည်အရှည်ကြီးလည်း အပြည့်မြင်ရမည်။',
+    descriptionEn: 'Every screen was checked group by group — the Shops filter panel, shop cards, Dashboard, Records, Wallets, Budget, Analytics, Debts, Vehicles, Data Management and Notifications. Wasted space was compacted with no info or button removed. Long shop names now keep their full width on shop cards.',
+    changesMy: [
+      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
+      'ဆိုင်ကတ်တွေမှာ နာမည်အရှည်ကြီးလည်း အပြည့်မြင်ရအောင် ပြင်ဆင်ခြင်း/ဖျက်ခြင်း ခလုတ်တွေကို ကတ်အောက်ခြေကို ရွှေ့သည်',
+      'Dashboard၊ စာရင်း၊ ပိုက်ဆံအိတ်၊ ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ အကြွေး၊ ယာဉ်၊ ဒေတာစီမံခန့်ခွဲမှုနဲ့ အသိပေးချက်မျက်နှာပြင်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+    ],
+    changesEn: [
+      'Shops header and filter panel compacted — less space before the first shop card',
+      'Shop cards: long names keep full width; edit/delete moved to the card footer',
+      'Dashboard, Records, Wallets, Budget, Analytics, Debts, Vehicles, Data Management and Notifications compacted — no info or button removed',
+    ],
+  },
   {
     version: 'v7.6.41',
     buildNumber: 355,

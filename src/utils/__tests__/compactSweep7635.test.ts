@@ -111,26 +111,26 @@ describe('Data Management Cloud Sync slim row (v7.6.35)', () => {
 // ---------- Version bump to v7.6.41 (build 355) ----------
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
-    expect(CURRENT_BUILD_NUMBER).toBe(356);
-    expect(VERSION_JSON.version).toBe('v7.6.42');
-    expect(VERSION_JSON.buildNumber).toBe(356);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
+    expect(CURRENT_BUILD_NUMBER).toBe(357);
+    expect(VERSION_JSON.version).toBe('v7.6.43');
+    expect(VERSION_JSON.buildNumber).toBe(357);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.42');
-    expect(entry.buildNumber).toBe(356);
+    expect(entry.version).toBe('v7.6.43');
+    expect(entry.buildNumber).toBe(357);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('မျက်နှာပြင်တိုင်း အဖွဲ့ခွဲ စစ်ဆေးပြီး ကျစ်လစ်အောင် ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('App-wide compaction sweep, checked group by group');
+    expect(entry.titleMy).toBe('ဆိုင်အမျိုးအစား နှစ်ဆင့် ခွဲခြားခြင်း');
+    expect(entry.titleEn).toBe('Two-level shop categories');
     expect(entry.changesMy).toEqual([
-      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
-      'ဆိုင်ကတ်တွေမှာ နာမည်အရှည်ကြီးလည်း အပြည့်မြင်ရအောင် ပြင်ဆင်ခြင်း/ဖျက်ခြင်း ခလုတ်တွေကို ကတ်အောက်ခြေကို ရွှေ့သည်',
-      'Dashboard၊ စာရင်း၊ ပိုက်ဆံအိတ်၊ ဘတ်ဂျက်၊ အစီရင်ခံစာ၊ အကြွေး၊ ယာဉ်၊ ဒေတာစီမံခန့်ခွဲမှုနဲ့ အသိပေးချက်မျက်နှာပြင်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ နှစ်ဆင့်ရွေးလို့ရပြီ (ဥပမာ ကျန်းမာရေး → ဆေးဆိုင်/ဆေးခန်း/ဆေးရုံ)',
+      'ကြိုတင်သတ်မှတ်ထားတာ မရှိမှသာ စိတ်ကြိုက်အမျိုးအစားခွဲ ရိုက်ထည့်လို့ရမည်',
+      'အမျိုးအစားအလိုက် စစ်ထုတ်ခြင်းနဲ့ အုပ်စုဖွဲ့ခြင်းလည်း နှစ်ဆင့်အတိုင်း ဖြစ်ပြီး ရှေးဆိုင်တွေရဲ့ အမျိုးအစားလည်း အတိုင်းပဲ ပေါ်မည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Shops header and filter panel compacted — less space before the first shop card',
-      'Shop cards: long names keep full width; edit/delete moved to the card footer',
-      'Dashboard, Records, Wallets, Budget, Analytics, Debts, Vehicles, Data Management and Notifications compacted — no info or button removed',
+      'Shop types are picked in two steps — Category, then Subcategory (e.g. Health → Pharmacy / Clinic / Hospital)',
+      'Custom sub-types can be typed in only when no preset fits',
+      'Filtering and grouping by type follow the same two levels, and existing shops keep their type',
     ]);
   });
 

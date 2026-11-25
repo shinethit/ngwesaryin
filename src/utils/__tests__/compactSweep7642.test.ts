@@ -66,8 +66,11 @@ describe('Group 1 — Shops filter + header panel (v7.6.42)', () => {
   it('every filter control stays: mode tabs, search, category, location, sort, view toggle', () => {
     expect(SHOPS_SRC).toContain('searchMode');
     expect(SHOPS_SRC).toContain('searchQuery');
-    expect(SHOPS_SRC).toContain('selectedTagFilter');
+    // [v7.6.43] Two-level filter states replace the flat tag filter.
+    expect(SHOPS_SRC).toContain('selectedCategoryFilter');
+    expect(SHOPS_SRC).toContain('selectedSubTypeFilter');
     expect(SHOPS_SRC).toContain('shop-category-filter');
+    expect(SHOPS_SRC).toContain('shop-subcategory-filter');
     expect(SHOPS_SRC).toContain('selectedTownshipFilter');
     expect(SHOPS_SRC).toContain('selectedStateRegionFilter');
     expect(SHOPS_SRC).toContain('sortMode');
@@ -195,13 +198,13 @@ describe('Group 8 — Debts, Vehicles, Data, Categories, Notifications (v7.6.42)
 
 describe('Version pins roll to v7.6.42 / build 356', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
-    expect(CURRENT_BUILD_NUMBER).toBe(356);
-    expect(VERSION_JSON.version).toBe('v7.6.42');
-    expect(VERSION_JSON.buildNumber).toBe(356);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
+    expect(CURRENT_BUILD_NUMBER).toBe(357);
+    expect(VERSION_JSON.version).toBe('v7.6.43');
+    expect(VERSION_JSON.buildNumber).toBe(357);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.42');
-    expect(top.buildNumber).toBe(356);
+    expect(top.version).toBe('v7.6.43');
+    expect(top.buildNumber).toBe(357);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
     expect(top.changesMy.length).toBe(3);

@@ -10,7 +10,7 @@ import {
   updateDoc,
   increment,
 } from 'firebase/firestore';
-import { MYANMAR_REGIONS, PRESET_TAGS } from './shops/shopConstants';
+import { MYANMAR_REGIONS, PRESET_TAGS, SHOP_CATEGORIES, resolveShopTaxonomy } from './shops/shopConstants';
 import { ShopCard } from './shops/ShopCard';
 import { ShopModal } from './shops/ShopModal';
 import { ShopReportModal } from './shops/ShopReportModal';
@@ -184,7 +184,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     window.addEventListener(OPEN_SHOPS_NEEDS_DETAILS_EVENT, onNeedsDetails);
     return () => window.removeEventListener(OPEN_SHOPS_NEEDS_DETAILS_EVENT, onNeedsDetails);
   }, []);
-  const [selectedTagFilter, setSelectedTagFilter] = useState('all');
+  // [v7.6.43] Two-level filter: parent Category first, then the
+  // Subcategory within it ('all' = no narrowing on that level).
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  const [selectedSubTypeFilter, setSelectedSubTypeFilter] = useState('all');
 
   // Hierarchical Filter States
   const [selectedStateRegionFilter, setSelectedStateRegionFilter] = useState('all');
@@ -595,6 +598,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     ward: string;
     kpayNumber: string;
     generalNotes: string;
+    // [v7.6.43] Parent category id — `note` carries the subcategory.
+    shopCategory: string;
     // [v7.5.55 C3] subCategory is collected by the modal — save it.
     subCategory: string;
     targetDirectory: 'public' | 'private' | 'both';
@@ -800,6 +805,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               address: data.addresses[0] || '',
               addresses: data.addresses,
               note: data.note,
+              shopCategory: data.shopCategory,
               subCategory: data.subCategory,
               addedBy: currentUser.email || currentUser.displayName || 'အသုံးပြုသူ',
               addedByUid: currentUser.uid,
@@ -860,6 +866,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           address: data.addresses[0] || '',
           addresses: data.addresses,
           note: data.note,
+          shopCategory: data.shopCategory,
           subCategory: data.subCategory,
           stateRegion: data.stateRegion,
           township: data.township,
@@ -904,6 +911,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           address: data.addresses[0] || '',
           addresses: data.addresses,
           note: data.note,
+          shopCategory: data.shopCategory,
           subCategory: data.subCategory,
           addedBy: currentUser.email || currentUser.displayName || 'အသုံးပြုသူ',
           addedByUid: currentUser.uid,
@@ -1017,6 +1025,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           address: data.addresses[0] || '',
           addresses: data.addresses,
           note: data.note,
+          shopCategory: data.shopCategory,
           subCategory: data.subCategory,
           stateRegion: data.stateRegion,
           township: data.township,
@@ -1049,6 +1058,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         address: data.addresses[0] || '',
         addresses: data.addresses,
         note: data.note,
+        shopCategory: data.shopCategory,
         subCategory: data.subCategory,
         stateRegion: data.stateRegion,
         township: data.township,
@@ -1122,13 +1132,22 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       : activeShopsList;
     return base.filter((shop) => {
 
-      // 1. Tag type filter (Category သို့မဟုတ် Sub Category နဲ့ ကိုက်ညီမှုရှာခြင်း)
-      if (selectedTagFilter !== 'all') {
-        const isUnknown = shop.name.startsWith('Unknown ');
-        const shopCat = isUnknown ? 'unknown' : (shop.note || 'other');
-        const shopSubCat = shop.subCategory || '';
-        
-        if (shopCat !== selectedTagFilter && shopSubCat !== selectedTagFilter) {
+      // 1. Two-level Category/Subcategory filter (v7.6.43). The
+      // levels resolve from what is stored — legacy shops carry
+      // only the subcategory value in `note`, and the parent is
+      // derived on read, so no stored doc needs rewriting. The
+      // subcategory level also matches the free-text sub-category,
+      // as the old flat filter did.
+      if (selectedCategoryFilter !== 'all' || selectedSubTypeFilter !== 'all') {
+        const taxonomy = resolveShopTaxonomy(shop);
+        if (selectedCategoryFilter !== 'all' && taxonomy.categoryId !== selectedCategoryFilter) {
+          return false;
+        }
+        if (
+          selectedSubTypeFilter !== 'all' &&
+          taxonomy.subType !== selectedSubTypeFilter &&
+          (shop.subCategory || '') !== selectedSubTypeFilter
+        ) {
           return false;
         }
       }
@@ -1166,10 +1185,16 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
         (shop.ward || '').toLowerCase().includes(queryStr);
 
       const tagMeta = PRESET_TAGS.find((t) => t.value === shop.note);
+      // [v7.6.43] Searching the parent category name (e.g. ကျန်းမာရေး)
+      // matches its shops too, like the subcategory name always did.
+      const parentMeta = SHOP_CATEGORIES.find((c) => c.id === resolveShopTaxonomy(shop).categoryId);
       const tagMatch =
         (tagMeta &&
           (tagMeta.labelMy.toLowerCase().includes(queryStr) ||
             tagMeta.labelEn.toLowerCase().includes(queryStr))) ||
+        (parentMeta &&
+          (parentMeta.labelMy.toLowerCase().includes(queryStr) ||
+            parentMeta.labelEn.toLowerCase().includes(queryStr))) ||
         (shop.note && shop.note.toLowerCase().includes(queryStr)) ||
         (shop.subCategory && shop.subCategory.toLowerCase().includes(queryStr));
 
@@ -1191,7 +1216,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   }, [
     activeShopsList,
     showNeedsDetailsOnly,
-    selectedTagFilter,
+    selectedCategoryFilter,
+    selectedSubTypeFilter,
     selectedStateRegionFilter,
     selectedTownshipFilter,
     selectedCityFilter,
@@ -1234,33 +1260,36 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
       };
     }
 
-    // Group by category (note field)
+    // Group by parent category (v7.6.43) — the same two levels as
+    // the filter. Legacy shops resolve from `note` on read, so no
+    // stored doc needs rewriting.
     const groupMap = new Map<string, (ShopContact | PublicShop)[]>();
     sorted.forEach((shop) => {
       const isUnknown = shop.name.startsWith('Unknown ');
-      
+
       // Unknown ဖြစ်ပြီး Toggle က ပိတ်ထားရင် ဒီ Group ထဲ ထည့်မှာ မဟုတ်ပါဘူး
-      if (isUnknown && !showUnknown) return; 
-      
-      const cat = isUnknown ? 'unknown' : (shop.note || 'other');
+      if (isUnknown && !showUnknown) return;
+
+      const cat = resolveShopTaxonomy(shop).categoryId;
       if (!groupMap.has(cat)) groupMap.set(cat, []);
       groupMap.get(cat)!.push(shop);
     });
 
-    // Sort groups by PRESET_TAGS order
+    // Sort groups by SHOP_CATEGORIES order
     const orderedGroups: Array<{ key: string; label: string; shops: (ShopContact | PublicShop)[] }> = [];
-    PRESET_TAGS.filter((t) => t.value !== 'all').forEach((tag) => {
-      const shops = groupMap.get(tag.value);
+    SHOP_CATEGORIES.forEach((catDef) => {
+      const shops = groupMap.get(catDef.id);
       if (shops && shops.length > 0) {
         orderedGroups.push({
-          key: tag.value,
-          label: lang === 'my' ? tag.labelMy : tag.labelEn,
+          key: catDef.id,
+          label: lang === 'my' ? catDef.labelMy : catDef.labelEn,
           shops,
         });
-        groupMap.delete(tag.value);
+        groupMap.delete(catDef.id);
       }
     });
-    // Any custom categories not in PRESET_TAGS
+    // Defensive: resolveShopTaxonomy covers every shop, so no group
+    // should be left — but never drop a shop if one ever is.
     groupMap.forEach((shops, key) => {
       if (shops.length > 0) {
         orderedGroups.push({ key, label: key, shops });
@@ -1302,11 +1331,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   // states listed here).
   useEffect(() => {
     setVisibleCount(SHOPS_BATCH_SIZE);
-  }, [searchQuery, selectedTagFilter, sortMode, selectedStateRegionFilter, selectedTownshipFilter, selectedCityFilter, selectedWardFilter, showUnknown, directoryType, showNeedsDetailsOnly]);
+  }, [searchQuery, selectedCategoryFilter, selectedSubTypeFilter, sortMode, selectedStateRegionFilter, selectedTownshipFilter, selectedCityFilter, selectedWardFilter, showUnknown, directoryType, showNeedsDetailsOnly]);
 
     const hasActiveFilters =
     searchQuery.trim() !== '' ||
-    selectedTagFilter !== 'all' ||
+    selectedCategoryFilter !== 'all' ||
+    selectedSubTypeFilter !== 'all' ||
     showNeedsDetailsOnly ||
     selectedStateRegionFilter !== 'all' ||
     selectedTownshipFilter !== 'all' ||
@@ -1315,7 +1345,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
   const handleResetFilters = () => {
     setSearchQuery('');
-    setSelectedTagFilter('all');
+    setSelectedCategoryFilter('all');
+    setSelectedSubTypeFilter('all');
     setShowNeedsDetailsOnly(false);
     setSelectedStateRegionFilter('all');
     setSelectedTownshipFilter('all');
@@ -1579,11 +1610,14 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 buttons wrapped to ~7 rows at 390px and filled ~40% of the
                 screen before the first shop card. A native <select> shows
                 the selected category name, reaches every category in 2 taps
-                (open + pick), and costs one 44px row. Same state
-                (selectedTagFilter) and same filter logic — only the control
-                changed; no category removed or renamed, no horizontal scroll.
-                "အားလုံး" is the first option, and the ✕ chip in the count
-                row below clears the category in 1 tap. */}
+                (open + pick), and costs one 44px row. Same filter logic —
+                only the control changed; no category removed or renamed,
+                no horizontal scroll. "အားလုံး" is the first option, and
+                the ✕ chip in the count row below clears the category in
+                1 tap. [v7.6.43] Two levels: the first select picks the
+                parent Category; a second select for the Subcategory
+                appears only while a parent is picked, so the unfiltered
+                view keeps its single row. */}
             <div className={searchMode === 'item' ? 'hidden' : 'flex items-center gap-2'}>
               {/* [v7.5.80] Icon-only prefix: the longest category label
                   ("အမည်မသိ / Import လုပ်ထားသော", 245px) must fit inside
@@ -1596,20 +1630,53 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 <select
                   id="shop-category-filter"
                   data-testid="category-filter"
-                  value={selectedTagFilter}
-                  onChange={(e) => setSelectedTagFilter(e.target.value)}
+                  value={selectedCategoryFilter}
+                  onChange={(e) => {
+                    setSelectedCategoryFilter(e.target.value);
+                    setSelectedSubTypeFilter('all');
+                  }}
                   className="w-full appearance-none pl-3 pr-8 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
                   title={lang === 'my' ? 'ဆိုင်အမျိုးအစား ရွေးရန်' : 'Choose a shop category'}
                 >
-                  {PRESET_TAGS.map((tag) => (
-                    <option key={tag.value} value={tag.value}>
-                      {lang === 'my' ? tag.labelMy : tag.labelEn}
+                  <option value="all">{lang === 'my' ? 'အားလုံး' : 'All Types'}</option>
+                  {SHOP_CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {lang === 'my' ? cat.labelMy : cat.labelEn}
                     </option>
                   ))}
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
+
+            {/* [v7.6.43] Subcategory filter — only while a parent
+                Category is picked. Same 44px row pattern as above. */}
+            {searchMode !== 'item' && selectedCategoryFilter !== 'all' && (
+              <div className="flex items-center gap-2 animate-fade-in">
+                <span aria-hidden="true" className="shrink-0 text-sm leading-none">🏷️</span>
+                <div className="relative flex-1 min-w-0">
+                  <select
+                    id="shop-subcategory-filter"
+                    data-testid="subcategory-filter"
+                    value={selectedSubTypeFilter}
+                    onChange={(e) => setSelectedSubTypeFilter(e.target.value)}
+                    className="w-full appearance-none pl-3 pr-8 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                    title={lang === 'my' ? 'အမျိုးအစားခွဲ ရွေးရန်' : 'Choose a shop sub-type'}
+                  >
+                    <option value="all">{lang === 'my' ? 'အားလုံး' : 'All'}</option>
+                    {(SHOP_CATEGORIES.find((c) => c.id === selectedCategoryFilter) || SHOP_CATEGORIES[0]).subTypes.map((subValue) => {
+                      const tag = PRESET_TAGS.find((t) => t.value === subValue);
+                      return (
+                        <option key={subValue} value={subValue}>
+                          {tag ? (lang === 'my' ? tag.labelMy : tag.labelEn) : subValue}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+            )}
 
             {/* [v7.6.42] Needs-details chip lives in the count row below
                 (was its own 44px row) — same toggle, same amber state. */}
@@ -1754,10 +1821,17 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     <button type="button" onClick={() => { setSelectedTownshipFilter('all'); setSelectedCityFilter('all'); setSelectedWardFilter('all'); }} className="hover:text-emerald-950 ml-0.5 min-h-[28px] min-w-[28px] p-1 flex items-center justify-center">✕</button>
                   </span>
                 )}
-                {selectedTagFilter !== 'all' && (
+                {(selectedCategoryFilter !== 'all' || selectedSubTypeFilter !== 'all') && (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-bold border border-slate-200">
-                    🏷️ {PRESET_TAGS.find((t) => t.value === selectedTagFilter)?.labelMy || selectedTagFilter}
-                    <button type="button" onClick={() => setSelectedTagFilter('all')} className="hover:text-black ml-0.5 min-h-[28px] min-w-[28px] p-1 flex items-center justify-center">✕</button>
+                    🏷️ {(() => {
+                      const cat = SHOP_CATEGORIES.find((c) => c.id === selectedCategoryFilter);
+                      const catLabel = cat ? (lang === 'my' ? cat.labelMy : cat.labelEn) : selectedCategoryFilter;
+                      if (selectedSubTypeFilter === 'all') return catLabel;
+                      const tag = PRESET_TAGS.find((t) => t.value === selectedSubTypeFilter);
+                      const subLabel = tag ? (lang === 'my' ? tag.labelMy : tag.labelEn) : selectedSubTypeFilter;
+                      return `${catLabel} › ${subLabel}`;
+                    })()}
+                    <button type="button" onClick={() => { setSelectedCategoryFilter('all'); setSelectedSubTypeFilter('all'); }} className="hover:text-black ml-0.5 min-h-[28px] min-w-[28px] p-1 flex items-center justify-center">✕</button>
                   </span>
                 )}
                 {showNeedsDetailsOnly && (

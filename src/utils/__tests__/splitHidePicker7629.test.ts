@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
-    expect(CURRENT_BUILD_NUMBER).toBe(356);
-    expect(VERSION_JSON.version).toBe('v7.6.42');
-    expect(VERSION_JSON.buildNumber).toBe(356);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
+    expect(CURRENT_BUILD_NUMBER).toBe(357);
+    expect(VERSION_JSON.version).toBe('v7.6.43');
+    expect(VERSION_JSON.buildNumber).toBe(357);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.42');
-    expect(entry.buildNumber).toBe(356);
-    expect(entry.changesMy[0]).toBe('ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်');
+    expect(entry.version).toBe('v7.6.43');
+    expect(entry.buildNumber).toBe(357);
+    expect(entry.changesMy[0]).toBe('ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ နှစ်ဆင့်ရွေးလို့ရပြီ (ဥပမာ ကျန်းမာရေး → ဆေးဆိုင်/ဆေးခန်း/ဆေးရုံ)');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

@@ -48,6 +48,7 @@ function formFields(overrides: Partial<ShopFormFields> = {}): ShopFormFields {
   return {
     name: 'Denko',
     note: 'grocery',
+    shopCategory: 'food',
     phones: ['091234567'],
     addresses: ['Main Road'],
     stateRegion: 'Shan',
@@ -297,6 +298,7 @@ describe('Both-save field shapes', () => {
       'address',
       'addresses',
       'note',
+      'shopCategory',
       'subCategory',
       'stateRegion',
       'township',

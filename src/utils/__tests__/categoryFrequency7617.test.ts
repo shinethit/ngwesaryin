@@ -422,26 +422,26 @@ describe('picker wiring (v7.6.17)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
-    expect(CURRENT_BUILD_NUMBER).toBe(356);
-    expect(VERSION_JSON.version).toBe('v7.6.42');
-    expect(VERSION_JSON.buildNumber).toBe(356);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
+    expect(CURRENT_BUILD_NUMBER).toBe(357);
+    expect(VERSION_JSON.version).toBe('v7.6.43');
+    expect(VERSION_JSON.buildNumber).toBe(357);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.42');
-    expect(entry.buildNumber).toBe(356);
+    expect(entry.version).toBe('v7.6.43');
+    expect(entry.buildNumber).toBe(357);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('မျက်နှာပြင်တိုင်း အဖွဲ့ခွဲ စစ်ဆေးပြီး ကျစ်လစ်အောင် ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('App-wide compaction sweep, checked group by group');
+    expect(entry.titleMy).toBe('ဆိုင်အမျိုးအစား နှစ်ဆင့် ခွဲခြားခြင်း');
+    expect(entry.titleEn).toBe('Two-level shop categories');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(3);
     expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'ဆိုင်ရှာဖွေမှုအပိုင်း (ခေါင်းစဉ် + Filter) ကို ကျစ်လစ်အောင် ပြင်သည် — ဆိုင်ကတ်မရောက်ခင် နေရာပိုယူနေတာကို လျှော့သည်',
+      'ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ နှစ်ဆင့်ရွေးလို့ရပြီ (ဥပမာ ကျန်းမာရေး → ဆေးဆိုင်/ဆေးခန်း/ဆေးရုံ)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Shops header and filter panel compacted — less space before the first shop card',
+      'Shop types are picked in two steps — Category, then Subcategory (e.g. Health → Pharmacy / Clinic / Hospital)',
     );
   });
 

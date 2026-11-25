@@ -53,6 +53,28 @@ export const PRESET_TAGS: PresetTag[] = [
     textColor: 'text-emerald-800',
     borderColor: 'border-emerald-200/80'
   },
+  // [v7.6.43] New sub-types under ကျန်းမာရေး, per the user's example
+  // (ဆေးရုံ, ဆေးခန်း, ဆေးဆိုင် under one parent category).
+  {
+    value: 'clinic',
+    labelMy: 'ဆေးခန်း',
+    labelEn: 'Clinic',
+    iconName: 'pharmacy',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    textColor: 'text-teal-800',
+    borderColor: 'border-teal-200/80'
+  },
+  {
+    value: 'hospital',
+    labelMy: 'ဆေးရုံ',
+    labelEn: 'Hospital',
+    iconName: 'pharmacy',
+    color: 'rose',
+    bgColor: 'bg-rose-50',
+    textColor: 'text-rose-800',
+    borderColor: 'border-rose-200/80'
+  },
   { 
     value: 'restaurant', 
     labelMy: 'စားသောက်ဆိုင် / Cafe', 
@@ -196,6 +218,69 @@ export const PRESET_TAGS: PresetTag[] = [
     borderColor: 'border-slate-300'
   },
 ];
+
+// [v7.6.43] Two-level shop taxonomy, approved by the user 2026-11-25:
+// Category (parent) -> Subcategory (child). A shop stores the
+// SUBCATEGORY value in `note` (unchanged since v7.5.72) and, from
+// this version on, the parent id in `shopCategory`. The parent is
+// DERIVED ON READ from the stored value, so the ~1,160 legacy
+// public shops need no doc rewrite and no data migration: every
+// one of the 16 old flat values maps to exactly one parent below.
+// Custom note text (no preset) falls back to the stored parent,
+// or to 'other' when no parent was ever stored.
+export interface ShopCategoryDef {
+  id: string;
+  labelMy: string;
+  labelEn: string;
+  subTypes: string[];
+}
+
+export const SHOP_CATEGORIES: ShopCategoryDef[] = [
+  { id: 'food', labelMy: 'စားသောက်ကုန်', labelEn: 'Food & Grocery', subTypes: ['grocery', 'restaurant', 'wholesale'] },
+  { id: 'health', labelMy: 'ကျန်းမာရေး', labelEn: 'Health', subTypes: ['pharmacy', 'clinic', 'hospital'] },
+  { id: 'vehicle', labelMy: 'ယာဉ်', labelEn: 'Vehicles', subTypes: ['workshop', 'car-rental'] },
+  { id: 'jobs', labelMy: 'အလုပ်အကိုင်', labelEn: 'Jobs', subTypes: ['oversea-employment', 'local-employment', 'seaman-shipping'] },
+  { id: 'services', labelMy: 'ဝန်ဆောင်မှု', labelEn: 'Services', subTypes: ['general-services', 'insurance', 'real-estate', 'advertising', 'custom-clearance'] },
+  { id: 'other', labelMy: 'အခြား', labelEn: 'Other', subTypes: ['other', 'unknown'] },
+];
+
+export const SHOP_CATEGORY_IDS: string[] = SHOP_CATEGORIES.map((c) => c.id);
+
+export const SUBCATEGORY_PARENT: Record<string, string> = {};
+for (const cat of SHOP_CATEGORIES) {
+  for (const sub of cat.subTypes) SUBCATEGORY_PARENT[sub] = cat.id;
+}
+
+export interface ResolvedShopTaxonomy {
+  categoryId: string;
+  subType: string;
+}
+
+/**
+ * Resolve a shop's two levels from what is stored. Known subcategory
+ * values map to their parent deterministically; custom/empty notes
+ * trust a valid stored parent and otherwise fall back to 'other'.
+ * 'Unknown ...' import stubs always read as Unknown under Other,
+ * whatever their stored note says (the same override ShopsView
+ * always applied when grouping and filtering).
+ */
+export function resolveShopTaxonomy(shop: {
+  name?: string;
+  note?: string;
+  shopCategory?: string;
+}): ResolvedShopTaxonomy {
+  if ((shop.name || '').startsWith('Unknown ')) {
+    return { categoryId: 'other', subType: 'unknown' };
+  }
+  const note = (shop.note || '').trim();
+  const parent = SUBCATEGORY_PARENT[note];
+  if (parent) return { categoryId: parent, subType: note };
+  const stored = (shop.shopCategory || '').trim();
+  if (stored && SHOP_CATEGORY_IDS.includes(stored)) {
+    return { categoryId: stored, subType: note || 'other' };
+  }
+  return { categoryId: 'other', subType: note || 'other' };
+}
 
 export const MYANMAR_REGIONS: RegionData[] = [
   {

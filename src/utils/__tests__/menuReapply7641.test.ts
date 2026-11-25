@@ -140,23 +140,24 @@ describe('menu re-apply button wiring (v7.6.41 B)', () => {
 
 describe('Version bump to v7.6.42 (build 356)', () => {
   it('version surfaces agree on v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.42');
-    expect(CURRENT_BUILD_NUMBER).toBe(356);
-    expect(VERSION_JSON.version).toBe('v7.6.42');
-    expect(VERSION_JSON.buildNumber).toBe(356);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
+    expect(CURRENT_BUILD_NUMBER).toBe(357);
+    expect(VERSION_JSON.version).toBe('v7.6.43');
+    expect(VERSION_JSON.buildNumber).toBe(357);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.42');
-    expect(entry.buildNumber).toBe(356);
+    expect(entry.version).toBe('v7.6.43');
+    expect(entry.buildNumber).toBe(357);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
   });
 
-  it('the changelog covers the whole sweep with zero Admin strings', () => {
+  it('the changelog covers the two-level taxonomy with zero Admin strings', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.changesMy.join(' ')).toContain('ဆိုင်ရှာဖွေမှုအပိုင်း');
-    expect(entry.changesMy.join(' ')).toContain('ကတ်အောက်ခြေ');
-    expect(entry.changesMy.join(' ')).toContain('Dashboard');
-    expect(entry.changesMy.join(' ')).toContain('အသိပေးချက်');
+    expect(entry.changesMy.join(' ')).toContain('နှစ်ဆင့်');
+    expect(entry.changesMy.join(' ')).toContain('အမျိုးအစားခွဲ');
+    expect(entry.changesMy.join(' ')).toContain('ကျန်းမာရေး');
+    expect(entry.changesMy.join(' ')).toContain('စိတ်ကြိုက်');
+    expect(entry.changesMy.join(' ')).toContain('ရှေးဆိုင်');
     for (const e of VERSION_HISTORY) {
       expect(e.changesMy.join(' ')).not.toMatch(/Admin/i);
       expect(e.changesEn.join(' ')).not.toMatch(/Admin/i);

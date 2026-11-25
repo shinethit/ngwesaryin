@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.42';
-export const CURRENT_BUILD_NUMBER = 356;
+export const CURRENT_APP_VERSION = 'v7.6.43';
+export const CURRENT_BUILD_NUMBER = 357;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.43',
+    buildNumber: 357,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ဆိုင်အမျိုးအစား နှစ်ဆင့် ခွဲခြားခြင်း',
+    titleEn: 'Two-level shop categories',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ ဆိုပြီး နှစ်ဆင့်ရွေးလို့ရပြီ — ဥပမာ ကျန်းမာရေး အောက်မှာ ဆေးဆိုင်၊ ဆေးခန်း၊ ဆေးရုံ။ ကြိုတင်သတ်မှတ်ထားတာ မရှိမှသာ စိတ်ကြိုက်ရိုက်ထည့်လို့ရမည်။ ရှေးဆိုင်တွေရဲ့ အမျိုးအစားလည်း အတိုင်းပဲ ပေါ်မည်။',
+    descriptionEn: 'Shop types are now picked in two steps — Category first, then Subcategory — e.g. Health contains Pharmacy, Clinic and Hospital. Custom typing appears only when no preset fits. Existing shops keep showing the same type as before.',
+    changesMy: [
+      'ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ နှစ်ဆင့်ရွေးလို့ရပြီ (ဥပမာ ကျန်းမာရေး → ဆေးဆိုင်/ဆေးခန်း/ဆေးရုံ)',
+      'ကြိုတင်သတ်မှတ်ထားတာ မရှိမှသာ စိတ်ကြိုက်အမျိုးအစားခွဲ ရိုက်ထည့်လို့ရမည်',
+      'အမျိုးအစားအလိုက် စစ်ထုတ်ခြင်းနဲ့ အုပ်စုဖွဲ့ခြင်းလည်း နှစ်ဆင့်အတိုင်း ဖြစ်ပြီး ရှေးဆိုင်တွေရဲ့ အမျိုးအစားလည်း အတိုင်းပဲ ပေါ်မည်',
+    ],
+    changesEn: [
+      'Shop types are picked in two steps — Category, then Subcategory (e.g. Health → Pharmacy / Clinic / Hospital)',
+      'Custom sub-types can be typed in only when no preset fits',
+      'Filtering and grouping by type follow the same two levels, and existing shops keep their type',
+    ],
+  },
   {
     version: 'v7.6.42',
     buildNumber: 356,

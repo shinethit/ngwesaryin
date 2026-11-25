@@ -21,6 +21,9 @@ import { findShopByName } from './myShops';
 export interface ShopFormFields {
   name: string;
   note: string;
+  // [v7.6.43] Parent category id ('food' | 'health' | 'vehicle' |
+  // 'jobs' | 'services' | 'other') — `note` carries the subcategory.
+  shopCategory: string;
   phones: string[];
   addresses: string[];
   stateRegion: string;
@@ -153,6 +156,7 @@ export function buildPublicShopFields(
     address: data.addresses[0] || '',
     addresses: data.addresses,
     note: data.note,
+    shopCategory: data.shopCategory,
     subCategory: data.subCategory,
     addedBy,
     addedByUid,
@@ -182,6 +186,7 @@ export function buildPrivateShopFields(
     address: data.addresses[0] || '',
     addresses: data.addresses,
     note: data.note,
+    shopCategory: data.shopCategory,
     subCategory: data.subCategory,
     stateRegion: data.stateRegion,
     township: data.township,
@@ -210,6 +215,7 @@ export function buildCounterpartUpdateFields(data: ShopFormFields) {
     address: data.addresses[0] || '',
     addresses: data.addresses,
     note: data.note,
+    shopCategory: data.shopCategory,
     subCategory: data.subCategory,
     stateRegion: data.stateRegion,
     township: data.township,

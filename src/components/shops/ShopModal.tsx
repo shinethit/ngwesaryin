@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, Store, Phone, MapPin, Plus, Globe, Lock, AlertTriangle, Check } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
-import { MYANMAR_REGIONS, PRESET_TAGS } from './shopConstants';
+import { MYANMAR_REGIONS, PRESET_TAGS, SHOP_CATEGORIES, SHOP_CATEGORY_IDS, SUBCATEGORY_PARENT } from './shopConstants';
 import { toLatinDigits } from '../../utils/myanmarDigits';
 
 // [v7.5.55 C16] Normalize a Myanmar phone number before storing and
@@ -34,6 +34,7 @@ interface ShopModalProps {
   onSave: (shopData: {
     name: string;
     note: string;
+    shopCategory: string;
     phones: string[];
     addresses: string[];
     stateRegion: string;
@@ -62,9 +63,13 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 }) => {
   const [formDirectoryType, setFormDirectoryType] = useState<'public' | 'private' | 'both'>(directoryType);
   const [formName, setFormName] = useState('');
-  const [formCategory, setFormCategory] = useState('grocery');
+  // [v7.6.43] Two-step taxonomy: formCategory is the PARENT category,
+  // formSubType the subcategory value ('custom' = typed-in fallback).
+  // A new shop defaults to Food > Grocery, the old flat default.
+  const [formCategory, setFormCategory] = useState('food');
+  const [formSubType, setFormSubType] = useState('grocery');
   const [formSubCategory, setFormSubCategory] = useState('');
-  const [formCustomCategory, setFormCustomCategory] = useState('');
+  const [formCustomSubType, setFormCustomSubType] = useState('');
   const [formPhones, setFormPhones] = useState<string[]>(['']);
   const [formAddresses, setFormAddresses] = useState<string[]>(['']);
   const [formStateRegion, setFormStateRegion] = useState('');
@@ -101,16 +106,27 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       setFormDirectoryType(editingShop.id.startsWith('__prefill_') ? directoryType : (isEditingPublic ? 'public' : 'private'));
       setFormName(editingShop.name || '');
 
-      const isPreset = PRESET_TAGS.some((t) => t.value === editingShop.note && t.value !== 'all');
-      if (isPreset) {
-        setFormCategory(editingShop.note || 'grocery');
-        setFormCustomCategory('');
-      } else if (editingShop.note) {
-        setFormCategory('custom');
-        setFormCustomCategory(editingShop.note);
+      // [v7.6.43] Restore the two levels from what is stored: the
+      // subcategory value lives in `note`; a known preset value
+      // restores its parent deterministically, custom text restores
+      // the stored parent (or Other), and an empty note restores
+      // Other — the same bucket the list groups it under. The raw
+      // note is used here (not the Unknown-name display override),
+      // so editing never rewrites a stored value.
+      const rawNote = (editingShop.note || '').trim();
+      if (rawNote && SUBCATEGORY_PARENT[rawNote]) {
+        setFormCategory(SUBCATEGORY_PARENT[rawNote]);
+        setFormSubType(rawNote);
+        setFormCustomSubType('');
+      } else if (rawNote) {
+        const storedParent = (editingShop as { shopCategory?: string }).shopCategory || '';
+        setFormCategory(SHOP_CATEGORY_IDS.includes(storedParent) ? storedParent : 'other');
+        setFormSubType('custom');
+        setFormCustomSubType(rawNote);
       } else {
-        setFormCategory('grocery');
-        setFormCustomCategory('');
+        setFormCategory('other');
+        setFormSubType('other');
+        setFormCustomSubType('');
       }
 
       // [v7.5.55 C3] Restore the sub-category on edit (it was collected
@@ -157,8 +173,10 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     } else {
       setFormDirectoryType(directoryType);
       setFormName('');
-      setFormCategory('grocery');
-      setFormCustomCategory('');
+      // [v7.6.43] New-shop default: Food > Grocery, the old flat default.
+      setFormCategory('food');
+      setFormSubType('grocery');
+      setFormCustomSubType('');
       setFormSubCategory('');
       setFormPhones(['']);
       setFormAddresses(['']);
@@ -351,14 +369,20 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       return;
     }
 
-    const finalCategory = formCategory === 'custom' ? formCustomCategory.trim() || 'အခြား' : formCategory;
+    // [v7.6.43] `note` carries the subcategory value; the parent id
+    // is stored alongside it in `shopCategory`. Custom text is used
+    // only when the user picked the custom fallback (the input
+    // appears only then); an empty custom entry falls back to the
+    // Other sub-type, as the old flat custom fallback did.
+    const finalSubType = formSubType === 'custom' ? formCustomSubType.trim() || 'other' : formSubType;
     const finalTownship = formTownship === 'custom' ? formCustomTownship.trim() || 'အခြား' : formTownship;
     const cleanedAddresses = formAddresses.map((a) => a.trim()).filter(Boolean);
 
     setIsSubmitting(true);
     const success = await onSave({
       name: formName.trim(),
-      note: finalCategory,
+      note: finalSubType,
+      shopCategory: formCategory,
       subCategory: formSubCategory.trim(),
       phones: cleanedPhones,
       addresses: cleanedAddresses,
@@ -607,65 +631,99 @@ export const ShopModal: React.FC<ShopModalProps> = ({
               />
             </div>
 
-            {/* Shop Category Preset Chips */}
+            {/* [v7.6.43] Step 1: parent Category chips */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 {lang === 'my' ? 'ဆိုင်အမျိုးအစား *' : 'Shop Type *'}
               </label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {PRESET_TAGS.filter((t) => t.value !== 'all').map((tag) => {
-                  const isSelected = formCategory === tag.value;
+              <div className="flex items-center gap-2 flex-wrap" data-testid="shop-category-picker">
+                {SHOP_CATEGORIES.map((cat) => {
+                  const isSelected = formCategory === cat.id;
                   return (
                     <button
-                      key={tag.value}
+                      key={cat.id}
                       type="button"
-                      onClick={() => setFormCategory(tag.value)}
+                      onClick={() => {
+                        setFormCategory(cat.id);
+                        setFormSubType(cat.subTypes[0]);
+                      }}
                       className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center ${
                         isSelected
                           ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
                           : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
-                      {lang === 'my' ? tag.labelMy : tag.labelEn}
+                      {lang === 'my' ? cat.labelMy : cat.labelEn}
                     </button>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={() => setFormCategory('custom')}
-                  className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center ${
-                    formCategory === 'custom'
-                      ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {lang === 'my' ? '+ စိတ်ကြိုက်' : '+ Custom'}
-                </button>
               </div>
 
-              {formCategory === 'custom' && (
-                <div className="mt-2 animate-fade-in">
-                  <input
-                    type="text"
-                    required
-                    value={formCustomCategory}
-                    onChange={(e) => setFormCustomCategory(e.target.value)}
-                    placeholder={lang === 'my' ? 'ဥပမာ - စာအုပ်နှင့် စာရေးကိရိယာ' : 'e.g. Stationery & Books'}
-                    className="w-full px-3.5 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
-                  />
+              {/* [v7.6.43] Step 2: Subcategory chips of the picked parent.
+                  The free-text input appears ONLY via the custom
+                  fallback chip — never on its own (type in only when
+                  no preset fits). */}
+              <div className="mt-3">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  {lang === 'my' ? 'အမျိုးအစားခွဲ *' : 'Subcategory *'}
+                </label>
+                <div className="flex items-center gap-2 flex-wrap" data-testid="shop-subcategory-picker">
+                  {(SHOP_CATEGORIES.find((c) => c.id === formCategory) || SHOP_CATEGORIES[0]).subTypes.map((subValue) => {
+                    const tag = PRESET_TAGS.find((t) => t.value === subValue);
+                    const isSelected = formSubType === subValue;
+                    return (
+                      <button
+                        key={subValue}
+                        type="button"
+                        onClick={() => setFormSubType(subValue)}
+                        className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {tag ? (lang === 'my' ? tag.labelMy : tag.labelEn) : subValue}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setFormSubType('custom')}
+                    className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center ${
+                      formSubType === 'custom'
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {lang === 'my' ? '+ စိတ်ကြိုက်' : '+ Custom'}
+                  </button>
                 </div>
-              )}
+
+                {formSubType === 'custom' && (
+                  <div className="mt-2 animate-fade-in">
+                    <input
+                      type="text"
+                      required
+                      data-testid="shop-custom-subtype"
+                      value={formCustomSubType}
+                      onChange={(e) => setFormCustomSubType(e.target.value)}
+                      placeholder={lang === 'my' ? 'ဥပမာ - စာအုပ်နှင့် စာရေးကိရိယာ' : 'e.g. Stationery & Books'}
+                      className="w-full px-3.5 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
+                    />
+                  </div>
+                )}
+              </div>
 
             {/* Sub Category (Optional) */}
             <div className="mt-3">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {lang === 'my' ? 'အမျိုးအစားခွဲ (ဥပမာ - bank, atm, clinic)' : 'Sub Category (e.g. bank, atm, clinic)'}
+                {lang === 'my' ? 'အမျိုးအစားခွဲ (ဥပမာ - bank, atm)' : 'Sub Category (e.g. bank, atm)'}
               </label>
               <input
                 type="text"
                 value={formSubCategory}
                 onChange={(e) => setFormSubCategory(e.target.value)}
-                placeholder={lang === 'my' ? 'ဥပမာ - bank, atm, clinic' : 'e.g. bank, atm, clinic'}
+                placeholder={lang === 'my' ? 'ဥပမာ - bank, atm' : 'e.g. bank, atm'}
                 className="w-full px-3.5 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-base text-slate-900 outline-none transition-all"
               />
             </div>

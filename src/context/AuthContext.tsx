@@ -24,6 +24,7 @@ import { fetchMyRefs, deleteSharedWalletRef, subscribeMyRefs } from '../lib/shar
 import { computeSyncSignature, computeContentFingerprint } from '../utils/syncGuards';
 import { buildTrialProfileUpdate } from '../utils/premiumActivation';
 import { isWalletMatch } from '../utils/walletBalance';
+import { pullCollection } from '../utils/pullResult';
 
 interface AuthContextType {
   user: User | null;
@@ -1626,16 +1627,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       void reconcileOwnedSharedWallets();
 
       return {
-        transactions: visibleTransactions,
-        debts: debts,
+        // [v7.6.34] Failed fetches (null snap) return undefined so
+        // the caller skips the collection; a successful-but-empty
+        // fetch still returns [] exactly as before. See pullResult.
+        transactions: pullCollection(txSnap, visibleTransactions),
+        debts: pullCollection(debtsSnap, debts),
         wallets: visibleWallets.length > 0 ? visibleWallets : undefined,
         categories: categories.length > 0 ? categories : undefined,
         budgets: budgets.length > 0 ? budgets : undefined,
-        shops: shops,
-        vehicles: vehicles,
-        fuelLogs: fuelLogs,
-        maintenanceLogs: maintenanceLogs,
-        tireLogs: tireLogs,
+        shops: pullCollection(shopsSnap, shops),
+        vehicles: pullCollection(vehiclesSnap, vehicles),
+        fuelLogs: pullCollection(fuelLogsSnap, fuelLogs),
+        maintenanceLogs: pullCollection(maintSnap, maintenanceLogs),
+        tireLogs: pullCollection(tiresSnap, tireLogs),
         plan: userPlan,
         premiumExpiresAt,
         premiumActivatedAt,

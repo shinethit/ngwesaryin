@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.33",
-  "buildNumber": 347,
+  "version": "v7.6.34",
+  "buildNumber": 348,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်"
+    "Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ"
   ],
   "changesEn": [
-    "Header cards and stat tiles are now compact — every number and button stays in place."
+    "Existing data stays visible while offline, and records added offline are no longer lost."
   ]
 }

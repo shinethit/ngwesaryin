@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.33';
-export const CURRENT_BUILD_NUMBER = 347;
+export const CURRENT_APP_VERSION = 'v7.6.34';
+export const CURRENT_BUILD_NUMBER = 348;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.34',
+    buildNumber: 348,
+    releaseDate: '2026-11-24',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Offline ဖြစ်နေချိန်မှာလည်း ဒေတာတွေ ဖွင့်ကြည့်နိုင်ခြင်း',
+    titleEn: 'Data stays visible offline',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး၊ Offline ထည့်ထားတဲ့ စာရင်းတွေလည်း မပျောက်တော့ဘဲ အင်တာနက်ပြန်ရမှ Cloud ကို ရောက်မည်။ ဗားရှင်းအသစ်ရောက်ချိန်နဲ့ လိုင်းမကောင်းချိန် ဆုံသွားရင်လည်း အက်ပ်က ဖွင့်မရဖြစ်တော့မည် မဟုတ်ပါ။',
+    descriptionEn: 'Existing data stays visible while offline, and records added offline are kept and reach the cloud once the connection returns. A new version arriving while the connection is slow no longer leaves the app unable to open.',
+    changesMy: [
+      'Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ',
+    ],
+    changesEn: [
+      'Existing data stays visible while offline, and records added offline are no longer lost.',
+    ],
+  },
   {
     version: 'v7.6.33',
     buildNumber: 347,

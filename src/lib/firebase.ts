@@ -91,21 +91,32 @@ try {
   }
 } catch (err) {
   console.warn('[firebase.ts] persistentLocalCache failed, falling back:', err);
+  // [v7.6.34] Retry with an EXPLICIT persistent single-tab cache
+  // instead of the SDK defaults ({}): a silent fall to a
+  // memory-only cache would make every offline reload come up
+  // empty, with no visible error. Only if persistence itself is
+  // unavailable do we end up on getFirestore, and that path logs
+  // loudly so an offline-empty report can be traced to it.
+  const singleTabCacheConfig = {
+    localCache: persistentLocalCache({
+      tabManager: persistentSingleTabManager(undefined),
+    }),
+  };
   try {
     if (useDefaultDbDirectly) {
-      firestoreInstance = initializeFirestore(app, {});
+      firestoreInstance = initializeFirestore(app, singleTabCacheConfig);
     } else {
       firestoreInstance = initializeFirestore(
         app,
-        {},
+        singleTabCacheConfig,
         firebaseConfig.firestoreDatabaseId as string
       );
     }
     if (typeof window !== 'undefined') {
-      console.log('[firebase.ts] Firestore initialized with default cache');
+      console.log('[firebase.ts] Firestore initialized with persistent single-tab cache (fallback)');
     }
   } catch (err2) {
-    console.error('[firebase.ts] initializeFirestore failed, using getFirestore:', err2);
+    console.error('[firebase.ts] initializeFirestore failed, using getFirestore (offline cache UNAVAILABLE):', err2);
     if (useDefaultDbDirectly) {
       firestoreInstance = getFirestore(app);
     } else {

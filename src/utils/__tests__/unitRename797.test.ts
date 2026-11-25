@@ -350,17 +350,17 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
-    expect(CURRENT_BUILD_NUMBER).toBe(347);
-    expect(VERSION_JSON.version).toBe('v7.6.33');
-    expect(VERSION_JSON.buildNumber).toBe(347);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.34');
+    expect(CURRENT_BUILD_NUMBER).toBe(348);
+    expect(VERSION_JSON.version).toBe('v7.6.34');
+    expect(VERSION_JSON.buildNumber).toBe(348);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.33');
-    expect(entry.buildNumber).toBe(347);
+    expect(entry.version).toBe('v7.6.34');
+    expect(entry.buildNumber).toBe(348);
     expect(entry.releaseDate).toBe('2026-11-24');
-    expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေ ကျစ်လစ်စေခြင်း');
-    expect(entry.titleEn).toBe('Compact headers and stat strips');
+    expect(entry.tag).toBe('fix');
+    expect(entry.titleMy).toBe('Offline ဖြစ်နေချိန်မှာလည်း ဒေတာတွေ ဖွင့်ကြည့်နိုင်ခြင်း');
+    expect(entry.titleEn).toBe('Data stays visible offline');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);

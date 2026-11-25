@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
-    expect(CURRENT_BUILD_NUMBER).toBe(347);
-    expect(VERSION_JSON.version).toBe('v7.6.33');
-    expect(VERSION_JSON.buildNumber).toBe(347);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.34');
+    expect(CURRENT_BUILD_NUMBER).toBe(348);
+    expect(VERSION_JSON.version).toBe('v7.6.34');
+    expect(VERSION_JSON.buildNumber).toBe(348);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.33');
-    expect(entry.buildNumber).toBe(347);
-    expect(entry.changesMy[0]).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်');
+    expect(entry.version).toBe('v7.6.34');
+    expect(entry.buildNumber).toBe(348);
+    expect(entry.changesMy[0]).toBe('Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

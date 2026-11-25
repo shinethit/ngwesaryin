@@ -193,31 +193,31 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
-    expect(CURRENT_BUILD_NUMBER).toBe(347);
-    expect(VERSION_JSON.version).toBe('v7.6.33');
-    expect(VERSION_JSON.buildNumber).toBe(347);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.34');
+    expect(CURRENT_BUILD_NUMBER).toBe(348);
+    expect(VERSION_JSON.version).toBe('v7.6.34');
+    expect(VERSION_JSON.buildNumber).toBe(348);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('top history entry is the v7.6.18 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.33');
-    expect(entry.buildNumber).toBe(347);
+    expect(entry.version).toBe('v7.6.34');
+    expect(entry.buildNumber).toBe(348);
     expect(entry.releaseDate).toBe('2026-11-24');
-    expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေ ကျစ်လစ်စေခြင်း');
-    expect(entry.titleEn).toBe('Compact headers and stat strips');
+    expect(entry.tag).toBe('fix');
+    expect(entry.titleMy).toBe('Offline ဖြစ်နေချိန်မှာလည်း ဒေတာတွေ ဖွင့်ကြည့်နိုင်ခြင်း');
+    expect(entry.titleEn).toBe('Data stays visible offline');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ',
     ]);
     expect(entry.changesEn).toEqual([
-      'Header cards and stat tiles are now compact — every number and button stays in place.',
+      'Existing data stays visible while offline, and records added offline are no longer lost.',
     ]);
   });
 });

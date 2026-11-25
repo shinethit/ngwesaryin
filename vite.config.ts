@@ -3,13 +3,36 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 
+// [v7.6.34] Emit the full JS/CSS asset list (including lazy chunks)
+// as dist/asset-manifest.json so the service worker can precache
+// the COMPLETE build at install time. The app mounts every tab
+// view (hidden) on boot, so every lazy chunk is imported on every
+// boot — parsing index.html alone only covers the entry chunks,
+// and a lazy chunk never visited online would 408 offline and
+// trip the ErrorBoundary. No new dependency: a plain Rollup hook.
+function swAssetManifest() {
+  return {
+    name: 'ngwe-sw-asset-manifest',
+    generateBundle(_options: any, bundle: any) {
+      const assets = Object.keys(bundle)
+        .filter((n) => n.endsWith('.js') || n.endsWith('.css'))
+        .sort();
+      this.emitFile({
+        type: 'asset',
+        fileName: 'asset-manifest.json',
+        source: JSON.stringify(assets),
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
   const isAIS = process.env.DISABLE_HMR === 'true';
   const shouldDisableHMR = isProduction || isAIS;
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), swAssetManifest()],
     build: {
       outDir: 'dist',
       emptyOutDir: true,

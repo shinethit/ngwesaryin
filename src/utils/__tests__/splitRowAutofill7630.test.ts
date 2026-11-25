@@ -125,22 +125,22 @@ describe('addSplitRow wiring (v7.6.30)', () => {
 
 describe('Version bump to v7.6.30 (build 344)', () => {
   it('version surfaces agree on v7.6.30 / build 344', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.33');
-    expect(CURRENT_BUILD_NUMBER).toBe(347);
-    expect(VERSION_JSON.version).toBe('v7.6.33');
-    expect(VERSION_JSON.buildNumber).toBe(347);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.34');
+    expect(CURRENT_BUILD_NUMBER).toBe(348);
+    expect(VERSION_JSON.version).toBe('v7.6.34');
+    expect(VERSION_JSON.buildNumber).toBe(348);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.33');
-    expect(entry.buildNumber).toBe(347);
+    expect(entry.version).toBe('v7.6.34');
+    expect(entry.buildNumber).toBe(348);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ခေါင်းစဉ်ကတ်နဲ့ ကိန်းဂဏန်းကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Offline ဖြစ်နေချိန်မှာလည်း ရှိပြီးသားဒေတာတွေ ဖွင့်ကြည့်နိုင်ပြီး ထည့်ထားတဲ့ စာရင်းတွေ မပျောက်တော့ပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      'Header cards and stat tiles are now compact — every number and button stays in place.',
+      'Existing data stays visible while offline, and records added offline are no longer lost.',
     );
   });
 

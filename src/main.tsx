@@ -56,12 +56,28 @@ if (typeof window !== 'undefined') {
 // Register Service Worker with instant Auto-Update & Cache Refresh for Android / iOS
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !import.meta.env.DEV) {
   let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      window.location.reload();
+  // [v7.6.34] Never reload while the user is typing in a form: a
+  // new worker taking over mid-entry would discard the unsaved
+  // form. Wait for focus to leave the field, then reload once.
+  // If focus never leaves, the update still applies on the next
+  // visit (reg.update() runs on every load).
+  const reloadForUpdate = () => {
+    if (refreshing) return;
+    const el = document.activeElement as HTMLElement | null;
+    const editing =
+      !!el &&
+      (el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.tagName === 'SELECT' ||
+        el.isContentEditable);
+    if (editing) {
+      document.addEventListener('focusout', () => setTimeout(reloadForUpdate, 300), { once: true });
+      return;
     }
-  });
+    refreshing = true;
+    window.location.reload();
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', reloadForUpdate);
 
   window.addEventListener('load', () => {
     navigator.serviceWorker

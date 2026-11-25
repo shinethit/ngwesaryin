@@ -1589,21 +1589,30 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              {/* [v7.6.38] overflow-x-auto is only a safety net for extreme content (very large amounts) — ordinary data fits without scrolling: fixed layout + wrapping cells. */}
+              <table className="w-full table-fixed text-left text-xs">
+                <colgroup>
+                  <col />
+                  <col className="w-[16%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[19%]" />
+                  <col className="hidden w-8 sm:table-column sm:w-11" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px] bg-slate-50/50">
-                    <th className="py-3 px-3 rounded-l-lg">{lang === 'my' ? 'ကဏ္ဍ' : 'Category'}</th>
-                    <th className="py-3 px-3 text-right">
+                    <th className="py-3 px-1.5 sm:px-3 rounded-l-lg">{lang === 'my' ? 'ကဏ္ဍ' : 'Category'}</th>
+                    <th className="py-3 px-1 sm:px-3 text-right">
                       <span className="text-emerald-700">{lang === 'my' ? 'ကာလ (က)' : 'Period A'}</span>
-                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[120px]">{labelA}</span>
+                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{labelA}</span>
                     </th>
-                    <th className="py-3 px-3 text-right">
+                    <th className="py-3 px-1 sm:px-3 text-right">
                       <span className="text-indigo-700">{lang === 'my' ? 'ကာလ (ခ)' : 'Period B'}</span>
-                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[120px]">{labelB}</span>
+                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{labelB}</span>
                     </th>
-                    <th className="py-3 px-3 text-right">{lang === 'my' ? 'ကွာခြားငွေ' : 'Difference'}</th>
-                    <th className="py-3 px-3 text-center">{lang === 'my' ? 'ပြောင်းလဲမှု %' : 'Change %'}</th>
-                    <th className="py-3 px-3 text-center rounded-r-lg">{lang === 'my' ? 'အခြေအနေ' : 'Trend'}</th>
+                    <th className="py-3 px-1 sm:px-3 text-right">{lang === 'my' ? 'ကွာခြားငွေ' : 'Difference'}</th>
+                    <th className="py-3 px-1.5 sm:px-3 text-center">{lang === 'my' ? 'ပြောင်းလဲမှု %' : 'Change %'}</th>
+                    <th className="py-3 px-1.5 sm:px-3 text-center rounded-r-lg hidden sm:table-cell">{lang === 'my' ? 'အခြေအနေ' : 'Trend'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1619,19 +1628,19 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                           onClick={() => setExpandedCatId(isExpanded ? null : item.categoryId)}
                           className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                         >
-                          <td className="py-3.5 px-3">
-                            <div className="flex items-center gap-2.5">
+                          <td className="py-3 px-1.5 sm:py-3.5 sm:px-3">
+                            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
                               <span
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
+                                className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
                                 style={{ backgroundColor: item.category?.color || '#94A3B8' }}
                               >
-                                <CategoryIcon name={item.category?.icon || 'ShoppingCart'} className="w-4 h-4" />
+                                <CategoryIcon name={item.category?.icon || 'ShoppingCart'} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </span>
-                              <div>
-                                <span className="font-bold text-slate-900 block group-hover:text-indigo-600 transition-colors">
+                              <div className="min-w-0">
+                                <span className="font-bold text-slate-900 block break-words group-hover:text-indigo-600 transition-colors">
                                   {lang === 'my' ? item.category?.name : item.category?.nameEn}
                                 </span>
-                                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                <span className="text-[10px] text-slate-400 flex flex-wrap items-center gap-1">
                                   <span>{subList.length} {lang === 'my' ? 'ကဏ္ဍခွဲ' : 'sub-cats'}</span>
                                   <span>•</span>
                                   <span>{lang === 'my' ? 'နှိပ်၍ အသေးစိတ်ကြည့်ရန်' : 'Click to inspect'}</span>
@@ -1641,7 +1650,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                           </td>
 
                           {/* Period A */}
-                          <td className="py-3.5 px-3 text-right font-bold text-slate-900">
+                          <td className="py-3 px-1 sm:py-3.5 sm:px-3 text-right font-bold text-slate-900 break-words text-[11px] sm:text-xs">
                             {formatLakhs(item.amountA, lang)}
                             <span className="block text-[10px] text-slate-400 font-normal">
                               {item.pctOfTotalA}% {lang === 'my' ? 'အသုံး' : 'of total'}
@@ -1649,7 +1658,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                           </td>
 
                           {/* Period B */}
-                          <td className="py-3.5 px-3 text-right font-medium text-slate-600">
+                          <td className="py-3 px-1 sm:py-3.5 sm:px-3 text-right font-medium text-slate-600 break-words text-[11px] sm:text-xs">
                             {formatLakhs(item.amountB, lang)}
                             <span className="block text-[10px] text-slate-400 font-normal">
                               {item.pctOfTotalB}% {lang === 'my' ? 'အသုံး' : 'of total'}
@@ -1657,7 +1666,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                           </td>
 
                           {/* Difference */}
-                          <td className="py-3.5 px-3 text-right">
+                          <td className="py-3 px-1 sm:py-3.5 sm:px-3 text-right break-words text-[11px] sm:text-xs">
                             <span
                               className={`font-bold ${
                                 item.diff > 0
@@ -1673,9 +1682,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                           </td>
 
                           {/* Percentage */}
-                          <td className="py-3.5 px-3 text-center">
+                          <td className="py-3 px-1.5 sm:py-3.5 sm:px-3 text-center">
                             <span
-                              className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-bold ${
+                              className={`inline-flex items-center gap-0.5 px-1 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-bold ${
                                 item.diff > 0
                                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                   : item.diff < 0
@@ -1688,7 +1697,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                           </td>
 
                           {/* Status badge */}
-                          <td className="py-3.5 px-3 text-center">
+                          <td className="py-3 px-1.5 sm:py-3.5 sm:px-3 text-center hidden sm:table-cell">
                             {item.diff > 0 ? (
                               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700">
                                 <TrendingUp className="w-3.5 h-3.5" />
@@ -1832,41 +1841,46 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              {/* [v7.6.38] overflow-x-auto is only a safety net for extreme content (very large amounts) — ordinary data fits without scrolling: fixed layout + wrapping cells. Parent category rides under the sub-category name (was its own column) — same info, one fewer column. */}
+              <table className="w-full table-fixed text-left text-xs">
+                <colgroup>
+                  <col />
+                  <col className="w-[16%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[19%]" />
+                  <col className="hidden w-8 sm:table-column sm:w-11" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px] bg-slate-50/50">
-                    <th className="py-3 px-3 rounded-l-lg">{lang === 'my' ? 'ကဏ္ဍခွဲ (Sub-Category)' : 'Sub-Category'}</th>
-                    <th className="py-3 px-3">{lang === 'my' ? 'ပင်မကဏ္ဍ' : 'Parent Category'}</th>
-                    <th className="py-3 px-3 text-right">
+                    <th className="py-3 px-1.5 sm:px-3 rounded-l-lg">{lang === 'my' ? 'ကဏ္ဍခွဲ (Sub-Category)' : 'Sub-Category'}</th>
+                    <th className="py-3 px-1 sm:px-3 text-right">
                       <span className="text-emerald-700">{lang === 'my' ? 'ကာလ (က)' : 'Period A'}</span>
-                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[120px]">{labelA}</span>
+                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{labelA}</span>
                     </th>
-                    <th className="py-3 px-3 text-right">
+                    <th className="py-3 px-1 sm:px-3 text-right">
                       <span className="text-indigo-700">{lang === 'my' ? 'ကာလ (ခ)' : 'Period B'}</span>
-                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[120px]">{labelB}</span>
+                      <span className="block text-[9px] font-normal text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{labelB}</span>
                     </th>
-                    <th className="py-3 px-3 text-right">{lang === 'my' ? 'ကွာခြားငွေ' : 'Difference'}</th>
-                    <th className="py-3 px-3 text-center">{lang === 'my' ? 'ပြောင်းလဲမှု %' : 'Change %'}</th>
-                    <th className="py-3 px-3 text-center rounded-r-lg">{lang === 'my' ? 'အခြေအနေ' : 'Trend'}</th>
+                    <th className="py-3 px-1 sm:px-3 text-right">{lang === 'my' ? 'ကွာခြားငွေ' : 'Difference'}</th>
+                    <th className="py-3 px-1.5 sm:px-3 text-center">{lang === 'my' ? 'ပြောင်းလဲမှု %' : 'Change %'}</th>
+                    <th className="py-3 px-1.5 sm:px-3 text-center rounded-r-lg hidden sm:table-cell">{lang === 'my' ? 'အခြေအနေ' : 'Trend'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredSubCategoryList.map((item) => (
                     <tr key={item.key} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-3 font-bold text-slate-900">
-                        {item.name}
-                      </td>
-
-                      {/* Parent Category Badge */}
-                      <td className="py-3.5 px-3">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
-                          <CategoryIcon name={item.category?.icon || 'Tag'} className="w-3 h-3 text-indigo-600" />
-                          <span>{lang === 'my' ? item.category?.name : item.category?.nameEn}</span>
+                      <td className="py-3 px-1.5 sm:py-3.5 sm:px-3 font-bold text-slate-900 min-w-0">
+                        <span className="block break-words">{item.name}</span>
+                        {/* [v7.6.38] Parent category under the name (was its own column) — same info, no horizontal scroll. */}
+                        <span className="mt-1 inline-flex max-w-full items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
+                          <CategoryIcon name={item.category?.icon || 'Tag'} className="w-3 h-3 shrink-0 text-indigo-600" />
+                          <span className="min-w-0 break-words">{lang === 'my' ? item.category?.name : item.category?.nameEn}</span>
                         </span>
                       </td>
 
                       {/* Period A */}
-                      <td className="py-3.5 px-3 text-right font-bold text-slate-900">
+                      <td className="py-3 px-1 sm:py-3.5 sm:px-3 text-right font-bold text-slate-900 break-words text-[11px] sm:text-xs">
                         {formatLakhs(item.amountA, lang)}
                         <span className="block text-[10px] text-slate-400 font-normal">
                           {item.pctOfTotalA}% {lang === 'my' ? 'အသုံး' : 'of total'}
@@ -1874,7 +1888,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                       </td>
 
                       {/* Period B */}
-                      <td className="py-3.5 px-3 text-right font-medium text-slate-600">
+                      <td className="py-3 px-1 sm:py-3.5 sm:px-3 text-right font-medium text-slate-600 break-words text-[11px] sm:text-xs">
                         {formatLakhs(item.amountB, lang)}
                         <span className="block text-[10px] text-slate-400 font-normal">
                           {item.pctOfTotalB}% {lang === 'my' ? 'အသုံး' : 'of total'}
@@ -1882,7 +1896,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                       </td>
 
                       {/* Difference */}
-                      <td className="py-3.5 px-3 text-right">
+                      <td className="py-3 px-1 sm:py-3.5 sm:px-3 text-right break-words text-[11px] sm:text-xs">
                         <span
                           className={`font-bold ${
                             item.diff > 0
@@ -1898,9 +1912,9 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                       </td>
 
                       {/* Percentage */}
-                      <td className="py-3.5 px-3 text-center">
+                      <td className="py-3 px-1.5 sm:py-3.5 sm:px-3 text-center">
                         <span
-                          className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-bold ${
+                          className={`inline-flex items-center gap-0.5 px-1 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-bold ${
                             item.diff > 0
                               ? 'bg-rose-50 text-rose-700 border border-rose-200'
                               : item.diff < 0
@@ -1913,7 +1927,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                       </td>
 
                       {/* Status badge */}
-                      <td className="py-3.5 px-3 text-center">
+                      <td className="py-3 px-1.5 sm:py-3.5 sm:px-3 text-center hidden sm:table-cell">
                         {item.diff > 0 ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700">
                             <TrendingUp className="w-3.5 h-3.5" />

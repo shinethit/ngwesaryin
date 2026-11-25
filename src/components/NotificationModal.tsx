@@ -862,9 +862,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           </div>
         </div>
 
-        {/* Category Tabs & Filter */}
-        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 overflow-x-auto shrink-0 scrollbar-none">
-          <div className="flex items-center gap-1.5">
+        {/* Category Tabs & Filter — [v7.6.38] wrap so every chip is visible; never horizontal-scroll */}
+        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setFilterTab('all')}

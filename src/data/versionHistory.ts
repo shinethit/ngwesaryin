@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.37';
-export const CURRENT_BUILD_NUMBER = 351;
+export const CURRENT_APP_VERSION = 'v7.6.38';
+export const CURRENT_BUILD_NUMBER = 352;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.38',
+    buildNumber: 352,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Notification filter များနှင့် ဘေး scroll စစ်ဆေးမှု',
+    titleEn: 'Notification filters wrap, and sideways scrolling re-swept',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Notification filter များကို ဘေးဆွဲစရာမလိုဘဲ အကုန်မြင်ရအောင် ပြင်လိုက်ပြီ။ ဘတ်ဂျက် နှိုင်းယှဉ်ဇယား (၂) ခုကိုလည်း ဖုန်းမှာ ဘေးဆွဲစရာမလိုဘဲ ဖတ်လို့ရအောင် ကျစ်လစ်အောင် ပြင်ထားတယ်။ App တစ်ခုလုံးကိုလည်း ဘေး scroll ကျန်နေသေးလား ပြန်စစ်ထားတယ်။',
+    descriptionEn: 'Notification filters now wrap so every chip is visible without sideways swiping. The two budget comparison tables also fit the phone screen without scrolling sideways. The whole app was re-checked for leftover sideways scrolling.',
+    changesMy: [
+      'Notification filter များကို ဘေးဆွဲစရာမလိုဘဲ အကုန်မြင်ရအောင် ပြင်ပြီး App တစ်ခုလုံးမှာ ဘေး scroll ကျန်နေသေးလားပါ ပြန်စစ်သည်',
+    ],
+    changesEn: [
+      'Notification filters now all show without sideways swiping, and the whole app was re-checked for leftover sideways scrolling.',
+    ],
+  },
   {
     version: 'v7.6.37',
     buildNumber: 351,

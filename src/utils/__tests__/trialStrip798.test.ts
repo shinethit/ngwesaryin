@@ -263,17 +263,17 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.37');
-    expect(CURRENT_BUILD_NUMBER).toBe(351);
-    expect(VERSION_JSON.version).toBe('v7.6.37');
-    expect(VERSION_JSON.buildNumber).toBe(351);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.38');
+    expect(CURRENT_BUILD_NUMBER).toBe(352);
+    expect(VERSION_JSON.version).toBe('v7.6.38');
+    expect(VERSION_JSON.buildNumber).toBe(352);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.37');
-    expect(entry.buildNumber).toBe(351);
+    expect(entry.version).toBe('v7.6.38');
+    expect(entry.buildNumber).toBe(352);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'ပိုက်ဆံအိတ်ကတ်တွေ ကျစ်လစ်စေခြင်း',
+      'Notification filter များနှင့် ဘေး scroll စစ်ဆေးမှု',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);

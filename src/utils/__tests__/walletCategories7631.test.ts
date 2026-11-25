@@ -269,24 +269,24 @@ describe('shared-wallet mirror + rules (v7.6.31)', () => {
   });
 });
 
-describe('Version bump to v7.6.37 (build 351)', () => {
+describe('Version bump to v7.6.38 (build 352)', () => {
   it('version surfaces agree on v7.6.31 / build 345', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.37');
-    expect(CURRENT_BUILD_NUMBER).toBe(351);
-    expect(VERSION_JSON.version).toBe('v7.6.37');
-    expect(VERSION_JSON.buildNumber).toBe(351);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.38');
+    expect(CURRENT_BUILD_NUMBER).toBe(352);
+    expect(VERSION_JSON.version).toBe('v7.6.38');
+    expect(VERSION_JSON.buildNumber).toBe(352);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.37');
-    expect(entry.buildNumber).toBe(351);
+    expect(entry.version).toBe('v7.6.38');
+    expect(entry.buildNumber).toBe(352);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'ပိုက်ဆံအိတ်ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Notification filter များကို ဘေးဆွဲစရာမလိုဘဲ အကုန်မြင်ရအောင် ပြင်ပြီး App တစ်ခုလုံးမှာ ဘေး scroll ကျန်နေသေးလားပါ ပြန်စစ်သည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Wallet cards are now compact — every detail and button stays in place.',
+      'Notification filters now all show without sideways swiping, and the whole app was re-checked for leftover sideways scrolling.',
     );
     expect([...entry.changesMy, ...entry.changesEn].join(' ')).not.toContain('Admin');
   });

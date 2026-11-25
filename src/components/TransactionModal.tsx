@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useDeferredValue } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle, Store } from 'lucide-react';
 import {
   Category,
@@ -28,7 +28,7 @@ import { FuelExpenseGuideModal } from './vehicles/FuelExpenseGuideModal';
 import { useAuth } from '../context/AuthContext';
 import { getVisibleCategories } from '../utils/walletCategories';
 import { getCollaboratorPermissions } from '../utils/permissions';
-import { getAllItemSuggestions, findMatchingItemInfo, normalizeItemName } from '../utils/itemIntelligence';
+import { getAllItemSuggestions, findMatchingItemInfo, canAutoSwitchCategory, normalizeItemName } from '../utils/itemIntelligence';
 import type { UnifiedItemInfo } from '../utils/itemIntelligence';
 // [v7.5.78 C] Shop-details prompt trigger — the matching rule lives
 // in the reminder store.
@@ -144,6 +144,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [type, setType] = useState<TransactionType>(editTransaction?.type || initialType);
   const [amount, setAmount] = useState(editTransaction ? String(editTransaction.amount) : '');
   const [categoryId, setCategoryId] = useState(editTransaction?.category || '');
+  // [v7.6.44] F1 — explicit-category lock: true once the user themself
+  // picks a category in THIS form session (primary picker or a
+  // split-row picker), or when an edit session restores the record's
+  // own category. While set, item-name matching must NEVER switch
+  // the form's category away (typing ဆီ for cooking oil must not
+  // flip a grocery form to the fuel model). A ref, not state: the
+  // auto-switch check reads it inside the row updater, and no
+  // re-render is needed when it flips. Cleared on every fresh open;
+  // never set by programmatic paths (vehicle auto-select, type
+  // resets, the auto-switch itself).
+  const categoryExplicitRef = useRef(false);
   const [subCategoryId, setSubCategoryId] = useState<string>(editTransaction?.subCategoryId || '');
   const [walletId, setWalletId] = useState<string>(() => {
     if (editTransaction?.walletId) return editTransaction.walletId;
@@ -351,6 +362,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       if (isNewlyOpened) {
         autoSelectDoneRef.current = false;
         autoSelectedRef.current = false;
+        // [v7.6.44] Fresh open = fresh category intent (the
+        // edit-restore below re-locks when a record's own category
+        // is restored).
+        categoryExplicitRef.current = false;
       }
       if (editTransaction) {
         if (isNewlyOpened || isEditTxChanged) {
@@ -361,6 +376,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setAmount(String(editTransaction.amount));
           setCategoryId(editTransaction.category || '');
           setSubCategoryId(editTransaction.subCategoryId || '');
+          // [v7.6.44] The restored category is the record's own
+          // explicit category for this session: typing a new item
+          // name must not switch it away.
+          categoryExplicitRef.current = !!(editTransaction.category);
           // [v7.6.07] A split record restores its rows (section on);
           // an unsplit record restores exactly as today (section off).
           const restoredSplits = splitRowsFromTransaction(editTransaction);
@@ -663,11 +682,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           // item-name datalist, as the old single-item input did.
           if (field === 'name' && typeof val === 'string') setItemInput(val);
           if (field === 'name' && typeof val === 'string' && val.trim().length >= 1) {
-            // [FIX] Only auto-switch if current category is not Vehicle related.
-            const isVehCat = categoryId?.startsWith('cat_vehicle') || categoryId?.startsWith('cat_expense_car');
-            if (!isVehCat) {
+            // [v7.6.44] F1: the category move is gated by
+            // canAutoSwitchCategory — never away from an explicitly
+            // picked category; matching still fills prices/suggestions.
+            if (canAutoSwitchCategory(categoryId, categoryExplicitRef.current)) {
               const match = findMatchingItemInfo(val, unifiedItemSuggestions);
-              if (match && match.categoryId && (!categoryId || categoryId === 'cat_food' || categoryId === 'cat_expense_other')) {
+              if (match && match.categoryId) {
                 setCategoryId(match.categoryId);
                 if (match.subCategoryId) setSubCategoryId(match.subCategoryId);
               }
@@ -1038,6 +1058,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setIsVehicleLinkEnabled(false);
     setCategoryId('');
     setSubCategoryId('');
+    // [v7.6.44] F1: leaving vehicle mode clears the category, so the
+    // explicit lock goes with it.
+    categoryExplicitRef.current = false;
     autoSelectedRef.current = false;
     autoSelectDoneRef.current = true;
   };
@@ -1201,18 +1224,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     amount: number; date: string; matchedName: string; matchType: 'item' | 'note' | 'subcategory' | 'category'; originalTxId?: string; note?: string;
   }
 
+  // [v7.6.44] The previous-purchase / price-comparison hints scan
+  // ALL past transactions (sort + up to three full passes per
+  // keystroke). They read DEFERRED snapshots of the rows: typing
+  // echoes urgently from the live state, and the hints catch up
+  // without blocking the keystroke. The row inputs themselves keep
+  // reading the urgent state, so echo and save behaviour are
+  // unchanged; only the hint derivation is deferred.
+  const deferredShoppingItems = useDeferredValue(shoppingItems);
+  const deferredItemName = useDeferredValue(itemName);
+
   const latestPreviousPurchase = useMemo<MatchedPreviousPurchase | null>(() => {
     if (!isOpen || type !== 'expense' || !allTransactions || allTransactions.length === 0) return null;
-    if (shoppingItems.length > 1) return null;
+    if (deferredShoppingItems.length > 1) return null;
     const currentTxId = editTransaction?.id;
-    const cleanItemName = itemName.trim();
+    const cleanItemName = deferredItemName.trim();
     const cleanItemNameLower = cleanItemName.toLowerCase();
     const selectedSub = selectedCatObj?.subCategories?.find((s) => s.id === subCategoryId);
     const subName = selectedSub?.name?.trim() || '';
     const subNameLower = subName.toLowerCase();
     const pastExpenseTxs = allTransactions.filter((t) => t.id !== currentTxId && t.type === 'expense').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     if (pastExpenseTxs.length === 0) return null;
-    const targetItemName = shoppingItems[0]?.name?.trim() ? shoppingItems[0].name.trim() : cleanItemName;
+    const targetItemName = deferredShoppingItems[0]?.name?.trim() ? deferredShoppingItems[0].name.trim() : cleanItemName;
     const targetItemLower = targetItemName.toLowerCase();
     if (targetItemLower.length >= 1) {
       for (const tx of pastExpenseTxs) {
@@ -1261,7 +1294,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
     }
     return null;
-  }, [isOpen, type, allTransactions, editTransaction, shoppingItems, itemName, subCategoryId, selectedCatObj, effectiveCategoryId, categories, unifiedItemSuggestions]);
+  }, [isOpen, type, allTransactions, editTransaction, deferredShoppingItems, deferredItemName, subCategoryId, selectedCatObj, effectiveCategoryId, categories, unifiedItemSuggestions]);
 
   // [v7.6.25] One form: the compared price is the single row's unit
   // price (transfers and multi-row entries compare the total, as
@@ -1342,6 +1375,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
       setCategoryId('');
       setSubCategoryId('');
+      // [v7.6.44] F1: the type switch cleared the category, so the
+      // explicit lock goes with it — typing may auto-switch again
+      // until the user picks in the new type.
+      categoryExplicitRef.current = false;
     }
     setType(newType);
   };
@@ -1352,6 +1389,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (pendingTypeChange.clearCategoryOnConfirm) {
       setCategoryId('');
       setSubCategoryId('');
+      // [v7.6.44] F1: confirmed clear, same as the direct switch above.
+      categoryExplicitRef.current = false;
     }
     setPendingTypeChange(null);
   };
@@ -1453,11 +1492,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const handleSplitRowCategorySelect = (index: number, catId: string, subId?: string) => {
+    // [v7.6.44] F1: an explicit split-row pick locks the form's
+    // category against item-name auto-switching.
+    categoryExplicitRef.current = true;
     updateSplitRow(index, { categoryId: catId, subCategoryId: subId || '' });
     setSplitPickerRow(null);
   };
 
   const handlePrimaryCategorySelect = (catId: string, subId?: string) => {
+    // [v7.6.44] F1: an explicit primary pick locks the category.
+    categoryExplicitRef.current = true;
     setCategoryId(catId);
     setSubCategoryId(subId || '');
     setIsCategoryPickerOpen(false);
@@ -2524,14 +2568,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <option value="engine_oil">{lang === "my" ? "🛢️ အင်ဂျင်ဝိုင်" : "🛢️ Engine Oil"}</option>
                     <option value="oil_filter">{lang === "my" ? "🔧 ဝိုင်စစ်" : "🔧 Oil Filter"}</option>
                     <option value="air_filter">{lang === "my" ? "💨 လေစစ်" : "💨 Air Filter"}</option>
+                    <option value="fuel_filter">{lang === "my" ? "⛽ ဆီစစ်" : "⛽ Fuel Filter"}</option>
                     <option value="brake_pads">{lang === "my" ? "🛑 ဘရိတ်ရှူး" : "🛑 Brake Pads"}</option>
+                    <option value="brake_fluid">{lang === "my" ? "🧪 ဘရိတ်ဆီ" : "🧪 Brake Fluid"}</option>
                     <option value="tires">{lang === "my" ? "🛞 တာယာ လဲလှယ်" : "🛞 Tire Replacement"}</option>
                     <option value="battery">{lang === "my" ? "🔋 ဘက်ထရီ" : "🔋 Battery"}</option>
                     <option value="spark_plugs">{lang === "my" ? "⚡ ပလပ်" : "⚡ Spark Plugs"}</option>
                     <option value="transmission_fluid">{lang === "my" ? "⚙️ ဂီယာဝိုင်" : "⚙️ Transmission Fluid"}</option>
                     <option value="coolant">{lang === "my" ? "💧 ရေတိုင်ကီ" : "💧 Coolant"}</option>
+                    <option value="fan_belt">{lang === "my" ? "🔗 ပန်ကာကြိုး" : "🔗 Fan Belt"}</option>
+                    <option value="timing_belt">{lang === "my" ? "⏱️ တိုင်မင်ကြိုး" : "⏱️ Timing Belt"}</option>
                     <option value="wheel_alignment">{lang === "my" ? "🎯 ဘီးချိန်" : "🎯 Wheel Alignment"}</option>
                     <option value="suspension">{lang === "my" ? "🪑 ရှော့ဘား" : "🪑 Suspension"}</option>
+                    <option value="wiper_blades">{lang === "my" ? "🌧️ ဝိုင်ပါ" : "🌧️ Wiper Blades"}</option>
                     <option value="general_repair">{lang === "my" ? "🔨 အထွေထွေ ပြုပြင်" : "🔨 General Repair"}</option>
                     <option value="license_renewal">{lang === "my" ? "🪪 လိုင်စင် သက်တမ်းတိုး" : "🪪 License Renewal"}</option>
                     <option value="other">{lang === "my" ? "📦 အခြား" : "📦 Other"}</option>

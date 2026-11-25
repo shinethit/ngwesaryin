@@ -83,10 +83,24 @@ export const SERVICE_TYPE_CONFIG: Record<
     defaultLifespanKm: 15000,
     defaultLifespanDays: 360,
   },
+  // [v7.6.44] Part H — Fuel Filter: distinct from the oil filter.
+  fuel_filter: {
+    labelMy: 'ဆီစစ် (Fuel Filter)',
+    labelEn: 'Fuel Filter',
+    defaultLifespanKm: 30000,
+    defaultLifespanDays: 720,
+  },
   brake_pads: {
     labelMy: 'ဘရိတ်ရှူး/ပြား (Brake Pads)',
     labelEn: 'Brake Pads',
     defaultLifespanKm: 25000,
+    defaultLifespanDays: 720,
+  },
+  // [v7.6.44] Part H — Brake Fluid: distinct from brake pads.
+  brake_fluid: {
+    labelMy: 'ဘရိတ်ဆီ (Brake Fluid)',
+    labelEn: 'Brake Fluid',
+    defaultLifespanKm: 40000,
     defaultLifespanDays: 720,
   },
   tires: {
@@ -119,6 +133,23 @@ export const SERVICE_TYPE_CONFIG: Record<
     defaultLifespanKm: 40000,
     defaultLifespanDays: 720,
   },
+  // [v7.6.44] Part G — Fan Belt: the rubber belt driving the
+  // alternator / AC / power steering. 60,000 km or 4 years.
+  fan_belt: {
+    labelMy: 'ပန်ကာကြိုး (Fan Belt)',
+    labelEn: 'Fan Belt',
+    defaultLifespanKm: 60000,
+    defaultLifespanDays: 1460, // 4 years
+  },
+  // [v7.6.44] Part H — Timing Belt: the engine-internal timing
+  // belt (distinct from the fan belt — a break can damage the
+  // engine). 90,000 km or 5 years.
+  timing_belt: {
+    labelMy: 'တိုင်မင်ကြိုး (Timing Belt)',
+    labelEn: 'Timing Belt',
+    defaultLifespanKm: 90000,
+    defaultLifespanDays: 1825, // 5 years
+  },
   wheel_alignment: {
     labelMy: 'ဘီးချိန်ခြင်း (Wheel Alignment)',
     labelEn: 'Wheel Alignment',
@@ -130,6 +161,14 @@ export const SERVICE_TYPE_CONFIG: Record<
     labelEn: 'Suspension & Shocks',
     defaultLifespanKm: 60000,
     defaultLifespanDays: 1080,
+  },
+  // [v7.6.44] Part H — Wiper Blades: TIME-ONLY (0 km, the same
+  // pattern as license_renewal). Rubber ages by time, not distance.
+  wiper_blades: {
+    labelMy: 'ဝိုင်ပါ (Wiper Blades)',
+    labelEn: 'Wiper Blades',
+    defaultLifespanKm: 0,
+    defaultLifespanDays: 365,
   },
   general_repair: {
     labelMy: 'အထွေထွေ ပြုပြင်ထိန်းသိမ်းမှု',
@@ -399,14 +438,19 @@ export function calculateServiceHealthStatuses(
     'engine_oil',
     'oil_filter',
     'air_filter',
+    'fuel_filter',
     'brake_pads',
+    'brake_fluid',
     'tires',
     'battery',
     'spark_plugs',
     'transmission_fluid',
     'coolant',
+    'fan_belt',
+    'timing_belt',
     'wheel_alignment',
     'suspension',
+    'wiper_blades',
     'general_repair',
     'other',
     'license_renewal',
@@ -452,7 +496,13 @@ export function calculateServiceHealthStatuses(
     let status: ServiceHealthStatus['status'] = 'good';
     let healthPercent = 100;
 
-    if (type === 'license_renewal') {
+    // [v7.6.44] Part H — time-only types (0 km lifespan, e.g.
+    // license_renewal, wiper_blades) are judged by days alone: the
+    // km branch would divide by zero (NaN health) and mark them
+    // overdue on day one (remainingKm 0 <= 0). Judging by the
+    // lifespan VALUE keeps any future 0-km type correct too.
+    const isTimeOnly = expKm === 0;
+    if (type === 'license_renewal' || isTimeOnly) {
       if (remainingDays <= 0) status = 'overdue';
       else if (remainingDays <= 30) status = 'due_soon';
       

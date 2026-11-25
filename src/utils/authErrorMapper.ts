@@ -16,6 +16,32 @@ export interface AuthErrorDetails {
 export const VPN_ADVICE_MY = 'VPN ဖွင့်ပြီး ပြန်ကြိုးစားပါ၊ မရလျှင် Email ဖြင့် ဝင်ပါ';
 export const VPN_ADVICE_EN = 'Turn on VPN and try again — if it still fails, sign in with Email';
 
+// [v7.6.44] Client-side pre-validation for the LoginScreen email
+// form, so the app's own Burmese messages show INSTEAD of the
+// browser's native English validation bubble (which appears when the
+// form relies on required/minLength alone). Returns the Firebase
+// error code whose mapper text must be shown, or null when the
+// values pass. Empty values return null: the caller shows its own
+// "fill in both fields" message for those. Email format uses the
+// same pattern as ShareWalletModal / WalletsView /
+// useWalletHandlers; the password floor applies ONLY in sign-up
+// mode — sign-in never blocks a short password client-side (the
+// server is the authority there).
+export function validateEmailAuthInput(
+  email: string,
+  password: string,
+  isSignUp: boolean,
+): 'auth/invalid-email' | 'auth/weak-password' | null {
+  const trimmed = email.trim();
+  if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+    return 'auth/invalid-email';
+  }
+  if (isSignUp && password && password.length < 6) {
+    return 'auth/weak-password';
+  }
+  return null;
+}
+
 export function getAuthErrorDetails(error: any, lang: 'my' | 'en'): AuthErrorDetails {
   const errCode = error?.code || '';
   const errStr = String(error?.message || error || '').toLowerCase();

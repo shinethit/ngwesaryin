@@ -15,6 +15,7 @@ import { CURRENT_APP_VERSION } from '../data/versionHistory';
 // [v7.5.60 G-M3] Google sign-in errors go through the same mapper as
 // the login screen — no raw Firebase codes shown to the user.
 import { getAuthErrorDetails, VPN_ADVICE_MY, VPN_ADVICE_EN } from '../utils/authErrorMapper';
+import { friendlySyncErrorMessage } from '../utils/syncErrorMessage';
 import { PinSetupModal } from './PinSetupModal';
 import { PinLockScreen } from './PinLockScreen';
 
@@ -77,6 +78,9 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     invitedWorkspaces = [],
     deleteAccount,
   } = useAuth();
+  // [v7.6.44] Part E — display-time mapping only: the raw Firebase
+  // syncError string is never rendered; null maps to null.
+  const syncErrorMessage = friendlySyncErrorMessage(syncError, lang);
   const [syncingAction, setSyncingAction] = useState<string | null>(null);
   const [workspaceInput, setWorkspaceInput] = useState('');
   const [workspaceMsg, setWorkspaceMsg] = useState({ type: '', text: '' });
@@ -635,9 +639,9 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </div>
         )}
 
-        {syncError && (
+        {syncErrorMessage && (
           <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium break-words">
-            ⚠️ {syncError}
+            ⚠️ {syncErrorMessage}
           </div>
         )}
 

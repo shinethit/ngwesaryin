@@ -1012,8 +1012,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                     : `${Math.abs(item.remainingDays)} ${lang === 'my' ? 'ရက် ကျော်' : 'days overdue'}`;
                 // Limiting value first, the other alongside it — the
                 // displayed "ကျန်ရှိ" can never contradict the status pill.
+                // [v7.6.44] Part H — time-only types (0 km lifespan) show
+                // days alone, never a bogus "0 km overdue" km part.
                 const remainingText =
-                  item.serviceType === 'license_renewal' ? daysPart : daysLimiting ? `${daysPart} · ${kmPart}` : `${kmPart} · ${daysPart}`;
+                  item.serviceType === 'license_renewal' || item.expectedLifespanKm <= 0 ? daysPart : daysLimiting ? `${daysPart} · ${kmPart}` : `${kmPart} · ${daysPart}`;
 
                 return (
                   <div

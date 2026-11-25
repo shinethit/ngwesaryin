@@ -299,11 +299,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>VIP</span>
                   </span>
                   {/* [v7.6.22] Remaining-days chip beside the VIP badge —
-                      display-only, same rule as the AccountModal chip. */}
+                      display-only, same rule as the AccountModal chip.
+                      [v7.6.44] Part F: hidden below 380px. At 360px the
+                      Myanmar chip (တစ်သက်တာ, 64px) overlapped the
+                      notification button by 7px — both header sides
+                      are shrink-0, so the row overlapped instead of
+                      compressing. The measured overlap ends at 367px;
+                      379px keeps a 12px margin for device font
+                      variance and longer "N ရက်ကျန်" texts. At 390px
+                      this class changes nothing (23px clearance, pill
+                      still shown); the same info stays one tap away
+                      in the Account screen. */}
                   {premiumRemainingText && (
                     <span
                       title={premiumRemainingText}
-                      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap shrink-0"
+                      className="max-[379px]:hidden inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap shrink-0"
                     >
                       {premiumRemainingText}
                     </span>

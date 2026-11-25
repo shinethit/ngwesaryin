@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Store, MapPin, Search, Plus, X, Info, Globe, Lock, LayoutGrid, List, ChevronDown, ChevronUp, Filter, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { Store, MapPin, Search, Plus, X, Info, Globe, Lock, LayoutGrid, List, ChevronDown, ChevronUp, Filter, RotateCcw, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import { ShopContact, PublicShop } from '../types';
 import { db, auth, handleFirestoreError, OperationType, safeSetDoc, safeDeleteDoc, safeUpdateDoc } from '../lib/firebase';
 import {
@@ -59,6 +59,10 @@ interface ShopsViewProps {
   // the transactions + the menu prompt); ShopsView only threads it
   // to ShopCard. Optional: other call sites pass nothing.
   onReapplyShopMenu?: (shop: ShopContact | PublicShop, isPublic: boolean) => void;
+  // [v7.6.44] ONE combined "refresh all menus" check — handled by
+  // App; ShopsView only renders the header button for it. Optional:
+  // other call sites pass nothing.
+  onReapplyAllShopMenus?: () => void;
 }
 
 export const ShopsView: React.FC<ShopsViewProps> = ({
@@ -72,6 +76,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   onDeleteShop: onDeletePrivateShop,
   sharedUnits = [],
   onReapplyShopMenu,
+  onReapplyAllShopMenus,
 }) => {
   // Directory Type: 'public' (collaborative community) or 'private' (private directory)
   const [directoryType, setDirectoryType] = useState<'public' | 'private'>('public');
@@ -1443,6 +1448,22 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* [v7.6.44] Global Menu re-apply — ONE tap re-checks every
+            shop with purchase history. Full-width row below the
+            switcher so the label stays readable; the header card
+            grows by one 44px row (measured in the harness). */}
+        {onReapplyAllShopMenus && (
+          <button
+            type="button"
+            onClick={onReapplyAllShopMenus}
+            className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-3 py-2 min-h-[44px] rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold cursor-pointer active:scale-[0.99] transition-all"
+            title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဆိုင်အားလုံးရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check all shop menus against my own purchase history'}
+          >
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+            <span>{lang === 'my' ? 'Menu အားလုံး ပြန် Update' : 'Refresh All Menus'}</span>
+          </button>
+        )}
       </div>
 
       {/* --------------------------------------------------------------------- */}

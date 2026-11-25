@@ -3,7 +3,7 @@ import { ShieldCheck, AlertCircle, Loader2, X, ArrowRight, ExternalLink, Mail, L
 import { useAuth } from '../context/AuthContext';
 import { FortuneLogo, LogoStyle } from './FortuneLogo';
 
-import { getAuthErrorDetails } from '../utils/authErrorMapper';
+import { getAuthErrorDetails, validateEmailAuthInput } from '../utils/authErrorMapper';
 
 interface LoginScreenProps {
   lang: 'my' | 'en';
@@ -84,6 +84,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     e.preventDefault();
     if (!email.trim() || !password) {
       setErrorMsg(lang === 'my' ? 'အီးမေးလ်နှင့် စကားဝှက် ဖြည့်စွက်ပေးပါ' : 'Please enter email and password');
+      return;
+    }
+    // [v7.6.44] Client-side check BEFORE submit, rendered through
+    // the same mapper texts the server errors use — with noValidate
+    // on the form the browser's English bubble never appears, and a
+    // short sign-up password shows the Burmese weak-password message.
+    const clientError = validateEmailAuthInput(email, password, isSignUp);
+    if (clientError) {
+      setErrorMsg(formatAuthError({ code: clientError }));
       return;
     }
     setErrorMsg(null);
@@ -316,8 +325,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
             )}
 
-            {/* Email Form */}
-            <form onSubmit={handleEmailAuth} className="space-y-3.5">
+            {/* Email Form — [v7.6.44] noValidate: the browser's native
+                English bubble is suppressed; validation runs in
+                handleEmailAuth and renders Burmese mapper text. The
+                required/type/minLength attributes stay for a11y. */}
+            <form onSubmit={handleEmailAuth} noValidate className="space-y-3.5">
               {isSignUp && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -328,7 +340,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     <input
                       type="text"
                       value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                      onChange={(e) => {
+                        setDisplayName(e.target.value);
+                        setErrorMsg(null);
+                      }}
                       placeholder={lang === 'my' ? 'ဥပမာ - မောင်မောင်' : 'e.g. John Doe'}
                       className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
@@ -346,7 +361,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setErrorMsg(null);
+                    }}
                     placeholder="yourname@gmail.com"
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
@@ -364,7 +382,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     required
                     minLength={6}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setErrorMsg(null);
+                    }}
                     placeholder="••••••••"
                     className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />

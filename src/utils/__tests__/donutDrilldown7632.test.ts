@@ -304,22 +304,22 @@ describe('Donut drill-down wiring (v7.6.32)', () => {
 
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version surfaces agree on v7.6.41 / build 355', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
-    expect(CURRENT_BUILD_NUMBER).toBe(357);
-    expect(VERSION_JSON.version).toBe('v7.6.43');
-    expect(VERSION_JSON.buildNumber).toBe(357);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
+    expect(CURRENT_BUILD_NUMBER).toBe(358);
+    expect(VERSION_JSON.version).toBe('v7.6.44');
+    expect(VERSION_JSON.buildNumber).toBe(358);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.43');
-    expect(entry.buildNumber).toBe(357);
+    expect(entry.version).toBe('v7.6.44');
+    expect(entry.buildNumber).toBe(358);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(10);
+    expect(entry.changesEn).toHaveLength(10);
     expect(entry.changesMy[0]).toBe(
-      'ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ နှစ်ဆင့်ရွေးလို့ရပြီ (ဥပမာ ကျန်းမာရေး → ဆေးဆိုင်/ဆေးခန်း/ဆေးရုံ)',
+      'ဆိုင်အားလုံးရဲ့ Menu ကို တစ်ခါနှိပ်နဲ့ ပြန် Update လုပ်လို့ရပြီ (Menu အားလုံး ပြန် Update ခလုတ်)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Shop types are picked in two steps — Category, then Subcategory (e.g. Health → Pharmacy / Clinic / Hospital)',
+      'All shop menus can be re-checked with one tap (Refresh All Menus button)',
     );
     expect([...entry.changesMy, ...entry.changesEn].join(' ')).not.toContain('Admin');
   });

@@ -10,7 +10,7 @@
 import type { TransactionItem, VehicleServiceType } from '../types';
 import { SERVICE_TYPE_CONFIG } from './vehicleAnalytics';
 
-/** The 13 service types a row can carry — every SERVICE_TYPE_CONFIG
+/** The 18 service types a row can carry — every SERVICE_TYPE_CONFIG
  *  type EXCLUDING license_renewal (a licence visit has no parts rows),
  *  in SERVICE_TYPE_CONFIG order. */
 export const ROW_SERVICE_TYPES: VehicleServiceType[] = (

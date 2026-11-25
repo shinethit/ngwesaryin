@@ -13,14 +13,22 @@ import { TransactionSyncDetailModal } from './TransactionSyncDetailModal';
 import { TransactionDetailModal } from './TransactionDetailModal';
 import { getTransactionSyncStatus } from '../utils/transactionSyncStatus';
 import { useSearchSeed } from '../hooks/useSearchSeed';
-import { toLatinDigits, toMyanmarDigits } from '../utils/myanmarDigits';
 import { syncQueue } from '../lib/syncQueue';
 import { useAuth } from '../context/AuthContext';
 import { getCollaboratorPermissions } from '../utils/permissions';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, isSharedWallet } from '../utils/walletBalance';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 // [v7.6.07] Split badge on collapsed rows.
-import { hasSplits, getSplitAttribution, splitShopGroups } from '../utils/transactionSplits';
+import { hasSplits, splitShopGroups } from '../utils/transactionSplits';
+// [v7.6.44] Records-search index (haystack + sort keys built once) and
+// the shared debounced search input (typing re-renders only the input).
+import {
+  buildTransactionSearchIndex,
+  compareTransactionSearchEntries,
+  normalizeTransactionSearchQuery,
+  transactionSearchEntryMatches,
+} from '../utils/transactionSearch';
+import { DebouncedSearchInput } from './DebouncedSearchInput';
 // [v7.6.15] Fuel line on Records rows (fuel type / litres / station
 // from the linked FuelLog).
 import { findFuelLogForTransaction, formatFuelRowLine } from '../utils/fuelRowLine';
@@ -121,19 +129,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     else setLocalDataScope(scope);
   };
   const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
-  useSearchSeed('transactions', setSearchTerm);
-  // [v7.6.41] Typing must echo at once: the input shows `searchTerm`
-  // immediately, while the list filters on the debounced term (150ms,
-  // the same delay ShopsView uses for its item query) so fast typing
-  // re-filters once per pause instead of once per keystroke over the
-  // whole mounted list.
+  // [v7.6.44] The search box is DebouncedSearchInput (below): it owns
+  // the raw keystroke text and reports the query once per pause, so
+  // typing re-renders ONLY the input — never this whole list view.
+  // The parent keeps ONLY the debounced term (what the list filters
+  // on). The 150ms pause is the delay v7.6.41 already used.
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  React.useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 150);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
+  // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
+  useSearchSeed('transactions', setDebouncedSearchTerm);
   const [visibleDays, setVisibleDays] = useState(30);
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   // [v7.5.60 S13] The time filter is saved on every change — read it
@@ -190,7 +193,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   // financialSystem !== 'opening_closing'; timeFilter !== 'all';
   // selectedCategory !== 'all'; selectedWallet !== 'all' OR
   // selectedWalletIds.length > 0 (counts as 1 combined, not 2);
-  // searchTerm.trim() !== ''. Maximum 7.
+  // debouncedSearchTerm.trim() !== ''. Maximum 7.
   const activeFilterCount = useMemo(() => (
     (typeFilter !== 'all' ? 1 : 0)
     + (effectiveDataScope !== 'all' ? 1 : 0)
@@ -322,8 +325,23 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     }
   };
 
+  // [v7.6.44] Search index: per-record lower-cased fields + sort
+  // keys, built once per data change (transactionSearch.ts). A
+  // filter run over the index is includes() checks + a numeric sort
+  // — no per-record lower-casing, joining, attribution, or
+  // `new Date()` construction per run.
+  const searchIndex = useMemo(
+    () => buildTransactionSearchIndex(transactions, catMap, subCatMap, walletMap),
+    [transactions, catMap, subCatMap, walletMap],
+  );
+
   const filtered = useMemo(() => {
-    return transactions.filter((t) => {
+    const { query: searchQuery, queryNoComma: searchQueryNoComma } =
+      normalizeTransactionSearchQuery(debouncedSearchTerm);
+    const hasSearchQuery = debouncedSearchTerm.trim() !== '';
+    return searchIndex
+      .filter((searchEntry) => {
+        const t = searchEntry.tx;
       // Data Scope (Combined vs Personal Only vs Shared Only)
       // [v7.5.56] Uses the precomputed wallet lists / id sets instead of
       // re-filtering `wallets` per transaction (finding 25).
@@ -368,61 +386,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         if (endDate && t.date > endDate) return false;
       }
 
-      // Search — [v7.5.55] matches item names, shop names, wallet
-      // names and amounts too (not just category/subcategory/note).
-      // The query is normalised with toLatinDigits so typing ၁၀၀၀၀
-      // matches an amount of 10000.
-      if (debouncedSearchTerm.trim()) {
-        const rawQuery = debouncedSearchTerm.trim().toLowerCase();
-        const query = toLatinDigits(rawQuery);
-        // [v7.5.60 S14] Strip commas so "50,000" matches an amount of
-        // 50000, like Global Search already does.
-        const queryNoComma = query.replace(/,/g, '');
-        const cat = catMap.get(t.category);
-        const catName = (cat?.name || '').toLowerCase();
-        const catNameEn = (cat?.nameEn || '').toLowerCase();
-        const subCat = t.subCategoryId ? subCatMap.get(t.subCategoryId) : undefined;
-        const subName = (subCat?.name || '').toLowerCase();
-        const subNameEn = (subCat?.nameEn || '').toLowerCase();
-        const note = (t.note || '').toLowerCase();
-        const itemNames = (t.items || []).map((it) => (it.name || '').toLowerCase()).join(' ');
-        const shopName = (t.shopName || '').toLowerCase();
-        // [v7.6.41] A split record matches a shop search when ANY row
-        // carries that shop, not only the entry-level shop name.
-        const rowShopNames = getSplitAttribution(t)
-          .map((a) => (a.shopName || '').toLowerCase())
-          .join(' ');
-        const wallet = walletMap.get(t.walletId);
-        const walletName = ((wallet?.name || '') + ' ' + (wallet?.nameEn || '')).toLowerCase();
-        const amountLatin = String(t.amount);
-        const amountMyanmar = toMyanmarDigits(amountLatin);
-        if (
-          !catName.includes(query) &&
-          !catNameEn.includes(query) &&
-          !subName.includes(query) &&
-          !subNameEn.includes(query) &&
-          !note.includes(query) &&
-          !itemNames.includes(query) &&
-          !shopName.includes(query) &&
-          !rowShopNames.includes(query) &&
-          !walletName.includes(query) &&
-          !(queryNoComma && amountLatin.includes(queryNoComma)) &&
-          !(queryNoComma && amountMyanmar.includes(toMyanmarDigits(queryNoComma)))
-        ) {
-          return false;
-        }
+      // Search — matches item names, shop names, wallet names and
+      // amounts too (not just category/subcategory/note). The
+      // per-record fields live in `searchIndex`; this run only does
+      // the includes checks. Query normalisation (toLatinDigits so
+      // typing ၁၀၀၀၀ matches 10000; comma-strip so "50,000" matches
+      // 50000, like Global Search) is computed once per run above.
+      if (hasSearchQuery && !transactionSearchEntryMatches(searchEntry, searchQuery, searchQueryNoComma)) {
+        return false;
       }
 
       return true;
-    }).sort((a, b) => {
-      const bDate = new Date(b.date).getTime() || 0;
-      const aDate = new Date(a.date).getTime() || 0;
-      if (bDate !== aDate) return bDate - aDate;
-      const bCreated = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || b.date).getTime() || 0;
-      const aCreated = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || a.date).getTime() || 0;
-      return bCreated - aCreated;
-    });
-  }, [transactions, effectiveDataScope, personalWalletIds, sharedWalletIds, personalWallets, sharedWallets, typeFilter, selectedCategory, selectedWallet, selectedWalletIds, wallets, walletMap, timeFilter, specificDate, startDate, endDate, debouncedSearchTerm, catMap, subCatMap, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthPrefix, lastMonthPrefix]);
+    })
+      .sort(compareTransactionSearchEntries)
+      .map((entry) => entry.tx);
+  }, [searchIndex, effectiveDataScope, personalWalletIds, sharedWalletIds, personalWallets, sharedWallets, typeFilter, selectedCategory, selectedWallet, selectedWalletIds, wallets, walletMap, timeFilter, specificDate, startDate, endDate, debouncedSearchTerm, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthPrefix, lastMonthPrefix]);
 
   // Filtered Totals (excluding internal transfers when viewing all wallets to match Dashboard, including when viewing specific wallet)
   const isSingleWalletFilter =
@@ -638,10 +616,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input id="tx-search-input" type="text" placeholder={lang === 'my' ? 'ရှာရန်...' : 'Search...'} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-8 py-2 sm:py-2.5 text-base bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            {/* [v7.6.44] Shared debounced input: typing re-renders
+                only the input; the list filters on the debounced
+                term (see the state comment above). */}
+            <DebouncedSearchInput id="tx-search-input" type="text" placeholder={lang === 'my' ? 'ရှာရန်...' : 'Search...'} value={debouncedSearchTerm} onDebouncedChange={setDebouncedSearchTerm} className="w-full pl-8 pr-8 py-2 sm:py-2.5 text-base bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             {/* [v7.5.60 N2] Clear-search ✕, like Global Search / Categories. */}
-            {searchTerm && (
-              <button type="button" onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer" title={lang === 'my' ? 'ရှာဖွေမှု ရှင်းမည်' : 'Clear search'}>
+            {debouncedSearchTerm && (
+              <button type="button" onClick={() => setDebouncedSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer" title={lang === 'my' ? 'ရှာဖွေမှု ရှင်းမည်' : 'Clear search'}>
                 <span className="text-sm leading-none">✕</span>
               </button>
             )}
@@ -728,8 +709,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           )}
 
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            {(searchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || selectedWalletIds.length > 0 || effectiveDataScope !== 'all') && (
-              <button type="button" onClick={() => { setSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); setEffectiveDataScope('all'); }} className="text-xs text-rose-600 hover:underline font-bold px-2.5 py-2.5 leading-relaxed cursor-pointer bg-rose-50 rounded-lg">↺</button>
+            {(debouncedSearchTerm || typeFilter !== 'all' || timeFilter !== 'all' || selectedCategory !== 'all' || selectedWallet !== 'all' || selectedWalletIds.length > 0 || effectiveDataScope !== 'all') && (
+              <button type="button" onClick={() => { setDebouncedSearchTerm(''); setTypeFilter('all'); setTimeFilter('all'); setSpecificDate(todayStr); setSelectedCategory('all'); setSelectedWallet('all'); setSelectedWalletIds([]); setEffectiveDataScope('all'); }} className="text-xs text-rose-600 hover:underline font-bold px-2.5 py-2.5 leading-relaxed cursor-pointer bg-rose-50 rounded-lg">↺</button>
             )}
             <button type="button" onClick={() => setShowSummaryTable(!showSummaryTable)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 sm:py-2.5 leading-relaxed rounded-lg border border-indigo-200 transition-all cursor-pointer shrink-0">
               {showSummaryTable ? (lang === 'my' ? '➖ ကျဉ်းမည်' : '➖ Compact') : (lang === 'my' ? '📊 Table' : '📊 Table')}
@@ -794,7 +775,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           <button
             type="button"
             onClick={() => {
-              setSearchTerm('');
+              setDebouncedSearchTerm('');
               setTypeFilter('all');
               setTimeFilter('all');
               setSpecificDate(todayStr);
@@ -826,7 +807,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setSearchTerm('');
+                  setDebouncedSearchTerm('');
                   setTypeFilter('all');
                   setTimeFilter('all');
                   setSelectedCategory('all');

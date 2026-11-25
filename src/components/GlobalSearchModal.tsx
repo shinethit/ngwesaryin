@@ -5,6 +5,9 @@ import { formatMMK } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
 import { toLatinDigits } from '../utils/myanmarDigits';
+// [v7.6.44] Shared debounced search input: typing re-renders only the
+// input; the results memo runs once per pause, not per keystroke.
+import { DebouncedSearchInput } from './DebouncedSearchInput';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -331,11 +334,13 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         {/* Search Input Bar — [v7.5.68 R7] shorter placeholder (was truncated by the ESC button); roomier chips below. */}
         <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex items-center gap-3">
           <Search className="w-5 h-5 text-slate-400 shrink-0" />
-          <input
-            ref={inputRef}
+          {/* [v7.6.44] Debounced: the results memo below runs on the
+              debounced query; the input echoes at once. */}
+          <DebouncedSearchInput
+            inputRef={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onDebouncedChange={setQuery}
             placeholder={
               lang === 'my'
                 ? 'ရှာဖွေပါ — မှတ်တမ်း၊ အကြွေး...'

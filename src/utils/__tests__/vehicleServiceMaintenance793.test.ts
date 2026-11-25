@@ -50,6 +50,11 @@ describe('resolveVehicleServiceSubCategory', () => {
       'spark_plugs',
       'transmission_fluid',
       'coolant',
+      'fan_belt',
+      'timing_belt',
+      'fuel_filter',
+      'brake_fluid',
+      'wiper_blades',
       'wheel_alignment',
       'suspension',
       'general_repair',
@@ -170,12 +175,14 @@ describe('resolvePerTypeTitle', () => {
 });
 
 describe('ROW_SERVICE_TYPES', () => {
-  it('has 13 types and excludes license_renewal', () => {
-    expect(ROW_SERVICE_TYPES).toHaveLength(13);
+  it('has 18 types and excludes license_renewal', () => {
+    expect(ROW_SERVICE_TYPES).toHaveLength(18);
     expect(ROW_SERVICE_TYPES).not.toContain('license_renewal');
     expect(ROW_SERVICE_TYPES).toContain('engine_oil');
     expect(ROW_SERVICE_TYPES).toContain('air_filter');
     expect(ROW_SERVICE_TYPES).toContain('tires');
     expect(ROW_SERVICE_TYPES).toContain('general_repair');
+    // [v7.6.44] Part G — Fan Belt.
+    expect(ROW_SERVICE_TYPES).toContain('fan_belt');
   });
 });

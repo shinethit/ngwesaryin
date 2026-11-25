@@ -32,22 +32,36 @@ const TX_VIEW_SRC = fs.readFileSync(
   new URL('../../components/TransactionsView.tsx', import.meta.url),
   'utf8',
 );
+const DEBOUNCED_INPUT_SRC = fs.readFileSync(
+  new URL('../../components/DebouncedSearchInput.tsx', import.meta.url),
+  'utf8',
+);
 
+// [v7.6.44] The debounce moved INTO the shared DebouncedSearchInput
+// (the fix-once answer to typing lag): the input owns its raw text
+// and reports pauses to the parent, so typing re-renders only the
+// input and the list re-filters once per pause. The pins below track
+// the new wiring; the behaviour is unchanged (same 150ms, same
+// results, same pagination reset per pause, same seed behaviour).
 describe('Records search debounce (v7.6.41 Part D)', () => {
   it('the list filters on a debounced term, 150ms like ShopsView', () => {
+    expect(TX_VIEW_SRC).toContain('DebouncedSearchInput');
     expect(TX_VIEW_SRC).toContain('debouncedSearchTerm');
-    expect(TX_VIEW_SRC).toContain(
-      'setTimeout(() => setDebouncedSearchTerm(searchTerm), 150)',
-    );
+    expect(TX_VIEW_SRC).toContain('transactionSearchEntryMatches');
+    expect(DEBOUNCED_INPUT_SRC).toContain('delay = 150');
+    expect(DEBOUNCED_INPUT_SRC).toContain('setTimeout(() => reportRef.current(text), delay)');
     // The debounced term drives the filter, not the raw keystrokes.
-    expect(TX_VIEW_SRC).toContain('if (debouncedSearchTerm.trim())');
-    expect(TX_VIEW_SRC).toContain('debouncedSearchTerm, catMap, subCatMap');
+    expect(TX_VIEW_SRC).toContain('if (hasSearchQuery && !transactionSearchEntryMatches');
   });
 
   it('the input itself stays immediate (echo is not debounced)', () => {
-    expect(TX_VIEW_SRC).toContain('value={searchTerm}');
-    expect(TX_VIEW_SRC).toContain('onChange={(e) => setSearchTerm(e.target.value)}');
-    expect(TX_VIEW_SRC).not.toContain('value={debouncedSearchTerm}');
+    // The shared input binds its OWN text state and updates it
+    // synchronously per keystroke; the parent learns the query only
+    // after the pause.
+    expect(DEBOUNCED_INPUT_SRC).toContain('value={text}');
+    expect(DEBOUNCED_INPUT_SRC).toContain('onChange={(e) => setText(e.target.value)}');
+    expect(TX_VIEW_SRC).not.toContain('onChange={(e) => setSearchTerm(e.target.value)}');
+    expect(TX_VIEW_SRC).toContain('value={debouncedSearchTerm} onDebouncedChange={setDebouncedSearchTerm}');
   });
 
   it('pagination reset + filter notice follow the applied (debounced) term', () => {
@@ -58,6 +72,6 @@ describe('Records search debounce (v7.6.41 Part D)', () => {
   });
 
   it('a global-search seed still lands in the box (then debounces)', () => {
-    expect(TX_VIEW_SRC).toContain("useSearchSeed('transactions', setSearchTerm);");
+    expect(TX_VIEW_SRC).toContain("useSearchSeed('transactions', setDebouncedSearchTerm);");
   });
 });

@@ -187,7 +187,10 @@ describe('Records list wires the banner gate to the helper (v7.6.16)', () => {
   it('the banner reset still clears ALL filters including the wallet pick', () => {
     const start = TX_VIEW_SRC.indexOf('Active Filter Notice Bar');
     const block = TX_VIEW_SRC.slice(start, TX_VIEW_SRC.indexOf('Transactions List', start));
-    expect(block).toContain("setSearchTerm('')");
+    // [v7.6.44] The applied term is now the single search state
+    // (DebouncedSearchInput owns the raw keystrokes); the banner
+    // reset clears it by the same setter.
+    expect(block).toContain("setDebouncedSearchTerm('')");
     expect(block).toContain("setTypeFilter('all')");
     expect(block).toContain("setTimeFilter('all')");
     expect(block).toContain("setSelectedCategory('all')");
@@ -218,26 +221,26 @@ describe('Records list wires the banner gate to the helper (v7.6.16)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
-    expect(CURRENT_BUILD_NUMBER).toBe(357);
-    expect(VERSION_JSON.version).toBe('v7.6.43');
-    expect(VERSION_JSON.buildNumber).toBe(357);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
+    expect(CURRENT_BUILD_NUMBER).toBe(358);
+    expect(VERSION_JSON.version).toBe('v7.6.44');
+    expect(VERSION_JSON.buildNumber).toBe(358);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.43');
-    expect(entry.buildNumber).toBe(357);
+    expect(entry.version).toBe('v7.6.44');
+    expect(entry.buildNumber).toBe(358);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဆိုင်အမျိုးအစား နှစ်ဆင့် ခွဲခြားခြင်း');
-    expect(entry.titleEn).toBe('Two-level shop categories');
+    expect(entry.titleMy).toBe('ဆိုင်အားလုံး Menu ပြန် Update နှင့် ပြင်ဆင်ချက်များ');
+    expect(entry.titleEn).toBe('Refresh all menus, plus typing, signup and display fixes');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(10);
+    expect(entry.changesEn).toHaveLength(10);
     expect(entry.changesMy[0]).toBe(
-      'ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ နှစ်ဆင့်ရွေးလို့ရပြီ (ဥပမာ ကျန်းမာရေး → ဆေးဆိုင်/ဆေးခန်း/ဆေးရုံ)',
+      'ဆိုင်အားလုံးရဲ့ Menu ကို တစ်ခါနှိပ်နဲ့ ပြန် Update လုပ်လို့ရပြီ (Menu အားလုံး ပြန် Update ခလုတ်)',
     );
     expect(entry.changesEn[0]).toBe(
-      'Shop types are picked in two steps — Category, then Subcategory (e.g. Health → Pharmacy / Clinic / Hospital)',
+      'All shop menus can be re-checked with one tap (Refresh All Menus button)',
     );
   });
 

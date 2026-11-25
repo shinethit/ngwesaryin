@@ -18,13 +18,20 @@ const row = (over: Partial<TransactionItem> & { name: string }): TransactionItem
 });
 
 describe('ROW_SERVICE_TYPES (v7.5.93)', () => {
-  it('has 13 types, excludes license_renewal, keeps SERVICE_TYPE_CONFIG order', () => {
-    expect(ROW_SERVICE_TYPES).toHaveLength(13);
+  it('has 18 types, excludes license_renewal, keeps SERVICE_TYPE_CONFIG order', () => {
+    expect(ROW_SERVICE_TYPES).toHaveLength(18);
     expect(ROW_SERVICE_TYPES).not.toContain('license_renewal');
     expect(ROW_SERVICE_TYPES[0]).toBe('engine_oil');
     expect(ROW_SERVICE_TYPES[ROW_SERVICE_TYPES.length - 1]).toBe('other');
     expect(ROW_SERVICE_TYPES).toContain('tires');
     expect(ROW_SERVICE_TYPES).toContain('air_filter');
+    // [v7.6.44] Part G — Fan Belt rides the same derived list.
+    expect(ROW_SERVICE_TYPES).toContain('fan_belt');
+    // [v7.6.44] Part H — the four new types ride it too.
+    expect(ROW_SERVICE_TYPES).toContain('timing_belt');
+    expect(ROW_SERVICE_TYPES).toContain('fuel_filter');
+    expect(ROW_SERVICE_TYPES).toContain('brake_fluid');
+    expect(ROW_SERVICE_TYPES).toContain('wiper_blades');
   });
 });
 

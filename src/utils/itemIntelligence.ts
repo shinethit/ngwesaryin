@@ -304,6 +304,30 @@ export function getAllItemSuggestions(
 }
 
 /**
+ * [v7.6.44] F1 — may item-name matching auto-switch the entry form's
+ * category? The pre-7.6.44 rule allowed switching only when no
+ * category was picked yet, or the current one was Food / Other, and
+ * never for vehicle categories. The 7.6.44 addition: NEVER when the
+ * user explicitly picked a category in this form session
+ * (categoryExplicit) — typing ဆီ for cooking oil must not flip a
+ * grocery form to the fuel model. Matching itself (prices,
+ * suggestions) is unaffected; only the category move is gated.
+ * (Placed BEFORE findMatchingItemInfo, not at end-of-file: an
+ * end-of-file insertion is not idempotent under the OLD-FIRST
+ * patch engine — its find survives verbatim inside its replace.)
+ */
+export function canAutoSwitchCategory(
+  categoryId: string | undefined,
+  categoryExplicit: boolean,
+): boolean {
+  if (categoryExplicit) return false;
+  const isVehCat =
+    categoryId?.startsWith('cat_vehicle') || categoryId?.startsWith('cat_expense_car');
+  if (isVehCat) return false;
+  return !categoryId || categoryId === 'cat_food' || categoryId === 'cat_expense_other';
+}
+
+/**
  * Searches and finds the best matching item from the unified database items
  */
 export function findMatchingItemInfo(

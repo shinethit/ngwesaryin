@@ -765,6 +765,64 @@ export function buildMenuPromptRows(
   return rows;
 }
 
+/** One shop's section of the combined "refresh all menus" prompt. */
+export interface GlobalMenuSection {
+  shopId: string;
+  shopName: string;
+  isPublic: boolean;
+  rows: MenuUpdateRow[];
+}
+
+/** One resolved shop with the user's latest purchased items for it. */
+export interface GlobalMenuShopEntry {
+  resolved: ResolvedMenuShop;
+  items: TransactionItem[];
+}
+
+export interface GlobalMenuSectionsResult {
+  sections: GlobalMenuSection[];
+  /** Resolved shops considered (with purchase history). */
+  checkedCount: number;
+  /** Resolved shops whose menu already matches (no diff, gate passed). */
+  upToDateCount: number;
+  /** Shops with a real diff that the gate refused (guest + public). */
+  skippedPublicCount: number;
+}
+
+/**
+ * [v7.6.44] Build the sections of the ONE combined "refresh all
+ * menus" prompt from already-resolved shops. Pure: the caller owns
+ * attribution + resolution; this owns only the per-shop diff +
+ * gate decision, reusing buildMenuPromptRows exactly as the
+ * single-shop prompt does. A null row set WITH a real diff means
+ * the gate refused (guest + public) — counted as skipped, never
+ * silently dropped; a null row set with NO diff means up to date.
+ */
+export function buildGlobalMenuSections(
+  entries: GlobalMenuShopEntry[],
+  isSignedIn: boolean,
+): GlobalMenuSectionsResult {
+  const sections: GlobalMenuSection[] = [];
+  let upToDateCount = 0;
+  let skippedPublicCount = 0;
+  for (const entry of entries) {
+    const rows = buildMenuPromptRows(entry.items, entry.resolved, isSignedIn);
+    if (rows) {
+      sections.push({
+        shopId: entry.resolved.shop.id,
+        shopName: entry.resolved.shop.name,
+        isPublic: entry.resolved.isPublic,
+        rows,
+      });
+      continue;
+    }
+    const diff = computeMenuDiff(entry.resolved.shop.items || [], entry.items);
+    if (diff.length > 0) skippedPublicCount++;
+    else upToDateCount++;
+  }
+  return { sections, checkedCount: entries.length, upToDateCount, skippedPublicCount };
+}
+
 export type ApplyResolvedMenuUpdateResult = 'applied' | 'not-found' | 'failed';
 
 /**

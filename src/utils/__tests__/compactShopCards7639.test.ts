@@ -98,21 +98,23 @@ describe('Shop cards are compact (v7.6.39)', () => {
     expect(count(SHOP_SRC, 'min-h-[44px]')).toBe(38);
     // [v7.6.43] 26 -> 27: the new subcategory filter select is itself
     // a 44px target. Nothing shrank; one control was added.
-    expect(count(SHOPS_SRC, 'min-h-[44px]')).toBe(27);
+    // [v7.6.44] 27 -> 28: the global "Refresh All Menus" header button
+    // is itself a 44px target. Nothing shrank; one control was added.
+    expect(count(SHOPS_SRC, 'min-h-[44px]')).toBe(28);
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
-    expect(CURRENT_BUILD_NUMBER).toBe(357);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.43');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(357);
-    expect(VERSION_JSON.version).toBe('v7.6.43');
-    expect(VERSION_JSON.buildNumber).toBe(357);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
+    expect(CURRENT_BUILD_NUMBER).toBe(358);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.44');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(358);
+    expect(VERSION_JSON.version).toBe('v7.6.44');
+    expect(VERSION_JSON.buildNumber).toBe(358);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ဆိုင်အမျိုးအစားကို အမျိုးအစား ပြီးမှ အမျိုးအစားခွဲ နှစ်ဆင့်ရွေးလို့ရပြီ (ဥပမာ ကျန်းမာရေး → ဆေးဆိုင်/ဆေးခန်း/ဆေးရုံ)',
+      'ဆိုင်အားလုံးရဲ့ Menu ကို တစ်ခါနှိပ်နဲ့ ပြန် Update လုပ်လို့ရပြီ (Menu အားလုံး ပြန် Update ခလုတ်)',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Shop types are picked in two steps — Category, then Subcategory (e.g. Health → Pharmacy / Clinic / Hospital)',
+      'All shop menus can be re-checked with one tap (Refresh All Menus button)',
     );
   });
 });

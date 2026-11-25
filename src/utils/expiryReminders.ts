@@ -15,7 +15,7 @@
 // - Which service types: there is NO insurance-only service type —
 //   `license_renewal` covers license / tax / insurance (the
 //   `sub_veh_license` sub-category is "လိုင်စင် / အခွန်နှင့် အာမခံ").
-//   EVERY one of the 14 SERVICE_TYPE_CONFIG types carries an
+//   EVERY one of the 19 SERVICE_TYPE_CONFIG types carries an
 //   expectedLifespanDays (the forms always store one; the config
 //   carries a default for each), so "a meaningful lifespan" is the
 //   stored value itself: a record with no / non-positive /

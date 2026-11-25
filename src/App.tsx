@@ -48,8 +48,11 @@ import { dispatchOpenShopForm, loadShopDetailReminders, shopReminderId, useShopD
 import { ShopDetailsPromptModal } from './components/ShopDetailsPromptModal';
 // [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
 import { ShopMenuUpdatePromptModal } from './components/ShopMenuUpdatePromptModal';
+// [v7.6.44] ONE combined "refresh all menus" prompt.
+import { GlobalMenuUpdatePromptModal, type GlobalMenuApplySelection } from './components/GlobalMenuUpdatePromptModal';
 import {
   applyResolvedMenuUpdate,
+  buildGlobalMenuSections,
   buildMenuPromptRows,
   computeMenuDiff,
   resolveMenuShop,
@@ -57,6 +60,7 @@ import {
   shouldOfferMenuUpdate,
   updateStashedCandidateForSavedShop,
   type MenuUpdateRow,
+  type GlobalMenuSection,
   type ResolvedMenuShop,
   type ShopMenuStore,
   type StashedMenuCandidate,
@@ -483,12 +487,20 @@ export default function App() {
   // [v7.5.82] Shop menu auto-update prompt (shopping-list entries).
   // Hosted here, not in TransactionModal, for the same reason as the
   // details prompt above: the transaction modal unmounts on save.
+  // [v7.6.44] The state is a union: one shop's prompt, or the ONE
+  // combined "refresh all menus" prompt (sections per shop).
   const [menuPrompt, setMenuPrompt] = useState<{
     shopId: string;
     shopName: string;
     isPublic: boolean;
     shop: ShopContact | PublicShop;
     rows: MenuUpdateRow[];
+  } | {
+    global: true;
+    sections: GlobalMenuSection[];
+    checkedCount: number;
+    upToDateCount: number;
+    skippedPublicCount: number;
   } | null>(null);
   const [menuPromptError, setMenuPromptError] = useState<string | null>(null);
   const [isApplyingMenuUpdate, setIsApplyingMenuUpdate] = useState(false);
@@ -505,6 +517,10 @@ export default function App() {
   // of opening a second prompt on top of the menu prompt.
   const menuCandidatePendingRef = useRef(false);
   const menuPromptOpenRef = useRef(false);
+  // [v7.6.44] True while the global re-check is building its sections
+  // (async) — a second tap during the build is ignored instead of
+  // queueing a duplicate combined prompt.
+  const globalMenuBuildRef = useRef(false);
   // [v7.6.41] True while a ShopDetailsPromptModal is open (set
   // synchronously wherever the prompt is opened, cleared by its
   // close handlers) — a second details name arriving in the same
@@ -1299,11 +1315,27 @@ export default function App() {
     return () => window.removeEventListener(SHOP_DETAILS_SAVED_EVENT, onShopDetailsSaved);
   }, [shopDetailsPromptName]);
 
+  // [v7.6.44] Explicit store shared by the single-shop and the
+  // combined global apply paths — mirrors ShopsView's
+  // handleAddPricingItem exactly: public shops via safeUpdateDoc on
+  // public_shops, private shops via App's handleUpdateShop (the
+  // util's default store throws for private shops and must never be
+  // relied on).
+  const buildMenuPromptStore = (): ShopMenuStore => ({
+    updatePublicShopItems: async (shopId, items) =>
+      safeUpdateDoc(doc(db, 'public_shops', shopId), { items }),
+    updatePrivateShopItems: async (s, items) =>
+      handleUpdateShop({
+        ...(s as ShopContact),
+        items: items as ShopContact['items'],
+      }),
+  });
+
   // [v7.5.82] Apply the checked menu rows. On write FAILURE the real
   // error is shown in the modal and it STAYS OPEN so the user can retry
   // or Skip — success is never claimed when the write failed.
   const handleMenuPromptApply = async (selectedRows: MenuUpdateRow[]) => {
-    if (!menuPrompt) return;
+    if (!menuPrompt || 'global' in menuPrompt) return;
     setIsApplyingMenuUpdate(true);
     setMenuPromptError(null);
     try {
@@ -1335,19 +1367,7 @@ export default function App() {
         );
         return;
       }
-      // Explicit store — mirrors ShopsView's handleAddPricingItem
-      // exactly: public shops via safeUpdateDoc on public_shops,
-      // private shops via App's handleUpdateShop (the util's default
-      // store throws for private shops and must never be relied on).
-      const store: ShopMenuStore = {
-        updatePublicShopItems: async (shopId, items) =>
-          safeUpdateDoc(doc(db, 'public_shops', shopId), { items }),
-        updatePrivateShopItems: async (s, items) =>
-          handleUpdateShop({
-            ...(s as ShopContact),
-            items: items as ShopContact['items'],
-          }),
-      };
+      const store: ShopMenuStore = buildMenuPromptStore();
       const result = await applyResolvedMenuUpdate(fresh, selectedRows, contributorName, store);
       if (result === 'failed') {
         setMenuPromptError(
@@ -1488,6 +1508,215 @@ export default function App() {
       shopId: resolved.shop.id,
       items,
     });
+    drainMenuQueue();
+  };
+
+  // [v7.6.44] PART C — Global Menu re-apply: ONE tap re-checks EVERY
+  // shop with purchase history and offers ALL of the changes in ONE
+  // combined prompt (per-shop sections, same selectable rows, same
+  // apply path, same gates as the single-shop prompt). The combined
+  // prompt is standalone — it does NOT join the single-shop queue
+  // (which would open one prompt per shop); instead it refuses to
+  // open while any prompt is already open, and its close handlers
+  // drain the queue so a save-path candidate queued meanwhile still
+  // opens next. Attribution is one newest-first pass over ALL
+  // transactions (entry shop + split-row shops, [v7.6.41]), keeping
+  // only the LATEST price per name+unit per shop — the same rule the
+  // per-shop handler applies shop by shop.
+  const handleReapplyAllShopMenus = async () => {
+    if (globalMenuBuildRef.current) return;
+    if (menuPromptOpenRef.current) {
+      showToast(
+        lang === 'my'
+          ? 'Menu prompt တစ်ခု ဖွင့်ထားပါတယ် — အဲဒါကို အရင်ပြီးမှ ပြန်နှိပ်ပါ။'
+          : 'A menu prompt is already open — finish it first, then try again.',
+        'error',
+      );
+      return;
+    }
+    globalMenuBuildRef.current = true;
+    try {
+      const suggestions = getAllItemSuggestions(transactions, categories);
+      const ordered = [...transactions].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        const aCreated = typeof a.createdAt === 'number' ? a.createdAt : 0;
+        const bCreated = typeof b.createdAt === 'number' ? b.createdAt : 0;
+        return bCreated - aCreated;
+      });
+      const latestByShop = new Map<string, { displayName: string; latest: Map<string, TransactionItem> }>();
+      for (const tx of ordered) {
+        const byShop = attributeItemsToShops(tx.items || [], tx.splits, tx.shopName, suggestions);
+        for (const [attributedShop, attributedItems] of byShop) {
+          const key = normalizeShopName(attributedShop);
+          if (!key) continue;
+          let entry = latestByShop.get(key);
+          if (!entry) {
+            entry = { displayName: attributedShop.trim(), latest: new Map() };
+            latestByShop.set(key, entry);
+          }
+          for (const item of attributedItems) {
+            const itemKey = `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
+            if (!entry.latest.has(itemKey)) entry.latest.set(itemKey, item);
+          }
+        }
+      }
+      if (latestByShop.size === 0) {
+        showToast(
+          lang === 'my' ? 'ဝယ်ခဲ့သည့် မှတ်တမ်း မရှိသေးပါ။' : 'No purchase history yet.',
+          'error',
+        );
+        return;
+      }
+      // Resolve each attributed shop once (public-first, the same
+      // order as the single-shop path); names that match nothing
+      // (deleted / renamed shop) are skipped — there is no menu to
+      // update for them.
+      const entries: { resolved: ResolvedMenuShop; items: TransactionItem[] }[] = [];
+      for (const entry of latestByShop.values()) {
+        const items = [...entry.latest.values()];
+        if (items.length === 0) continue;
+        const resolved = await resolveMenuShop(entry.displayName, publicShops, shops, fetchPublicMenuShop);
+        if (!resolved) continue;
+        entries.push({ resolved, items });
+      }
+      const built = buildGlobalMenuSections(entries, !!user);
+      // A save-path prompt may have opened while this build was
+      // resolving — the combined prompt must never stack on it.
+      if (menuPromptOpenRef.current) {
+        showToast(
+          lang === 'my'
+            ? 'Menu prompt တစ်ခု ဖွင့်သွားပါပြီ — အဲဒါကို အရင်ပြီးမှ ပြန်နှိပ်ပါ။'
+            : 'A menu prompt just opened — finish it first, then try again.',
+          'error',
+        );
+        return;
+      }
+      if (built.sections.length === 0) {
+        if (built.skippedPublicCount > 0 && built.upToDateCount === 0 && built.checkedCount > 0) {
+          showToast(
+            lang === 'my'
+              ? 'အများပြင် ဆိုင်တွေရဲ့ Menu ကို အကောင့်ဝင်ပြီးမှ ပြန် Update လုပ်နိုင်ပါတယ်။'
+              : 'Sign in to update public shop menus.',
+            'error',
+          );
+        } else {
+          showToast(
+            lang === 'my' ? 'ဆိုင်အားလုံးရဲ့ Menu က ဈေးနှုန်း အသစ်နဲ့ ကိုက်ညီနေပါပြီ ✓' : 'All shop menus are already up to date ✓',
+          );
+        }
+        return;
+      }
+      setMenuPromptError(null);
+      setMenuPrompt({
+        global: true,
+        sections: built.sections,
+        checkedCount: built.checkedCount,
+        upToDateCount: built.upToDateCount,
+        skippedPublicCount: built.skippedPublicCount,
+      });
+      menuPromptOpenRef.current = true;
+    } finally {
+      globalMenuBuildRef.current = false;
+    }
+  };
+
+  // [v7.6.44] Apply the combined prompt: each section re-resolves
+  // FRESH (rename/move-proof, same as the single-shop apply) and
+  // writes through the SAME store + apply path; large-diff rows fire
+  // the SAME admin alert per row. Sections that apply are REMOVED
+  // from the open prompt so a retry after a partial failure only
+  // retries the shops that failed; a failed section keeps the modal
+  // open with the failing shop names shown.
+  const handleGlobalMenuPromptApply = async (selected: GlobalMenuApplySelection[]) => {
+    if (!menuPrompt || !('global' in menuPrompt)) return;
+    const openSections = menuPrompt.sections;
+    setIsApplyingMenuUpdate(true);
+    setMenuPromptError(null);
+    try {
+      const contributorName = user
+        ? user.email || user.displayName || 'အသုံးပြုသူ'
+        : lang === 'my'
+          ? 'ဧည့်သည်'
+          : 'Guest';
+      const store: ShopMenuStore = buildMenuPromptStore();
+      const failures: string[] = [];
+      const appliedIds = new Set<string>();
+      for (const section of selected) {
+        if (section.rows.length === 0) continue;
+        const fresh =
+          (await resolveMenuShopById(section.shopId, section.isPublic, shops, fetchPublicMenuShop)) ??
+          (await resolveMenuShop(section.shopName, publicShops, shops, fetchPublicMenuShop));
+        if (!fresh) {
+          failures.push(section.shopName);
+          continue;
+        }
+        const result = await applyResolvedMenuUpdate(fresh, section.rows, contributorName, store);
+        if (result !== 'applied') {
+          failures.push(section.shopName);
+          continue;
+        }
+        appliedIds.add(section.shopId);
+        for (const row of section.rows) {
+          if (!row.isLargeDiff) continue;
+          submitShopPriceAlert({
+            shopId: fresh.shop.id,
+            shopName: fresh.shop.name,
+            itemName: row.itemName,
+            unit: row.unit,
+            oldPrice: row.oldPrice ?? 0,
+            newPrice: row.newPrice,
+          })
+            .then((res) => {
+              if (res !== 'submitted') {
+                console.warn('[shopMenuUpdate] price alert not submitted for', row.itemName);
+              }
+            })
+            .catch((err) => console.warn('[shopMenuUpdate] price alert failed:', err));
+        }
+      }
+      if (appliedIds.size > 0) {
+        showToast(
+          lang === 'my'
+            ? `ဆိုင် ${appliedIds.size} ဆိုင်ရဲ့ Menu ကို ဈေးနှုန်း အသစ် တင်ပေးပြီးပါပြီ ✓`
+            : `Updated menus for ${appliedIds.size} ${appliedIds.size === 1 ? 'shop' : 'shops'} ✓`,
+        );
+      }
+      if (failures.length > 0) {
+        setMenuPromptError(
+          lang === 'my'
+            ? `ဆိုင်တွေကို Update လုပ်မရပါ — ${failures.join(', ')} — ထပ်ကြိုးစားပေးပါ၊ ဒါမှမဟုတ် မလုပ်တော့ ကို နှိပ်ပါ။`
+            : `Could not update: ${failures.join(', ')} — please try again, or Skip.`,
+        );
+        // Keep the failed sections open for retry; drop the applied
+        // ones so the retry only covers what failed.
+        const remaining = openSections.filter((s) => !appliedIds.has(s.shopId));
+        if (remaining.length > 0 && remaining.length !== openSections.length) {
+          setMenuPrompt({
+            global: true,
+            sections: remaining,
+            checkedCount: menuPrompt.checkedCount,
+            upToDateCount: menuPrompt.upToDateCount,
+            skippedPublicCount: menuPrompt.skippedPublicCount,
+          });
+        }
+        return;
+      }
+      setMenuPrompt(null);
+      menuPromptOpenRef.current = false;
+      menuCandidatePendingRef.current = false;
+      drainMenuQueue();
+    } finally {
+      setIsApplyingMenuUpdate(false);
+    }
+  };
+
+  const handleGlobalMenuPromptSkip = () => {
+    setMenuPrompt(null);
+    setMenuPromptError(null);
+    menuPromptOpenRef.current = false;
+    menuCandidatePendingRef.current = false;
+    // Same drain as the single-shop Skip: a queued save-path
+    // candidate opens next; otherwise the details names flush.
     drainMenuQueue();
   };
 
@@ -3605,6 +3834,7 @@ export default function App() {
             onUpdateShop={handleUpdateShop}
             onDeleteShop={handleDeleteShop}
             onReapplyShopMenu={handleReapplyShopMenu}
+            onReapplyAllShopMenus={handleReapplyAllShopMenus}
           />
         </div>
 
@@ -3834,14 +4064,29 @@ export default function App() {
       {/* [v7.5.82] Menu prompt renders AFTER the details prompt; the two
           never open together — see flushPendingShopDetails. */}
       <ShopMenuUpdatePromptModal
-        isOpen={!!menuPrompt}
-        shopName={menuPrompt?.shopName || ''}
-        rows={menuPrompt?.rows || []}
+        isOpen={!!menuPrompt && !('global' in menuPrompt)}
+        shopName={menuPrompt && !('global' in menuPrompt) ? menuPrompt.shopName : ''}
+        rows={menuPrompt && !('global' in menuPrompt) ? menuPrompt.rows : []}
         lang={lang}
         error={menuPromptError}
         isApplying={isApplyingMenuUpdate}
         onApply={handleMenuPromptApply}
         onSkip={handleMenuPromptSkip}
+      />
+
+      {/* [v7.6.44] ONE combined "refresh all menus" prompt — same
+          z-stack and close/drain rules as the single-shop prompt. */}
+      <GlobalMenuUpdatePromptModal
+        isOpen={!!menuPrompt && 'global' in menuPrompt}
+        sections={menuPrompt && 'global' in menuPrompt ? menuPrompt.sections : []}
+        checkedCount={menuPrompt && 'global' in menuPrompt ? menuPrompt.checkedCount : 0}
+        upToDateCount={menuPrompt && 'global' in menuPrompt ? menuPrompt.upToDateCount : 0}
+        skippedPublicCount={menuPrompt && 'global' in menuPrompt ? menuPrompt.skippedPublicCount : 0}
+        lang={lang}
+        error={menuPromptError}
+        isApplying={isApplyingMenuUpdate}
+        onApply={handleGlobalMenuPromptApply}
+        onSkip={handleGlobalMenuPromptSkip}
       />
 
       <DebtModal

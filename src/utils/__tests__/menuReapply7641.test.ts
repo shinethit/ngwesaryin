@@ -92,8 +92,14 @@ describe('Records per-shop lines wiring (v7.6.41 A)', () => {
   });
 
   it('search matches a shop carried by any split row', () => {
-    expect(src).toContain('rowShopNames');
-    expect(src).toContain('getSplitAttribution(t)');
+    // [v7.6.44] The split-row shop names moved into the shared
+    // search index (transactionSearch.ts): the view filters through
+    // the index matcher instead of a local rowShopNames variable.
+    const util = SRC('../transactionSearch.ts');
+    expect(util).toContain('rowShopNames');
+    expect(util).toContain('getSplitAttribution(t)');
+    expect(src).toContain('transactionSearchEntryMatches');
+    expect(src).toContain('buildTransactionSearchIndex');
   });
 
   it('day subtotals stay transaction-level', () => {
@@ -140,24 +146,24 @@ describe('menu re-apply button wiring (v7.6.41 B)', () => {
 
 describe('Version bump to v7.6.42 (build 356)', () => {
   it('version surfaces agree on v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.43');
-    expect(CURRENT_BUILD_NUMBER).toBe(357);
-    expect(VERSION_JSON.version).toBe('v7.6.43');
-    expect(VERSION_JSON.buildNumber).toBe(357);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.44');
+    expect(CURRENT_BUILD_NUMBER).toBe(358);
+    expect(VERSION_JSON.version).toBe('v7.6.44');
+    expect(VERSION_JSON.buildNumber).toBe(358);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.43');
-    expect(entry.buildNumber).toBe(357);
+    expect(entry.version).toBe('v7.6.44');
+    expect(entry.buildNumber).toBe(358);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
   });
 
-  it('the changelog covers the two-level taxonomy with zero Admin strings', () => {
+  it('the changelog covers the global menu refresh with zero Admin strings', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.changesMy.join(' ')).toContain('နှစ်ဆင့်');
-    expect(entry.changesMy.join(' ')).toContain('အမျိုးအစားခွဲ');
-    expect(entry.changesMy.join(' ')).toContain('ကျန်းမာရေး');
-    expect(entry.changesMy.join(' ')).toContain('စိတ်ကြိုက်');
-    expect(entry.changesMy.join(' ')).toContain('ရှေးဆိုင်');
+    expect(entry.changesMy.join(' ')).toContain('Menu အားလုံး');
+    expect(entry.changesMy.join(' ')).toContain('ဆိုင်အလိုက်');
+    expect(entry.changesMy.join(' ')).toContain('အတည်ပြုမှ');
+    expect(entry.changesMy.join(' ')).toContain('တစ်ဆိုင်ချင်း');
+    expect(entry.changesMy.join(' ')).toContain('အများပြင်');
     for (const e of VERSION_HISTORY) {
       expect(e.changesMy.join(' ')).not.toMatch(/Admin/i);
       expect(e.changesEn.join(' ')).not.toMatch(/Admin/i);

@@ -677,27 +677,27 @@ describe('anomaly section wiring — modal + bell badge (v7.6.08)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.38');
-    expect(CURRENT_BUILD_NUMBER).toBe(352);
-    expect(VERSION_JSON.version).toBe('v7.6.38');
-    expect(VERSION_JSON.buildNumber).toBe(352);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
+    expect(CURRENT_BUILD_NUMBER).toBe(353);
+    expect(VERSION_JSON.version).toBe('v7.6.39');
+    expect(VERSION_JSON.buildNumber).toBe(353);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.38');
-    expect(top.buildNumber).toBe(352);
+    expect(top.version).toBe('v7.6.39');
+    expect(top.buildNumber).toBe(353);
     expect(top.releaseDate).toBe('2026-11-25');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Notification filter များနှင့် ဘေး scroll စစ်ဆေးမှု');
-    expect(top.titleEn).toBe('Notification filters wrap, and sideways scrolling re-swept');
+    expect(top.titleMy).toBe('ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(top.titleEn).toBe('Compact shop cards and buttons');
     expect(top.changesMy).toEqual([
-      'Notification filter များကို ဘေးဆွဲစရာမလိုဘဲ အကုန်မြင်ရအောင် ပြင်ပြီး App တစ်ခုလုံးမှာ ဘေး scroll ကျန်နေသေးလားပါ ပြန်စစ်သည်',
+      'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Notification filters now all show without sideways swiping, and the whole app was re-checked for leftover sideways scrolling.',
+      'Shop cards and buttons are now compact — every detail and button stays in place.',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

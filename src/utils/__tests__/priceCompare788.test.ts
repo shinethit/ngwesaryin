@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.38');
-    expect(CURRENT_BUILD_NUMBER).toBe(352);
-    expect(VERSION_JSON.version).toBe('v7.6.38');
-    expect(VERSION_JSON.buildNumber).toBe(352);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
+    expect(CURRENT_BUILD_NUMBER).toBe(353);
+    expect(VERSION_JSON.version).toBe('v7.6.39');
+    expect(VERSION_JSON.buildNumber).toBe(353);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.38');
-    expect(entry.buildNumber).toBe(352);
+    expect(entry.version).toBe('v7.6.39');
+    expect(entry.buildNumber).toBe(353);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('Notification filter များနှင့် ဘေး scroll စစ်ဆေးမှု');
-    expect(entry.titleEn).toBe('Notification filters wrap, and sideways scrolling re-swept');
+    expect(entry.titleMy).toBe('ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(entry.titleEn).toBe('Compact shop cards and buttons');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

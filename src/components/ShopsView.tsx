@@ -1953,7 +1953,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
 
                   {/* Group Shops */}
                   {viewMode === 'compact' ? (
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       {group.shops.map((shop) => (
                         <ShopCard
                           key={shop.id}
@@ -1974,7 +1974,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {group.shops.map((shop) => (
                         <ShopCard
                           key={shop.id}
@@ -2001,7 +2001,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           ) : sortedAndGrouped.flat ? (
             // FLAT VIEW (sorted)
             viewMode === 'compact' ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {(batchedFlat ?? []).map((shop) => (
                   <ShopCard
                     key={shop.id}
@@ -2022,7 +2022,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {(batchedFlat ?? []).map((shop) => (
                   <ShopCard
                     key={shop.id}

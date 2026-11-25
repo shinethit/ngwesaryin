@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.38');
-    expect(CURRENT_BUILD_NUMBER).toBe(352);
-    expect(VERSION_JSON.version).toBe('v7.6.38');
-    expect(VERSION_JSON.buildNumber).toBe(352);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.39');
+    expect(CURRENT_BUILD_NUMBER).toBe(353);
+    expect(VERSION_JSON.version).toBe('v7.6.39');
+    expect(VERSION_JSON.buildNumber).toBe(353);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.38');
-    expect(entry.buildNumber).toBe(352);
-    expect(entry.changesMy[0]).toBe('Notification filter များကို ဘေးဆွဲစရာမလိုဘဲ အကုန်မြင်ရအောင် ပြင်ပြီး App တစ်ခုလုံးမှာ ဘေး scroll ကျန်နေသေးလားပါ ပြန်စစ်သည်');
+    expect(entry.version).toBe('v7.6.39');
+    expect(entry.buildNumber).toBe(353);
+    expect(entry.changesMy[0]).toBe('ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

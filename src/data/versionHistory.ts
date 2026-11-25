@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.38';
-export const CURRENT_BUILD_NUMBER = 352;
+export const CURRENT_APP_VERSION = 'v7.6.39';
+export const CURRENT_BUILD_NUMBER = 353;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.39',
+    buildNumber: 353,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေ ကျစ်လစ်စေခြင်း',
+    titleEn: 'Compact shop cards and buttons',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်လိုက်ပြီ — ဈေးနှုန်းတွေ၊ ဖုန်းနံပါတ်တွေ၊ ခလုတ်တွေနဲ့ အချက်အလက်အားလုံး ရှိနေတုန်းပဲ။ ကတ်တွေကြားက အကွာအဝေးနဲ့ ကတ်ထဲက နေရာလွတ်တွေကိုသာ လျှော့ထားတယ်။',
+    descriptionEn: 'Shop cards and buttons are now compact — menu prices, phone numbers, buttons, and every detail stay in place. Only the spacing inside and between the cards is tighter, and every tap target stays at least 44px.',
+    changesMy: [
+      'ဆိုင်ကတ်တွေနဲ့ ခလုတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+    ],
+    changesEn: [
+      'Shop cards and buttons are now compact — every detail and button stays in place.',
+    ],
+  },
   {
     version: 'v7.6.38',
     buildNumber: 352,

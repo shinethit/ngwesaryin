@@ -247,11 +247,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({
     return (
       // [v7.5.80] Card polish — soft shadow for lift, crisper icon tile,
       // bolder name, one tidy icon-button row (see actions below).
-      <div className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-4 shadow-sm transition-all hover:shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-3.5 shadow-sm transition-all hover:shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           {/* Shop identity */}
-          <div className="flex items-start gap-3 min-w-0">
-            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ring-1 ring-black/5 shadow-2xs ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ring-1 ring-black/5 shadow-2xs ${tagMeta?.bgColor || 'bg-slate-100'} ${tagMeta?.textColor || 'text-slate-700'}`}>
               {renderCategoryIcon()}
             </div>
             <div className="min-w-0">
@@ -288,7 +288,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               bar takes its own full-width row and the icon buttons sit in
               one neat row below it, instead of wrapping mid-row into a
               second ragged line. Same buttons, same order, same content. */}
-          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center shrink-0">
+          <div className="flex flex-col gap-1.5 w-full sm:w-auto sm:flex-row sm:items-center shrink-0">
             {primaryPhone && (
               <a
                 href={`tel:${primaryPhone}`}
@@ -301,7 +301,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             )}
 
             {/* Icon actions — one tidy row under the call bar on phones. */}
-            <div className="flex items-center gap-1.5 justify-end sm:justify-start">
+            <div className="flex items-center gap-1 justify-end sm:justify-start">
             {isPublic && pub && (
               <button
                 type="button"
@@ -415,9 +415,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         {/* [v7.5.55 C32] Compact view: address, secondary phones, KPay —
             same info as the grid view. */}
         {(primaryAddress || secondaryPhones.length > 0 || shop.kpayNumber) && (
-          <div className="mt-3 space-y-1.5">
+          <div className="mt-2.5 space-y-1">
             {primaryAddress && (
-              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+              <div className="text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2 rounded-xl border border-slate-200">
                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                 <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
               </div>
@@ -455,7 +455,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </div>
             )}
             {shop.kpayNumber && (
-              <div className="px-3 py-1.5 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-2">
+              <div className="px-3 py-1 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs text-indigo-950 font-semibold min-w-0">
                   <span className="px-1.5 py-0.2 bg-indigo-600 text-white rounded text-[10px] font-black shrink-0">
                     KPay
@@ -481,7 +481,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* Compact View Items expansion */}
         {isItemsExpanded && (
-          <div className="mt-3 pt-3 border-t border-slate-200 space-y-3">
+          <div className="mt-2.5 pt-2.5 border-t border-slate-200 space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-600">
               <span className="font-bold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -497,9 +497,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 {lang === 'my' ? 'ပစ္စည်းစာရင်း မရှိသေးပါ။' : 'No items added yet.'}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
                 {(shop.items || []).map((item, idx) => (
-                  <div key={idx} className="p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div key={idx} className="p-1.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div className="min-w-0">
                       <span className="font-bold text-slate-800 text-xs block break-words">{item.name}</span>
                       <span className="text-[10px] text-slate-400 break-all">{item.addedBy ? item.addedBy.split('@')[0] : 'User'}</span>
@@ -534,7 +534,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
             {/* [v7.5.55 C32] Compact view: add-price form, like grid. */}
             {canManage ? (
-              <form onSubmit={handleAddItem} className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
+              <form onSubmit={handleAddItem} className="bg-white p-2 rounded-xl border border-slate-200 space-y-1.5">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                   {lang === 'my' ? '+ ပစ္စည်းနှင့် ဈေးနှုန်း ဖြည့်စွက်ရန်' : '+ Add Item & Price'}
                 </span>
@@ -622,8 +622,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       {/* Category-tint accent strip */}
       <div className={`h-1.5 ${tagMeta?.bgColor || 'bg-slate-100'}`} aria-hidden="true" />
       {/* CARD TOP HEADER */}
-      <div className="p-5 pb-3">
-        <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="p-4 pb-2.5">
+        <div className="flex items-start justify-between gap-2 mb-2">
           {/* Category Pill with Icon */}
           <div className="flex items-center gap-2 flex-wrap">
             <span
@@ -709,7 +709,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* PRIMARY PHONE CALL BAR */}
         {primaryPhone && (
-          <div className="mt-3.5 p-2.5 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
+          <div className="mt-2.5 p-2 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between gap-2">
             <a
               href={`tel:${primaryPhone}`}
               className="flex items-center gap-2 text-emerald-800 hover:text-emerald-950 font-bold text-xs transition-colors min-w-0 min-h-[44px] py-1"
@@ -741,7 +741,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* Secondary phones dropdown/expander if available */}
         {secondaryPhones.length > 0 && (
-          <div className="mt-1.5">
+          <div className="mt-1">
             <button
               type="button"
               onClick={() => setShowAllPhones(!showAllPhones)}
@@ -758,7 +758,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </span>
             </button>
             {showAllPhones && (
-              <div className="mt-1.5 space-y-1 pl-2 border-l-2 border-slate-200">
+              <div className="mt-1 space-y-1 pl-2 border-l-2 border-slate-200">
                 {secondaryPhones.map((ph, idx) => (
                   <div key={idx} className="flex items-center justify-between text-xs py-0.5">
                     <a href={`tel:${ph}`} className="text-emerald-700 font-bold hover:underline">
@@ -780,7 +780,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* KPAY INFORMATION PILL */}
         {shop.kpayNumber && (
-          <div className="mt-2.5 px-3 py-1.5 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-2">
+          <div className="mt-2 px-3 py-1 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs text-indigo-950 font-semibold min-w-0">
               <span className="px-1.5 py-0.2 bg-indigo-600 text-white rounded text-[10px] font-black shrink-0">
                 KPay
@@ -804,7 +804,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* ADDRESS */}
         {primaryAddress && (
-          <div className="mt-2.5 text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div className="mt-2 text-xs text-slate-600 flex items-start gap-1.5 leading-relaxed bg-slate-50 p-2 rounded-xl border border-slate-200">
             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
             <span className="line-clamp-2 min-w-0 break-words">{primaryAddress}</span>
           </div>
@@ -812,7 +812,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
         {/* GENERAL NOTES */}
         {shop.generalNotes && (
-          <div className="mt-2 text-xs text-slate-600 bg-amber-50/40 p-2 rounded-xl border border-amber-100/60 italic line-clamp-2">
+          <div className="mt-1.5 text-xs text-slate-600 bg-amber-50/40 p-1.5 rounded-xl border border-amber-100/60 italic line-clamp-2">
             📝 {shop.generalNotes}
           </div>
         )}
@@ -823,7 +823,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         <button
           type="button"
           onClick={() => setIsItemsExpanded(!isItemsExpanded)}
-          className="w-full px-5 py-2.5 min-h-[44px] flex items-center justify-between text-xs font-bold text-slate-700 hover:bg-slate-100/70 transition-colors cursor-pointer"
+          className="w-full px-4 py-2.5 min-h-[44px] flex items-center justify-between text-xs font-bold text-slate-700 hover:bg-slate-100/70 transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -848,9 +848,9 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         </button>
 
         {isItemsExpanded && (
-          <div className="p-4 pt-1 space-y-3">
+          <div className="p-3 pt-0.5 space-y-2">
             {/* Disclaimer */}
-            <div className="p-2 bg-rose-50 border border-rose-100 rounded-xl text-[10px] text-rose-800 flex items-start gap-1.5 leading-relaxed">
+            <div className="p-1.5 bg-rose-50 border border-rose-100 rounded-xl text-[10px] text-rose-800 flex items-start gap-1.5 leading-relaxed">
               <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0 mt-0.5" />
               <span>
                 {lang === 'my'
@@ -865,11 +865,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 {lang === 'my' ? 'ပစ္စည်းစာရင်း မထည့်ရသေးပါ။ အောက်တွင် ထည့်သွင်းနိုင်ပါသည်။' : 'No items listed yet. Add one below.'}
               </div>
             ) : (
-              <div className="space-y-1.5 max-h-44 overflow-y-auto overflow-x-hidden pr-1">
+              <div className="space-y-1 max-h-44 overflow-y-auto overflow-x-hidden pr-1">
                 {(shop.items || []).map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-2 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between text-xs"
+                    className="p-1.5 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between text-xs"
                   >
                     <div className="min-w-0 pr-2">
                       <div className="font-bold text-slate-900 break-words">{item.name}</div>
@@ -908,7 +908,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
 
             {/* Add Price Item Form */}
             {canManage ? (
-              <form onSubmit={handleAddItem} className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
+              <form onSubmit={handleAddItem} className="bg-white p-2 rounded-xl border border-slate-200 space-y-1.5">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                   {lang === 'my' ? '+ ပစ္စည်းနှင့် ဈေးနှုန်း ဖြည့်စွက်ရန်' : '+ Add Item & Price'}
                 </span>
@@ -983,7 +983,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       </div>
 
       {/* CARD FOOTER ACTIONS */}
-      <div className="p-3 bg-slate-50/50 border-t border-slate-200 flex items-center justify-between gap-2 text-xs">
+      <div className="p-2.5 bg-slate-50/50 border-t border-slate-200 flex items-center justify-between gap-2 text-xs">
         {/* Contributor Attribution */}
         {isPublic && pub && (
           <div className="flex items-center gap-1 text-[11px] text-slate-400 truncate max-w-[130px]" title={pub.addedBy}>

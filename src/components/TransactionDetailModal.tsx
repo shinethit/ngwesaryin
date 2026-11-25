@@ -268,6 +268,13 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                   <span className="min-w-0 break-words">
                     {getCategoryDisplayName(slice.categoryId, categories, lang)}
                     {sliceSub && <span className="text-slate-500"> · {lang === 'my' ? sliceSub.name : sliceSub.nameEn}</span>}
+                    {/* [v7.6.41] A row bought at a different shop than
+                        the entry shop names that shop here; rows on
+                        the entry shop show nothing extra (the shop is
+                        already in the header above). */}
+                    {slice.shopName && slice.shopName !== (tx.shopName || '').trim() && (
+                      <span className="text-slate-500"> · 🏪 {slice.shopName}</span>
+                    )}
                     {slice.note && <span className="text-slate-500 italic"> “{slice.note}”</span>}
                   </span>
                   <span className="font-bold font-mono text-slate-900 shrink-0 whitespace-nowrap" title={formatMMK(slice.amount)}>

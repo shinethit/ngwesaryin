@@ -217,8 +217,8 @@ describe('form-row helpers', () => {
   it('defaultSplitRows gives 2 rows, row 1 mirroring the primary category', () => {
     const rows = defaultSplitRows('cat_food', 'sub_a');
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toEqual({ categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '', note: '' });
-    expect(rows[1]).toEqual({ categoryId: '', subCategoryId: '', amount: '', note: '' });
+    expect(rows[0]).toEqual({ categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '', note: '', shopName: '' });
+    expect(rows[1]).toEqual({ categoryId: '', subCategoryId: '', amount: '', note: '', shopName: '' });
   });
 
   it('splitRowsFromTransaction restores rows; old records restore to null (section off)', () => {
@@ -231,8 +231,8 @@ describe('form-row helpers', () => {
       }),
     );
     expect(rows).toEqual([
-      { categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '60000', note: 'lunch' },
-      { categoryId: 'cat_household', subCategoryId: '', amount: '40000', note: '' },
+      { categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '60000', note: 'lunch', shopName: '' },
+      { categoryId: 'cat_household', subCategoryId: '', amount: '40000', note: '', shopName: '' },
     ]);
     expect(splitRowsFromTransaction(makeTx({}))).toBeNull();
     expect(splitRowsFromTransaction(makeTx({ splits: [] }))).toBeNull();
@@ -240,8 +240,8 @@ describe('form-row helpers', () => {
 
   it('rowsToSplits parses Myanmar digits and trims notes; empty sub/note omitted', () => {
     const splits = rowsToSplits([
-      { categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '၆၀၀၀၀', note: '  lunch  ' },
-      { categoryId: 'cat_household', subCategoryId: '', amount: '', note: '' },
+      { categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '၆၀၀၀၀', note: '  lunch  ', shopName: '' },
+      { categoryId: 'cat_household', subCategoryId: '', amount: '', note: '', shopName: '' },
     ]);
     expect(splits[0]).toEqual({ categoryId: 'cat_food', subCategoryId: 'sub_a', amount: 60000, note: 'lunch' });
     expect(splits[1]).toEqual({ categoryId: 'cat_household', amount: 0 });
@@ -251,8 +251,8 @@ describe('form-row helpers', () => {
 
   it('fillRemainderAmount fills total minus the OTHER rows only', () => {
     const rows = [
-      { categoryId: 'a', subCategoryId: '', amount: '60000', note: '' },
-      { categoryId: 'b', subCategoryId: '', amount: '', note: '' },
+      { categoryId: 'a', subCategoryId: '', amount: '60000', note: '', shopName: '' },
+      { categoryId: 'b', subCategoryId: '', amount: '', note: '', shopName: '' },
     ];
     expect(fillRemainderAmount(100000, rows, 1)).toBe('40000');
     // Filling row 1 counts row 2's amount, not its own.
@@ -262,8 +262,8 @@ describe('form-row helpers', () => {
       fillRemainderAmount(
         100000,
         [
-          { categoryId: 'a', subCategoryId: '', amount: '100000', note: '' },
-          { categoryId: 'b', subCategoryId: '', amount: '40000', note: '' },
+          { categoryId: 'a', subCategoryId: '', amount: '100000', note: '', shopName: '' },
+          { categoryId: 'b', subCategoryId: '', amount: '40000', note: '', shopName: '' },
         ],
         1,
       ),
@@ -272,12 +272,12 @@ describe('form-row helpers', () => {
 
   it('syncSplitRowToPrimary moves only row 1', () => {
     const rows = [
-      { categoryId: 'old', subCategoryId: 'old_sub', amount: '100', note: '' },
-      { categoryId: 'keep', subCategoryId: 'keep_sub', amount: '200', note: '' },
+      { categoryId: 'old', subCategoryId: 'old_sub', amount: '100', note: '', shopName: '' },
+      { categoryId: 'keep', subCategoryId: 'keep_sub', amount: '200', note: '', shopName: '' },
     ];
     expect(syncSplitRowToPrimary(rows, 'cat_food', 'sub_a')).toEqual([
-      { categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '100', note: '' },
-      { categoryId: 'keep', subCategoryId: 'keep_sub', amount: '200', note: '' },
+      { categoryId: 'cat_food', subCategoryId: 'sub_a', amount: '100', note: '', shopName: '' },
+      { categoryId: 'keep', subCategoryId: 'keep_sub', amount: '200', note: '', shopName: '' },
     ]);
     expect(syncSplitRowToPrimary([], 'cat_food', '')).toEqual([]);
   });
@@ -461,26 +461,26 @@ describe('splits cleared on edit (D1: merge writes keep an omitted field)', () =
 });
 
 describe('Version bump to v7.6.27 (build 342)', () => {  it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
-    expect(CURRENT_BUILD_NUMBER).toBe(354);
-    expect(VERSION_JSON.version).toBe('v7.6.40');
-    expect(VERSION_JSON.buildNumber).toBe(354);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
+    expect(CURRENT_BUILD_NUMBER).toBe(355);
+    expect(VERSION_JSON.version).toBe('v7.6.41');
+    expect(VERSION_JSON.buildNumber).toBe(355);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.40');
-    expect(entry.buildNumber).toBe(354);
+    expect(entry.version).toBe('v7.6.41');
+    expect(entry.buildNumber).toBe(355);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေ ပုံစံပြန်စီခြင်း');
-    expect(entry.titleEn).toBe('Redesigned wallet and shop cards');
+    expect(entry.titleMy).toBe('Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('Per-row split shops, menu re-apply, and crash fixes');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
+      'Each split row can pick its own shop; records with different shops show one line per shop',
     );
   });
 

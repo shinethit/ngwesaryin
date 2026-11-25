@@ -20,7 +20,7 @@ import { getCollaboratorPermissions } from '../utils/permissions';
 import { buildWalletMap, getMatchingWalletIds, isWalletMatch, isTransferTransaction, isSharedWallet } from '../utils/walletBalance';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 // [v7.6.07] Split badge on collapsed rows.
-import { hasSplits } from '../utils/transactionSplits';
+import { hasSplits, getSplitAttribution, splitShopGroups } from '../utils/transactionSplits';
 // [v7.6.15] Fuel line on Records rows (fuel type / litres / station
 // from the linked FuelLog).
 import { findFuelLogForTransaction, formatFuelRowLine } from '../utils/fuelRowLine';
@@ -124,6 +124,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   // [v7.5.55 E15] A global-search "View all" tap seeds this search box.
   useSearchSeed('transactions', setSearchTerm);
+  // [v7.6.41] Typing must echo at once: the input shows `searchTerm`
+  // immediately, while the list filters on the debounced term (150ms,
+  // the same delay ShopsView uses for its item query) so fast typing
+  // re-filters once per pause instead of once per keystroke over the
+  // whole mounted list.
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 150);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
   const [visibleDays, setVisibleDays] = useState(30);
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   // [v7.5.60 S13] The time filter is saved on every change — read it
@@ -188,8 +198,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     + (timeFilter !== 'all' ? 1 : 0)
     + (selectedCategory !== 'all' ? 1 : 0)
     + ((selectedWallet !== 'all' || selectedWalletIds.length > 0) ? 1 : 0)
-    + (searchTerm.trim() !== '' ? 1 : 0)
-  ), [typeFilter, effectiveDataScope, financialSystem, timeFilter, selectedCategory, selectedWallet, selectedWalletIds, searchTerm]);
+    + (debouncedSearchTerm.trim() !== '' ? 1 : 0)
+  ), [typeFilter, effectiveDataScope, financialSystem, timeFilter, selectedCategory, selectedWallet, selectedWalletIds, debouncedSearchTerm]);
 
   const hasSharedWallets = useMemo(() => {
     return wallets.some((w) => w.isSharedFromOther || (w.sharedWith && w.sharedWith.length > 0));
@@ -239,10 +249,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     lang,
   );
 
-  // Reset pagination when filters change
+  // Reset pagination when filters change (the debounced search term,
+  // so typing does not reset it on every keystroke)
   React.useEffect(() => {
     setVisibleDays(30);
-  }, [typeFilter, timeFilter, searchTerm, selectedCategory, selectedWallet, selectedWalletIds, effectiveDataScope]);
+  }, [typeFilter, timeFilter, debouncedSearchTerm, selectedCategory, selectedWallet, selectedWalletIds, effectiveDataScope]);
 
   // [v7.5.56] A scope change invalidates the wallet pick: a personal
   // wallet selected under "Shared" would otherwise show nothing.
@@ -361,8 +372,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       // names and amounts too (not just category/subcategory/note).
       // The query is normalised with toLatinDigits so typing ၁၀၀၀၀
       // matches an amount of 10000.
-      if (searchTerm.trim()) {
-        const rawQuery = searchTerm.trim().toLowerCase();
+      if (debouncedSearchTerm.trim()) {
+        const rawQuery = debouncedSearchTerm.trim().toLowerCase();
         const query = toLatinDigits(rawQuery);
         // [v7.5.60 S14] Strip commas so "50,000" matches an amount of
         // 50000, like Global Search already does.
@@ -376,6 +387,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         const note = (t.note || '').toLowerCase();
         const itemNames = (t.items || []).map((it) => (it.name || '').toLowerCase()).join(' ');
         const shopName = (t.shopName || '').toLowerCase();
+        // [v7.6.41] A split record matches a shop search when ANY row
+        // carries that shop, not only the entry-level shop name.
+        const rowShopNames = getSplitAttribution(t)
+          .map((a) => (a.shopName || '').toLowerCase())
+          .join(' ');
         const wallet = walletMap.get(t.walletId);
         const walletName = ((wallet?.name || '') + ' ' + (wallet?.nameEn || '')).toLowerCase();
         const amountLatin = String(t.amount);
@@ -388,6 +404,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           !note.includes(query) &&
           !itemNames.includes(query) &&
           !shopName.includes(query) &&
+          !rowShopNames.includes(query) &&
           !walletName.includes(query) &&
           !(queryNoComma && amountLatin.includes(queryNoComma)) &&
           !(queryNoComma && amountMyanmar.includes(toMyanmarDigits(queryNoComma)))
@@ -405,7 +422,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       const aCreated = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || a.date).getTime() || 0;
       return bCreated - aCreated;
     });
-  }, [transactions, effectiveDataScope, personalWalletIds, sharedWalletIds, personalWallets, sharedWallets, typeFilter, selectedCategory, selectedWallet, selectedWalletIds, wallets, walletMap, timeFilter, specificDate, startDate, endDate, searchTerm, catMap, subCatMap, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthPrefix, lastMonthPrefix]);
+  }, [transactions, effectiveDataScope, personalWalletIds, sharedWalletIds, personalWallets, sharedWallets, typeFilter, selectedCategory, selectedWallet, selectedWalletIds, wallets, walletMap, timeFilter, specificDate, startDate, endDate, debouncedSearchTerm, catMap, subCatMap, todayStr, yesterdayStr, sevenDaysAgoStr, currentMonthPrefix, lastMonthPrefix]);
 
   // Filtered Totals (excluding internal transfers when viewing all wallets to match Dashboard, including when viewing specific wallet)
   const isSingleWalletFilter =
@@ -751,7 +768,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       </div>
 
             {/* Active Filter Notice Bar if filtered is less than total */}
-      {shouldShowFilterNotice(transactions.length, filtered.length, { typeFilter, timeFilter, selectedCategory, searchTerm }) && (
+      {shouldShowFilterNotice(transactions.length, filtered.length, { typeFilter, timeFilter, selectedCategory, searchTerm: debouncedSearchTerm }) && (
         <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2 font-medium min-w-0">
             <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
@@ -895,15 +912,35 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                   {/* Transactions for this date */}
                   <div className="divide-y divide-slate-100">
-                    {group.transactions.map((t) => {
-                      const cat = catMap.get(t.category);
-                      const subCat = t.subCategoryId ? subCatMap.get(t.subCategoryId) : undefined;
+                    {/* [v7.6.41] One line PER SHOP: a split record whose
+                        rows name different shops renders one line per
+                        shop group (each line: that shop's rows, their
+                        categories, their summed amount). Rows sharing
+                        a shop stay grouped, and a single-shop record
+                        renders exactly one line, as today. Day
+                        subtotals, the day count, and the summary table
+                        above stay transaction-level — nothing is
+                        double-counted. Every line opens the same
+                        whole-record detail view. */}
+                    {group.transactions.flatMap((t) => {
+                      const shopGroups = splitShopGroups(t);
+                      const isMultiShop = shopGroups.length > 1;
+                      return shopGroups.map((shopGroup, groupIdx) => {
+                      const isFirstLine = groupIdx === 0;
+                      // Line 1 shows THIS group's first row's category
+                      // (the primary for a single-group record — the
+                      // same value as today); Line 2 shows THIS
+                      // group's summed amount.
+                      const lineCatId = shopGroup.attributions[0]?.categoryId || t.category;
+                      const lineSubId = shopGroup.attributions[0]?.subCategoryId;
+                      const cat = catMap.get(lineCatId);
+                      const subCat = lineSubId ? subCatMap.get(lineSubId) : undefined;
                       const wallet = walletMap.get(t.walletId);
                       const isIncome = t.type === 'income';
                       // [v7.5.60 S3] Row amounts in lakhs like the summary
                       // bar (exact kyat in the tooltip); foreign-currency
                       // wallets keep their own currency format.
-                      const amountMMK = convertToMMK(t.amount, wallet?.currency, wallet?.exchangeRate);
+                      const amountMMK = convertToMMK(shopGroup.amount, wallet?.currency, wallet?.exchangeRate);
                       const isMMK = !wallet?.currency || wallet.currency === 'MMK';
                       // [v7.6.15] Fuel line: the linked FuelLog's type /
                       // litres / station, joined by transactionId only.
@@ -915,14 +952,20 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       const fuelLine = formatFuelRowLine(linkedFuelLog);
                       // [v7.5.62] Line 3 only exists when it has content —
                       // an empty div still costs pt-0.5 + space-y-1 on
-                      // every row.
+                      // every row. [v7.6.41] Note / items / split badge /
+                      // fuel line / creator chip are whole-record facts:
+                      // they render on the FIRST line only. Later lines
+                      // of a multi-shop record get Line 3 only for
+                      // their shop pill.
                       const hasLine3Content =
-                        !!t.note ||
-                        (t.items && t.items.length > 0) ||
-                        hasSplits(t) ||
-                        !!fuelLine ||
-                        (isSharedWallet(wallet) &&
-                          !!(t.createdByName || (t.createdBy && t.createdBy === user?.uid)));
+                        (isFirstLine &&
+                          (!!t.note ||
+                            (t.items && t.items.length > 0) ||
+                            hasSplits(t) ||
+                            !!fuelLine ||
+                            (isSharedWallet(wallet) &&
+                              !!(t.createdByName || (t.createdBy && t.createdBy === user?.uid))))) ||
+                        (isMultiShop && !!shopGroup.shopName);
                       // [v7.6.02] Collapsed unit_qty rows: the item name
                       // lives only in t.items[0].name while t.note is
                       // only the typed note, so the name was unreachable
@@ -952,7 +995,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                       return (
                         <div
-                          key={t.id}
+                          key={`${t.id}::${groupIdx}`}
                           onClick={() => setViewingTx(t)}
                           className="p-3.5 sm:p-4 sm:px-6 hover:bg-slate-50/80 transition-colors cursor-pointer"
                           title={lang === 'my' ? 'နှိပ်၍ ကြည့်မည်' : 'Tap to view'}
@@ -979,7 +1022,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   line when it does not fit beside the name. */}
                               <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                 <span className="font-bold text-sm sm:text-base text-slate-900 min-w-0 flex-1">
-                                  {getCategoryDisplayName(t.category, categories, lang)}
+                                  {getCategoryDisplayName(lineCatId, categories, lang)}
                                 </span>
                                 {subCat && (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200 shrink-0">
@@ -992,7 +1035,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               {/* Line 2: Amount & Wallet */}
                               <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                 <span className={`font-mono font-bold text-xs sm:text-sm shrink-0 ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`} title={formatMMK(amountMMK)}>
-                                  {isIncome ? `+${isMMK ? formatLakhs(amountMMK, lang) : formatCurrency(t.amount, wallet?.currency)}` : `-${isMMK ? formatLakhs(amountMMK, lang) : formatCurrency(t.amount, wallet?.currency)}`}
+                                  {isIncome ? `+${isMMK ? formatLakhs(amountMMK, lang) : formatCurrency(shopGroup.amount, wallet?.currency)}` : `-${isMMK ? formatLakhs(amountMMK, lang) : formatCurrency(shopGroup.amount, wallet?.currency)}`}
                                 </span>
                                 {wallet && wallet.currency && wallet.currency !== 'MMK' && (
                                   <span
@@ -1036,11 +1079,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               {/* Line 3: Note / Shopping / Package */}
                               {hasLine3Content && (
                               <div className="flex items-center gap-2 min-w-0 flex-wrap text-xs text-slate-500 pt-0.5">
+                                {/* [v7.6.41] Shop pill — ONLY on lines of
+                                    a multi-shop record: the shop this
+                                    line's rows were bought at.
+                                    Single-shop records show no pill,
+                                    exactly as today. */}
+                                {isMultiShop && shopGroup.shopName && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-900 text-[10px] font-bold border border-emerald-200 shrink-0">
+                                    🏪 {shopGroup.shopName}
+                                  </span>
+                                )}
                                 {/* [v7.5.56] Who added it (finding 38): the
                                     creator's name on rows in shared wallets.
                                     Own rows show "ကိုယ်တိုင်" when the stamp
                                     is missing but the creator is the viewer. */}
-                                {isSharedWallet(wallet) && (t.createdByName || (t.createdBy && t.createdBy === user?.uid)) && (
+                                {isFirstLine && isSharedWallet(wallet) && (t.createdByName || (t.createdBy && t.createdBy === user?.uid)) && (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 text-[10px] font-bold border border-amber-200 shrink-0">
                                     👤 {t.createdByName || (lang === 'my' ? 'ကိုယ်တိုင်' : 'You')}
                                   </span>
@@ -1051,17 +1104,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     note, and shown even when the note is
                                     empty — fuel records otherwise showed
                                     nothing here at all. */}
-                                {fuelLine && (
+                                {isFirstLine && fuelLine && (
                                   <span className="text-slate-700 font-semibold text-[11px] min-w-0 break-words">
                                     {fuelLine}
                                   </span>
                                 )}
-                                {unitQtyItemLabel && (
+                                {isFirstLine && unitQtyItemLabel && (
                                   <span className="text-slate-700 font-semibold text-[11px] min-w-0 break-words">
                                     {unitQtyItemLabel}
                                   </span>
                                 )}
-                                {t.note && !noteRepeatsItemName && (
+                                {isFirstLine && t.note && !noteRepeatsItemName && (
                                   <span className="text-slate-600 italic text-[11px]">
                                     "{t.note}"
                                   </span>
@@ -1071,13 +1124,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     categories this one record is split
                                     across (primary category + amount stay
                                     in Lines 1–2, as today). */}
-                                {hasSplits(t) && (
+                                {isFirstLine && hasSplits(t) && (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-900 border border-violet-300 shadow-2xs shrink-0">
                                     {lang === 'my' ? `${t.splits!.length} မျိုး ခွဲ` : `Split ×${t.splits!.length}`}
                                   </span>
                                 )}
 
-                                {t.items && t.items.length > 0 && (
+                                {isFirstLine && t.items && t.items.length > 0 && (
                                   <div className="flex items-center gap-1.5 shrink-0">
                                     {(!t.unitPrice) ? (
                                       <>
@@ -1114,7 +1167,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             </div>
                           </div>
 
-                          {/* Right Side Actions & Cloud Badge */}
+                          {/* Right Side Actions & Cloud Badge — first
+                              line only: edit / delete / sync act on the
+                              whole record, so later lines of a
+                              multi-shop record carry no duplicate
+                              buttons. Every line still opens the
+                              whole-record detail view on tap. */}
+                          {isFirstLine && (
                           <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-2">
                             {/* Per-Transaction Sync Status Badge & Error Tracker Trigger */}
                             {(() => {
@@ -1193,10 +1252,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               );
                             })()}
                           </div>
+                          )}
                         </div>
                         {/* [v7.5.95 T1] Expanded table hoisted out of the
-                            flex-1 middle column to full row width. */}
-                        {t.items && t.items.length > 0 && expandedShoppingTxIds[t.id] && (
+                            flex-1 middle column to full row width. Whole-
+                            record items: shown under the first line only. */}
+                        {isFirstLine && t.items && t.items.length > 0 && expandedShoppingTxIds[t.id] && (
                           <div className="mt-2.5 w-full p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 text-xs space-y-1.5 animate-fadeIn">
                             <div className="text-[11px] font-bold text-amber-950 pb-1 border-b border-amber-200/80 flex items-center justify-between">
                               <span>🛒 {lang === 'my' ? 'ဝယ်ယူခဲ့သည့် ပစ္စည်းအသေးစိတ်:' : 'Itemized Purchases:'}</span>
@@ -1228,7 +1289,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         )}
                         </div>
                       );
-                    })}
+                    });
+                  })}
                   </div>
                 </div>
               );

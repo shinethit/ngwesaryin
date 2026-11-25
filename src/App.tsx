@@ -51,8 +51,10 @@ import { ShopMenuUpdatePromptModal } from './components/ShopMenuUpdatePromptModa
 import {
   applyResolvedMenuUpdate,
   buildMenuPromptRows,
+  computeMenuDiff,
   resolveMenuShop,
   resolveMenuShopById,
+  shouldOfferMenuUpdate,
   updateStashedCandidateForSavedShop,
   type MenuUpdateRow,
   type ResolvedMenuShop,
@@ -93,7 +95,8 @@ import { getExpiryReminders } from './utils/expiryReminders';
 // [v7.6.08] Anomaly alerts — same helper and ids as NotificationModal.
 import { getAnomalyAlerts } from './utils/anomalyAlerts';
 // [v7.6.07] Split-aware budget badge math (same as NotificationModal).
-import { getSplitAttribution, splitAmountMatching } from './utils/transactionSplits';
+import { getSplitAttribution, splitAmountMatching, attributeItemsToShops } from './utils/transactionSplits';
+import { getAllItemSuggestions } from './utils/itemIntelligence';
 // [v7.6.15] Fuel-log join for the Records rows + search-hit detail view.
 import { findFuelLogForTransaction } from './utils/fuelRowLine';
 import { getLocalDateString } from './utils/dateUtils';
@@ -489,23 +492,43 @@ export default function App() {
   } | null>(null);
   const [menuPromptError, setMenuPromptError] = useState<string | null>(null);
   const [isApplyingMenuUpdate, setIsApplyingMenuUpdate] = useState(false);
-  // The details name that arrived while a menu candidate was resolving
-  // or the menu prompt was open. A ref, not state: nothing renders from
-  // it — it is only consumed by flushPendingShopDetails() when the menu
-  // prompt closes (or when no menu prompt opens at all).
-  const pendingShopDetailsNameRef = useRef<string | null>(null);
+  // The details names that arrived while a menu candidate was
+  // resolving or a prompt was open. A LIST ([v7.6.41]: one save can
+  // name several unknown shops — one per split row), deduped by
+  // folded name; consumed one at a time by flushPendingShopDetails()
+  // when the menu prompt closes (or when no menu prompt opens at
+  // all). A ref, not state: nothing renders from it.
+  const pendingDetailsNamesRef = useRef<string[]>([]);
   // Flags the details callback reads synchronously: the candidate
   // handler runs first (same tick, TransactionModal), so these are set
   // before onShopNeedsDetails fires and the name gets stashed instead
   // of opening a second prompt on top of the menu prompt.
   const menuCandidatePendingRef = useRef(false);
   const menuPromptOpenRef = useRef(false);
-  // [v7.5.85 FIX 2] A menu candidate whose shop did not resolve yet
+  // [v7.6.41] True while a ShopDetailsPromptModal is open (set
+  // synchronously wherever the prompt is opened, cleared by its
+  // close handlers) — a second details name arriving in the same
+  // tick must queue instead of overwriting the open one.
+  const detailsPromptOpenRef = useRef(false);
+  // [v7.5.85 FIX 2] Menu candidates whose shop did not resolve yet
   // (a just-typed NEW shop exists in neither list at save time — it
-  // is created right after, via the details prompt). One small
-  // object, overwritten by the next candidate; cleared only when its
-  // prompt opens. If the shop never appears it sits harmlessly.
-  const stashedMenuCandidateRef = useRef<StashedMenuCandidate | null>(null);
+  // is created right after, via the details prompt). A LIST
+  // ([v7.6.41]: one save can stash several, one per row shop);
+  // each entry is cleared only when its prompt opens. If a shop
+  // never appears its entry sits harmlessly until overwritten.
+  const stashedMenuCandidatesRef = useRef<StashedMenuCandidate[]>([]);
+  // [v7.6.41] Menu candidates waiting for the prompt, in arrival
+  // order — one save can produce several (one per row shop), and a
+  // menu re-apply tap enqueues one more. Drained one at a time by
+  // drainMenuQueue(); a candidate whose shop does not resolve yet
+  // moves to the stash list instead of being dropped.
+  const menuCandidateQueueRef = useRef<StashedMenuCandidate[]>([]);
+  // [v7.6.41] A queue drain is already running — a second caller
+  // only sets menuQueueDrainRequestedRef; the running drain picks
+  // the new items up (or re-runs) so no candidate is ever lost to
+  // two saves racing one async resolution.
+  const menuQueueDrainingRef = useRef(false);
+  const menuQueueDrainRequestedRef = useRef(false);
   // [v7.5.90 F2] Bumped whenever the details-saved listener REWRITES
   // the stash (a rename in the details form). The retry effect below
   // watches it: the shop list may already have changed BEFORE the
@@ -1021,27 +1044,37 @@ export default function App() {
 
   // [v7.5.82] DETAILS-PROMPT SEQUENCING — the details prompt must NOT
   // stack on top of the menu prompt. A details name that arrives while
-  // a menu candidate is resolving or the menu prompt is open is stashed
-  // in pendingShopDetailsNameRef; it is shown (re-checked) only after
-  // the menu prompt closes — or immediately, when no menu prompt opens.
+  // a menu candidate is resolving or a prompt is open is queued in
+  // pendingDetailsNamesRef; names are shown (re-checked) one at a
+  // time, only after the menu prompt closes — or immediately, when
+  // no menu prompt opens. [v7.6.41] The queue holds EVERY distinct
+  // name (one save can name several shops); a name that no longer
+  // needs details is skipped and the next one is tried, so one
+  // filled shop never swallows the prompt for the next.
   const flushPendingShopDetails = () => {
-    const name = pendingShopDetailsNameRef.current;
-    pendingShopDetailsNameRef.current = null;
-    if (!name) return;
-    // Re-check: the shop's details may have been filled meanwhile.
-    // [v7.5.89 A1] The FULL public docs are passed (not the id+name
-    // list): a public shop WITH phone/address must suppress the
-    // prompt here, exactly as at capture time in TransactionModal.
-    // [v7.5.91 D3] A dismissed name never re-prompts.
-    if (isShopNameNeedingDetails(name, shops, publicShopsFull, loadShopDetailDismissedKeys())) {
-      setShopDetailsPromptName(name);
+    while (pendingDetailsNamesRef.current.length > 0) {
+      const name = pendingDetailsNamesRef.current.shift()!;
+      // Re-check: the shop's details may have been filled meanwhile.
+      // [v7.5.89 A1] The FULL public docs are passed (not the id+name
+      // list): a public shop WITH phone/address must suppress the
+      // prompt here, exactly as at capture time in TransactionModal.
+      // [v7.5.91 D3] A dismissed name never re-prompts.
+      if (isShopNameNeedingDetails(name, shops, publicShopsFull, loadShopDetailDismissedKeys())) {
+        detailsPromptOpenRef.current = true;
+        setShopDetailsPromptName(name);
+        return;
+      }
     }
   };
 
   const handleShopNeedsDetails = (name: string) => {
-    if (menuCandidatePendingRef.current || menuPromptOpenRef.current) {
-      pendingShopDetailsNameRef.current = name;
+    const key = normalizeShopName(name);
+    if (!key) return;
+    if (menuCandidatePendingRef.current || menuPromptOpenRef.current || detailsPromptOpenRef.current) {
+      const queued = pendingDetailsNamesRef.current;
+      if (!queued.some((n) => normalizeShopName(n) === key)) queued.push(name.trim());
     } else {
+      detailsPromptOpenRef.current = true;
       setShopDetailsPromptName(name);
     }
   };
@@ -1055,105 +1088,151 @@ export default function App() {
   // the private menu would hide the new price from everyone else.
   // If no shop resolves, or nothing differs, or the gate refuses
   // (guest + public shop) → auto-skip silently, no prompt, no notice.
-  const handleShopMenuUpdateCandidate = async (candidate: { shopName: string; items: TransactionItem[] }) => {
-    // Synchronous part first: the details callback fires right after
-    // this one (same tick, TransactionModal) — the flag makes App stash
-    // the details name instead of showing both prompts at once.
-    menuCandidatePendingRef.current = true;
-    try {
-      const key = normalizeShopName(candidate.shopName);
-      if (!key || !candidate.items || candidate.items.length === 0) return;
-      // [v7.5.85 FIX 2] Shared resolution (public-first, full public
-      // doc via getDoc; a failed public fetch falls back to the
-      // private namesake — v7.5.89 A6).
-      const resolved = await resolveMenuShop(candidate.shopName, publicShops, shops, fetchPublicMenuShop);
-      if (!resolved) {
-        // NEW SHOP: it exists in neither list yet — it is created
-        // right after, via the details prompt. STASH the candidate
-        // instead of silently dropping it; the retry effect below
-        // re-runs the SAME resolution + gating when the shop appears.
-        stashedMenuCandidateRef.current = { shopName: candidate.shopName, items: candidate.items };
-        return;
-      }
-      const rows = buildMenuPromptRows(candidate.items, resolved, !!user);
-      if (!rows) return;
-      setMenuPromptError(null);
-      setMenuPrompt({
-        shopId: resolved.shop.id,
-        shopName: resolved.shop.name,
-        isPublic: resolved.isPublic,
-        shop: resolved.shop as ShopContact | PublicShop,
-        rows,
-      });
-      menuPromptOpenRef.current = true;
-      // A prompt opened for this shop supersedes its stashed
-      // candidate (a stash for a DIFFERENT shop is left alone).
-      if (
-        stashedMenuCandidateRef.current &&
-        normalizeShopName(stashedMenuCandidateRef.current.shopName) === key
-      ) {
-        stashedMenuCandidateRef.current = null;
-      }
-      // The pending flag stays up until the prompt closes — the close
-      // handlers flush the stashed details name.
-      return;
-    } finally {
-      // No prompt opened → the details prompt (if one arrived) behaves
-      // exactly as today: show it now.
-      if (!menuPromptOpenRef.current) {
-        menuCandidatePendingRef.current = false;
-        flushPendingShopDetails();
-      }
+  //
+  // [v7.6.41] ONE shared resolution path for every candidate source
+  // (save path, stash retry, menu re-apply): resolve → diff → open,
+  // returning what happened so the caller can stash / drop / stop.
+  // A candidate that carries a shop id resolves by id first
+  // (rename-proof — the v7.5.89 A5 rule, public first then private);
+  // otherwise by name, public-first. Opening a prompt supersedes
+  // any stashed candidate for the SAME shop.
+  type MenuPromptOutcome = 'opened' | 'unresolved' | 'nodiff';
+  const openMenuPrompt = async (candidate: StashedMenuCandidate): Promise<MenuPromptOutcome> => {
+    const key = normalizeShopName(candidate.shopName);
+    if (!key || !candidate.items || candidate.items.length === 0) return 'nodiff';
+    // [v7.5.85 FIX 2] Shared resolution (public-first, full public
+    // doc via getDoc; a failed public fetch falls back to the
+    // private namesake — v7.5.89 A6).
+    let resolved: ResolvedMenuShop | null = null;
+    if (candidate.shopId) {
+      resolved =
+        (await resolveMenuShopById(candidate.shopId, true, shops, fetchPublicMenuShop)) ??
+        (await resolveMenuShopById(candidate.shopId, false, shops, fetchPublicMenuShop));
     }
+    if (!resolved) {
+      resolved = await resolveMenuShop(candidate.shopName, publicShops, shops, fetchPublicMenuShop);
+    }
+    if (!resolved) return 'unresolved';
+    const rows = buildMenuPromptRows(candidate.items, resolved, !!user);
+    if (!rows) return 'nodiff';
+    setMenuPromptError(null);
+    setMenuPrompt({
+      shopId: resolved.shop.id,
+      shopName: resolved.shop.name,
+      isPublic: resolved.isPublic,
+      shop: resolved.shop as ShopContact | PublicShop,
+      rows,
+    });
+    menuPromptOpenRef.current = true;
+    // A prompt opened for this shop supersedes its stashed
+    // candidate (a stash for a DIFFERENT shop is left alone).
+    stashedMenuCandidatesRef.current = stashedMenuCandidatesRef.current.filter(
+      (c) => normalizeShopName(c.shopName) !== key,
+    );
+    // The pending flag stays up until the prompt closes — the close
+    // handlers drain the queue and flush the stashed details names.
+    return 'opened';
   };
 
-  // [v7.5.85 FIX 2] STASH RETRY — a candidate stashed because its
-  // shop did not exist yet is retried when either shop list changes
+  /** Stash a candidate whose shop does not exist yet (replacing any
+   *  stash for the same folded name — today's overwrite semantics,
+   *  extended to the list). The stash retry effect re-runs the SAME
+   *  resolution + gating when the shop appears. */
+  const stashMenuCandidate = (candidate: StashedMenuCandidate) => {
+    const key = normalizeShopName(candidate.shopName);
+    stashedMenuCandidatesRef.current = [
+      ...stashedMenuCandidatesRef.current.filter((c) => normalizeShopName(c.shopName) !== key),
+      candidate,
+    ];
+  };
+
+  /** Drain the candidate queue one prompt at a time. When the queue
+   *  empties (and no prompt opened), the pending flag drops and the
+   *  queued details names flush — the same ending the single-
+   *  candidate handler always had. Re-entrant-safe: a second caller
+   *  while a drain is running only flags a re-run. */
+  const drainMenuQueue = () => {
+    if (menuPromptOpenRef.current) return;
+    if (menuQueueDrainingRef.current) {
+      menuQueueDrainRequestedRef.current = true;
+      return;
+    }
+    menuQueueDrainingRef.current = true;
+    (async () => {
+      try {
+        for (;;) {
+          if (menuPromptOpenRef.current) return;
+          const candidate = menuCandidateQueueRef.current.shift();
+          if (!candidate) return;
+          menuCandidatePendingRef.current = true;
+          const outcome = await openMenuPrompt(candidate);
+          if (outcome === 'opened') return;
+          if (outcome === 'unresolved') stashMenuCandidate(candidate);
+          // 'nodiff': nothing differs or the gate refused — dropped.
+        }
+      } finally {
+        menuQueueDrainingRef.current = false;
+        if (!menuPromptOpenRef.current) {
+          menuCandidatePendingRef.current = false;
+          flushPendingShopDetails();
+        }
+        if (menuQueueDrainRequestedRef.current) {
+          menuQueueDrainRequestedRef.current = false;
+          drainMenuQueue();
+        }
+      }
+    })();
+  };
+
+  // [v7.5.82] Called AFTER a successful save with the entry's menu
+  // candidates — one per row shop ([v7.6.41]; unsplit entries send
+  // one). Enqueued synchronously so the details callback firing
+  // right after (same tick) sees the pending flag up and stashes
+  // its names instead of opening a second prompt.
+  const handleShopMenuUpdateCandidates = (candidates: { shopName: string; items: TransactionItem[] }[]) => {
+    menuCandidatePendingRef.current = true;
+    for (const c of candidates) {
+      const key = normalizeShopName(c.shopName);
+      if (!key || !c.items || c.items.length === 0) continue;
+      menuCandidateQueueRef.current.push({ shopName: c.shopName.trim(), items: c.items });
+    }
+    drainMenuQueue();
+  };
+
+  // [v7.5.85 FIX 2] STASH RETRY — candidates stashed because their
+  // shop did not exist yet are retried when either shop list changes
   // (the new shop arriving via the details prompt is the usual
   // trigger), re-running the SAME resolution + gating as the
   // candidate handler. Skipped while the menu prompt is open or the
   // details prompt is still up (the effect re-runs when the details
-  // prompt closes, so the retry is deferred, not lost). The stash is
-  // cleared ONLY on a successful prompt open; if the shop never
-  // appears, or nothing differs / the gate refuses, it sits
-  // harmlessly until the next candidate overwrites it.
+  // prompt closes, so the retry is deferred, not lost). [v7.6.41]
+  // The stash is a LIST: every entry is tried in order until one
+  // opens a prompt; an entry that still does not resolve, or whose
+  // rows show nothing, stays stashed (today's parity — it sits
+  // harmlessly until the next candidate overwrites it).
   useEffect(() => {
-    const stashed = stashedMenuCandidateRef.current;
-    if (!stashed) return;
+    const stashes = stashedMenuCandidatesRef.current;
+    if (stashes.length === 0) return;
     if (menuPromptOpenRef.current) return;
     if (shopDetailsPromptName) return;
+    // [v7.6.41] A queued drain takes precedence — opening from both
+    // the queue and the stash in the same tick could stack two
+    // prompts. The stash waits for the next trigger (any list
+    // change re-runs this effect).
+    if (menuCandidateQueueRef.current.length > 0 || menuQueueDrainingRef.current) return;
     let cancelled = false;
     (async () => {
       menuCandidatePendingRef.current = true;
       try {
-        // [v7.5.89 A5] A stashed candidate that carries a shop id
-        // resolves by id first (rename-proof — the shop may have
-        // been renamed between stash and retry); otherwise by name.
-        // The id is tried as public first, then private: the stash
-        // does not record which list the shop is in.
-        let resolved: ResolvedMenuShop | null = null;
-        if (stashed.shopId) {
-          resolved =
-            (await resolveMenuShopById(stashed.shopId, true, shops, fetchPublicMenuShop)) ??
-            (await resolveMenuShopById(stashed.shopId, false, shops, fetchPublicMenuShop));
+        for (const stashed of [...stashes]) {
+          if (cancelled) return;
+          // [v7.5.89 A5] A stashed candidate that carries a shop id
+          // resolves by id first (rename-proof); openMenuPrompt owns
+          // that order, plus the name fallback and the gating.
+          const outcome = await openMenuPrompt(stashed);
+          if (cancelled) return;
+          if (outcome === 'opened') return;
         }
-        if (!resolved) {
-          resolved = await resolveMenuShop(stashed.shopName, publicShops, shops, fetchPublicMenuShop);
-        }
-        if (cancelled) return;
-        if (!resolved) return;
-        const rows = buildMenuPromptRows(stashed.items, resolved, !!user);
-        if (!rows) return;
-        setMenuPromptError(null);
-        setMenuPrompt({
-          shopId: resolved.shop.id,
-          shopName: resolved.shop.name,
-          isPublic: resolved.isPublic,
-          shop: resolved.shop as ShopContact | PublicShop,
-          rows,
-        });
-        menuPromptOpenRef.current = true;
-        stashedMenuCandidateRef.current = null;
       } finally {
         if (!cancelled && !menuPromptOpenRef.current) {
           menuCandidatePendingRef.current = false;
@@ -1181,7 +1260,7 @@ export default function App() {
   // must move the stashed menu candidate with it: the stash still
   // says X, the shop now exists only as Y, and the retry above would
   // never resolve. ShopsView dispatches `ngwe:shop-details-saved`
-  // on every successful ShopModal save; when the stash's folded name
+  // on every successful ShopModal save; when a stash's folded name
   // matches the folded OLD name (or the folded details-prompt name —
   // the prompt is cleared by Fill Now before the form opens, so the
   // old name is the usual match) the stash is rewritten to the SAVED
@@ -1190,20 +1269,29 @@ export default function App() {
   // this listener is a no-op. The seq bump re-runs the retry effect
   // (see stashedCandidateSeq): the shop list may already have
   // changed before this event arrives, so the retry may already have
-  // run — and missed — with the old name.
+  // run — and missed — with the old name. [v7.6.41] The stash is a
+  // list: EVERY entry is mapped through the rewrite; the list is
+  // replaced (and the seq bumped) only when at least one entry
+  // actually changed.
   useEffect(() => {
     const onShopDetailsSaved = (e: Event) => {
       const detail = (e as CustomEvent<ShopDetailsSavedDetail>).detail;
       if (!detail) return;
-      const stashed = stashedMenuCandidateRef.current;
-      const next = updateStashedCandidateForSavedShop(stashed, {
-        oldName: detail.oldName,
-        savedName: detail.savedName,
-        shopId: detail.shopId,
-        promptName: shopDetailsPromptName,
+      const stashes = stashedMenuCandidatesRef.current;
+      if (stashes.length === 0) return;
+      let changed = false;
+      const next = stashes.map((stashed) => {
+        const rewritten = updateStashedCandidateForSavedShop(stashed, {
+          oldName: detail.oldName,
+          savedName: detail.savedName,
+          shopId: detail.shopId,
+          promptName: shopDetailsPromptName,
+        });
+        if (rewritten !== stashed) changed = true;
+        return rewritten;
       });
-      if (next && next !== stashed) {
-        stashedMenuCandidateRef.current = next;
+      if (changed) {
+        stashedMenuCandidatesRef.current = next;
         setStashedCandidateSeq((s) => s + 1);
       }
     };
@@ -1295,7 +1383,10 @@ export default function App() {
       setMenuPrompt(null);
       menuPromptOpenRef.current = false;
       menuCandidatePendingRef.current = false;
-      flushPendingShopDetails();
+      // [v7.6.41] The next queued candidate (if any) opens next; when
+      // the queue is empty the drain drops the pending flag and
+      // flushes the queued details names.
+      drainMenuQueue();
     } finally {
       setIsApplyingMenuUpdate(false);
     }
@@ -1306,7 +1397,98 @@ export default function App() {
     setMenuPromptError(null);
     menuPromptOpenRef.current = false;
     menuCandidatePendingRef.current = false;
-    flushPendingShopDetails();
+    // [v7.6.41] Same drain as Apply: the next queued candidate opens,
+    // else the queued details names flush.
+    drainMenuQueue();
+  };
+
+  // [v7.6.41] PART B — Menu re-apply from a shop card: rebuild THIS
+  // shop's menu diff from the user's OWN transactions (the entry
+  // shop OR a split row's shop — per-row attribution included) and
+  // offer it through the SAME prompt UI, SAME apply path and SAME
+  // gates as the save path. The candidate joins the SAME queue, so
+  // a prompt already open (or resolving) is never stacked on. The
+  // tap always answers: up-to-date / sign-in needed / no history /
+  // shop gone each get their own notice instead of silence.
+  const handleReapplyShopMenu = async (shop: ShopContact | PublicShop, isPublic: boolean) => {
+    // Resolve fresh (rename/move-proof): by the card's id first,
+    // then by name, public-first — the same order as the queue.
+    const resolved =
+      (await resolveMenuShopById(shop.id, isPublic, shops, fetchPublicMenuShop)) ??
+      (await resolveMenuShop(shop.name, publicShops, shops, fetchPublicMenuShop));
+    if (!resolved) {
+      showToast(
+        lang === 'my'
+          ? 'ဆိုင်ကို ရှာမတွေ့ပါ — ရွှေ့လိုက်ပြီ ဒါမှမဟုတ် ဖျက်လိုက်ပြီ ဖြစ်နိုင်ပါတယ်။'
+          : 'Shop not found — it may have been moved or deleted.',
+        'error',
+      );
+      return;
+    }
+    // Every purchased item attributed to THIS shop across all of
+    // the user's records, newest first, keeping only the LATEST
+    // price per name+unit (the diff itself dedupes the same way).
+    const suggestions = getAllItemSuggestions(transactions, categories);
+    const shopKey = normalizeShopName(resolved.shop.name);
+    const latestByItem = new Map<string, TransactionItem>();
+    const ordered = [...transactions].sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      const aCreated = typeof a.createdAt === 'number' ? a.createdAt : 0;
+      const bCreated = typeof b.createdAt === 'number' ? b.createdAt : 0;
+      return bCreated - aCreated;
+    });
+    for (const tx of ordered) {
+      const byShop = attributeItemsToShops(tx.items || [], tx.splits, tx.shopName, suggestions);
+      for (const [attributedShop, attributedItems] of byShop) {
+        if (normalizeShopName(attributedShop) !== shopKey) continue;
+        for (const item of attributedItems) {
+          const itemKey = `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
+          if (!latestByItem.has(itemKey)) latestByItem.set(itemKey, item);
+        }
+      }
+    }
+    const items = [...latestByItem.values()];
+    if (items.length === 0) {
+      showToast(
+        lang === 'my' ? 'ဤဆိုင်မှာ ဝယ်ခဲ့သည့် မှတ်တမ်း မရှိသေးပါ။' : 'No purchase history for this shop yet.',
+        'error',
+      );
+      return;
+    }
+    // Distinguish "already up to date" from "gate refused" BEFORE
+    // enqueueing; the queue's own diff re-checks the same gate when
+    // the prompt would open, so a stale enqueue just yields no prompt.
+    const diff = computeMenuDiff(resolved.shop.items || [], items);
+    if (diff.length === 0) {
+      showToast(
+        lang === 'my' ? 'ဆိုင်ရဲ့ Menu က ဈေးနှုန်း အသစ်နဲ့ ကိုက်ညီနေပါပြီ ✓' : 'This shop menu is already up to date ✓',
+      );
+      return;
+    }
+    if (
+      !shouldOfferMenuUpdate({
+        hasItems: true,
+        shopResolved: true,
+        isPublic: resolved.isPublic,
+        isSignedIn: !!user,
+        hasDiff: true,
+      })
+    ) {
+      showToast(
+        lang === 'my'
+          ? 'အများပြင် ဆိုင်ရဲ့ Menu ကို အကောင့်ဝင်ပြီးမှ ပြန် Update လုပ်နိုင်ပါတယ်။'
+          : 'Sign in to update a public shop menu.',
+        'error',
+      );
+      return;
+    }
+    menuCandidatePendingRef.current = true;
+    menuCandidateQueueRef.current.push({
+      shopName: resolved.shop.name,
+      shopId: resolved.shop.id,
+      items,
+    });
+    drainMenuQueue();
   };
 
   // [v7.5.60 G-M6] One Toast element rendered above EVERY return
@@ -3422,6 +3604,7 @@ export default function App() {
                 onAddShop={handleAddShop}
             onUpdateShop={handleUpdateShop}
             onDeleteShop={handleDeleteShop}
+            onReapplyShopMenu={handleReapplyShopMenu}
           />
         </div>
 
@@ -3586,7 +3769,7 @@ export default function App() {
         shops={shops}
         sharedUnits={sharedUnits}
         onShopNeedsDetails={handleShopNeedsDetails}
-        onShopMenuUpdateCandidate={handleShopMenuUpdateCandidate}
+        onShopMenuUpdateCandidates={handleShopMenuUpdateCandidates}
         plan={plan}
         lang={lang}
         fuelLogs={fuelLogs}
@@ -3625,17 +3808,26 @@ export default function App() {
         shopName={shopDetailsPromptName || ''}
         lang={lang}
         onFillNow={(name) => {
+          detailsPromptOpenRef.current = false;
           setShopDetailsPromptName(null);
           setActiveTab('shops');
           dispatchOpenShopForm(name);
+          // [v7.6.41] No flush here: the shop form opens on top, so a
+          // queued name waits until the form save re-runs the stash
+          // retry effect (which flushes) or the next trigger — a
+          // second details prompt must never stack on the form.
         }}
         onLater={(name) => {
           addShopDetailReminder(name);
+          detailsPromptOpenRef.current = false;
           setShopDetailsPromptName(null);
+          flushPendingShopDetails();
         }}
         onNotNow={(name) => {
           dismissShopDetailReminder(name);
+          detailsPromptOpenRef.current = false;
           setShopDetailsPromptName(null);
+          flushPendingShopDetails();
         }}
       />
 

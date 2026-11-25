@@ -177,6 +177,31 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     setDuplicateWarning(null);
   }, [isOpen, editingShop, isEditingPublic, directoryType]);
 
+  // [v7.6.41 C] Hooks BEFORE the early return: customTownships used
+  // to be a useMemo BELOW `if (!isOpen) return null`, so opening the
+  // always-mounted modal added a hook mid-life → React #310, caught
+  // by the ErrorBoundary on the user's phone when filling shop info.
+  // (Same pattern as the v7.6.31 WalletModal #310.) Every hook in
+  // this component now runs before this return, unconditionally.
+  const currentRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === formStateRegion);
+
+  // [v7.5.95 U3] Custom townships typed before (saved on other shops
+  // in this region) reappear as extra options, additive only — the
+  // static region data is untouched. Derived from `existingShops`,
+  // the same list the duplicate check already consults.
+  const customTownships = useMemo(() => {
+    if (!formStateRegion) return [] as string[];
+    const known = new Set((currentRegionObj?.townships || []).map((t) => t.nameMy));
+    const out: string[] = [];
+    for (const s of existingShops || []) {
+      if (s.stateRegion !== formStateRegion) continue;
+      const ts = (s.township || '').trim();
+      if (!ts || ts === 'custom' || known.has(ts) || out.includes(ts)) continue;
+      out.push(ts);
+    }
+    return out;
+  }, [existingShops, formStateRegion, currentRegionObj]);
+
   if (!isOpen) return null;
 
   const handlePhoneChange = (idx: number, val: string) => {
@@ -351,25 +376,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       onClose();
     }
   };
-
-  const currentRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === formStateRegion);
-
-  // [v7.5.95 U3] Custom townships typed before (saved on other shops
-  // in this region) reappear as extra options, additive only — the
-  // static region data is untouched. Derived from `existingShops`,
-  // the same list the duplicate check already consults.
-  const customTownships = useMemo(() => {
-    if (!formStateRegion) return [] as string[];
-    const known = new Set((currentRegionObj?.townships || []).map((t) => t.nameMy));
-    const out: string[] = [];
-    for (const s of existingShops || []) {
-      if (s.stateRegion !== formStateRegion) continue;
-      const ts = (s.township || '').trim();
-      if (!ts || ts === 'custom' || known.has(ts) || out.includes(ts)) continue;
-      out.push(ts);
-    }
-    return out;
-  }, [existingShops, formStateRegion, currentRegionObj]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto overflow-x-hidden animate-fade-in">

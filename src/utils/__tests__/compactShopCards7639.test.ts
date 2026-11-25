@@ -93,22 +93,22 @@ describe('Shop cards are compact (v7.6.39)', () => {
   });
 
   it('no tap target shrinks below the settled 44px', () => {
-    expect(count(SHOP_SRC, 'min-h-[44px]')).toBe(36);
+    expect(count(SHOP_SRC, 'min-h-[44px]')).toBe(38);
     expect(count(SHOPS_SRC, 'min-h-[44px]')).toBe(26);
   });
 
-  it('version pins roll to v7.6.40 / build 354', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
-    expect(CURRENT_BUILD_NUMBER).toBe(354);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.40');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(354);
-    expect(VERSION_JSON.version).toBe('v7.6.40');
-    expect(VERSION_JSON.buildNumber).toBe(354);
+  it('version pins roll to v7.6.41 / build 355', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
+    expect(CURRENT_BUILD_NUMBER).toBe(355);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.41');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(355);
+    expect(VERSION_JSON.version).toBe('v7.6.41');
+    expect(VERSION_JSON.buildNumber).toBe(355);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
+      'Each split row can pick its own shop; records with different shops show one line per shop',
     );
   });
 });

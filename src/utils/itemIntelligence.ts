@@ -230,6 +230,17 @@ export function getAllItemSuggestions(
 
     // A. Shopping list items
     if (tx.items && tx.items.length > 0) {
+      // [v7.6.41] Split-aware: a split record's items belong to its
+      // ROWS, not to the record's top category. Stored items carry no
+      // row link, so an item is recorded under the category its own
+      // earlier purchase history already teaches (the same matcher the
+      // entry form uses), when one exists — otherwise the record's top
+      // category, exactly as before. Without this, an item first bought
+      // inside a mixed split (e.g. fuel inside a food-topped record)
+      // is learned under the top category, and the per-row-shop menu
+      // attribution then sends it to the wrong shop's menu.
+      const splitRows =
+        Array.isArray(tx.splits) && tx.splits.length > 0 ? tx.splits : null;
       tx.items.forEach((item) => {
         if (item.name) {
           const unitPrice =
@@ -238,8 +249,19 @@ export function getAllItemSuggestions(
               : item.quantity > 0 && item.amount
               ? Math.round(item.amount / item.quantity)
               : item.amount || 0;
-
-          recordItem(item.name, unitPrice, txDate, catId, subCatId, 'shopping_item');
+          let itemCat = catId;
+          let itemSub = subCatId;
+          if (splitRows) {
+            const prior = findMatchingItemInfo(
+              item.name,
+              Array.from(itemMap.values()),
+            );
+            if (prior?.categoryId) {
+              itemCat = prior.categoryId;
+              itemSub = prior.subCategoryId;
+            }
+          }
+          recordItem(item.name, unitPrice, txDate, itemCat, itemSub, 'shopping_item');
         }
       });
     }

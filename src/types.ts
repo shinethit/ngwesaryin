@@ -36,6 +36,11 @@ export interface TransactionSplit {
   subCategoryId?: string;
   amount: number;
   note?: string;
+  // [v7.6.41] Per-row shop: the shop this slice was bought at. Absent
+  // (or blank) = the record's own `shopName` — old rows, and rows the
+  // user leaves on the entry shop, read exactly as before. Only rows
+  // the user explicitly gives a different shop carry this field.
+  shopName?: string;
 }
 
 export interface Transaction {

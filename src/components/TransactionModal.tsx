@@ -45,6 +45,7 @@ import { ROW_SERVICE_TYPES, resolveVehicleServiceSubCategory } from '../utils/ve
 import { resolveMostUsedVehicleEntry } from '../utils/vehicleMostUsed';
 // [v7.6.07] Split transactions — category slices of one record.
 import {
+  attributeItemsToShops,
   defaultSplitRows,
   fillRemainderAmount,
   nextSplitRow,
@@ -100,10 +101,12 @@ interface TransactionModalProps {
   onShopNeedsDetails?: (shopName: string) => void;
   // [v7.5.82] Called AFTER a successful save, BEFORE onShopNeedsDetails,
   // when the saved entry carries items (shopping_list or unit_qty) and a
-  // typed shop name. App resolves the shop, diffs its menu and shows
+  // typed shop name. App resolves each shop, diffs its menu and shows
   // the ShopMenuUpdatePromptModal when something would actually change.
-  // An entry with no items never produces a candidate.
-  onShopMenuUpdateCandidate?: (candidate: { shopName: string; items: TransactionItem[] }) => void;
+  // An entry with no items never produces a candidate. [v7.6.41] An
+  // ARRAY: a split entry produces one candidate PER row shop (each
+  // row's items → that shop); unsplit entries produce at most one.
+  onShopMenuUpdateCandidates?: (candidates: { shopName: string; items: TransactionItem[] }[]) => void;
   fuelLogs?: FuelLog[];
   vehicleMaintenance?: VehicleMaintenance[];
   tirePressureLogs?: TirePressureLog[];
@@ -130,7 +133,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onAddSubCategory,
   onManageCategories,
   onShopNeedsDetails,
-  onShopMenuUpdateCandidate,
+  onShopMenuUpdateCandidates,
   fuelLogs = [],
   vehicleMaintenance = [],
   tirePressureLogs = [],
@@ -1087,6 +1090,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     ].slice(0, 5);
   }, [shopInput, shops, publicShops]);
 
+  // [v7.6.41] Same shop list as the entry shop field, for one split
+  // row's typed text: the top 5 matches when text is typed, the
+  // first 5 shops when the row's shop field is blank. A plain
+  // function (not a memo) — one per row, keyed on that row's text.
+  const shopSuggestionsFor = (query: string) => {
+    if (!query.trim()) return shops.slice(0, 5).concat(publicShops.slice(0, 5) as any);
+    const q = query.toLowerCase();
+    return [
+      ...shops.filter((s) => s.name.toLowerCase().includes(q)),
+      ...publicShops.filter((s) => s.name.toLowerCase().includes(q) && !shops.some((ps) => ps.name === s.name))
+    ].slice(0, 5);
+  };
+
   // [v7.5.55] True when the typed shop name is not in the private or
   // public directory — only then is the publish opt-in shown.
   const isNewShopName = useMemo(() => {
@@ -1851,35 +1867,50 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         detailsShopName.length > 0 &&
         isShopNameNeedingDetails(detailsShopName, shops, publicShops, loadShopDetailDismissedKeys());
 
-      // [v7.5.82] Menu-update candidate — captured BEFORE onSubmit,
+      // [v7.5.82] Menu-update candidates — captured BEFORE onSubmit,
       // next to the details-prompt decision. [v7.5.83] Fuel and
-      // maintenance entries now build a ONE-item candidate too (fuel
+      // maintenance entries build a ONE-item candidate too (fuel
       // type per litre at the selected station; service / part per
       // service at the workshop) — the station / workshop name IS the
-      // shop for them. An entry with no items has txItems undefined and
-      // produces no candidate; license renewal and the free tire check
-      // never do either.
-      const menuUpdateCandidate =
-        entryModel === 'general'
-          ? txItems && txItems.length > 0 && typedShopName.length > 0
-            ? { shopName: typedShopName, items: txItems }
-            : null
-          : buildVehicleMenuCandidate({
-              entryModel,
-              shopName: derivedShopName,
-              fuelType,
-              fuelLiters: parseMyanmarNumber(fuelLiters) || 0,
-              fuelPricePerLiter: parseMyanmarNumber(fuelPricePerLiter) || 0,
-              maintServiceType,
-              maintServiceLabel: SERVICE_TYPE_CONFIG[maintServiceType]?.labelMy,
-              maintTitle,
-              extraNote,
-              finalAmount,
-              // [v7.5.93] Multi-row visit: the candidate emits one item
-              // per row; the helper falls back to the single-item
-              // synthesis when there are no rows.
-              rows: validItems.length > 0 ? validItems : undefined,
-            });
+      // shop for them. An entry with no items has txItems undefined
+      // and produces no candidate; license renewal and the free tire
+      // check never do either. [v7.6.41] General entries produce ONE
+      // candidate PER ROW SHOP (each row's items → that row's shop,
+      // category-inferred when rows name different shops); an
+      // unsplit entry produces the single entry-shop candidate
+      // exactly as before. A row shop typed while the entry shop is
+      // blank still produces its own candidate.
+      const menuUpdateCandidates: { shopName: string; items: TransactionItem[] }[] = [];
+      if (entryModel === 'general') {
+        if (txItems && txItems.length > 0) {
+          for (const [candidateShop, candidateItems] of attributeItemsToShops(
+            txItems,
+            validSplits,
+            typedShopName,
+            unifiedItemSuggestions,
+          )) {
+            menuUpdateCandidates.push({ shopName: candidateShop, items: candidateItems });
+          }
+        }
+      } else {
+        const vehicleCandidate = buildVehicleMenuCandidate({
+          entryModel,
+          shopName: derivedShopName,
+          fuelType,
+          fuelLiters: parseMyanmarNumber(fuelLiters) || 0,
+          fuelPricePerLiter: parseMyanmarNumber(fuelPricePerLiter) || 0,
+          maintServiceType,
+          maintServiceLabel: SERVICE_TYPE_CONFIG[maintServiceType]?.labelMy,
+          maintTitle,
+          extraNote,
+          finalAmount,
+          // [v7.5.93] Multi-row visit: the candidate emits one item
+          // per row; the helper falls back to the single-item
+          // synthesis when there are no rows.
+          rows: validItems.length > 0 ? validItems : undefined,
+        });
+        if (vehicleCandidate) menuUpdateCandidates.push(vehicleCandidate);
+      }
 
             const saveOk = onSubmit({
         type: entryModel === 'fuel' || entryModel === 'vehicle_service' ? 'expense' : type,
@@ -1915,8 +1946,23 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         // [v7.5.82] Menu prompt goes FIRST: App may open the menu
         // prompt and stash the details name until it closes, so the
         // two prompts never stack.
-        if (menuUpdateCandidate) onShopMenuUpdateCandidate?.(menuUpdateCandidate);
+        if (menuUpdateCandidates.length > 0) onShopMenuUpdateCandidates?.(menuUpdateCandidates);
         if (needsShopDetailsPrompt) onShopNeedsDetails?.(detailsShopName);
+        // [v7.6.41] Split rows may name shops the entry shop does
+        // not: each distinct row shop gets the same details check
+        // (App dedupes by normalized name, so a name already
+        // prompted for is not prompted twice).
+        const seenDetailNames = new Set([detailsShopName.toLowerCase()]);
+        for (const s of validSplits || []) {
+          const rowShop = (s.shopName || '').trim();
+          const rowKey = rowShop.toLowerCase();
+          if (rowShop && !seenDetailNames.has(rowKey)) {
+            seenDetailNames.add(rowKey);
+            if (isShopNameNeedingDetails(rowShop, shops, publicShops, loadShopDetailDismissedKeys())) {
+              onShopNeedsDetails?.(rowShop);
+            }
+          }
+        }
         onClose();
       }
     } catch (err) {
@@ -2212,6 +2258,31 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                               placeholder={lang === 'my' ? 'မှတ်ချက် (ရွေးချယ်နိုင်)' : 'Note (optional)'}
                               className="w-full text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-2 focus:outline-none"
                             />
+                            {/* [v7.6.41] Per-row shop: blank = this row
+                                was bought at the entry shop above; a
+                                typed/picked name makes this row its own
+                                shop (Records shows it on its own line,
+                                and that shop's Menu gets this row's
+                                items). Same shop list + typed-name
+                                handling as the entry shop field. */}
+                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 focus-within:border-emerald-400">
+                              <Store className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <input
+                                type="text"
+                                list={`shop-suggestions-split-${idx}`}
+                                autoComplete="off"
+                                value={row.shopName}
+                                onChange={(e) => updateSplitRow(idx, { shopName: e.target.value })}
+                                placeholder={lang === 'my' ? 'ဆိုင် (မထည့်ရင် အထက်က ဆိုင်အမည်)' : 'Shop (blank = entry shop above)'}
+                                aria-label={lang === 'my' ? `တန်း ${idx + 1} ဆိုင်` : `Row ${idx + 1} shop`}
+                                className="w-full min-h-[40px] text-xs font-bold bg-transparent border-0 focus:outline-none"
+                              />
+                            </div>
+                            <datalist id={`shop-suggestions-split-${idx}`}>
+                              {shopSuggestionsFor(row.shopName).map((s) => (
+                                <option key={s.id} value={s.name} />
+                              ))}
+                            </datalist>
                           </div>
                         );
                       })}

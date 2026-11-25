@@ -55,6 +55,10 @@ interface ShopsViewProps {
   // (App listener) — passed to ShopCard for the unit selects.
   // Optional: other call sites pass nothing.
   sharedUnits?: string[];
+  // [v7.6.41] Menu re-apply from a shop card — handled by App (it owns
+  // the transactions + the menu prompt); ShopsView only threads it
+  // to ShopCard. Optional: other call sites pass nothing.
+  onReapplyShopMenu?: (shop: ShopContact | PublicShop, isPublic: boolean) => void;
 }
 
 export const ShopsView: React.FC<ShopsViewProps> = ({
@@ -67,6 +71,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   onUpdateShop: onUpdatePrivateShop,
   onDeleteShop: onDeletePrivateShop,
   sharedUnits = [],
+  onReapplyShopMenu,
 }) => {
   // Directory Type: 'public' (collaborative community) or 'private' (private directory)
   const [directoryType, setDirectoryType] = useState<'public' | 'private'>('public');
@@ -1970,6 +1975,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           onAddPricingItem={handleAddPricingItem}
                           onDeletePricingItem={handleDeletePricingItem}
                           onReport={handleReportShop}
+                          onReapplyMenu={onReapplyShopMenu}
                         />
                       ))}
                     </div>
@@ -1991,6 +1997,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           onAddPricingItem={handleAddPricingItem}
                           onDeletePricingItem={handleDeletePricingItem}
                           onReport={handleReportShop}
+                          onReapplyMenu={onReapplyShopMenu}
                         />
                       ))}
                     </div>
@@ -2018,6 +2025,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     onAddPricingItem={handleAddPricingItem}
                     onDeletePricingItem={handleDeletePricingItem}
                     onReport={handleReportShop}
+                    onReapplyMenu={onReapplyShopMenu}
                   />
                 ))}
               </div>
@@ -2039,6 +2047,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     onAddPricingItem={handleAddPricingItem}
                     onDeletePricingItem={handleDeletePricingItem}
                     onReport={handleReportShop}
+                    onReapplyMenu={onReapplyShopMenu}
                   />
                 ))}
               </div>

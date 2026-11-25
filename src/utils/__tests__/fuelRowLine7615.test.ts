@@ -150,7 +150,7 @@ describe('Records row shows the fuel line for linked records only (v7.6.15)', ()
   });
 
   it('the fuel line renders in Line 3 and creates Line 3 when it is the only content', () => {
-    expect(TX_VIEW_SRC).toContain('{fuelLine && (');
+    expect(TX_VIEW_SRC).toContain('{isFirstLine && fuelLine && (');
     expect(TX_VIEW_SRC).toContain('{fuelLine}');
     const start = TX_VIEW_SRC.indexOf('const hasLine3Content');
     const block = TX_VIEW_SRC.slice(start, TX_VIEW_SRC.indexOf(');', start));
@@ -163,8 +163,8 @@ describe('Records row shows the fuel line for linked records only (v7.6.15)', ()
     // what the note text says.
     expect(TX_VIEW_SRC).toContain('noteRepeatsItemName');
     const fuelSpan = TX_VIEW_SRC.slice(
-      TX_VIEW_SRC.indexOf('{fuelLine && ('),
-      TX_VIEW_SRC.indexOf('{fuelLine && (') + 400,
+      TX_VIEW_SRC.indexOf('{isFirstLine && fuelLine && ('),
+      TX_VIEW_SRC.indexOf('{isFirstLine && fuelLine && (') + 400,
     );
     expect(fuelSpan).not.toContain('noteRepeatsItemName');
   });
@@ -255,26 +255,26 @@ describe('neutral form category icon and color (v7.6.15)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
-    expect(CURRENT_BUILD_NUMBER).toBe(354);
-    expect(VERSION_JSON.version).toBe('v7.6.40');
-    expect(VERSION_JSON.buildNumber).toBe(354);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
+    expect(CURRENT_BUILD_NUMBER).toBe(355);
+    expect(VERSION_JSON.version).toBe('v7.6.41');
+    expect(VERSION_JSON.buildNumber).toBe(355);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.40');
-    expect(entry.buildNumber).toBe(354);
+    expect(entry.version).toBe('v7.6.41');
+    expect(entry.buildNumber).toBe(355);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေ ပုံစံပြန်စီခြင်း');
-    expect(entry.titleEn).toBe('Redesigned wallet and shop cards');
+    expect(entry.titleMy).toBe('Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('Per-row split shops, menu re-apply, and crash fixes');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
+      'Each split row can pick its own shop; records with different shops show one line per shop',
     );
   });
 

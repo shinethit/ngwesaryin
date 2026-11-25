@@ -302,24 +302,24 @@ describe('Donut drill-down wiring (v7.6.32)', () => {
   });
 });
 
-describe('Version bump to v7.6.40 (build 354)', () => {
-  it('version surfaces agree on v7.6.40 / build 354', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
-    expect(CURRENT_BUILD_NUMBER).toBe(354);
-    expect(VERSION_JSON.version).toBe('v7.6.40');
-    expect(VERSION_JSON.buildNumber).toBe(354);
+describe('Version bump to v7.6.41 (build 355)', () => {
+  it('version surfaces agree on v7.6.41 / build 355', () => {
+    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
+    expect(CURRENT_BUILD_NUMBER).toBe(355);
+    expect(VERSION_JSON.version).toBe('v7.6.41');
+    expect(VERSION_JSON.buildNumber).toBe(355);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.40');
-    expect(entry.buildNumber).toBe(354);
+    expect(entry.version).toBe('v7.6.41');
+    expect(entry.buildNumber).toBe(355);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
+      'Each split row can pick its own shop; records with different shops show one line per shop',
     );
     expect([...entry.changesMy, ...entry.changesEn].join(' ')).not.toContain('Admin');
   });

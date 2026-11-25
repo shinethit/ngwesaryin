@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Store, Phone, MapPin, Edit2, Trash2, Copy, ExternalLink, Sparkles, Check, ThumbsUp, User, AlertTriangle, Plus, X, CreditCard, ChevronDown, ChevronUp, ShoppingBag, Pill, Utensils, Wrench, Package } from 'lucide-react';
+import { Store, Phone, MapPin, Edit2, Trash2, Copy, ExternalLink, Sparkles, Check, ThumbsUp, User, AlertTriangle, Plus, X, CreditCard, ChevronDown, ChevronUp, ShoppingBag, Pill, Utensils, Wrench, Package, RefreshCw } from 'lucide-react';
 import { ShopContact, PublicShop } from '../../types';
 import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
@@ -25,6 +25,10 @@ interface ShopCardProps {
   // [v7.5.81] Report a public shop — handled by ShopsView (guest check +
   // modal live there); ShopCard only renders the button.
   onReport?: (shop: ShopContact | PublicShop) => void;
+  // [v7.6.41] Menu re-apply — handled by App via ShopsView (it owns
+  // the transactions + the menu prompt); ShopCard only renders the
+  // button. Optional: other call sites pass nothing.
+  onReapplyMenu?: (shop: ShopContact | PublicShop, isPublic: boolean) => void;
   // [v7.5.86] All distinct menu item names in the tab's shops (from
   // ShopsView) — the add-price form suggests from the DATABASE, not from
   // the user's own transactions, so an item that exists in another shop's
@@ -48,6 +52,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   onAddPricingItem,
   onDeletePricingItem,
   onReport,
+  onReapplyMenu,
   menuItemNames = [],
   sharedUnits = [],
 }) => {
@@ -493,6 +498,23 @@ export const ShopCard: React.FC<ShopCardProps> = ({
               </span>
             </div>
 
+            {/* [v7.6.41] Menu re-apply: re-check this shop's menu
+                against the user's own purchase history through the
+                same prompt as the save path. Full-width, directly
+                under the section header — visible the moment the
+                menu is expanded, in both views. */}
+            {onReapplyMenu && (
+              <button
+                type="button"
+                onClick={() => onReapplyMenu(shop, isPublic)}
+                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဒီဆိုင်ရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check this shop menu against my own purchase history'}
+              >
+                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                <span>{lang === 'my' ? 'Menu ပြန် Update' : 'Refresh Menu'}</span>
+              </button>
+            )}
+
             {(shop.items || []).length === 0 ? (
               <div className="text-xs text-slate-400 italic py-2">
                 {lang === 'my' ? 'ပစ္စည်းစာရင်း မရှိသေးပါ။' : 'No items added yet.'}
@@ -862,6 +884,23 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                   : 'Contributed voluntarily by users. App assumes no responsibility for accuracy.'}
               </span>
             </div>
+
+            {/* [v7.6.41] Menu re-apply: re-check this shop's menu
+                against the user's own purchase history through the
+                same prompt as the save path. Full-width, directly
+                under the disclaimer — visible the moment the menu is
+                expanded, in both views. */}
+            {onReapplyMenu && (
+              <button
+                type="button"
+                onClick={() => onReapplyMenu(shop, isPublic)}
+                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဒီဆိုင်ရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check this shop menu against my own purchase history'}
+              >
+                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                <span>{lang === 'my' ? 'Menu ပြန် Update' : 'Refresh Menu'}</span>
+              </button>
+            )}
 
             {/* List of items */}
             {(shop.items || []).length === 0 ? (

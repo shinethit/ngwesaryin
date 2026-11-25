@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
-    expect(CURRENT_BUILD_NUMBER).toBe(354);
-    expect(VERSION_JSON.version).toBe('v7.6.40');
-    expect(VERSION_JSON.buildNumber).toBe(354);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
+    expect(CURRENT_BUILD_NUMBER).toBe(355);
+    expect(VERSION_JSON.version).toBe('v7.6.41');
+    expect(VERSION_JSON.buildNumber).toBe(355);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,16 +330,20 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.40');
-    expect(top.buildNumber).toBe(354);
+    expect(top.version).toBe('v7.6.41');
+    expect(top.buildNumber).toBe(355);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေ ပုံစံပြန်စီခြင်း');
-    expect(top.titleEn).toBe('Redesigned wallet and shop cards');
+    expect(top.titleMy).toBe('Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း');
+    expect(top.titleEn).toBe('Per-row split shops, menu re-apply, and crash fixes');
     expect(top.changesMy).toEqual([
-      'ပိုက်ဆံအိတ်ကတ်နဲ့ ဆိုင်ကတ်တွေကို ပုံစံပြန်စီပြီး သိသိသာသာ ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
+      'ဆိုင် Menu ကို ဆိုင်ကတ်ကနေ ပြန် Update လုပ်လို့ရပြီ',
+      'ဆိုင်အချက်အလက်ဖြည့်တုန်း crash ဖြစ်တာနဲ့ စာရိုက်ထစ်တာကို ပြင်သည်',
     ]);
     expect(top.changesEn).toEqual([
-      'Wallet and shop cards are redesigned to be visibly more compact — every detail and button stays in place.',
+      'Each split row can pick its own shop; records with different shops show one line per shop',
+      'Shop menus can be re-applied from the shop card',
+      'Fixed the crash while filling shop info and the typing lag',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.40';
-export const CURRENT_BUILD_NUMBER = 354;
+export const CURRENT_APP_VERSION = 'v7.6.41';
+export const CURRENT_BUILD_NUMBER = 355;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.41',
+    buildNumber: 355,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Split တစ်ကြောင်းချင်း ဆိုင်ခွဲခြင်း၊ Menu ပြန် Update နဲ့ crash ပြင်ဆင်ခြင်း',
+    titleEn: 'Per-row split shops, menu re-apply, and crash fixes',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ — ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြပြီး ဆိုင်တစ်ဆိုင်ချင်းစီရဲ့ Menu ကို သူ့အပိုင်းနဲ့သူ Update လုပ်သည်။ ဆိုင်ကတ်ကနေ Menu ကို ပြန် Update လုပ်လို့ရပြီ။ ဆိုင်အချက်အလက်ဖြည့်တုန်း crash ဖြစ်တာနဲ့ စာရိုက်ထစ်တာကို ပြင်သည်။',
+    descriptionEn: 'Each split row can now pick its own shop — records with different shops show one line per shop, and each shop menu updates with its own portion. Shop menus can be re-applied from the shop card. Fixed the crash while filling shop info and the typing lag.',
+    changesMy: [
+      'Split တစ်ကြောင်းချင်းစီမှာ ဆိုင်ရွေးလို့ရပြီ၊ ဆိုင်မတူရင် စာရင်းမှာ ကြောင်းခွဲပြသည်',
+      'ဆိုင် Menu ကို ဆိုင်ကတ်ကနေ ပြန် Update လုပ်လို့ရပြီ',
+      'ဆိုင်အချက်အလက်ဖြည့်တုန်း crash ဖြစ်တာနဲ့ စာရိုက်ထစ်တာကို ပြင်သည်',
+    ],
+    changesEn: [
+      'Each split row can pick its own shop; records with different shops show one line per shop',
+      'Shop menus can be re-applied from the shop card',
+      'Fixed the crash while filling shop info and the typing lag',
+    ],
+  },
   {
     version: 'v7.6.40',
     buildNumber: 354,

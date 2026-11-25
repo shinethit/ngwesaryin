@@ -193,19 +193,19 @@ describe('Tire-pressure tiles stay visible (v7.5.94 Fix E)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.40');
-    expect(CURRENT_BUILD_NUMBER).toBe(354);
-    expect(VERSION_JSON.version).toBe('v7.6.40');
-    expect(VERSION_JSON.buildNumber).toBe(354);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.41');
+    expect(CURRENT_BUILD_NUMBER).toBe(355);
+    expect(VERSION_JSON.version).toBe('v7.6.41');
+    expect(VERSION_JSON.buildNumber).toBe(355);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.40');
-    expect(entry.buildNumber).toBe(354);
+    expect(entry.version).toBe('v7.6.41');
+    expect(entry.buildNumber).toBe(355);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(1);
-    expect(entry.changesEn).toHaveLength(1);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

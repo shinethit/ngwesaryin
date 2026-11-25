@@ -856,7 +856,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {displayedWallets.map((wallet) => {
             const IconComp = WALLET_ICONS_MAP[wallet.icon] || WalletCards;
             const currInfo = getCurrencyInfo(wallet.currency || 'MMK');
@@ -883,7 +883,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
             return (
               <div
                 key={wallet.id}
-                className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
+                className="bg-white rounded-3xl p-3 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
               >
                 {/* Colored Accent Top Strip */}
                 <div
@@ -896,10 +896,10 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     {/* Icon & Currency Flag */}
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xs"
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xs"
                         style={{ backgroundColor: wallet.color || '#6366F1' }}
                       >
-                        <IconComp className="w-6 h-6 text-white" />
+                        <IconComp className="w-5 h-5 text-white" />
                       </div>
                       <span
                         className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
@@ -979,11 +979,11 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   </div>
 
                   {/* Wallet Info */}
-                  <div className="mt-3.5">
+                  <div className="mt-2.5">
                     <h3 className="font-bold text-base text-slate-900 tracking-tight break-words">
                       {lang === 'my' ? wallet.name : wallet.nameEn || wallet.name}
                     </h3>
-                    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       {wallet.isDefault && (
                         <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                           {lang === 'my' ? 'မူလအကောင့်' : 'Primary'}
@@ -1059,7 +1059,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     ].filter(Boolean);
 
                     return (
-                      <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-100 text-[10px]">
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-100 text-[10px]">
                         <span className="font-bold text-slate-500">
                           {lang === 'my' ? 'သင့်ခွင့်ပြုချက်:' : 'Rights:'}
                         </span>
@@ -1083,7 +1083,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                 </div>
 
               {/* Balance & Rate Section */}
-              <div className="mt-5 pt-3 border-t border-slate-100 space-y-2">
+              <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
                 <div className="flex items-baseline justify-between">
                   <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
                     {lang === 'my' ? 'လက်ကျန်ငွေ' : 'Balance'}
@@ -1108,7 +1108,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     full kyat); exact kyat is the title tooltip. Foreign
                     wallets keep their own currency format. */}
                 <div
-                  className="text-2xl font-black text-slate-900 tracking-tight"
+                  className="text-xl font-black text-slate-900 tracking-tight"
                   title={(wallet.currency || 'MMK') === 'MMK' ? formatMMK(wallet.balance) : undefined}
                 >
                   {(wallet.currency || 'MMK') === 'MMK'
@@ -1152,7 +1152,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
                 {/* Converted MMK & Exchange Rate Pill if Currency !== 'MMK' */}
                 {isForeign && (
-                  <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between text-xs">
+                  <div className="p-1.5 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 text-slate-600 font-medium">
                       <TrendingUp className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                       <span>1 {wallet.currency} = {effectiveRate.toLocaleString()} Ks</span>
@@ -1170,7 +1170,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   const defaultType = (wallet.isSharedFromOther && userPerms.canAddIncome && !userPerms.canAddExpense) ? 'income' : 'expense';
 
                   return (
-                    <div className="pt-2">
+                    <div className="pt-1">
                       {wallet.isSharedFromOther && !canAdd ? (
                         <div className="text-[11px] text-center text-slate-400 py-1 italic bg-slate-50 rounded-lg">
                           {lang === 'my' ? 'စာရင်းထည့်သွင်းခွင့် မရှိပါ (ဖတ်ခွင့်သာ)' : 'Read-only access'}

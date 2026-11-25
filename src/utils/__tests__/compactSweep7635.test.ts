@@ -108,25 +108,25 @@ describe('Data Management Cloud Sync slim row (v7.6.35)', () => {
   });
 });
 
-// ---------- Version bump to v7.6.36 (build 350) ----------
-describe('Version bump to v7.6.36 (build 350)', () => {
+// ---------- Version bump to v7.6.37 (build 351) ----------
+describe('Version bump to v7.6.37 (build 351)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.36');
-    expect(CURRENT_BUILD_NUMBER).toBe(350);
-    expect(VERSION_JSON.version).toBe('v7.6.36');
-    expect(VERSION_JSON.buildNumber).toBe(350);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.37');
+    expect(CURRENT_BUILD_NUMBER).toBe(351);
+    expect(VERSION_JSON.version).toBe('v7.6.37');
+    expect(VERSION_JSON.buildNumber).toBe(351);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.36');
-    expect(entry.buildNumber).toBe(350);
+    expect(entry.version).toBe('v7.6.37');
+    expect(entry.buildNumber).toBe(351);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('PDF စာရင်းရှင်းတမ်း — A4၊ chart များနှင့် iOS ပြင်ဆင်မှု');
-    expect(entry.titleEn).toBe('PDF statement: A4 pages, charts, and the iOS fix');
+    expect(entry.titleMy).toBe('ပိုက်ဆံအိတ်ကတ်တွေ ကျစ်လစ်စေခြင်း');
+    expect(entry.titleEn).toBe('Compact wallet cards');
     expect(entry.changesMy).toEqual([
-      'PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်',
+      'ပိုက်ဆံအိတ်ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     ]);
     expect(entry.changesEn).toEqual([
-      'The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too.',
+      'Wallet cards are now compact — every detail and button stays in place.',
     ]);
   });
 
@@ -314,7 +314,7 @@ describe('Categories, Wallets and banners (v7.6.35)', () => {
   it('Wallets empty state, grid, cards and exchange panel are compact; totals banner stays', () => {
     expect(WALLET_SRC).toContain('px-4 py-5 text-center');
     expect(WALLET_SRC).not.toContain('sm:gap-6');
-    expect(WALLET_SRC).toContain('bg-white rounded-3xl p-4 border');
+    expect(WALLET_SRC).toContain('bg-white rounded-3xl p-3 border');
     expect(WALLET_SRC).toContain('p-4 space-y-3');
     expect(WALLET_SRC).toContain('စုစုပေါင်း ဘဏ္ဍာငွေ လက်ကျန် (ကျပ်ဖြင့်)');
   });

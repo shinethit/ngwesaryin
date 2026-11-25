@@ -1,11 +1,11 @@
 {
-  "version": "v7.6.36",
-  "buildNumber": 350,
+  "version": "v7.6.37",
+  "buildNumber": 351,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်"
+    "ပိုက်ဆံအိတ်ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်"
   ],
   "changesEn": [
-    "The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too."
+    "Wallet cards are now compact — every detail and button stays in place."
   ]
 }

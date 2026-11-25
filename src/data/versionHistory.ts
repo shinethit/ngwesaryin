@@ -16,10 +16,29 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.36';
-export const CURRENT_BUILD_NUMBER = 350;
+export const CURRENT_APP_VERSION = 'v7.6.37';
+export const CURRENT_BUILD_NUMBER = 351;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.37',
+    buildNumber: 351,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ပိုက်ဆံအိတ်ကတ်တွေ ကျစ်လစ်စေခြင်း',
+    titleEn: 'Compact wallet cards',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ပိုက်ဆံအိတ်ကတ်တွေကို ကျစ်လစ်အောင် ပြင်လိုက်ပြီ — လက်ကျန်ငွေ၊ ဂဏန်းတွေ၊ ခလုတ်တွေနဲ့ အချက်အလက်အားလုံး ရှိနေတုန်းပဲ။ ကတ်တွေကြားက အကွာအဝေးနဲ့ ကတ်ထဲက နေရာလွတ်တွေကိုသာ လျှော့ထားတယ်။',
+    descriptionEn: 'Wallet cards are now compact — balances, numbers, buttons, and every detail stay in place. Only the spacing inside and between the cards is tighter.',
+    changesMy: [
+      'ပိုက်ဆံအိတ်ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
+    ],
+    changesEn: [
+      'Wallet cards are now compact — every detail and button stays in place.',
+    ],
+  },
   {
     version: 'v7.6.36',
     buildNumber: 350,

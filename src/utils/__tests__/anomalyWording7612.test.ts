@@ -76,30 +76,30 @@ describe('anomaly trigger wording (v7.6.12)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.36');
-    expect(CURRENT_BUILD_NUMBER).toBe(350);
-    expect(VERSION_JSON.version).toBe('v7.6.36');
-    expect(VERSION_JSON.buildNumber).toBe(350);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.37');
+    expect(CURRENT_BUILD_NUMBER).toBe(351);
+    expect(VERSION_JSON.version).toBe('v7.6.37');
+    expect(VERSION_JSON.buildNumber).toBe(351);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.36');
-    expect(entry.buildNumber).toBe(350);
+    expect(entry.version).toBe('v7.6.37');
+    expect(entry.buildNumber).toBe(351);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'PDF စာရင်းရှင်းတမ်း — A4၊ chart များနှင့် iOS ပြင်ဆင်မှု',
+      'ပိုက်ဆံအိတ်ကတ်တွေ ကျစ်လစ်စေခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'PDF statement: A4 pages, charts, and the iOS fix',
+      'Compact wallet cards',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(1);
     expect(entry.changesEn).toHaveLength(1);
     expect(entry.changesMy[0]).toBe(
-      'PDF စာရင်းရှင်းတမ်းကို A4 ဖြင့် ထုတ်နိုင်ပြီး ဝင်ငွေ/ထွက်ငွေကို pie chart၊ ကဏ္ဍများကို bar chart ဖြင့် ပြမည် — iOS မှာလည်း ထုတ်လို့ရအောင် ပြင်သည်',
+      'ပိုက်ဆံအိတ်ကတ်တွေကို ကျစ်လစ်အောင် ပြင်သည် — အချက်အလက်နဲ့ ခလုတ်အကုန် ရှိနေမည်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The PDF statement prints on A4 with income/expense as a pie chart and categories as a bar chart — and can now be exported on iOS too.',
+      'Wallet cards are now compact — every detail and button stays in place.',
     );
   });
 

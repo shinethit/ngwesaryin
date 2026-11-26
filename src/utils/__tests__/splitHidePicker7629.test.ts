@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
-    expect(CURRENT_BUILD_NUMBER).toBe(371);
-    expect(VERSION_JSON.version).toBe('v7.6.57');
-    expect(VERSION_JSON.buildNumber).toBe(371);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
+    expect(CURRENT_BUILD_NUMBER).toBe(372);
+    expect(VERSION_JSON.version).toBe('v7.6.58');
+    expect(VERSION_JSON.buildNumber).toBe(372);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.57');
-    expect(entry.buildNumber).toBe(371);
-    expect(entry.changesMy[0]).toBe('စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ');
+    expect(entry.version).toBe('v7.6.58');
+    expect(entry.buildNumber).toBe(372);
+    expect(entry.changesMy[0]).toBe('လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

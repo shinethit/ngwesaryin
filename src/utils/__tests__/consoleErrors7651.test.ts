@@ -74,20 +74,20 @@ describe('recharts visibility gate (v7.6.51 item 2)', () => {
 
 describe('Version pins roll to v7.6.52 / build 366', () => {
   it('constants and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
-    expect(CURRENT_BUILD_NUMBER).toBe(371);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
+    expect(CURRENT_BUILD_NUMBER).toBe(372);
     const VERSION_JSON = JSON.parse(
       readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
     );
-    expect(VERSION_JSON.version).toBe('v7.6.57');
-    expect(VERSION_JSON.buildNumber).toBe(371);
+    expect(VERSION_JSON.version).toBe('v7.6.58');
+    expect(VERSION_JSON.buildNumber).toBe(372);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.57');
-    expect(top.buildNumber).toBe(371);
+    expect(top.version).toBe('v7.6.58');
+    expect(top.buildNumber).toBe(372);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(4);
-    expect(top.changesEn.length).toBe(4);
+    expect(top.changesMy.length).toBe(3);
+    expect(top.changesEn.length).toBe(3);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

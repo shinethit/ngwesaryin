@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.57';
-export const CURRENT_BUILD_NUMBER = 371;
+export const CURRENT_APP_VERSION = 'v7.6.58';
+export const CURRENT_BUILD_NUMBER = 372;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.58',
+    buildNumber: 372,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'လက်ကျန်ကတ် တစ်ကတ်လုံး အရောင်စိုစိုတောက်တောက်',
+    titleEn: 'Whole-card vivid treatment for the Records balance card',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'လက်ကျန်ကတ်တစ်ခုလုံး အရောင်စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — ရောင်စုံအောက်ခံ၊ အရောင်ခွက်ကတ်ပြားတွေ၊ တောက်ပတဲ့ ပမာဏတွေနဲ့။ အနီ၊ အဝါ၊ အဖြူ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ။',
+    descriptionEn: 'The whole Records balance card is vivid now — a rich gradient ground, tinted chips and luminous figures. Red, yellow and white keep their meanings.',
+    changesMy: [
+      'လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ',
+      'အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်ကတ်ပြားလေးတွေထဲမှာ ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အနီ၊ အဝါ၊ အစိမ်း၊ အဖြူ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'ဖုန်း အကျယ် 360px မှာလည်း စာတွေ ညှပ်မသွားဘဲ အပြည့်အစုံ ပေါ်ပါပြီ',
+    ],
+    changesEn: [
+      'The balance card now sits on a rich gradient ground with a luminous main figure',
+      'Opening, closing and net sit in tinted chips with bright labels — red, yellow, green and white keep their meanings',
+      'No clipped text at any phone width, including 360px',
+    ],
+  },
   {
     version: 'v7.6.57',
     buildNumber: 371,

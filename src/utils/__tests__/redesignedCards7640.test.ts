@@ -153,17 +153,17 @@ describe('Redesigned shop cards (v7.6.40)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
-    expect(CURRENT_BUILD_NUMBER).toBe(371);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.57');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(371);
-    expect(VERSION_JSON.version).toBe('v7.6.57');
-    expect(VERSION_JSON.buildNumber).toBe(371);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
+    expect(CURRENT_BUILD_NUMBER).toBe(372);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.58');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(372);
+    expect(VERSION_JSON.version).toBe('v7.6.58');
+    expect(VERSION_JSON.buildNumber).toBe(372);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'The Records balance card colours are vivid now — red, yellow and white keep their meanings',
+      'The balance card now sits on a rich gradient ground with a luminous main figure',
     );
   });
 });

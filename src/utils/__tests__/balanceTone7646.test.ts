@@ -5,6 +5,10 @@
 // card, so the helper returns the -400 shades instead. SAME semantics
 // and boundaries — only saturation changed (rose-400 #fb7185,
 // amber-400 #fbbf24, white unchanged).
+// [v7.6.58] The mini-stat labels are bright TINTED chip labels now
+// (rose-100 / amber-100 / emerald-100 / white by tone), not the
+// washed-out white/80 of 57 — the whole card reads vivid only when
+// the labels carry colour too.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { balanceToneClass, LOW_BALANCE_THRESHOLD_MMK } from '../balanceTone';
@@ -59,8 +63,11 @@ describe('balanceToneClass (v7.6.46 Part D, saturated v7.6.57)', () => {
     );
   });
 
-  it('the mini-stat labels are readable white/80, not dim white/60', () => {
-    expect(TX_SRC).toContain('text-white/80 font-medium truncate');
+  it('the mini-stat labels are bright tinted chip labels (v7.6.58), not washed-out white/80', () => {
+    expect(TX_SRC).toContain('toneChipLabelClass(balanceTone(monthBalance.opening))');
+    expect(TX_SRC).toContain('toneChipLabelClass(balanceTone(monthBalance.closing))');
+    expect(TX_SRC).toContain("toneChipLabelClass(monthBalance.net >= 0 ? 'emerald' : 'rose')");
+    expect(TX_SRC).not.toContain('text-white/80 font-medium truncate');
     expect(TX_SRC).not.toContain('text-white/60 font-medium truncate');
   });
 });

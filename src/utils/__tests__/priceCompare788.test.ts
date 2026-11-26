@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
-    expect(CURRENT_BUILD_NUMBER).toBe(371);
-    expect(VERSION_JSON.version).toBe('v7.6.57');
-    expect(VERSION_JSON.buildNumber).toBe(371);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
+    expect(CURRENT_BUILD_NUMBER).toBe(372);
+    expect(VERSION_JSON.version).toBe('v7.6.58');
+    expect(VERSION_JSON.buildNumber).toBe(372);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,19 +141,19 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.57');
-    expect(entry.buildNumber).toBe(371);
+    expect(entry.version).toBe('v7.6.58');
+    expect(entry.buildNumber).toBe(372);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('လက်ကျန်ကတ် အရောင်စိုစိုတောက်တောက် နှင့် စာရင်းထည့်ဖောင် အကူအညီများ');
-    expect(entry.titleEn).toBe('Vivid Records balance card and entry-form helpers');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် တစ်ကတ်လုံး အရောင်စိုစိုတောက်တောက်');
+    expect(entry.titleEn).toBe('Whole-card vivid treatment for the Records balance card');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(4);
-    expect(entry.changesEn).toHaveLength(4);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
   });
 });

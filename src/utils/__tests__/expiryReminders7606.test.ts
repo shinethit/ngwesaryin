@@ -349,33 +349,31 @@ describe('expiry section wiring — modal + bell badge (v7.6.06)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
-    expect(CURRENT_BUILD_NUMBER).toBe(371);
-    expect(VERSION_JSON.version).toBe('v7.6.57');
-    expect(VERSION_JSON.buildNumber).toBe(371);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
+    expect(CURRENT_BUILD_NUMBER).toBe(372);
+    expect(VERSION_JSON.version).toBe('v7.6.58');
+    expect(VERSION_JSON.buildNumber).toBe(372);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.57');
-    expect(top.buildNumber).toBe(371);
+    expect(top.version).toBe('v7.6.58');
+    expect(top.buildNumber).toBe(372);
     expect(top.releaseDate).toBe('2026-11-27');
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('လက်ကျန်ကတ် အရောင်စိုစိုတောက်တောက် နှင့် စာရင်းထည့်ဖောင် အကူအညီများ');
-    expect(top.titleEn).toBe('Vivid Records balance card and entry-form helpers');
+    expect(top.titleMy).toBe('လက်ကျန်ကတ် တစ်ကတ်လုံး အရောင်စိုစိုတောက်တောက်');
+    expect(top.titleEn).toBe('Whole-card vivid treatment for the Records balance card');
     expect(top.changesMy).toEqual([
-      'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
-      'ပမာဏထည့်ဖို့ ဂဏန်းခလုတ်ပါလာပါပြီ — နှိပ်ပြီးရိုက်လို့ရတယ်၊ ဖျက်တာ ရှင်းတာလည်း လုပ်လို့ရတယ်',
-      'ပမာဏ အမြန်ရွေးခလုတ်တွေ ပါလာပါပြီ — ၅ သိန်း၊ ၁၀ သိန်း၊ ၁၅ သိန်း နှိပ်ရုံနဲ့ ပမာဏ ဖြည့်ပြီးသား ဖြစ်ပါတယ်',
-      'နေ့ရက်ကို တစ်ရက်ချင်း ရှေ့/နောက် ရွှေ့လို့ရတဲ့ ခလုတ်တွေ ပါလာပါပြီ',
+      'လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ',
+      'အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်ကတ်ပြားလေးတွေထဲမှာ ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အနီ၊ အဝါ၊ အစိမ်း၊ အဖြူ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'ဖုန်း အကျယ် 360px မှာလည်း စာတွေ ညှပ်မသွားဘဲ အပြည့်အစုံ ပေါ်ပါပြီ',
         ]);
     expect(top.changesEn).toEqual([
-      'The Records balance card colours are vivid now — red, yellow and white keep their meanings',
-      'A calculator keypad for the amount field — tap to type, with backspace and clear',
-      'Quick-amount chips — 500,000, 1,000,000 and 1,500,000, tap to set the amount',
-      'Date stepper — move the entry date one day forward or back per tap',
+      'The balance card now sits on a rich gradient ground with a luminous main figure',
+      'Opening, closing and net sit in tinted chips with bright labels — red, yellow, green and white keep their meanings',
+      'No clipped text at any phone width, including 360px',
         ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -5,7 +5,7 @@ import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatt
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { safeSetItem } from '../utils/storage';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { MultiWalletSelector } from './MultiWalletSelector';
 import { FinancialSummaryTable } from './FinancialSummaryTable';
@@ -1220,12 +1220,15 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                               overlapping. */}
                           <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div
-                              className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-[2px_3px_8px_rgba(0,0,0,0.12),inset_1px_1px_2px_rgba(255,255,255,0.6)]"
-                              style={{ backgroundColor: getCategoryTileColor(cat, isIncome) }}
-                            >
-                              <CategoryIcon name={cat?.icon || 'Tag'} className="w-5 h-5" />
-                            </div>
+                            <CategoryTile
+                              categoryId={cat?.id}
+                              icon={cat?.icon}
+                              color={getCategoryTileColor(cat, isIncome)}
+                              sizeClassName="w-10 h-10 sm:w-11 sm:h-11"
+                              roundedClassName="rounded-2xl"
+                              iconClassName="w-5 h-5"
+                              extraClassName="text-white shadow-[2px_3px_8px_rgba(0,0,0,0.12),inset_1px_1px_2px_rgba(255,255,255,0.6)]"
+                            />
 
                             <div className="min-w-0 flex-1 space-y-1">
                               {/* Line 1: Category & Subcategory */}

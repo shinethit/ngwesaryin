@@ -2,7 +2,7 @@ import React from 'react';
 import { PieChart } from 'lucide-react';
 import { Budget, Category, Transaction, UNBUDGETED_CATEGORY_ID, Wallet, getBudgetCategoryIds } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { buildWalletMap, isWalletMatch, isTransferTransaction, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 
@@ -225,12 +225,15 @@ export const CurrentMonthBudgetSummaryCard: React.FC<CurrentMonthBudgetSummaryCa
             <div key={b.categoryId} className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div
-                    className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0 text-xs shadow-2xs"
-                    style={{ backgroundColor: cat?.color || '#6366F1' }}
-                  >
-                    <CategoryIcon name={cat?.icon || 'Tag'} className="w-3.5 h-3.5" />
-                  </div>
+                  <CategoryTile
+                    categoryId={cat?.id}
+                    icon={cat?.icon}
+                    color={cat?.color || '#6366F1'}
+                    sizeClassName="w-6 h-6"
+                    roundedClassName="rounded-lg"
+                    iconClassName="w-3.5 h-3.5"
+                    extraClassName="text-white text-xs shadow-2xs"
+                  />
                   <span className="font-bold text-slate-900 break-words">
                     {displayName}
                   </span>

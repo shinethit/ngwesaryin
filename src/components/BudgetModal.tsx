@@ -10,7 +10,7 @@ import {
 } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 
 interface BudgetModalProps {
   isOpen: boolean;
@@ -306,12 +306,15 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                           onChange={() => toggleCategory(c.id)}
                           className="w-4 h-4 accent-indigo-600 shrink-0"
                         />
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
-                          style={{ backgroundColor: c.color || '#6366F1' }}
-                        >
-                          <CategoryIcon name={c.icon || 'Tag'} className="w-4 h-4" />
-                        </div>
+                        <CategoryTile
+                          categoryId={c.id}
+                          icon={c.icon}
+                          color={c.color || '#6366F1'}
+                          sizeClassName="w-8 h-8"
+                          roundedClassName="rounded-lg"
+                          iconClassName="w-4 h-4"
+                          extraClassName="text-white"
+                        />
                         <span className="font-medium text-slate-800 text-sm min-w-0">
                           {lang === 'my' ? c.name : c.nameEn}
                         </span>

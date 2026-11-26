@@ -3,7 +3,7 @@ import { X, Edit2, Lock } from 'lucide-react';
 import { Category, FuelLog, Transaction, VehicleMaintenance, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 import { hasSplits, getSplitAttribution } from '../utils/transactionSplits';
 import { isWalletMatch } from '../utils/walletBalance';
@@ -138,12 +138,15 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3 pr-8">
-          <div
-            className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-[2px_3px_8px_rgba(0,0,0,0.12),inset_1px_1px_2px_rgba(255,255,255,0.6)]"
-            style={{ backgroundColor: cat?.color || (isIncome ? '#10B981' : '#EF4444') }}
-          >
-            <CategoryIcon name={cat?.icon || 'Tag'} className="w-5 h-5" />
-          </div>
+          <CategoryTile
+            categoryId={cat?.id}
+            icon={cat?.icon}
+            color={cat?.color || (isIncome ? '#10B981' : '#EF4444')}
+            sizeClassName="w-11 h-11"
+            roundedClassName="rounded-2xl"
+            iconClassName="w-5 h-5"
+            extraClassName="text-white shadow-[2px_3px_8px_rgba(0,0,0,0.12),inset_1px_1px_2px_rgba(255,255,255,0.6)]"
+          />
           <div className="min-w-0">
             <h3 className="font-bold text-slate-900 text-base break-words">
               {getCategoryDisplayName(tx.category, categories, lang)}

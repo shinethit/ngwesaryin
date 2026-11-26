@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Crown, Lock, Plus, Sparkles, Edit2, Trash2, Tag, Layers, ArrowUpRight, ArrowDownLeft, Search, Check, X } from 'lucide-react';
 import { Category, PlanType, SubCategory, Transaction, TransactionType, UNBUDGETED_CATEGORY_ID } from '../types';
 import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
-import { CategoryIcon, CATEGORY_ICON_GROUPS } from './CategoryIcon';
+import { CategoryIcon, CategoryTile, CATEGORY_ICON_GROUPS } from './CategoryIcon';
+import { PICTORIAL_ICON_GROUPS, isPictorialLocked, pictorialIconUrl } from '../utils/categoryPictures';
 import { useSearchSeed } from '../hooks/useSearchSeed';
 import { safeGetItem } from '../utils/storage';
 
@@ -502,12 +503,15 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 {/* Category Header */}
                 <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
-                      style={{ backgroundColor: category.color }}
-                    >
-                      <CategoryIcon name={category.icon} className="w-5 h-5" />
-                    </div>
+                    <CategoryTile
+                      categoryId={category.id}
+                      icon={category.icon}
+                      color={category.color}
+                      sizeClassName="w-11 h-11"
+                      roundedClassName="rounded-xl"
+                      iconClassName="w-5 h-5"
+                      extraClassName="text-white shadow-xs"
+                    />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-sm sm:text-base text-slate-900 truncate">
@@ -858,6 +862,54 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   {lang === 'my' ? 'အိုင်ကွန် ရွေးချယ်ရန်:' : 'Select Icon:'}
                 </label>
                 <div className="max-h-72 overflow-y-auto overflow-x-hidden p-2 space-y-3 bg-slate-50 rounded-xl border border-slate-200">
+                  {/* [v7.6.47] Pictorial icons first, grouped into packs
+                      (money, food, home/shopping, vehicle/travel,
+                      health/charity, entertainment). Tapping a locked
+                      icon (guest mode, or a Premium pack on a Free
+                      plan) opens the upgrade modal instead of
+                      selecting — stored icons are never rewritten. */}
+                  {PICTORIAL_ICON_GROUPS.map((group) => (
+                    <div key={group.key}>
+                      <div className="px-1 pb-1.5 text-xs font-bold text-slate-500">
+                        {lang === 'my' ? group.labelMy : group.labelEn}
+                      </div>
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                        {group.icons.map((entry) => {
+                          const value = `pic:${entry.key}`;
+                          const isSelected = catIcon === value;
+                          const locked = isPictorialLocked(entry.key, plan);
+                          return (
+                            <button
+                              key={entry.key}
+                              type="button"
+                              onClick={() => {
+                                if (locked) { onOpenUpgradeModal(); return; }
+                                setCatIcon(value);
+                              }}
+                              className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                                isSelected
+                                  ? 'ring-2 ring-emerald-600 ring-offset-1 scale-105'
+                                  : 'hover:scale-105'
+                              } ${locked ? 'opacity-70' : ''}`}
+                              title={entry.key}
+                            >
+                              <img
+                                src={pictorialIconUrl(entry.key)}
+                                alt=""
+                                draggable={false}
+                                className="w-9 h-9 rounded-full object-cover"
+                              />
+                              {locked && (
+                                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center ring-1 ring-white">
+                                  <Lock className="w-2.5 h-2.5 text-white" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                   {/* [v7.6.28] Icons grouped by category, with headings. */}
                   {CATEGORY_ICON_GROUPS.map((group) => (
                     <div key={group.key}>
@@ -1000,12 +1052,15 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
-                  style={{ backgroundColor: editingSubModal.categoryColor }}
-                >
-                  <CategoryIcon iconName={editingSubModal.categoryIcon} className="w-5 h-5 text-white" />
-                </div>
+                <CategoryTile
+                  categoryId={editingSubModal.categoryId}
+                  icon={editingSubModal.categoryIcon}
+                  color={editingSubModal.categoryColor}
+                  sizeClassName="w-10 h-10"
+                  roundedClassName="rounded-xl"
+                  iconClassName="w-5 h-5"
+                  extraClassName="text-white shadow-xs"
+                />
                 <div>
                   <h3 className="font-bold text-base text-slate-900">
                     {lang === 'my' ? 'ကဏ္ဍခွဲ ပြင်ဆင်ခြင်း' : 'Edit Sub-Category'}

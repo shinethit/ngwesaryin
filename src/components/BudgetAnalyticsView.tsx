@@ -3,7 +3,7 @@ import { Sparkles, Lock, PieChart, TrendingDown, AlertTriangle, CheckCircle, Plu
 import { BudgetConfig, Category, PlanType, Transaction, UNBUDGETED_CATEGORY_ID, Wallet, getBudgetCategoryIds } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { BudgetModal } from './BudgetModal';
 import { SpendingComparisonView } from './SpendingComparisonView';
 import { FinancialHealthModal } from './FinancialHealthModal';
@@ -691,15 +691,15 @@ export const BudgetAnalyticsView: React.FC<BudgetAnalyticsViewProps> = ({
                               <Layers className="w-5 h-5" />
                             </div>
                           ) : (
-                            <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
-                              style={{ backgroundColor: cat?.color || '#6366F1' }}
-                            >
-                              <CategoryIcon
-                                name={cat?.icon || 'Tag'}
-                                className="w-5 h-5"
-                              />
-                            </div>
+                            <CategoryTile
+                              categoryId={cat?.id}
+                              icon={cat?.icon}
+                              color={cat?.color || '#6366F1'}
+                              sizeClassName="w-10 h-10"
+                              roundedClassName="rounded-xl"
+                              iconClassName="w-5 h-5"
+                              extraClassName="text-white shadow-xs"
+                            />
                           )}
 
                           <div>

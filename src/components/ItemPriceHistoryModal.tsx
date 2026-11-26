@@ -4,7 +4,7 @@ import { Category, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK } from '../utils/formatters';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
 
 interface PriceRecord {
@@ -370,12 +370,15 @@ export const ItemPriceHistoryModal: React.FC<ItemPriceHistoryModalProps> = ({
                     {/* Top Row: Item name, Category, Trend Badge */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
-                          style={{ backgroundColor: cat?.color || '#EF4444' }}
-                        >
-                          <CategoryIcon name={cat?.icon || 'Tag'} className="w-4 h-4" />
-                        </div>
+                        <CategoryTile
+                          categoryId={cat?.id}
+                          icon={cat?.icon}
+                          color={cat?.color || '#EF4444'}
+                          sizeClassName="w-9 h-9"
+                          roundedClassName="rounded-xl"
+                          iconClassName="w-4 h-4"
+                          extraClassName="text-white shadow-2xs"
+                        />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-sm sm:text-base text-slate-900 truncate min-w-0">

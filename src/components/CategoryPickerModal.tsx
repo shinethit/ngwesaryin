@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, Plus, Lock, Check, ChevronRight } from 'lucide-react';
 import { Category, PlanType, SubCategory, Transaction, TransactionType } from '../types';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { sortCategoriesByFrequency, sortSubCategoriesByFrequency } from '../utils/categoryFrequency';
 
 interface Props {
@@ -192,10 +192,15 @@ export const CategoryPickerModal: React.FC<Props> = ({
                   className={'w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-slate-50 ' +
                     (isCatSelected ? 'bg-emerald-50/60' : 'hover:bg-slate-50')}>
 
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
-                    style={{ backgroundColor: cat.color || '#10B981' }}>
-                    <CategoryIcon name={cat.icon} className="w-5 h-5" />
-                  </div>
+                  <CategoryTile
+                    categoryId={cat.id}
+                    icon={cat.icon}
+                    color={cat.color || '#10B981'}
+                    sizeClassName="w-10 h-10"
+                    roundedClassName="rounded-xl"
+                    iconClassName="w-5 h-5"
+                    extraClassName="text-white"
+                  />
 
                   <div className="flex-1 min-w-0">
                     <div className={'text-sm font-bold truncate ' + (isCatSelected ? 'text-emerald-800' : 'text-slate-900')}>
@@ -229,10 +234,15 @@ export const CategoryPickerModal: React.FC<Props> = ({
                       className={'relative w-full flex items-center gap-3 pl-3 pr-3 py-2.5 rounded-xl text-left transition-colors ' +
                         (isCatSelected ? 'bg-emerald-100/70' : 'hover:bg-slate-50')}>
                       <div className="absolute left-[-14px] top-1/2 w-3 h-px bg-slate-200" />
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
-                        style={{ backgroundColor: cat.color || '#94A3B8' }}>
-                        <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
-                      </div>
+                      <CategoryTile
+                        categoryId={cat.id}
+                        icon={cat.icon}
+                        color={cat.color || '#94A3B8'}
+                        sizeClassName="w-7 h-7"
+                        roundedClassName="rounded-lg"
+                        iconClassName="w-3.5 h-3.5"
+                        extraClassName="text-white"
+                      />
                       <span className={'flex-1 text-xs font-semibold truncate ' +
                         (isCatSelected ? 'text-emerald-800' : 'text-slate-700')}>
                         {lang === 'my' ? 'အထွေထွေ' : 'General'}
@@ -260,10 +270,15 @@ export const CategoryPickerModal: React.FC<Props> = ({
 
                           <div className="absolute left-[-14px] top-1/2 w-3 h-px bg-slate-200" />
 
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
-                            style={{ backgroundColor: cat.color || '#94A3B8' }}>
-                            <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
-                          </div>
+                          <CategoryTile
+                            categoryId={cat.id}
+                            icon={cat.icon}
+                            color={cat.color || '#94A3B8'}
+                            sizeClassName="w-7 h-7"
+                            roundedClassName="rounded-lg"
+                            iconClassName="w-3.5 h-3.5"
+                            extraClassName="text-white"
+                          />
 
                           <span className={'flex-1 text-xs font-semibold truncate ' +
                             (isSubSelected ? 'text-emerald-800' : 'text-slate-700')}>

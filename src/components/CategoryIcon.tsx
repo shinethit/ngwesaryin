@@ -146,6 +146,7 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
+import { pictorialIconUrl, resolvePictorialIcon } from '../utils/categoryPictures';
 
 // [v7.6.28] Category icons, grouped so the picker can show headings.
 // AVAILABLE_CATEGORY_ICONS is derived from the groups (single source
@@ -370,13 +371,32 @@ export const AVAILABLE_CATEGORY_ICONS: string[] =
 interface CategoryIconProps {
   name?: string;
   iconName?: string;
+  /** Category id: default ids resolve to their pictorial icon. */
+  categoryId?: string | null;
   className?: string;
   size?: number;
 }
 
-export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, iconName, className = 'w-5 h-5', size }) => {
+export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, iconName, categoryId, className = 'w-5 h-5', size }) => {
   const iconProps = { className, size };
   const targetName = iconName || name || 'Tag';
+
+  // [v7.6.47] Pictorial icons: an explicit `pic:` value, or the
+  // default-category map, renders the bundled picture instead of
+  // the lucide glyph. The picture is a full circle, so it keeps
+  // the caller's size and clips to round; unknown values fall
+  // through to the lucide switch below (never a broken image).
+  const pictorialKey = resolvePictorialIcon({ categoryId, iconName: targetName });
+  if (pictorialKey) {
+    return (
+      <img
+        src={pictorialIconUrl(pictorialKey)}
+        alt=""
+        draggable={false}
+        className={`${className} rounded-full object-cover shrink-0`}
+      />
+    );
+  }
 
   switch (targetName) {
     case 'Utensils':
@@ -670,4 +690,58 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, iconName, clas
     default:
       return <MoreHorizontal {...iconProps} />;
   }
+};
+
+/**
+ * [v7.6.47] The coloured icon tile used across list rows, pickers,
+ * calendars and budget views. When the category resolves to a
+ * pictorial icon, the picture IS the tile (full-bleed circle, no
+ * coloured background div); otherwise the classic coloured tile
+ * with the white lucide glyph renders exactly as before. Size and
+ * rounding are split into separate props so the pictorial branch
+ * never carries a conflicting rounding class.
+ */
+export interface CategoryTileProps {
+  categoryId?: string | null;
+  icon?: string | null;
+  /** Background colour of the lucide fallback tile. */
+  color?: string;
+  /** Tile size classes only, e.g. 'w-10 h-10 sm:w-11 sm:h-11'. */
+  sizeClassName?: string;
+  /** Rounding for the lucide tile only, e.g. 'rounded-2xl'. */
+  roundedClassName?: string;
+  /** Glyph size for the lucide fallback, e.g. 'w-5 h-5'. */
+  iconClassName?: string;
+  /** Extra classes (shadows, text colour) applied to both branches. */
+  extraClassName?: string;
+}
+
+export const CategoryTile: React.FC<CategoryTileProps> = ({
+  categoryId,
+  icon,
+  color,
+  sizeClassName = 'w-10 h-10',
+  roundedClassName = 'rounded-xl',
+  iconClassName = 'w-5 h-5',
+  extraClassName = '',
+}) => {
+  const pictorialKey = resolvePictorialIcon({ categoryId, iconName: icon });
+  if (pictorialKey) {
+    return (
+      <img
+        src={pictorialIconUrl(pictorialKey)}
+        alt=""
+        draggable={false}
+        className={`${sizeClassName} rounded-full object-cover shrink-0 ${extraClassName}`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${sizeClassName} ${roundedClassName} flex items-center justify-center shrink-0 ${extraClassName}`}
+      style={color ? { backgroundColor: color } : undefined}
+    >
+      <CategoryIcon name={icon || 'Tag'} className={iconClassName} />
+    </div>
+  );
 };

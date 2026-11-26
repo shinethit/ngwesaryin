@@ -16,10 +16,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.46';
-export const CURRENT_BUILD_NUMBER = 360;
+export const CURRENT_APP_VERSION = 'v7.6.47';
+export const CURRENT_BUILD_NUMBER = 361;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.47',
+    buildNumber: 361,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ကဏ္ဍအိုင်ကွန် ရုပ်ပုံအသစ်များ',
+    titleEn: 'New pictorial category icons',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ကဏ္ဍတိုင်းမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ။ မှတ်တမ်းစာရင်း၊ ကဏ္ဍရွေးချယ်မှုနဲ့ ပြက္ခဒိန်တို့မှာ တစ်နေရာတည်း တသမတ်တည်း ပြပေးပြီး၊ အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ အုပ်စုခွဲပြပေးထားပါတယ်။ ရုပ်ပုံတွေကို ဖုန်းထဲမှာ သိမ်းထားတာမို့ အင်တာနက်မရှိလည်း မြင်ရပါတယ်။',
+    descriptionEn: 'Every category now has its own pictorial circle icon. Records, the category picker and the calendar all show the same pictures, the picker groups them into packs, and the pictures are saved on the phone so they still show without internet.',
+    changesMy: [
+      'ကဏ္ဍအိုင်ကွန်တွေကို ရုပ်ပုံအလှလေးတွေနဲ့ ပြပေးပါပြီ — ဝင်ငွေ/အသုံးစရိတ် ကဏ္ဍ ၁၇ ခုလုံးမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ',
+      'မှတ်တမ်းစာရင်း၊ ကဏ္ဍရွေးချယ်မှု၊ အသေးစိတ်ကြည့်ရှုမှုနဲ့ ပြက္ခဒိန်တို့မှာ အိုင်ကွန်အသစ်တွေကို တစ်နေရာတည်း တသမတ်တည်း ပြပေးပါပြီ',
+      'အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ ရုပ်ပုံအိုင်ကွန်တွေကို အုပ်စုခွဲပြီး ပြပေးပါပြီ — ငွေ၊ အစားအသောက်၊ အိမ်/ဈေးဝယ်၊ ယာဉ်/ခရီး၊ ကျန်းမာရေး၊ ဖျော်ဖြေရေးတို့အလိုက် ရှာရလွယ်ပါပြီ',
+      'ရုပ်ပုံအိုင်ကွန်အုပ်စုတွေကို အခြေခံအုပ်စု (Free) နဲ့ အထူးအုပ်စု (Premium) ဆိုပြီး ခွဲထားပါပြီ — အထူးအုပ်စုတွေကို နောက်ဗားရှင်းတွေမှာ ထပ်ထည့်ပေးပါမယ်',
+      'Premium နဲ့ ရွေးထားတဲ့ အိုင်ကွန်က Premium သက်တမ်းကုန်သွားရင်လည်း ကဏ္ဍမှာ ဆက်ကျန်နေပါမယ် — ပြောင်းလိုက်မှသာ ပြန်ရွေးလို့ မရတော့ပါဘူး',
+      'အိုင်ကွန်ရုပ်ပုံတွေကို အင်တာနက်မရှိလည်း ဖွင့်လို့ရအောင် ဖုန်းထဲမှာ သိမ်းထားပေးပါပြီ',
+      'အိုင်ကွန်ဟောင်း (ရိုးရိုးပုံလေးတွေ) ကိုလည်း ဆက်သုံးနိုင်ပါပြီ — ကိုယ်တိုင်ထည့်ထားတဲ့ ကဏ္ဍတွေမှာ အရင်အတိုင်း ပြပေးပါတယ်',
+    ],
+    changesEn: [
+      'Category icons are now colourful pictures — all 17 default income and expense categories have their own pictorial circle icon',
+      'The new icons show consistently in the Records list, category picker, detail view and calendar',
+      'The icon picker now groups pictorial icons into packs — money, food, home and shopping, vehicle and travel, health and charity, entertainment — so they are easy to find',
+      'Pictorial icon packs are split into core packs (Free) and special packs (Premium); special packs will arrive in later versions',
+      'An icon chosen while Premium stays on its category after Premium lapses — it only becomes unavailable again once you change away from it',
+      'Icon pictures are saved on the phone so they still show without internet',
+      'The classic plain icons still work too — custom categories keep showing them exactly as before',
+    ],
+  },
   {
     version: 'v7.6.46',
     buildNumber: 360,

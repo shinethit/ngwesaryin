@@ -12,7 +12,7 @@ import {
 } from '../utils/fuelRowLine';
 import { isTransferTransaction, isWalletMatch, isSharedWallet } from '../utils/walletBalance';
 import { getLocalDateString } from '../utils/dateUtils';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 
 interface SmartCalendarCardProps {
   transactions: Transaction[];
@@ -666,12 +666,15 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                       <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div
-                              className="w-7 h-7 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
-                              style={{ backgroundColor: catColor }}
-                            >
-                              <CategoryIcon name={catIcon} className="w-3.5 h-3.5" />
-                            </div>
+                            <CategoryTile
+                              categoryId={cat?.id}
+                              icon={catIcon}
+                              color={catColor}
+                              sizeClassName="w-7 h-7"
+                              roundedClassName="rounded-xl"
+                              iconClassName="w-3.5 h-3.5"
+                              extraClassName="text-white shadow-2xs"
+                            />
                             <div className="min-w-0">
                               {/* [v7.6.28] Both names must stay readable: the
                                   label wraps instead of truncating, so a

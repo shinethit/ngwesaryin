@@ -21,7 +21,7 @@ import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatter
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { CategoryPickerModal } from './CategoryPickerModal';
 import { FuelExpenseGuideModal } from './vehicles/FuelExpenseGuideModal';
@@ -2207,9 +2207,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   same object whenever a category IS picked, so
                   picked-state rendering is unchanged; unpicked
                   state shows the neutral slate + Tag icon. */}
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: explicitCatObj?.color || "#94A3B8" }}>
-                <CategoryIcon name={explicitCatObj?.icon || "Tag"} className="w-5 h-5" />
-              </div>
+              <CategoryTile
+                categoryId={explicitCatObj?.id}
+                icon={explicitCatObj?.icon}
+                color={explicitCatObj?.color || "#94A3B8"}
+                sizeClassName="w-10 h-10"
+                roundedClassName="rounded-xl"
+                iconClassName="w-5 h-5"
+                extraClassName="text-white"
+              />
               <div className="flex-1 min-w-0">
                 {categoryId ? (
                   <>
@@ -2254,9 +2260,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                                 onClick={() => setSplitPickerRow(idx)}
                                 className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-left min-h-[44px]"
                               >
-                                <span className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0" style={{ backgroundColor: rowCat?.color || '#94A3B8' }}>
-                                  <CategoryIcon name={rowCat?.icon || 'Tag'} className="w-3.5 h-3.5" />
-                                </span>
+                                <CategoryTile
+                                  categoryId={rowCat?.id}
+                                  icon={rowCat?.icon}
+                                  color={rowCat?.color || '#94A3B8'}
+                                  sizeClassName="w-6 h-6"
+                                  roundedClassName="rounded-lg"
+                                  iconClassName="w-3.5 h-3.5"
+                                  extraClassName="text-white"
+                                />
                                 <span className="min-w-0 flex-1">
                                   {row.categoryId ? (
                                     <>

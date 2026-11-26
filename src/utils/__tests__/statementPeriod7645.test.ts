@@ -111,15 +111,15 @@ describe('statementPeriodBounds (v7.6.45 Part F)', () => {
   });
 });
 
-describe('Version pins roll to v7.6.46 / build 360', () => {
+describe('Version pins roll to v7.6.47 / build 361', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
-    expect(CURRENT_BUILD_NUMBER).toBe(360);
-    expect(VERSION_JSON.version).toBe('v7.6.46');
-    expect(VERSION_JSON.buildNumber).toBe(360);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
+    expect(CURRENT_BUILD_NUMBER).toBe(361);
+    expect(VERSION_JSON.version).toBe('v7.6.47');
+    expect(VERSION_JSON.buildNumber).toBe(361);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.46');
-    expect(top.buildNumber).toBe(360);
+    expect(top.version).toBe('v7.6.47');
+    expect(top.buildNumber).toBe(361);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
     expect(top.changesMy.length).toBe(7);

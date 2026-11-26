@@ -350,17 +350,17 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
-    expect(CURRENT_BUILD_NUMBER).toBe(360);
-    expect(VERSION_JSON.version).toBe('v7.6.46');
-    expect(VERSION_JSON.buildNumber).toBe(360);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
+    expect(CURRENT_BUILD_NUMBER).toBe(361);
+    expect(VERSION_JSON.version).toBe('v7.6.47');
+    expect(VERSION_JSON.buildNumber).toBe(361);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.46');
-    expect(entry.buildNumber).toBe(360);
+    expect(entry.version).toBe('v7.6.47');
+    expect(entry.buildNumber).toBe(361);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('မှတ်တမ်းပြက္ခဒိန်၊ လက်ကျန်အရောင်၊ Menu ခလုတ်နှင့် Dashboard ပြင်ဆင်ချက်များ');
-    expect(entry.titleEn).toBe('Records calendar, balance colours, menu button and Dashboard fixes');
+    expect(entry.titleMy).toBe('ကဏ္ဍအိုင်ကွန် ရုပ်ပုံအသစ်များ');
+    expect(entry.titleEn).toBe('New pictorial category icons');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(7);

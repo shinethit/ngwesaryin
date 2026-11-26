@@ -390,33 +390,33 @@ describe('placement and UI wiring (v7.6.09)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
-    expect(CURRENT_BUILD_NUMBER).toBe(360);
-    expect(VERSION_JSON.version).toBe('v7.6.46');
-    expect(VERSION_JSON.buildNumber).toBe(360);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
+    expect(CURRENT_BUILD_NUMBER).toBe(361);
+    expect(VERSION_JSON.version).toBe('v7.6.47');
+    expect(VERSION_JSON.buildNumber).toBe(361);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.46');
-    expect(entry.buildNumber).toBe(360);
+    expect(entry.version).toBe('v7.6.47');
+    expect(entry.buildNumber).toBe(361);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('မှတ်တမ်းပြက္ခဒိန်၊ လက်ကျန်အရောင်၊ Menu ခလုတ်နှင့် Dashboard ပြင်ဆင်ချက်များ');
+    expect(entry.titleMy).toBe('ကဏ္ဍအိုင်ကွန် ရုပ်ပုံအသစ်များ');
     expect(entry.changesMy).toEqual([
-      'မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ',
-      'မှတ်တမ်းစာရင်းက တရက်ချင်းစီ ကတ်တွေကို နက်ပြာ/ခရမ်းဖျော့ ဘောင်နဲ့ ထင်ရှားအောင် ခတ်ပေးထားပါပြီ',
-      'လအစလက်ကျန်/လအဆုံးလက်ကျန်ကို အနှုတ် (အနီ)၊ ၁ သိန်းအောက် (အဝါ)၊ ၁ သိန်းနှင့်အထက် (အဖြူ) ခွဲပြပါပြီ',
-      'ဆိုင်အားလုံးရဲ့ Menu ပြန် Update ခလုတ်ကို ရှာဖွေမှုတန်းဘေးကို ရွှေ့ပြီး အလုပ်ရှိမှသာ ရောင်စုံပြ၊ ပြီးရင် မှိန်သွားအောင် လုပ်ထားပါပြီ',
-      'စမတ်ပြက္ခဒိန်မှာ အပေါင်း (အစိမ်း)၊ အနှုတ် (အနီ) ခွဲပြပြီး ၁ သိန်းအထက် အပေါင်းရက်တွေကို နက်ပြာနောက်ခံ ရွှေစာလုံးနဲ့ ပြပါပြီ',
-      'Dashboard Hero ကတ်မှာ လက်ကျန်ကို ဝှက်လို့ရတဲ့ မျက်လုံးခလုတ်ကို ထည့်ပေးထားပါပြီ',
-      'အမျိုးအစားအိုင်ကွန်အရောင်တွေ အကောင့်ဟောင်းတွေမှာပါ ထင်ရှားစွာ ကွဲပြားအောင် ပြင်ထားပါပြီ',
+      'ကဏ္ဍအိုင်ကွန်တွေကို ရုပ်ပုံအလှလေးတွေနဲ့ ပြပေးပါပြီ — ဝင်ငွေ/အသုံးစရိတ် ကဏ္ဍ ၁၇ ခုလုံးမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ',
+      'မှတ်တမ်းစာရင်း၊ ကဏ္ဍရွေးချယ်မှု၊ အသေးစိတ်ကြည့်ရှုမှုနဲ့ ပြက္ခဒိန်တို့မှာ အိုင်ကွန်အသစ်တွေကို တစ်နေရာတည်း တသမတ်တည်း ပြပေးပါပြီ',
+      'အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ ရုပ်ပုံအိုင်ကွန်တွေကို အုပ်စုခွဲပြီး ပြပေးပါပြီ — ငွေ၊ အစားအသောက်၊ အိမ်/ဈေးဝယ်၊ ယာဉ်/ခရီး၊ ကျန်းမာရေး၊ ဖျော်ဖြေရေးတို့အလိုက် ရှာရလွယ်ပါပြီ',
+      'ရုပ်ပုံအိုင်ကွန်အုပ်စုတွေကို အခြေခံအုပ်စု (Free) နဲ့ အထူးအုပ်စု (Premium) ဆိုပြီး ခွဲထားပါပြီ — အထူးအုပ်စုတွေကို နောက်ဗားရှင်းတွေမှာ ထပ်ထည့်ပေးပါမယ်',
+      'Premium နဲ့ ရွေးထားတဲ့ အိုင်ကွန်က Premium သက်တမ်းကုန်သွားရင်လည်း ကဏ္ဍမှာ ဆက်ကျန်နေပါမယ် — ပြောင်းလိုက်မှသာ ပြန်ရွေးလို့ မရတော့ပါဘူး',
+      'အိုင်ကွန်ရုပ်ပုံတွေကို အင်တာနက်မရှိလည်း ဖွင့်လို့ရအောင် ဖုန်းထဲမှာ သိမ်းထားပေးပါပြီ',
+      'အိုင်ကွန်ဟောင်း (ရိုးရိုးပုံလေးတွေ) ကိုလည်း ဆက်သုံးနိုင်ပါပြီ — ကိုယ်တိုင်ထည့်ထားတဲ့ ကဏ္ဍတွေမှာ အရင်အတိုင်း ပြပေးပါတယ်',
     ]);
     expect(entry.changesEn).toEqual([
-      'The Records calendar now shows the net balance for each day alongside in/out',
-      'Day cards in the Records list now have a navy/purple border so they stand out from the page background',
-      'Opening/closing balances are now coloured: red when negative, yellow below 100,000 MMK, white at 100,000 and above',
-      'The refresh-all-menus button moved beside the search row and now shows colour only while menu work is pending, dimming once up to date',
-      'Smart Calendar days are tinted green for positive and red for negative nets, with a navy background and gold text for days netting over 100,000 MMK',
-      'Added a hide-balance eye button to the Dashboard Hero card, matching the Records card',
-      'Category tile colours now show distinctly on long-lived accounts too, not only fresh ones',
+      'Category icons are now colourful pictures — all 17 default income and expense categories have their own pictorial circle icon',
+      'The new icons show consistently in the Records list, category picker, detail view and calendar',
+      'The icon picker now groups pictorial icons into packs — money, food, home and shopping, vehicle and travel, health and charity, entertainment — so they are easy to find',
+      'Pictorial icon packs are split into core packs (Free) and special packs (Premium); special packs will arrive in later versions',
+      'An icon chosen while Premium stays on its category after Premium lapses — it only becomes unavailable again once you change away from it',
+      'Icon pictures are saved on the phone so they still show without internet',
+      'The classic plain icons still work too — custom categories keep showing them exactly as before',
     ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

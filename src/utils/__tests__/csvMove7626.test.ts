@@ -156,26 +156,26 @@ describe('CSV export moved to Data Management (v7.6.26)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
-    expect(CURRENT_BUILD_NUMBER).toBe(360);
-    expect(VERSION_JSON.version).toBe('v7.6.46');
-    expect(VERSION_JSON.buildNumber).toBe(360);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
+    expect(CURRENT_BUILD_NUMBER).toBe(361);
+    expect(VERSION_JSON.version).toBe('v7.6.47');
+    expect(VERSION_JSON.buildNumber).toBe(361);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.46');
-    expect(entry.buildNumber).toBe(360);
+    expect(entry.version).toBe('v7.6.47');
+    expect(entry.buildNumber).toBe(361);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('မှတ်တမ်းပြက္ခဒိန်၊ လက်ကျန်အရောင်၊ Menu ခလုတ်နှင့် Dashboard ပြင်ဆင်ချက်များ');
-    expect(entry.titleEn).toBe('Records calendar, balance colours, menu button and Dashboard fixes');
+    expect(entry.titleMy).toBe('ကဏ္ဍအိုင်ကွန် ရုပ်ပုံအသစ်များ');
+    expect(entry.titleEn).toBe('New pictorial category icons');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(7);
     expect(entry.changesEn).toHaveLength(7);
     expect(entry.changesMy[0]).toBe(
-      'မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ',
+      'ကဏ္ဍအိုင်ကွန်တွေကို ရုပ်ပုံအလှလေးတွေနဲ့ ပြပေးပါပြီ — ဝင်ငွေ/အသုံးစရိတ် ကဏ္ဍ ၁၇ ခုလုံးမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The Records calendar now shows the net balance for each day alongside in/out',
+      'Category icons are now colourful pictures — all 17 default income and expense categories have their own pictorial circle icon',
     );
   });
 

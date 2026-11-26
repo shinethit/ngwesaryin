@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowUpDown, TrendingUp, TrendingDown, Minus, Search, Wallet as WalletIcon, Download, Filter, BarChart3, Sparkles, Check, Copy, Info, Lock, Shuffle, Tag } from 'lucide-react';
 import { Category, PlanType, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryIcon, CategoryTile } from './CategoryIcon';
 import { buildWalletMap, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
 import { convertToMMK } from '../utils/currency';
@@ -1374,12 +1374,15 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                 <div key={c.categoryId} className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 transition-all">
                   <div className="flex items-center justify-between text-xs mb-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-6 h-6 rounded-md flex items-center justify-center text-white shrink-0"
-                        style={{ backgroundColor: c.category?.color || '#94A3B8' }}
-                      >
-                        <CategoryIcon name={c.category?.icon || 'ShoppingCart'} className="w-3.5 h-3.5" />
-                      </span>
+                      <CategoryTile
+                        categoryId={c.category?.id}
+                        icon={c.category?.icon}
+                        color={c.category?.color || '#94A3B8'}
+                        sizeClassName="w-6 h-6"
+                        roundedClassName="rounded-md"
+                        iconClassName="w-3.5 h-3.5"
+                        extraClassName="text-white"
+                      />
                       <span className="font-bold text-slate-900 truncate">
                         {lang === 'my' ? c.category?.name : c.category?.nameEn}
                       </span>
@@ -1630,12 +1633,15 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                         >
                           <td className="py-3 px-1.5 sm:py-3.5 sm:px-3">
                             <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-                              <span
-                                className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-2xs"
-                                style={{ backgroundColor: item.category?.color || '#94A3B8' }}
-                              >
-                                <CategoryIcon name={item.category?.icon || 'ShoppingCart'} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              </span>
+                              <CategoryTile
+                                categoryId={item.category?.id}
+                                icon={item.category?.icon}
+                                color={item.category?.color || '#94A3B8'}
+                                sizeClassName="w-6 h-6 sm:w-7 sm:h-7"
+                                roundedClassName="rounded-lg"
+                                iconClassName="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                extraClassName="text-white shadow-2xs"
+                              />
                               <div className="min-w-0">
                                 <span className="font-bold text-slate-900 block break-words group-hover:text-indigo-600 transition-colors">
                                   {lang === 'my' ? item.category?.name : item.category?.nameEn}
@@ -1874,7 +1880,7 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                         <span className="block break-words">{item.name}</span>
                         {/* [v7.6.38] Parent category under the name (was its own column) — same info, no horizontal scroll. */}
                         <span className="mt-1 inline-flex max-w-full items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
-                          <CategoryIcon name={item.category?.icon || 'Tag'} className="w-3 h-3 shrink-0 text-indigo-600" />
+                          <CategoryIcon name={item.category?.icon || 'Tag'} categoryId={item.category?.id} className="w-3 h-3 shrink-0 text-indigo-600" />
                           <span className="min-w-0 break-words">{lang === 'my' ? item.category?.name : item.category?.nameEn}</span>
                         </span>
                       </td>

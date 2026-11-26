@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
-    expect(CURRENT_BUILD_NUMBER).toBe(360);
-    expect(VERSION_JSON.version).toBe('v7.6.46');
-    expect(VERSION_JSON.buildNumber).toBe(360);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
+    expect(CURRENT_BUILD_NUMBER).toBe(361);
+    expect(VERSION_JSON.version).toBe('v7.6.47');
+    expect(VERSION_JSON.buildNumber).toBe(361);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.46');
-    expect(entry.buildNumber).toBe(360);
-    expect(entry.changesMy[0]).toBe('မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ');
+    expect(entry.version).toBe('v7.6.47');
+    expect(entry.buildNumber).toBe(361);
+    expect(entry.changesMy[0]).toBe('ကဏ္ဍအိုင်ကွန်တွေကို ရုပ်ပုံအလှလေးတွေနဲ့ ပြပေးပါပြီ — ဝင်ငွေ/အသုံးစရိတ် ကဏ္ဍ ၁၇ ခုလုံးမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

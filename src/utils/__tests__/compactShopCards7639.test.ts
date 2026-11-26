@@ -104,17 +104,17 @@ describe('Shop cards are compact (v7.6.39)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
-    expect(CURRENT_BUILD_NUMBER).toBe(360);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.46');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(360);
-    expect(VERSION_JSON.version).toBe('v7.6.46');
-    expect(VERSION_JSON.buildNumber).toBe(360);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
+    expect(CURRENT_BUILD_NUMBER).toBe(361);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.47');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(361);
+    expect(VERSION_JSON.version).toBe('v7.6.47');
+    expect(VERSION_JSON.buildNumber).toBe(361);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ',
+      'ကဏ္ဍအိုင်ကွန်တွေကို ရုပ်ပုံအလှလေးတွေနဲ့ ပြပေးပါပြီ — ဝင်ငွေ/အသုံးစရိတ် ကဏ္ဍ ၁၇ ခုလုံးမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'The Records calendar now shows the net balance for each day alongside in/out',
+      'Category icons are now colourful pictures — all 17 default income and expense categories have their own pictorial circle icon',
     );
   });
 });

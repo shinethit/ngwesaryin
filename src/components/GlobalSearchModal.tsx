@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, X, ArrowDownLeft, HandCoins, Wallet, Tag, Layers, ChevronRight, Store, Car } from 'lucide-react';
 import { Category, Debt, Transaction, Wallet as WalletType, ShopContact, Vehicle } from '../types';
 import { formatMMK } from '../utils/formatters';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import { buildWalletMap } from '../utils/walletBalance';
 import { toLatinDigits } from '../utils/myanmarDigits';
 // [v7.6.44] Shared debounced search input: typing re-renders only the
@@ -453,13 +453,14 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                       className={`p-3 hover:bg-slate-50 transition-colors flex items-center justify-between gap-3 cursor-pointer group${rowCls(key)}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                            isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-                          }`}
-                        >
-                          <CategoryIcon iconName={cat?.icon || 'Tag'} className="w-4 h-4" />
-                        </div>
+                        <CategoryTile
+                          categoryId={cat?.id}
+                          icon={cat?.icon}
+                          sizeClassName="w-9 h-9"
+                          roundedClassName="rounded-lg"
+                          iconClassName="w-4 h-4"
+                          extraClassName={isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}
+                        />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-xs sm:text-sm text-slate-900 truncate">
@@ -657,12 +658,15 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                       className={`p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer${rowCls(key)}`}
                     >
                       <div className="flex items-center gap-2">
-                        <div
-                          className="w-6 h-6 rounded-md flex items-center justify-center text-white shrink-0"
-                          style={{ backgroundColor: c.color }}
-                        >
-                          <CategoryIcon iconName={c.icon} className="w-3.5 h-3.5" />
-                        </div>
+                        <CategoryTile
+                          categoryId={c.id}
+                          icon={c.icon}
+                          color={c.color}
+                          sizeClassName="w-6 h-6"
+                          roundedClassName="rounded-md"
+                          iconClassName="w-3.5 h-3.5"
+                          extraClassName="text-white"
+                        />
                         <span className="font-semibold text-xs text-slate-800 truncate">
                           {lang === 'my' ? c.name : c.nameEn}
                         </span>

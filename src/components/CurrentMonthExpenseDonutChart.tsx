@@ -6,7 +6,7 @@ import { buildWalletMap, isTransferTransaction, isWalletMatch, effectiveIncludeI
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 import { useAuth } from '../context/AuthContext';
 import { getLocalDateString } from '../utils/dateUtils';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import {
   buildDonutSubBreakdown,
   buildDonutCategoryRecords,
@@ -308,12 +308,15 @@ export const CurrentMonthExpenseDonutChart: React.FC<CurrentMonthExpenseDonutCha
                     onClick={() => setExpandedCategoryId(isExpanded ? null : item.categoryId)}
                     className="flex flex-1 items-center gap-2 min-w-0 min-h-[44px] text-left cursor-pointer rounded-xl"
                   >
-                    <div
-                      className="w-7 h-7 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs"
-                      style={{ backgroundColor: item.color }}
-                    >
-                      <CategoryIcon name={item.icon} className="w-3.5 h-3.5" />
-                    </div>
+                    <CategoryTile
+                      categoryId={item.categoryId}
+                      icon={item.icon}
+                      color={item.color}
+                      sizeClassName="w-7 h-7"
+                      roundedClassName="rounded-xl"
+                      iconClassName="w-3.5 h-3.5"
+                      extraClassName="text-white shadow-2xs"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="font-bold text-xs text-slate-900 truncate">{item.name}</div>
                       <div className="text-[10px] text-slate-400 font-mono">{item.count} {lang === 'my' ? 'မှတ်တမ်း' : 'txs'}</div>

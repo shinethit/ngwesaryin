@@ -15,7 +15,7 @@ import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { isTransferTransaction, buildWalletMap, isWalletMatch, effectiveIncludeInTotals, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 
 interface MonthlyComparisonCardProps {
   transactions: Transaction[];
@@ -639,12 +639,15 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                   return (
                     <div key={cat.id} className="py-2 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="w-5 h-5 rounded-md flex items-center justify-center text-white shrink-0"
-                          style={{ backgroundColor: cat.color }}
-                        >
-                          <CategoryIcon name={cat.icon} className="w-3 h-3" />
-                        </span>
+                        <CategoryTile
+                          categoryId={cat.id}
+                          icon={cat.icon}
+                          color={cat.color}
+                          sizeClassName="w-5 h-5"
+                          roundedClassName="rounded-md"
+                          iconClassName="w-3 h-3"
+                          extraClassName="text-white"
+                        />
                         <span className="font-semibold text-slate-800 truncate">{cat.name}</span>
                       </div>
 

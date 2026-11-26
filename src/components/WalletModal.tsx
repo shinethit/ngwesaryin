@@ -23,7 +23,7 @@ import {
   convertToMMK,
 } from '../utils/currency';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryTile } from './CategoryIcon';
 import {
   bootstrapExchangeRates,
   subscribeRates,
@@ -735,12 +735,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                             onChange={(e) => toggleCategoryHidden(cat.id, !e.target.checked)}
                             className="w-4 h-4 accent-emerald-600 cursor-pointer shrink-0"
                           />
-                          <span
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
-                            style={{ backgroundColor: cat.color || '#94A3B8' }}
-                          >
-                            <CategoryIcon name={cat.icon} className="w-4 h-4" />
-                          </span>
+                          <CategoryTile
+                            categoryId={cat.id}
+                            icon={cat.icon}
+                            color={cat.color || '#94A3B8'}
+                            sizeClassName="w-7 h-7"
+                            roundedClassName="rounded-lg"
+                            iconClassName="w-4 h-4"
+                            extraClassName="text-white"
+                          />
                           <span className="text-xs font-semibold text-slate-800 truncate min-w-0">
                             {lang === 'my' ? cat.name : cat.nameEn || cat.name}
                           </span>

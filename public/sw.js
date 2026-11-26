@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ngwesaryin-live-v9';
+const CACHE_NAME = 'ngwesaryin-live-v10';
 // [v7.6.34] ATOMIC GENERATIONS — bump CACHE_NAME on EVERY release.
 // A new worker activates only after it has precached the COMPLETE
 // build (index.html + every hashed JS/CSS asset it references). The
@@ -19,7 +19,28 @@ const PRECACHE_ASSETS = [
   '/apple-touch-icon.png',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
-  '/pwa-maskable-512x512.png'
+  '/pwa-maskable-512x512.png',
+  // [v7.6.47] Pictorial category icons — precached with the build
+  // (atomic generation) so a category row never 404s offline on
+  // first sight. Filenames are unhashed; the CACHE_NAME bump above
+  // clears stale copies on every release.
+  '/icons/salary.webp',
+  '/icons/business.webp',
+  '/icons/freelance.webp',
+  '/icons/bonus.webp',
+  '/icons/investment.webp',
+  '/icons/income-other.webp',
+  '/icons/transfer.webp',
+  '/icons/reconcile.webp',
+  '/icons/food.webp',
+  '/icons/transport.webp',
+  '/icons/vehicle.webp',
+  '/icons/utilities.webp',
+  '/icons/shopping.webp',
+  '/icons/health.webp',
+  '/icons/charity.webp',
+  '/icons/entertainment.webp',
+  '/icons/expense-other.webp',
 ];
 
 self.addEventListener('install', (event) => {

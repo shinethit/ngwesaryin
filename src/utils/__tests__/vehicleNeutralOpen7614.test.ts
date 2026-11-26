@@ -193,45 +193,43 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
-    expect(CURRENT_BUILD_NUMBER).toBe(359);
-    expect(VERSION_JSON.version).toBe('v7.6.45');
-    expect(VERSION_JSON.buildNumber).toBe(359);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
+    expect(CURRENT_BUILD_NUMBER).toBe(360);
+    expect(VERSION_JSON.version).toBe('v7.6.46');
+    expect(VERSION_JSON.buildNumber).toBe(360);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('top history entry is the v7.6.18 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.45');
-    expect(entry.buildNumber).toBe(359);
+    expect(entry.version).toBe('v7.6.46');
+    expect(entry.buildNumber).toBe(360);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('မှတ်တမ်းစာရင်း ဒီဇိုင်းအသစ်နှင့် စာရင်းရှင်းတမ်း ပြင်ဆင်ချက်များ');
-    expect(entry.titleEn).toBe('Records redesign and statement fixes');
+    expect(entry.titleMy).toBe('မှတ်တမ်းပြက္ခဒိန်၊ လက်ကျန်အရောင်၊ Menu ခလုတ်နှင့် Dashboard ပြင်ဆင်ချက်များ');
+    expect(entry.titleEn).toBe('Records calendar, balance colours, menu button and Dashboard fixes');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ',
-      'ယာဉ်နံပါတ်ပြား မရှိတဲ့ ယာဉ်နာမည်မှာ အလွတ်ကွင်းစကွင်း () မပါတော့ပါ',
-      'မှတ်တမ်း အသေးစိတ် Pop Up မှာ မိုင်တာဖတ်အား (km) ကို ထည့်ပြပေးပါပြီ',
-      'မှတ်တမ်းစာရင်း Tab အပေါ်မှာ ဒီလလက်ကျန် ကတ်အသစ် — လအစလက်ကျန်၊ လအဆုံးလက်ကျန်၊ အသားတင်၊ ပိုက်ဆံအိတ် ရွေးချယ်မှု၊ လက်ကျန်ဝှက်ရန် မျက်လုံး၊ အစီရင်ခံစာနှင့် ပြက္ခဒိန် ခလုတ်များ',
-      'မှတ်တမ်းများကို တစ်ရက်ချင်းစီ ကတ်အလိုက် ပြပေးပါပြီ — အချက်အလက် အားလုံး အပြည့်အစုံပါဝင်ပါသည်',
-      'ကဏ္ဍအလိုက် အိုင်ကွန်အရောင်များ ကွဲပြားအောင် ပြင်ဆင်ပေးပါပြီ (ကိုယ်တိုင်သတ်မှတ်ထားတဲ့ အရောင်တွေကို မထိပါ)',
-      'မှတ်တမ်း ပြက္ခဒိန်မှာ ဝင်+ထွက် နှစ်ခုလုံး သို့မဟုတ် အသားတင်သာ ရွေးချယ်ပြနိုင်ပါပြီ — ရက်တစ်ရက်ကို နှိပ်ရင် အဲဒီနေ့စာရင်းချည်း စစ်ကြည့်နိုင်ပါသည်',
-      'စာရင်းရှင်းတမ်း ကာလမှာ ဒီနေ့၊ ဒီအပတ်၊ ဒီသုံးလပတ်၊ ဒီနှစ် တို့ကို ထည့်ပေးပါပြီ',
+      'မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ',
+      'မှတ်တမ်းစာရင်းက တရက်ချင်းစီ ကတ်တွေကို နက်ပြာ/ခရမ်းဖျော့ ဘောင်နဲ့ ထင်ရှားအောင် ခတ်ပေးထားပါပြီ',
+      'လအစလက်ကျန်/လအဆုံးလက်ကျန်ကို အနှုတ် (အနီ)၊ ၁ သိန်းအောက် (အဝါ)၊ ၁ သိန်းနှင့်အထက် (အဖြူ) ခွဲပြပါပြီ',
+      'ဆိုင်အားလုံးရဲ့ Menu ပြန် Update ခလုတ်ကို ရှာဖွေမှုတန်းဘေးကို ရွှေ့ပြီး အလုပ်ရှိမှသာ ရောင်စုံပြ၊ ပြီးရင် မှိန်သွားအောင် လုပ်ထားပါပြီ',
+      'စမတ်ပြက္ခဒိန်မှာ အပေါင်း (အစိမ်း)၊ အနှုတ် (အနီ) ခွဲပြပြီး ၁ သိန်းအထက် အပေါင်းရက်တွေကို နက်ပြာနောက်ခံ ရွှေစာလုံးနဲ့ ပြပါပြီ',
+      'Dashboard Hero ကတ်မှာ လက်ကျန်ကို ဝှက်လို့ရတဲ့ မျက်လုံးခလုတ်ကို ထည့်ပေးထားပါပြီ',
+      'အမျိုးအစားအိုင်ကွန်အရောင်တွေ အကောင့်ဟောင်းတွေမှာပါ ထင်ရှားစွာ ကွဲပြားအောင် ပြင်ထားပါပြီ',
     ]);
     expect(entry.changesEn).toEqual([
-      'The statement now shows fuel and maintenance details (vehicle, litres, price, shop) again — records without a note no longer fall back to the bare category name',
-      'A vehicle without a plate number no longer shows empty parentheses () after its name',
-      'The record detail pop-up now shows the odometer reading (km)',
-      'New this-month balance card at the top of the Records tab — opening balance, closing balance, net, wallet picker, hide-balance eye, and Report and Calendar buttons',
-      'Records are now shown one card per day — with every detail kept, nothing removed',
-      'Category icon colours are now distinct per category (colours you set yourself are untouched)',
-      'The Records calendar can show in + out together or net only — tap a day to filter the list to that day',
-      'The statement period picker gains Today, This week, This quarter, and This year',
+      'The Records calendar now shows the net balance for each day alongside in/out',
+      'Day cards in the Records list now have a navy/purple border so they stand out from the page background',
+      'Opening/closing balances are now coloured: red when negative, yellow below 100,000 MMK, white at 100,000 and above',
+      'The refresh-all-menus button moved beside the search row and now shows colour only while menu work is pending, dimming once up to date',
+      'Smart Calendar days are tinted green for positive and red for negative nets, with a navy background and gold text for days netting over 100,000 MMK',
+      'Added a hide-balance eye button to the Dashboard Hero card, matching the Records card',
+      'Category tile colours now show distinctly on long-lived accounts too, not only fresh ones',
     ]);
   });
 });

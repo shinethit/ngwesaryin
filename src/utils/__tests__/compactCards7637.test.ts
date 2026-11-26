@@ -99,17 +99,17 @@ describe('Wallet cards are compact (v7.6.37)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
-    expect(CURRENT_BUILD_NUMBER).toBe(359);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.45');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(359);
-    expect(VERSION_JSON.version).toBe('v7.6.45');
-    expect(VERSION_JSON.buildNumber).toBe(359);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
+    expect(CURRENT_BUILD_NUMBER).toBe(360);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.46');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(360);
+    expect(VERSION_JSON.version).toBe('v7.6.46');
+    expect(VERSION_JSON.buildNumber).toBe(360);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ',
+      'မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'The statement now shows fuel and maintenance details (vehicle, litres, price, shop) again — records without a note no longer fall back to the bare category name',
+      'The Records calendar now shows the net balance for each day alongside in/out',
     );
   });
 });

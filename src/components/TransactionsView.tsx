@@ -41,6 +41,7 @@ import { getWalletSelectionLabel } from '../utils/walletSelectionLabel';
 // [v7.6.45] Records-top calendar (Part E) + display-time tile colours (Part D).
 import { RecordsCalendar } from './RecordsCalendar';
 import { getCategoryTileColor } from '../utils/categoryTileColor';
+import { balanceToneClass } from '../utils/balanceTone';
 
 export type TimeFilterType =
   | 'all'
@@ -709,7 +710,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         <div
-          className="text-[22px] leading-tight font-extrabold font-mono"
+          className={`text-[22px] leading-tight font-extrabold font-mono ${balanceToneClass(monthBalance.closing)}`}
           title={formatMMK(monthBalance.closing)}
         >
           {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
@@ -718,13 +719,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         <div className="grid grid-cols-3 gap-2 text-[11px]">
           <div className="min-w-0">
             <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
-            <div className="font-mono font-bold truncate" title={formatMMK(monthBalance.opening)}>
+            <div className={`font-mono font-bold truncate ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.opening, lang)}
             </div>
           </div>
           <div className="min-w-0">
             <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
-            <div className="font-mono font-bold truncate" title={formatMMK(monthBalance.closing)}>
+            <div className={`font-mono font-bold truncate ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
             </div>
           </div>
@@ -1087,8 +1088,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 .filter(([, count]) => count === maxWalletCount)
                 .map(([id]) => id);
               const defaultWalletId = majorityWalletIds.length === 1 ? majorityWalletIds[0] : null;
+              // [v7.6.46] Navy/purple-tinted border so the card stands
+              // out from the white page background (white/90 border
+              // blended in). Shadow and all inner rows unchanged.
               return (
-                <div key={group.date} className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/90 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
+                <div key={group.date} className="bg-white/95 backdrop-blur-xl rounded-3xl border border-indigo-200 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
                   {/* [v7.6.45] Day header: big numeral + weekday +
                       month/year + day net + count chip (one card
                       per day). The old sticky header with in/out/net

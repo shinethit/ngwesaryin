@@ -1,30 +1,29 @@
 // [v7.6.45] Display-time icon-tile colours for Records rows.
+// [v7.6.46] Rule change: the curated colour ALWAYS wins for the 17
+// default category ids, regardless of the stored value.
 //
 // The 17 default categories in initialData.ts are mostly greens
 // (six green/teal income colours), so the 40px row tiles read
 // monochrome even though every category has its own colour. The
 // stored colours are NEVER rewritten (no data migration, no
-// Firestore write): when a category still carries exactly its
-// shipped default colour, the tile shows a curated distinct colour
-// instead. A colour the user changed — or any colour on a category
-// the user added — is shown exactly as stored, so custom colours
-// always win.
+// Firestore write): for a default category id, the tile shows the
+// curated distinct colour below.
 //
-// The default-colour lookup is derived from INITIAL_CATEGORIES at
-// runtime (single source of truth): if a future version ships
-// different defaults, the "still default" test follows them.
-import { INITIAL_CATEGORIES } from '../data/initialData';
-
-const DEFAULT_COLOR_BY_ID = new Map<string, string>(
-  INITIAL_CATEGORIES.map((c) => [c.id, (c.color || '').trim().toLowerCase()]),
-);
-
-// Curated display colours, one per default category id. Only used
-// while the category still carries its shipped default colour.
-// Hues are spread across the wheel (emerald/blue/teal/amber/cyan/
-// lime/fuchsia/slate/red/yellow/sky/violet/pink/rose/orange/indigo/
-// stone) so neighbouring rows read distinct at a glance; every
-// colour keeps the white glyph readable.
+// Why unconditional (the v7.6.45 gate failed on real accounts):
+// v7.6.45 remapped only when the stored colour EXACTLY equalled
+// the CURRENT shipped default. Real long-lived accounts carry
+// stored colours seeded by OLDER defaults that differ from
+// today's, so the gate failed silently and nothing visibly
+// changed. And no colour-picker UI exists anywhere (no input
+// type="color" in src; CategoryPickerModal only DISPLAYS
+// cat.color), so stored colours on default ids are ALWAYS
+// seed-derived, never user-picked — remapping them cannot
+// override a choice the user made. A colour on a category the
+// user added IS shown exactly as stored.
+//
+// The detail-modal tile keeps the stored colour (v7.6.45
+// decision, unchanged); CategoryPickerModal tiles unchanged.
+// Only the Records row call site uses this helper.
 const DISPLAY_TILE_COLORS: Record<string, string> = {
   cat_salary: '#10B981', // emerald (unchanged)
   cat_business: '#2563EB', // blue
@@ -56,10 +55,9 @@ export function getCategoryTileColor(
 ): string {
   const fallback = isIncome ? '#10B981' : '#EF4444';
   if (!cat) return fallback;
+  // [v7.6.46] Default ids always show the curated colour, whatever
+  // the stored value is (see the header comment).
+  if (cat.id && DISPLAY_TILE_COLORS[cat.id]) return DISPLAY_TILE_COLORS[cat.id];
   const stored = (cat.color || '').trim().toLowerCase();
-  const shippedDefault = cat.id ? DEFAULT_COLOR_BY_ID.get(cat.id) : undefined;
-  if (shippedDefault && stored === shippedDefault) {
-    return (cat.id && DISPLAY_TILE_COLORS[cat.id]) || stored || fallback;
-  }
   return stored || fallback;
 }

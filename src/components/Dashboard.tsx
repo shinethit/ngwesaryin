@@ -3,6 +3,7 @@ import {
   ArrowDownLeft, ArrowUpRight, HandCoins, AlertCircle,
   Calendar, ChevronRight, ChevronDown, Search, RefreshCw,
   Wallet, Scale, Crown, MessageCircle, GraduationCap, BarChart3,
+  Eye, EyeOff,
 } from 'lucide-react';
 import { BudgetConfig, Category, Debt, FuelLog, PlanType, Transaction, Wallet as WalletType } from '../types';
 import { formatMMK, formatLakhs, formatShortDate, isOverdue, getAmountDisplayMode } from '../utils/formatters';
@@ -60,6 +61,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const scopeOverrides = ctxScopeOverrides ?? {};
 
   const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('this_month');
+  // [v7.6.46] Hero hide-balance eye: LOCAL state, mirroring the
+  // Records card's eye exactly — independent per tab, not shared,
+  // not persisted. Toggles only this Hero card's amounts.
+  const [heroBalanceHidden, setHeroBalanceHidden] = useState(false);
   const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
   const [tempFrom, setTempFrom] = useState('');
@@ -525,16 +530,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* HERO — [v7.5.68 R1] amount/advice leading loosened so Burmese descenders clear the pill below. [v7.5.75] p-5→p-4 and tighter mt gaps; amount size, leading and all info unchanged. [v7.6.42] p-4→p-3.5, badge/period mt tightened; amount leading untouched. */}
       <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-3.5 text-white shadow-md">
-        <div className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">
-          {lang === 'my' ? 'စုစုပေါင်း လက်ကျန်' : 'Total Balance'}
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[11px] uppercase tracking-wider text-slate-300 font-bold">
+            {lang === 'my' ? 'စုစုပေါင်း လက်ကျန်' : 'Total Balance'}
+          </div>
+          <button
+            type="button"
+            onClick={() => setHeroBalanceHidden(!heroBalanceHidden)}
+            className="min-h-[44px] min-w-[44px] p-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors cursor-pointer flex items-center justify-center shrink-0"
+            aria-label={lang === 'my' ? (heroBalanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (heroBalanceHidden ? 'Show balance' : 'Hide balance')}
+            title={lang === 'my' ? (heroBalanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (heroBalanceHidden ? 'Show balance' : 'Hide balance')}
+          >
+            {heroBalanceHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         </div>
         <button
           type="button"
-          onClick={() => setShowCurrencyBreakdown(true)}
+          onClick={() => { if (!heroBalanceHidden) setShowCurrencyBreakdown(true); }}
           className={`text-3xl sm:text-4xl font-black mt-1 tracking-tight leading-[1.4] flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group text-left ${heroHealthText[heroHealth.tier]}`}
-          title={(lang === 'my' ? 'ငွေကြေး အလိုက် ကြည့်ရန် နှိပ်ပါ • ' : 'Tap for currency breakdown • ') + formatMMK(totalWalletBalance)}
+          title={heroBalanceHidden ? (lang === 'my' ? 'ငွေကြေး အလိုက် ကြည့်ရန် နှိပ်ပါ' : 'Tap for currency breakdown') : (lang === 'my' ? 'ငွေကြေး အလိုက် ကြည့်ရန် နှိပ်ပါ • ' : 'Tap for currency breakdown • ') + formatMMK(totalWalletBalance)}
         >
-          <span>{formatLakhs(totalWalletBalance, lang)}</span>
+          <span>{heroBalanceHidden ? '••••' : formatLakhs(totalWalletBalance, lang)}</span>
           <ChevronRight className="w-5 h-5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
         </button>
         {/* [v7.5.57] Health badge + one-line advice; taps open the full health detail. */}
@@ -558,8 +574,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {sharedWalletsInScope.length > 0 && (
           <div className="text-[11px] text-indigo-200 mt-1 font-semibold">
             {lang === 'my'
-              ? `🤝 မျှဝေထားသော အိတ် ${formatLakhs(sharedWalletBalance, lang)} ပါဝင်`
-              : `🤝 Includes ${formatLakhs(sharedWalletBalance, lang)} from shared wallets`}
+              ? `🤝 မျှဝေထားသော အိတ် ${heroBalanceHidden ? '••••' : formatLakhs(sharedWalletBalance, lang)} ပါဝင်`
+              : `🤝 Includes ${heroBalanceHidden ? '••••' : formatLakhs(sharedWalletBalance, lang)} from shared wallets`}
           </div>
         )}
         {currencyBreakdownData.length > 1 && (
@@ -575,13 +591,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs flex-wrap">
           <span className="flex items-center gap-1 text-emerald-400 font-bold">
-            <ArrowDownLeft className="w-3.5 h-3.5" /><span title={formatMMK(totalIncome)}>+{formatLakhs(totalIncome, lang)}</span>
+            <ArrowDownLeft className="w-3.5 h-3.5" /><span title={heroBalanceHidden ? undefined : formatMMK(totalIncome)}>{heroBalanceHidden ? '••••' : `+${formatLakhs(totalIncome, lang)}`}</span>
           </span>
           <span className="flex items-center gap-1 text-rose-400 font-bold">
-            <ArrowUpRight className="w-3.5 h-3.5" /><span title={formatMMK(totalExpense)}>-{formatLakhs(totalExpense, lang)}</span>
+            <ArrowUpRight className="w-3.5 h-3.5" /><span title={heroBalanceHidden ? undefined : formatMMK(totalExpense)}>{heroBalanceHidden ? '••••' : `-${formatLakhs(totalExpense, lang)}`}</span>
           </span>
           <span className={'font-bold ' + (netSavings >= 0 ? 'text-emerald-300' : 'text-rose-300')}>
-            {lang === 'my' ? 'အသားတင်' : 'Net'}: <span title={formatMMK(netSavings)}>{netSavings >= 0 ? '+' : ''}{formatLakhs(netSavings, lang)}</span>
+            {lang === 'my' ? 'အသားတင်' : 'Net'}: <span title={heroBalanceHidden ? undefined : formatMMK(netSavings)}>{heroBalanceHidden ? '••••' : `${netSavings >= 0 ? '+' : ''}${formatLakhs(netSavings, lang)}`}</span>
           </span>
         </div>
       </div>

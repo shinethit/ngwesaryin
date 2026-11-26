@@ -16,10 +16,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.45';
-export const CURRENT_BUILD_NUMBER = 359;
+export const CURRENT_APP_VERSION = 'v7.6.46';
+export const CURRENT_BUILD_NUMBER = 360;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.46',
+    buildNumber: 360,
+    releaseDate: '2026-11-25',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'မှတ်တမ်းပြက္ခဒိန်၊ လက်ကျန်အရောင်၊ Menu ခလုတ်နှင့် Dashboard ပြင်ဆင်ချက်များ',
+    titleEn: 'Records calendar, balance colours, menu button and Dashboard fixes',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'မှတ်တမ်းပြက္ခဒိန်မှာ ကျန်ငွေကိုပါ ပြပေးပါပြီ။ လက်ကျန်ပမာဏတွေကို အခြေအနေအလိုက် အရောင်ခွဲပြပြီး၊ တရက်ချင်းစီ ကတ်တွေကို ဘောင်ခတ်ထားတယ်။ Menu ပြန် Update ခလုတ်က အလုပ်ရှိမှသာ ရောင်စုံပြတယ်။ စမတ်ပြက္ခဒိန်မှာ ရက်အလိုက် အရောင်ခွဲပြပြီး၊ Dashboard Hero မှာ လက်ကျန်ဝှက်တဲ့ မျက်လုံးပါပြီ။',
+    descriptionEn: 'The Records calendar now shows the net balance too, balance amounts are coloured by state, and day cards have a visible border. The refresh-all-menus button shows colour only while work is pending. The Smart Calendar tints days by net, and the Dashboard Hero gains a hide-balance eye.',
+    changesMy: [
+      'မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ',
+      'မှတ်တမ်းစာရင်းက တရက်ချင်းစီ ကတ်တွေကို နက်ပြာ/ခရမ်းဖျော့ ဘောင်နဲ့ ထင်ရှားအောင် ခတ်ပေးထားပါပြီ',
+      'လအစလက်ကျန်/လအဆုံးလက်ကျန်ကို အနှုတ် (အနီ)၊ ၁ သိန်းအောက် (အဝါ)၊ ၁ သိန်းနှင့်အထက် (အဖြူ) ခွဲပြပါပြီ',
+      'ဆိုင်အားလုံးရဲ့ Menu ပြန် Update ခလုတ်ကို ရှာဖွေမှုတန်းဘေးကို ရွှေ့ပြီး အလုပ်ရှိမှသာ ရောင်စုံပြ၊ ပြီးရင် မှိန်သွားအောင် လုပ်ထားပါပြီ',
+      'စမတ်ပြက္ခဒိန်မှာ အပေါင်း (အစိမ်း)၊ အနှုတ် (အနီ) ခွဲပြပြီး ၁ သိန်းအထက် အပေါင်းရက်တွေကို နက်ပြာနောက်ခံ ရွှေစာလုံးနဲ့ ပြပါပြီ',
+      'Dashboard Hero ကတ်မှာ လက်ကျန်ကို ဝှက်လို့ရတဲ့ မျက်လုံးခလုတ်ကို ထည့်ပေးထားပါပြီ',
+      'အမျိုးအစားအိုင်ကွန်အရောင်တွေ အကောင့်ဟောင်းတွေမှာပါ ထင်ရှားစွာ ကွဲပြားအောင် ပြင်ထားပါပြီ',
+    ],
+    changesEn: [
+      'The Records calendar now shows the net balance for each day alongside in/out',
+      'Day cards in the Records list now have a navy/purple border so they stand out from the page background',
+      'Opening/closing balances are now coloured: red when negative, yellow below 100,000 MMK, white at 100,000 and above',
+      'The refresh-all-menus button moved beside the search row and now shows colour only while menu work is pending, dimming once up to date',
+      'Smart Calendar days are tinted green for positive and red for negative nets, with a navy background and gold text for days netting over 100,000 MMK',
+      'Added a hide-balance eye button to the Dashboard Hero card, matching the Records card',
+      'Category tile colours now show distinctly on long-lived accounts too, not only fresh ones',
+    ],
+  },
   {
     version: 'v7.6.45',
     buildNumber: 359,

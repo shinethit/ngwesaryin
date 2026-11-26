@@ -6,11 +6,14 @@
 // - Month grid, Sunday-start weeks (the app's calendar convention).
 // - Each cell shows the day's totals from the Records filter scope
 //   (the caller passes the day-filter-free filtered list): in +
-//   out lines in 'both' mode (default), a single signed net line in
+//   out + net lines in 'both' mode (default), a single signed net line in
 //   'net' mode. Amounts are compact (lakh format) with the exact
 //   kyat value in the tooltip — the Dashboard calendar's
 //   exact-on-tap does NOT carry over (it would clash with the tap
 //   gesture below).
+// [v7.6.46] The net line in 'both' mode mirrors the Dashboard
+// SmartCalendarCard's v7.5.55 fix: the header promises in/out/net,
+// so cells show all three (net in indigo), not in/out only.
 // - Tapping a day filters the Records list to that day; tapping the
 //   same day again clears the filter. The caller owns the selected
 //   day; this component only reports taps.
@@ -157,7 +160,7 @@ export const RecordsCalendar: React.FC<RecordsCalendarProps> = ({
           onClick={() => setModePersist('both')}
           className={`flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${mode === 'both' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          {lang === 'my' ? 'ဝင်+ထွက် နှစ်ခုလုံး' : 'In + Out'}
+          {lang === 'my' ? 'ဝင်+ထွက်+ကျန်' : 'In + Out + Net'}
         </button>
         <button
           type="button"
@@ -193,7 +196,7 @@ export const RecordsCalendar: React.FC<RecordsCalendarProps> = ({
               role="gridcell"
               aria-pressed={isSelected}
               onClick={() => onSelectDay(isSelected ? null : dateStr)}
-              className={`min-h-[46px] rounded-lg px-0.5 py-1 flex flex-col items-center justify-start gap-px transition-colors cursor-pointer border ${
+              className={`rounded-lg px-0.5 py-1 flex flex-col items-center justify-start gap-px transition-colors cursor-pointer border ${mode === 'both' ? 'min-h-[60px]' : 'min-h-[46px]'} ${
                 isSelected
                   ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
                   : 'border-transparent hover:bg-slate-50'
@@ -201,8 +204,8 @@ export const RecordsCalendar: React.FC<RecordsCalendarProps> = ({
               title={
                 totals
                   ? lang === 'my'
-                    ? `ဝင် ${formatMMK(totals.in)} · ထွက် ${formatMMK(totals.out)}`
-                    : `In ${formatMMK(totals.in)} · Out ${formatMMK(totals.out)}`
+                    ? `ဝင် ${formatMMK(totals.in)} · ထွက် ${formatMMK(totals.out)} · ကျန် ${net >= 0 ? '+' : ''}${formatMMK(net)}`
+                    : `In ${formatMMK(totals.in)} · Out ${formatMMK(totals.out)} · Net ${net >= 0 ? '+' : ''}${formatMMK(net)}`
                   : undefined
               }
             >
@@ -227,6 +230,15 @@ export const RecordsCalendar: React.FC<RecordsCalendarProps> = ({
                   {totals.out > 0 && (
                     <span className="text-[9px] leading-3 font-mono font-bold text-rose-600 truncate max-w-full">
                       -{formatLakhs(totals.out, lang)}
+                    </span>
+                  )}
+                  {/* [v7.6.46] Net row: the toggle promises in/out/net,
+                      so 'both' cells show the net in indigo, the same
+                      sign/colour convention as the Dashboard calendar. */}
+                  {(totals.in > 0 || totals.out > 0) && (
+                    <span className="text-[9px] leading-3 font-mono font-bold text-indigo-700 truncate max-w-full">
+                      {net >= 0 ? '+' : ''}
+                      {formatLakhs(net, lang)}
                     </span>
                   )}
                 </>

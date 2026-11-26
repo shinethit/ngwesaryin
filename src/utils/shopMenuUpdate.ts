@@ -20,8 +20,10 @@
 // (safeUpdateDoc/safeSetDoc CORRUPT FieldValue sentinels; see
 // AGENTS.md v7.5.64 lesson).
 
-import type { TransactionItem } from '../types';
+import type { Transaction, TransactionItem } from '../types';
 import { normalizeShopName } from './shopDetailsReminders';
+import { attributeItemsToShops } from './transactionSplits';
+import type { UnifiedItemInfo } from './itemIntelligence';
 
 /** Default unit — one piece. Stored value is the Myanmar string. */
 export const DEFAULT_MENU_UNIT = 'ခု';
@@ -821,6 +823,125 @@ export function buildGlobalMenuSections(
     else upToDateCount++;
   }
   return { sections, checkedCount: entries.length, upToDateCount, skippedPublicCount };
+}
+
+/** One attributed shop's latest purchased items, keyed by folded shop name. */
+export interface LatestItemsByShopEntry {
+  displayName: string;
+  latest: Map<string, TransactionItem>;
+}
+
+/**
+ * [v7.6.46] Shared attribution loop: newest-first over all
+ * transactions, items attributed to shops with the same helpers the
+ * save path uses, keeping only the LATEST item per name+unit per
+ * shop. Extracted verbatim from App's handleReapplyAllShopMenus so
+ * the click build and the header-button derivation can never drift.
+ */
+export function collectLatestItemsByShop(
+  transactions: Transaction[],
+  suggestions: UnifiedItemInfo[],
+): Map<string, LatestItemsByShopEntry> {
+  const ordered = [...transactions].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    const aCreated = typeof a.createdAt === 'number' ? a.createdAt : 0;
+    const bCreated = typeof b.createdAt === 'number' ? b.createdAt : 0;
+    return bCreated - aCreated;
+  });
+  const latestByShop = new Map<string, LatestItemsByShopEntry>();
+  for (const tx of ordered) {
+    const byShop = attributeItemsToShops(tx.items || [], tx.splits, tx.shopName, suggestions);
+    for (const [attributedShop, attributedItems] of byShop) {
+      const key = normalizeShopName(attributedShop);
+      if (!key) continue;
+      let entry = latestByShop.get(key);
+      if (!entry) {
+        entry = { displayName: attributedShop.trim(), latest: new Map() };
+        latestByShop.set(key, entry);
+      }
+      for (const item of attributedItems) {
+        const itemKey = `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
+        if (!entry.latest.has(itemKey)) entry.latest.set(itemKey, item);
+      }
+    }
+  }
+  return latestByShop;
+}
+
+/**
+ * [v7.6.46] SYNCHRONOUS mirror of resolveMenuShop's private branch:
+ * match a folded shop name against the already-loaded private shops,
+ * preferring the doc WITH menu items. No fetching — a name that also
+ * matches a public shop is NOT resolved here (the click build is
+ * public-first and fetches the public menu); the caller treats that
+ * as doubt, never as up-to-date.
+ */
+export function resolveLocalMenuShop(
+  shopName: string,
+  privateShops: MenuShopListEntry[],
+): ResolvedMenuShop | null {
+  const key = normalizeShopName(shopName);
+  if (!key) return null;
+  const privateHits = privateShops.filter((s) => normalizeShopName(s.name) === key);
+  const privateHit = privateHits.find((s) => (s.items || []).length > 0) ?? privateHits[0];
+  if (!privateHit) return null;
+  return { shop: privateHit, isPublic: false };
+}
+
+/** Header-button pending state for the "refresh all menus" action. */
+export interface GlobalMenuPendingState {
+  /** Shops whose menu provably differs from the latest purchases. */
+  pendingCount: number;
+  /** True when some attributed shop could not be checked
+      synchronously (public-shop match: the click build fetches its
+      menu). Doubt means coloured, never dimmed. */
+  hasDoubt: boolean;
+  /** Attributed shops that resolved to a menu (private or public). */
+  checkedCount: number;
+  /** Resolved private shops whose menu already matches. */
+  upToDateCount: number;
+}
+
+/**
+ * [v7.6.46] Derive the header button's pending state SYNCHRONOUSLY
+ * from already-loaded data — no fetching, no async resolve. The
+ * diff uses buildMenuPromptRows, the exact helper the click build
+ * uses, so the two can never disagree on a private shop. Pure and
+ * memoizable on [transactions, categories, shops, publicShops].
+ */
+export function deriveGlobalMenuPending(args: {
+  transactions: Transaction[];
+  suggestions: UnifiedItemInfo[];
+  privateShops: MenuShopListEntry[];
+  publicShopNames: string[];
+  isSignedIn: boolean;
+}): GlobalMenuPendingState {
+  const { transactions, suggestions, privateShops, publicShopNames, isSignedIn } = args;
+  const latestByShop = collectLatestItemsByShop(transactions, suggestions);
+  const publicKeys = new Set(publicShopNames.map((n) => normalizeShopName(n)));
+  let pendingCount = 0;
+  let hasDoubt = false;
+  let checkedCount = 0;
+  let upToDateCount = 0;
+  for (const [key, entry] of latestByShop) {
+    const items = [...entry.latest.values()];
+    if (items.length === 0) continue;
+    const local = resolveLocalMenuShop(entry.displayName, privateShops);
+    const publicMatch = publicKeys.has(key);
+    if (publicMatch) {
+      // Public-first resolution: the click build fetches this menu.
+      // Unknown here — doubt, never up-to-date.
+      hasDoubt = true;
+      checkedCount++;
+      continue;
+    }
+    if (!local) continue; // Deleted/renamed shop: the click build skips it.
+    checkedCount++;
+    const rows = buildMenuPromptRows(items, local, isSignedIn);
+    if (rows) pendingCount++;
+    else upToDateCount++;
+  }
+  return { pendingCount, hasDoubt, checkedCount, upToDateCount };
 }
 
 export type ApplyResolvedMenuUpdateResult = 'applied' | 'not-found' | 'failed';

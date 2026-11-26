@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
-    expect(CURRENT_BUILD_NUMBER).toBe(359);
-    expect(VERSION_JSON.version).toBe('v7.6.45');
-    expect(VERSION_JSON.buildNumber).toBe(359);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
+    expect(CURRENT_BUILD_NUMBER).toBe(360);
+    expect(VERSION_JSON.version).toBe('v7.6.46');
+    expect(VERSION_JSON.buildNumber).toBe(360);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.45');
-    expect(entry.buildNumber).toBe(359);
-    expect(entry.changesMy[0]).toBe('စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ');
+    expect(entry.version).toBe('v7.6.46');
+    expect(entry.buildNumber).toBe(360);
+    expect(entry.changesMy[0]).toBe('မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

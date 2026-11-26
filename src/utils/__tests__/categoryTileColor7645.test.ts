@@ -1,8 +1,9 @@
 // [v7.6.45] Part D — display-time category tile colours. Stored
-// colours are never rewritten: a category still carrying exactly
-// its shipped default colour gets a curated distinct tile colour;
-// any other stored colour (user-customised, or a colour the user
-// added) is shown exactly as stored.
+// colours are never rewritten: a DEFAULT category id always gets
+// its curated distinct tile colour ([v7.6.46] rule change — the
+// v7.6.45 "still exactly the shipped default" gate failed on real
+// accounts carrying older defaults); a colour on a category the
+// user added is shown exactly as stored.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { getCategoryTileColor } from '../categoryTileColor';
@@ -41,14 +42,18 @@ describe('getCategoryTileColor (v7.6.45 Part D)', () => {
     expect(getCategoryTileColor({ id: 'cat_vehicle', color: '#0284C7' }, false)).toBe('#0284C7');
   });
 
-  it('a user-customised colour is shown exactly as stored', () => {
-    expect(getCategoryTileColor({ id: 'cat_food', color: '#123456' }, false)).toBe('#123456');
-    expect(getCategoryTileColor({ id: 'cat_salary', color: '#FF0000' }, true)).toBe('#ff0000');
+  it('a stored colour on a DEFAULT id never wins over the curated colour', () => {
+    // [v7.6.46] No colour-picker UI exists, so stored colours on
+    // default ids are always seed-derived — the curated colour wins
+    // whatever is stored (see categoryTileColor7646.test.ts).
+    expect(getCategoryTileColor({ id: 'cat_food', color: '#123456' }, false)).toBe('#EF4444');
+    expect(getCategoryTileColor({ id: 'cat_salary', color: '#FF0000' }, true)).toBe('#10B981');
   });
 
-  it('a colour equal to ANOTHER category\'s default is not remapped', () => {
-    // Food carrying salary's default green: the user chose it.
-    expect(getCategoryTileColor({ id: 'cat_food', color: '#10B981' }, false)).toBe('#10b981');
+  it("a colour equal to ANOTHER category's default is still remapped by id", () => {
+    // Food carrying salary's default green: the id decides, not the
+    // stored value.
+    expect(getCategoryTileColor({ id: 'cat_food', color: '#10B981' }, false)).toBe('#EF4444');
   });
 
   it('comparison is case-insensitive', () => {
@@ -72,19 +77,19 @@ describe('getCategoryTileColor (v7.6.45 Part D)', () => {
   });
 });
 
-describe('Version pins roll to v7.6.45 / build 359', () => {
+describe('Version pins roll to v7.6.46 / build 360', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
-    expect(CURRENT_BUILD_NUMBER).toBe(359);
-    expect(VERSION_JSON.version).toBe('v7.6.45');
-    expect(VERSION_JSON.buildNumber).toBe(359);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
+    expect(CURRENT_BUILD_NUMBER).toBe(360);
+    expect(VERSION_JSON.version).toBe('v7.6.46');
+    expect(VERSION_JSON.buildNumber).toBe(360);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.45');
-    expect(top.buildNumber).toBe(359);
+    expect(top.version).toBe('v7.6.46');
+    expect(top.buildNumber).toBe(360);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(8);
-    expect(top.changesEn.length).toBe(8);
+    expect(top.changesMy.length).toBe(7);
+    expect(top.changesEn.length).toBe(7);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

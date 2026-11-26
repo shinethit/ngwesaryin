@@ -2698,9 +2698,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* Unified 6 Tabs Navigation */}
         {/* [v7.5.60 N-48] On phones the old horizontal scroll strip showed
             only ~2 tabs at 11px. Now a 2-column grid on phones (3 on sm,
-            6 on lg) so every tab is visible without scrolling. */}
+            6 on lg) so every tab is visible without scrolling.
+            [v7.6.46] Tinted band + count badges so the strip reads as
+            navigation at a glance: users, active broadcasts, visitors. */}
         <div className="relative">
-        <div ref={tabStripRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 sm:pt-3 pb-2 shrink-0 border-b border-slate-100 -mx-1 px-1">
+        <div ref={tabStripRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-1.5 shrink-0 bg-indigo-50/60 border border-indigo-100 rounded-2xl">
           <button
             type="button"
             data-tab="overview"
@@ -2749,6 +2751,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 ? '🔑 အသုံးပြုသူ & ကုဒ်များ'
                 : 'Users & Codes'}
             </span>
+            {usersList.length > 0 && (
+              <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none shrink-0 ${activeTab === 'users_codes' ? 'bg-white/25 text-white' : 'bg-indigo-100 text-indigo-700'}`}>
+                {usersList.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -2767,6 +2774,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 ? '📢 ကြေညာချက်'
                 : 'Broadcast'}
             </span>
+            {messages.filter((m) => m.isActive).length > 0 && (
+              <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none shrink-0 ${activeTab === 'broadcast' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                {messages.filter((m) => m.isActive).length}
+              </span>
+            )}
           </button>
 
           <button
@@ -2803,6 +2815,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 ? '📊 ဧည့်သည် Logs'
                 : 'Visitor Logs'}
             </span>
+            {(visitorsTotalCount ?? analyticsStats.total) > 0 && (
+              <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none shrink-0 ${activeTab === 'analytics' ? 'bg-white/25 text-white' : 'bg-indigo-100 text-indigo-700'}`}>
+                {visitorsTotalCount ?? analyticsStats.total}
+              </span>
+            )}
           </button>
         </div>
         </div>
@@ -2864,6 +2881,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 0: SYSTEM & FINANCIAL OVERVIEW (PRIVACY-PRESERVED AGGREGATES) */}
         {activeTab === 'overview' && (
           <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
+            {/* [v7.6.46] Tab header: title + purpose + primary action,
+                the same pattern on every tab so each tab reads as its
+                own section at first glance. */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-indigo-600 shrink-0" />
+                  {lang === 'my' ? 'စနစ် အကြမ်းဖျင်း' : 'System Overview'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lang === 'my' ? 'အသုံးပြုသူ၊ ကုဒ်နှင့် ဒေတာအားလုံးရဲ့ အခြေအနေ တစ်ချက်ကြည့်ရန်' : 'At-a-glance health of users, codes, and system data.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { void fetchAllData(); }}
+                disabled={dataLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                {lang === 'my' ? 'ပြန်လည်ဆွဲယူမည်' : 'Refresh'}
+              </button>
+            </div>
             {overviewError && (
               <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 text-xs font-bold text-rose-900 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -3835,6 +3875,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 0.5: FIRESTORE QUOTA & CAPACITY DASHBOARD */}
         {activeTab === 'quota' && (
           <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
+            {/* [v7.6.46] Tab header (same pattern as the other tabs). */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-amber-500 shrink-0" />
+                  {lang === 'my' ? 'Quota & စွမ်းရည်' : 'Quota & Capacity'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lang === 'my' ? 'စနစ်အရင်းအမြစ် အသုံးပြုမှုနှင့် ကန့်သတ်ချက်များ' : 'System usage measured against plan limits.'}
+                </p>
+              </div>
+            </div>
             <QuotaDashboard
               lang={lang}
               usersCount={usersList.length}
@@ -3862,6 +3914,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 1: UNIFIED USERS & PREMIUM CODES */}
         {activeTab === 'users_codes' && (
           <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
+            {/* [v7.6.46] Tab header (same pattern as the other tabs). */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Key className="w-5 h-5 text-indigo-600 shrink-0" />
+                  {lang === 'my' ? 'အသုံးပြုသူ & ကုဒ်များ' : 'Users & Codes'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lang === 'my' ? 'အကောင့်များနှင့် ပရီမယမ် ကုဒ်များကို ရှာဖွေ၊ စီမံပါ' : 'Search and manage accounts and premium codes.'}
+                </p>
+              </div>
+            </div>
             {/* Summary Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-center">
@@ -3897,8 +3961,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
             </div>
 
-            {/* Quick Generator Box */}
-            <div className="flex flex-wrap gap-3 items-end bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            {/* Quick Generator Box — [v7.6.46] featured card: the
+                generate action is the tab's primary action, so the
+                box carries the indigo tint and a larger button. */}
+            <div className="flex flex-wrap gap-3 items-end bg-indigo-50/60 p-4 rounded-2xl border border-indigo-200">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Duration (သက်တမ်း)
@@ -3935,7 +4001,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 type="button"
                 onClick={handleGenerateCodes}
                 disabled={dataLoading}
-                className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-1.5 text-xs disabled:opacity-50 cursor-pointer shadow-xs"
+                className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-1.5 text-sm disabled:opacity-50 cursor-pointer shadow-xs"
               >
                 <Plus className="w-4 h-4" />
                 {lang === 'my' ? 'ကုဒ် အသစ်ထုတ်မည်' : 'Generate Codes'}
@@ -4738,11 +4804,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 2: BROADCAST & MARQUEE ANNOUNCEMENTS */}
         {activeTab === 'broadcast' && (
           <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
+            {/* [v7.6.46] Tab header (same pattern as the other tabs). */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-indigo-600 shrink-0" />
+                  {lang === 'my' ? 'ကြေညာချက်' : 'Broadcast'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lang === 'my' ? 'အသုံးပြုသူအားလုံးထံ စာတန်းပြေး ကြေညာချက်များ ထုတ်လွှင့်ပါ' : 'Publish banner announcements to all users.'}
+                </p>
+              </div>
+              {messages.filter((m) => m.isActive).length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                  {messages.filter((m) => m.isActive).length} {lang === 'my' ? 'ခု ကြေညာထားဆဲ' : 'active broadcasts'}
+                </span>
+              )}
+            </div>
             {/* Create/Edit Broadcast Form */}
             <form
               id="broadcast-form"
               onSubmit={handleSaveMessage}
-              className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3.5"
+              className="bg-white p-4 sm:p-5 rounded-2xl border border-indigo-200 shadow-xs space-y-3.5"
             >
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 min-w-0">
@@ -5295,6 +5378,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* TAB 4: VISITOR & COUNTRY ANALYTICS */}
         {activeTab === 'analytics' && (
           <div className="flex-1 overflow-y-auto overflow-x-hidden pt-3 space-y-4 pr-1">
+            {/* [v7.6.46] Tab header (same pattern as the other tabs);
+                the recount button moved here from below so the
+                primary action sits with the title, not lost under
+                the error banner. */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-indigo-600 shrink-0" />
+                  {lang === 'my' ? 'ဧည့်သည် Logs' : 'Visitor Logs'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lang === 'my' ? 'အက်ပ်ကို ဝင်ကြည့်သူများရဲ့ စာရင်း' : 'Who visits the app, and from where.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={refreshVisitorsTotalCount}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all cursor-pointer shrink-0"
+                title={lang === 'my' ? 'ဝင်ကြည့်သူ စုစုပေါင်းကို အခုပြန်ရေတွက်မည်' : 'Recount the total visitor count now'}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                {lang === 'my' ? 'စုစုပေါင်း အသစ်ယူမည်' : 'Refresh total'}
+              </button>
+            </div>
             {analyticsError && (
               <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3.5 text-xs font-bold text-rose-900 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -5303,19 +5410,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             )}
             {/* [v7.6.45] Headline-total recount: the visitor list is
                 a live listener, but the aggregate total refreshes
-                on a 60s timer — this re-runs the same count query
-                on demand. It does not reload the list. */}
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={refreshVisitorsTotalCount}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all cursor-pointer"
-                title={lang === 'my' ? 'ဝင်ကြည့်သူ စုစုပေါင်းကို အခုပြန်ရေတွက်မည်' : 'Recount the total visitor count now'}
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                {lang === 'my' ? 'စုစုပေါင်း အသစ်ယူမည်' : 'Refresh total'}
-              </button>
-            </div>
+                on a 60s timer — the header button re-runs the same
+                count query on demand. It does not reload the list. */}
             {/* Top Stat Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-4 rounded-2xl shadow-sm space-y-1">

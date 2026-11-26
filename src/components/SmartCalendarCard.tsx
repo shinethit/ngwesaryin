@@ -24,6 +24,23 @@ interface SmartCalendarCardProps {
   fuelLogs?: FuelLog[];
 }
 
+// [v7.6.46] Smart Calendar cell tint by day net (MMK): a big positive
+// day (net strictly over 100,000) gets the premium navy/gold
+// treatment, a smaller positive day a light green tint, a negative
+// day a light red tint, and a zero/empty day stays white. Net sign
+// decides; net == 0 with transactions present is white too.
+export const PREMIUM_NET_THRESHOLD_MMK = 100000;
+
+export type SmartDayCellTone = 'navy' | 'green' | 'red' | 'plain';
+
+export function getSmartDayCellTone(net: number, hasData: boolean): SmartDayCellTone {
+  if (!hasData) return 'plain';
+  if (net > PREMIUM_NET_THRESHOLD_MMK) return 'navy';
+  if (net > 0) return 'green';
+  if (net < 0) return 'red';
+  return 'plain';
+}
+
 // [v6.1.7] Compact number format for tight calendar cells
 // [v7.5.58] Capped at 4 decimals so the longest token stays short
 // (e.g. "12.3456") and cannot overflow the tiny day cells.
@@ -482,6 +499,21 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
             const metrics = dailyMap.get(slot.dateStr);
             const isSelected = selectedDayStr === slot.dateStr;
             const isToday = slot.dateStr === todayStr;
+            // [v7.6.46] Cell tint by day net; the selected ring wins
+            // over every tint (selected keeps its indigo wash), and
+            // the old faint amber today wash is replaced by the net
+            // tint — today stays identifiable via its numeral badge.
+            const cellTone = getSmartDayCellTone(metrics?.net ?? 0, !!metrics);
+            const isNavyCell = cellTone === 'navy' && !isSelected;
+            const cellBg = isSelected
+              ? 'bg-indigo-50/30'
+              : isNavyCell
+                ? 'bg-[#1E3A5F]'
+                : cellTone === 'green'
+                  ? 'bg-emerald-50'
+                  : cellTone === 'red'
+                    ? 'bg-rose-50'
+                    : 'bg-white';
 
             return (
               <button
@@ -490,18 +522,18 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                 onClick={() => setSelectedDayStr(slot.dateStr)}
                 aria-pressed={isSelected}
                 aria-label={`${formatSelectedDay(slot.dateStr)}${metrics ? ` — ${lang === 'my' ? 'ဝင်ငွေ' : 'income'} ${formatMMK(metrics.income)}, ${lang === 'my' ? 'ထွက်ငွေ' : 'expense'} ${formatMMK(metrics.expense)}` : ''}`}
-                className={`bg-white min-h-[66px] sm:min-h-[88px] p-1.5 sm:p-2 flex flex-col justify-between transition-all cursor-pointer hover:bg-indigo-50/40 relative text-left w-full ${
-                  isSelected ? 'ring-2 ring-indigo-600 bg-indigo-50/30 z-10' : ''
-                } ${isToday ? 'bg-amber-50/30' : ''}`}
+                className={`${cellBg} min-h-[66px] sm:min-h-[88px] p-1.5 sm:p-2 flex flex-col justify-between transition-all cursor-pointer hover:bg-indigo-50/40 relative text-left w-full ${
+                  isSelected ? 'ring-2 ring-indigo-600 z-10' : ''
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold font-mono ${
-                    isToday ? 'bg-indigo-600 text-white' : 'text-slate-800'
+                    isToday ? (isNavyCell ? 'bg-amber-300 text-slate-900' : 'bg-indigo-600 text-white') : isNavyCell ? 'text-amber-200' : 'text-slate-800'
                   }`}>
                     {slot.dayNum}
                   </span>
                   {metrics && metrics.count > 0 && (
-                    <span className="text-[9px] font-mono font-bold px-1 rounded bg-slate-100 text-slate-600">
+                    <span className={`text-[9px] font-mono font-bold px-1 rounded ${isNavyCell ? 'bg-white/15 text-amber-200' : 'bg-slate-100 text-slate-600'}`}>
                       {metrics.count}
                     </span>
                   )}
@@ -513,24 +545,24 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                 {metrics ? (
                   <div className="space-y-0.5 text-[9px] font-mono">
                     {metrics.income > 0 && (
-                      <div className={`text-emerald-700 font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`In: +${formatMMK(metrics.income)}`}>
+                      <div className={`${isNavyCell ? 'text-amber-200' : 'text-emerald-700'} font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`In: +${formatMMK(metrics.income)}`}>
                         <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">+{fmtCell(metrics.income)}</span>
                       </div>
                     )}
                     {metrics.expense > 0 && (
-                      <div className={`text-rose-600 font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`Out: -${formatMMK(metrics.expense)}`}>
+                      <div className={`${isNavyCell ? 'text-amber-200' : 'text-rose-600'} font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`Out: -${formatMMK(metrics.expense)}`}>
                         <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">-{fmtCell(metrics.expense)}</span>
                       </div>
                     )}
                     {/* [v7.5.55] Net row: the header promises ဝင်/ထွက်/ကျန်
                         but cells only showed income/expense. */}
                     {(metrics.income > 0 || metrics.expense > 0) && (
-                      <div className={`text-indigo-700 font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`Net: ${metrics.net >= 0 ? '+' : ''}${formatMMK(metrics.net)}`}>
+                      <div className={`${isNavyCell ? 'text-amber-300' : 'text-indigo-700'} font-bold ${isKyatMode ? 'break-all leading-tight' : 'truncate'}`} title={`Net: ${metrics.net >= 0 ? '+' : ''}${formatMMK(metrics.net)}`}>
                         <span onClick={(e) => { e.stopPropagation(); toggleExactAmounts(); }} className="cursor-pointer">{metrics.net >= 0 ? '+' : '-'}{fmtCell(metrics.net)}</span>
                       </div>
                     )}
                     {metrics.income === 0 && metrics.expense === 0 && (
-                      <div className="text-slate-300 text-[8px]">-</div>
+                      <div className={`${isNavyCell ? 'text-amber-200/60' : 'text-slate-300'} text-[8px]`}>-</div>
                     )}
                   </div>
                 ) : (

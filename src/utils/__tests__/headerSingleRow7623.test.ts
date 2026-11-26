@@ -92,26 +92,26 @@ describe('Records header single row (v7.6.23)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.45');
-    expect(CURRENT_BUILD_NUMBER).toBe(359);
-    expect(VERSION_JSON.version).toBe('v7.6.45');
-    expect(VERSION_JSON.buildNumber).toBe(359);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.46');
+    expect(CURRENT_BUILD_NUMBER).toBe(360);
+    expect(VERSION_JSON.version).toBe('v7.6.46');
+    expect(VERSION_JSON.buildNumber).toBe(360);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.45');
-    expect(entry.buildNumber).toBe(359);
+    expect(entry.version).toBe('v7.6.46');
+    expect(entry.buildNumber).toBe(360);
     expect(entry.releaseDate).toBe('2026-11-25');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('မှတ်တမ်းစာရင်း ဒီဇိုင်းအသစ်နှင့် စာရင်းရှင်းတမ်း ပြင်ဆင်ချက်များ');
-    expect(entry.titleEn).toBe('Records redesign and statement fixes');
+    expect(entry.titleMy).toBe('မှတ်တမ်းပြက္ခဒိန်၊ လက်ကျန်အရောင်၊ Menu ခလုတ်နှင့် Dashboard ပြင်ဆင်ချက်များ');
+    expect(entry.titleEn).toBe('Records calendar, balance colours, menu button and Dashboard fixes');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(8);
-    expect(entry.changesEn).toHaveLength(8);
+    expect(entry.changesMy).toHaveLength(7);
+    expect(entry.changesEn).toHaveLength(7);
     expect(entry.changesMy[0]).toBe(
-      'စာရင်းရှင်းတမ်းမှာ ဆီ/ပြုပြင်မှတ်တမ်း အသေးစိတ် (ယာဉ်၊ လီတာ၊ ဈေး၊ ဆိုင်) ကို ပြန်ပြပေးပါပြီ — မှတ်ချက်မရှိတဲ့ မှတ်တမ်းတွေလည်း အမျိုးအစားအမည်ချည်းပဲ မပြတော့ပါ',
+      'မှတ်တမ်းပြက္ခဒိန်မှာ ဝင်/ထွက် နဲ့အတူ ကျန်ငွေ (Net) ကိုပါ တစ်နေ့ချင်းစီ ပြပေးပါပြီ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The statement now shows fuel and maintenance details (vehicle, litres, price, shop) again — records without a note no longer fall back to the bare category name',
+      'The Records calendar now shows the net balance for each day alongside in/out',
     );
   });
 

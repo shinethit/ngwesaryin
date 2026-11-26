@@ -36,6 +36,7 @@ import {
   applyShopMenuItems,
   buildUpdatedMenuItems,
   computeMenuDiff,
+  type GlobalMenuPendingState,
   type ShopMenuStore,
 } from '../utils/shopMenuUpdate';
 import { publishSharedUnits } from '../utils/sharedUnits';
@@ -63,6 +64,12 @@ interface ShopsViewProps {
   // App; ShopsView only renders the header button for it. Optional:
   // other call sites pass nothing.
   onReapplyAllShopMenus?: () => void;
+  // [v7.6.46] Sync derivation of the same check (App useMemo):
+  // pendingCount shops with menu work, hasDoubt when the sync
+  // path cannot rule work out. Undefined = unknown (old
+  // always-coloured behaviour) — the button never claims
+  // up-to-date on doubt.
+  globalMenuPending?: GlobalMenuPendingState;
 }
 
 export const ShopsView: React.FC<ShopsViewProps> = ({
@@ -77,7 +84,15 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   sharedUnits = [],
   onReapplyShopMenu,
   onReapplyAllShopMenus,
+  globalMenuPending,
 }) => {
+  // [v7.6.46] State-aware menu button: dimmed + disabled ONLY when
+  // the sync derivation verified zero pending shops with no doubt;
+  // coloured + badged whenever work may exist (or the state is
+  // unknown because the prop was not passed).
+  const menuPendingCount = globalMenuPending?.pendingCount ?? 0;
+  const menuUpToDate =
+    globalMenuPending !== undefined && menuPendingCount === 0 && !globalMenuPending.hasDoubt;
   // Directory Type: 'public' (collaborative community) or 'private' (private directory)
   const [directoryType, setDirectoryType] = useState<'public' | 'private'>('public');
 
@@ -1449,21 +1464,6 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           </div>
         </div>
 
-        {/* [v7.6.44] Global Menu re-apply — ONE tap re-checks every
-            shop with purchase history. Full-width row below the
-            switcher so the label stays readable; the header card
-            grows by one 44px row (measured in the harness). */}
-        {onReapplyAllShopMenus && (
-          <button
-            type="button"
-            onClick={onReapplyAllShopMenus}
-            className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-3 py-2 min-h-[44px] rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold cursor-pointer active:scale-[0.99] transition-all"
-            title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဆိုင်အားလုံးရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check all shop menus against my own purchase history'}
-          >
-            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-            <span>{lang === 'my' ? 'Menu အားလုံး ပြန် Update' : 'Refresh All Menus'}</span>
-          </button>
-        )}
       </div>
 
       {/* --------------------------------------------------------------------- */}
@@ -1561,6 +1561,31 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   </button>
                 )}
               </div>
+
+              {/* [v7.6.46] Compact "refresh all menus" button — lives in
+                  Row 1 OUTSIDE the shop-mode-only fragments so it
+                  stays visible in both search modes. Coloured +
+                  badged while menu work may exist; dimmed + disabled
+                  once verified up-to-date (never hidden, so the row
+                  never jumps). Full label in title + aria-label. */}
+              {onReapplyAllShopMenus && (
+                <button
+                  type="button"
+                  onClick={onReapplyAllShopMenus}
+                  disabled={menuUpToDate}
+                  aria-label={lang === 'my' ? 'Menu အားလုံး ပြန် Update' : 'Refresh All Menus'}
+                  title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဆိုင်အားလုံးရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check all shop menus against my own purchase history'}
+                  className={`h-11 min-h-[44px] px-2.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all shrink-0 ${menuUpToDate ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-default' : 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-[0.99]'}`}
+                >
+                  <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                  <span>Menu</span>
+                  {!menuUpToDate && menuPendingCount > 0 && (
+                    <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-black">
+                      {menuPendingCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
               {searchMode === 'shop' && (<>
               {/* Sort Dropdown */}

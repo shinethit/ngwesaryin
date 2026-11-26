@@ -54,7 +54,9 @@ import {
   applyResolvedMenuUpdate,
   buildGlobalMenuSections,
   buildMenuPromptRows,
+  collectLatestItemsByShop,
   computeMenuDiff,
+  deriveGlobalMenuPending,
   resolveMenuShop,
   resolveMenuShopById,
   shouldOfferMenuUpdate,
@@ -1523,6 +1525,24 @@ export default function App() {
   // transactions (entry shop + split-row shops, [v7.6.41]), keeping
   // only the LATEST price per name+unit per shop — the same rule the
   // per-shop handler applies shop by shop.
+  // [v7.6.46] Header-button pending state for "refresh all menus":
+  // derived synchronously from already-loaded data (Approach A) so
+  // the button shows colour only when work may exist. Memoized on
+  // the same inputs the click build reads; typing/search never
+  // retrigger it (those don't change these inputs). Doubt (a
+  // public-shop match the sync path can't check) stays coloured.
+  const globalMenuPendingState = useMemo(
+    () =>
+      deriveGlobalMenuPending({
+        transactions,
+        suggestions: getAllItemSuggestions(transactions, categories),
+        privateShops: shops,
+        publicShopNames: publicShops.map((s) => s.name),
+        isSignedIn: !!user,
+      }),
+    [transactions, categories, shops, publicShops, user],
+  );
+
   const handleReapplyAllShopMenus = async () => {
     if (globalMenuBuildRef.current) return;
     if (menuPromptOpenRef.current) {
@@ -1537,29 +1557,10 @@ export default function App() {
     globalMenuBuildRef.current = true;
     try {
       const suggestions = getAllItemSuggestions(transactions, categories);
-      const ordered = [...transactions].sort((a, b) => {
-        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-        const aCreated = typeof a.createdAt === 'number' ? a.createdAt : 0;
-        const bCreated = typeof b.createdAt === 'number' ? b.createdAt : 0;
-        return bCreated - aCreated;
-      });
-      const latestByShop = new Map<string, { displayName: string; latest: Map<string, TransactionItem> }>();
-      for (const tx of ordered) {
-        const byShop = attributeItemsToShops(tx.items || [], tx.splits, tx.shopName, suggestions);
-        for (const [attributedShop, attributedItems] of byShop) {
-          const key = normalizeShopName(attributedShop);
-          if (!key) continue;
-          let entry = latestByShop.get(key);
-          if (!entry) {
-            entry = { displayName: attributedShop.trim(), latest: new Map() };
-            latestByShop.set(key, entry);
-          }
-          for (const item of attributedItems) {
-            const itemKey = `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
-            if (!entry.latest.has(itemKey)) entry.latest.set(itemKey, item);
-          }
-        }
-      }
+      // [v7.6.46] Attribution loop extracted to collectLatestItemsByShop
+      // (shared with the header button's sync derivation — same helper,
+      // so the two can never drift apart).
+      const latestByShop = collectLatestItemsByShop(transactions, suggestions);
       if (latestByShop.size === 0) {
         showToast(
           lang === 'my' ? 'ဝယ်ခဲ့သည့် မှတ်တမ်း မရှိသေးပါ။' : 'No purchase history yet.',
@@ -3843,6 +3844,7 @@ export default function App() {
             onDeleteShop={handleDeleteShop}
             onReapplyShopMenu={handleReapplyShopMenu}
             onReapplyAllShopMenus={handleReapplyAllShopMenus}
+            globalMenuPending={globalMenuPendingState}
           />
         </div>
 

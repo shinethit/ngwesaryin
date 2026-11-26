@@ -99,17 +99,17 @@ describe('Wallet cards are compact (v7.6.37)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
-    expect(CURRENT_BUILD_NUMBER).toBe(369);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.55');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(369);
-    expect(VERSION_JSON.version).toBe('v7.6.55');
-    expect(VERSION_JSON.buildNumber).toBe(369);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
+    expect(CURRENT_BUILD_NUMBER).toBe(370);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.56');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(370);
+    expect(VERSION_JSON.version).toBe('v7.6.56');
+    expect(VERSION_JSON.buildNumber).toBe(370);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'စာရင်း (Transactions) ကတ်တွေ ပိုတောက်ပလာပါပြီ — ကဏ္ဍခွဲပြားတွေက ကဏ္ဍအရောင် ဖျော့ဖျော့ နဲ့ ပါလာပြီး ပမာဏတွေက ပိုထင်ရှားလာပါတယ်',
+      'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ပါဘူး — ဖျက်တာ Cloud ကို ရောက်တဲ့အထိ စောင့်ပြီး အတည်ပြုပါတယ်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Records cards are more vivid — sub-category pills are tinted with their category colour and amounts stand out more',
+      'Deleted records no longer reappear on other devices — deletes are confirmed only once they reach Cloud',
     );
   });
 });

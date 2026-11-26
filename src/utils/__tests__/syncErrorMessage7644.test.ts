@@ -1,7 +1,8 @@
 // [v7.6.44] Part E — syncError is shown as plain Burmese/English
 // only. The raw Firebase message/code must NEVER appear on the
-// surface: every non-empty input maps to one of three short lines,
-// and null/empty maps to null (nothing renders, as today).
+// surface: every non-empty input maps to one of four short lines
+// ([v7.6.56] token, network, permission, generic), and null/empty
+// maps to null (nothing renders, as today).
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { friendlySyncErrorMessage } from '../syncErrorMessage';
@@ -21,10 +22,22 @@ describe('friendlySyncErrorMessage (v7.6.44 Part E)', () => {
       .toBe('အင်တာနက်ချိတ်ဆက်မှု မရပါ။ ချိတ်ဆက်မှုကို စစ်ပြီး ပြန်ကြိုးစားပါ။');
     expect(friendlySyncErrorMessage('Failed to get document because the client is offline', 'en'))
       .toBe('No internet connection. Check your connection and try again.');
-    expect(friendlySyncErrorMessage('auth/network-request-failed', 'my'))
-      .toBe('အင်တာနက်ချိတ်ဆက်မှု မရပါ။ ချိတ်ဆက်မှုကို စစ်ပြီး ပြန်ကြိုးစားပါ။');
     expect(friendlySyncErrorMessage('UNAVAILABLE: The service is currently unavailable.', 'en'))
       .toBe('No internet connection. Check your connection and try again.');
+  });
+
+  it('[v7.6.56] token failures → the token line, FIRST (never the internet line)', () => {
+    // The 2026-11-26 failure: the Auth token endpoint was
+    // unreachable while the internet worked. The raw code contains
+    // 'network', so the token branch must win over the network one.
+    expect(friendlySyncErrorMessage('auth/network-request-failed', 'my'))
+      .toBe('Cloud အကောင့် တိုကင် ပြန်လည်ရယူ၍ မရပါ။ ပြောင်းလဲမှုကို စက်ထဲတွင် သိမ်းထားပြီး ချိတ်ဆက်မှု ပြန်ရလျှင် အလိုအလျောက် ပို့ပေးပါမည်။');
+    expect(friendlySyncErrorMessage('auth/network-request-failed', 'en'))
+      .toBe('Could not refresh the Cloud sign-in token. Your change is saved on this device and will sync automatically when the connection recovers.');
+    expect(friendlySyncErrorMessage('Cloud sign-in token could not be refreshed', 'my'))
+      .toBe('Cloud အကောင့် တိုကင် ပြန်လည်ရယူ၍ မရပါ။ ပြောင်းလဲမှုကို စက်ထဲတွင် သိမ်းထားပြီး ချိတ်ဆက်မှု ပြန်ရလျှင် အလိုအလျောက် ပို့ပေးပါမည်။');
+    expect(friendlySyncErrorMessage('token-expired', 'en'))
+      .toBe('Could not refresh the Cloud sign-in token. Your change is saved on this device and will sync automatically when the connection recovers.');
   });
 
   it('permission failures → the short permission line', () => {

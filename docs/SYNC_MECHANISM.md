@@ -37,9 +37,10 @@ outcome: confirmed | local | failed
         │
         ├── confirmed ──► task removed from the queue
         ├── local ──────► task KEPT (SDK accepted, server unconfirmed;
-        │                   deletes only; re-attempted REST-first)
-        └── failed ─────► task kept with backoff; permission/quota
-                           failures dead-letter visibly (see below)
+        │                   deletes only; re-attempted REST-first,
+        │                   backoff-spaced via the attempt count)
+        └── failed ─────► task kept with backoff; failures that can
+                           never succeed dead-letter visibly (see below)
 ```
 
 Confirmation also arrives from the live listeners and the pull merge:
@@ -57,7 +58,7 @@ and never because a caller removed it after attempting the delete.
 | Transaction delete | REST DELETE (12s timeout) | SDK `deleteDoc` (12s timeout) | REST ok/404, or listener/pull-observed absence. An SDK resolve alone is `local`, NOT confirmed |
 | Shared-wallet tx upsert/delete | SDK first (upsert) / REST first (delete) | the other transport | same as above, on the shared doc path |
 | Other entities (debts, wallets, ...) upsert | SDK `setDoc` (12s timeout) | REST is not available for these paths | SDK resolve |
-| Other entities delete | SDK `deleteDoc` (12s timeout) | none (no REST helper) | SDK resolve |
+| Other entities delete | generic REST DELETE (12s timeout) | SDK `deleteDoc` (12s timeout) | REST ok/404, or listener/pull-observed absence. An SDK resolve alone is `local`, NOT confirmed — the same rule as transaction deletes (v7.6.56; the old SDK-resolve-confirms asymmetry is gone) |
 
 `safeSetDoc`/`safeDeleteDoc` (`src/lib/firebase.ts`) are thin
 wrappers over the same executor for their immediate attempt, plus
@@ -138,10 +139,14 @@ Every write path consults it:
 - Permission-denied (and quota-exceeded) failures: after
   `PERMISSION_MAX_RETRIES=2` attempts the task moves to the
   dead-letter list (`getFailedItems()`), persisted across restarts.
-  Dead-lettered items NEVER auto-retry.
+  Dead-lettered items NEVER auto-retry. Any OTHER failure that
+  reaches `MAX_RETRIES=10` dead-letters the same way (v7.6.56) —
+  a task that can never succeed must not retry forever.
 - `local` outcome (SDK-accepted delete, server unconfirmed): the
-  task stays pending WITHOUT inflating the failure count, and is
-  counted in `awaitingConfirmation`.
+  task stays pending and the attempt is COUNTED (retryCount + 1,
+  so the backoff gate spaces re-attempts), but it is never
+  dead-lettered on the count alone — the delete may have landed —
+  and is counted in `awaitingConfirmation`.
 - `retryFailedItem()` / `retryAllFailed()` move dead-lettered items
   back to the queue with a reset retry count.
 

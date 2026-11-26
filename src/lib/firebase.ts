@@ -209,7 +209,17 @@ export interface FirestoreErrorInfo {
 export function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number = 9000,
-  fallbackMessage: string = 'ကွန်ရက် ချိတ်ဆက်မှု နှေးကွေးနေပါသည် (Network timed out)'
+  // [v7.6.56] The old default ("network slow") was WRONG for the
+  // failure users actually hit: the Firebase Auth token endpoint
+  // unreachable, so every write/delete timed out while the internet
+  // worked fine. The default now says what happened (the Cloud
+  // sign-in token could not refresh), that the change is saved
+  // on-device, and that it will sync when the connection recovers.
+  // A single string cannot distinguish a token timeout from genuine
+  // slowness (withTimeout discards the underlying error) — the
+  // token wording is correct for every timeout in the 2026-11-26
+  // console log, which is the observed failure mode.
+  fallbackMessage: string = 'Cloud အကောင့် တိုကင် ပြန်လည်ရယူ၍ မရပါ။ ပြောင်းလဲမှုကို စက်ထဲတွင် သိမ်းထားပြီး ချိတ်ဆက်မှု ပြန်ရလျှင် ပို့ပေးပါမည် (Cloud sign-in token could not be refreshed — saved on this device, will sync when it recovers)'
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -382,7 +392,22 @@ export function handleFirestoreError(
   } else if (isTargetIdExists) {
     console.warn('Firestore stream target re-synced:', path);
   } else {
-    console.error('Firestore Error:', JSON.stringify(errInfo));
+    // [v7.6.56] Never print the user's email into the console:
+    // pasted logs then carry identifiers. The returned errInfo and
+    // the persisted sync-error history keep the full authInfo for
+    // diagnostics — only the console line is redacted.
+    const redacted = {
+      ...errInfo,
+      authInfo: {
+        ...errInfo.authInfo,
+        email: '[redacted]',
+        providerInfo: (errInfo.authInfo.providerInfo || []).map((p) => ({
+          ...p,
+          email: '[redacted]',
+        })),
+      },
+    };
+    console.error('Firestore Error:', JSON.stringify(redacted));
   }
 
   // Persistently record this failure in the Sync Error History
@@ -512,16 +537,25 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
   // the listener/pull observing the server absence) — never here on
   // a local SDK ack. The old code enqueued on failure and let callers
   // remove the task, which is how deletes were silently lost.
-  const recordDeleteIntent = async () => {
-    if (!queueEntityType || !queueEntityId || !targetUid) return;
+  const recordDeleteIntent = async (): Promise<boolean> => {
+    if (!queueEntityType || !queueEntityId) return false;
+    // [v7.6.56] Shared-wallet paths carry no users/ targetUid in the
+    // path — the old code returned early and NO durable task was
+    // ever recorded for them, so a failed shared delete was lost.
+    // Fall back to the signed-in user (the executor does the same).
+    const intentUid = targetUid || auth.currentUser?.uid;
+    if (!intentUid) return false;
     try {
       const { syncQueue } = await import('./syncQueue');
       if (queueEntityType === 'transactions') {
-        syncQueue.enqueueTxDelete(queueEntityId, targetUid);
+        syncQueue.enqueueTxDelete(queueEntityId, intentUid);
       } else {
-        syncQueue.enqueue(queueEntityType as any, queueEntityId, 'delete', targetUid);
+        syncQueue.enqueue(queueEntityType as any, queueEntityId, 'delete', intentUid);
       }
-    } catch {}
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   // Guard against quota exhaustion and enqueue delete task
@@ -530,7 +564,7 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
     return false;
   }
 
-  await recordDeleteIntent();
+  const intentRecorded = await recordDeleteIntent();
 
   try {
     // [v7.6.52] ONE transport (see safeSetDoc): REST-first for
@@ -562,7 +596,12 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
     }
     if (result.outcome === 'local') {
       recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
-      return false;
+      // [v7.6.56] The queued task owns the retry when an intent was
+      // recorded (false = not confirmed yet). With NO queue intent
+      // (admin / public / direct-only paths) the SDK accept is the
+      // only signal there is — keep today's `true`, or admin deletes
+      // would report failure for every offline-accepted write.
+      return !intentRecorded;
     }
     return false;
   } catch (error) {

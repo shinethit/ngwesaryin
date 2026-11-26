@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, RefreshCw, Trash2, X, ShieldAlert, CheckCircle2, Layers } from 'lucide-react';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
+import { friendlySyncErrorMessage } from '../utils/syncErrorMessage';
 // [v7.5.99 top-up] Pending sync items carry any wallet currency:
 // formatLakhs is aliased to the lakh-only form so no foreign-currency
 // amount ever gains a ကျပ် suffix.
@@ -57,7 +58,11 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
   const pendingOrFailedTransactions = transactions.filter((t) => {
     const isPendingInQueue = queueItems.some((q) => q.entityType === 'transactions' && q.entityId === t.id);
     const notInCloud = !cloudTxIds.has(t.id);
-    return isPendingInQueue || notInCloud;
+    // [v7.6.56] A dead-lettered record is pending/failed even when a
+    // stale cloudTxIds still contains its id and no queue task
+    // remains for it — without this leg it vanished from the list.
+    const isDeadLettered = syncQueue.isEntityInDeadLetter('transactions', t.id);
+    return isPendingInQueue || notInCloud || isDeadLettered;
   });
 
   // [v7.5.60 M-22] Pending records that never entered the queue were
@@ -65,6 +70,16 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
   const pendingNotInQueue = pendingOrFailedTransactions.filter(
     (t) => !queueItems.some((q) => q.entityType === 'transactions' && q.entityId === t.id)
   );
+
+  // [v7.6.56] Header count: queued + dead-lettered + pending records
+  // never queued. A dead-lettered record appears in BOTH failedItems
+  // and pendingNotInQueue — subtract that overlap so one record is
+  // never counted twice.
+  const pendingNotInQueueOverlap = pendingNotInQueue.filter((t) =>
+    failedItems.some((f) => f.entityType === 'transactions' && f.entityId === t.id)
+  ).length;
+  const headerPendingCount =
+    queueItems.length + failedItems.length + pendingNotInQueue.length - pendingNotInQueueOverlap;
 
   // [v7.5.60 S-93] A retry is only a success if the item actually left
   // the queue afterwards — processQueue() returning without throwing
@@ -272,8 +287,8 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
               </h2>
               <p className="text-[11px] text-slate-500 font-medium">
                 {lang === 'my'
-                  ? `မအောင်မြင်သေးသော / စောင့်ဆိုင်းနေသော မှတ်တမ်းများ (${queueItems.length + failedItems.length} ခု)`
-                  : `${queueItems.length + failedItems.length} items pending or failed sync`}
+                  ? `မအောင်မြင်သေးသော / စောင့်ဆိုင်းနေသော မှတ်တမ်းများ (${headerPendingCount} ခု)`
+                  : `${headerPendingCount} items pending or failed sync`}
               </p>
             </div>
           </div>
@@ -372,7 +387,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                             <span>{lang === 'my' ? 'Firestore Operation Error:' : 'Firestore Error Message:'}</span>
                           </div>
                           <p className="font-mono text-[11px] bg-white p-2 rounded-lg border border-rose-200 text-rose-900 break-all">
-                            {item.lastError}
+                            {friendlySyncErrorMessage(item.lastError, lang) || item.lastError}
                           </p>
                         </div>
                       )}
@@ -459,7 +474,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                               <span>{lang === 'my' ? 'Firestore Operation Error:' : 'Firestore Error Message:'}</span>
                             </div>
                             <p className="font-mono text-[11px] bg-white p-2 rounded-lg border border-rose-200 text-rose-900 break-all">
-                              {item.lastError}
+                              {friendlySyncErrorMessage(item.lastError, lang) || item.lastError}
                             </p>
                           </div>
                         )}

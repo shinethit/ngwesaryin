@@ -220,6 +220,13 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.expiresAt == resource.data.expiresAt;
+
+      // [v7.6.56] Admin maintenance (unmark / revoke: isUsed back to
+      // false, code deleted) is denied for EVERYONE by the redeem
+      // rule above — including the master admin, whose own panel
+      // already expects the write to work. Admins may update; the
+      // redeem rule still gates every non-admin update.
+      allow update: if isAdmin();
     }
 
     // =========================================================
@@ -244,8 +251,19 @@ service cloud.firestore {
     // 6. /feedbacks/{feedbackId}
     // =========================================================
     // [v6.9-phase1a] Feedbacks — was: anyone read/write (spam + privacy leak)
+    // [v7.6.56] Public feedbacks (isPublic == true) are readable by
+    // any signed-in user — the old rule denied the public list query
+    // for everyone but admins and owners, so the public view was
+    // empty/denied. List queries MUST constrain to a branch the rule
+    // can prove (where isPublic == true, or where userId == uid, or
+    // admin unconstrained); see subscribeFeedbacks. Private
+    // feedbacks stay owner/admin-only.
     match /feedbacks/{feedbackId} {
-      allow get, list: if isAdmin()
+      allow get: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid)
+        || (isSignedIn() && resource.data.isPublic == true);
+      allow list: if isAdmin()
+        || (isSignedIn() && resource.data.isPublic == true)
         || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid;

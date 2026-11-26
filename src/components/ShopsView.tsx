@@ -36,6 +36,7 @@ import {
   applyShopMenuItems,
   buildUpdatedMenuItems,
   computeMenuDiff,
+  shopMenuState,
   type GlobalMenuPendingState,
   type ShopMenuStore,
 } from '../utils/shopMenuUpdate';
@@ -1567,7 +1568,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   stays visible in both search modes. Coloured +
                   badged while menu work may exist; dimmed + disabled
                   once verified up-to-date (never hidden, so the row
-                  never jumps). Full label in title + aria-label. */}
+                  never jumps). Full label in title + aria-label.
+                  [v7.6.56] Pending branch is FILLED emerald + shadow
+                  (unmistakably pressable, like the per-card buttons);
+                  the done branch is byte-identical. */}
               {onReapplyAllShopMenus && (
                 <button
                   type="button"
@@ -1575,12 +1579,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   disabled={menuUpToDate}
                   aria-label={lang === 'my' ? 'Menu အားလုံး ပြန် Update' : 'Refresh All Menus'}
                   title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဆိုင်အားလုံးရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check all shop menus against my own purchase history'}
-                  className={`h-11 min-h-[44px] px-2.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all shrink-0 ${menuUpToDate ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-default' : 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-[0.99]'}`}
+                  className={`h-11 min-h-[44px] px-2.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all shrink-0 ${menuUpToDate ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-default' : 'bg-emerald-600 border-emerald-700 text-white hover:bg-emerald-700 cursor-pointer active:scale-[0.99] shadow-md'}`}
                 >
                   <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                   <span>Menu</span>
                   {!menuUpToDate && menuPendingCount > 0 && (
-                    <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-black">
+                    <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-white text-emerald-700 text-[10px] font-black">
                       {menuPendingCount}
                     </span>
                   )}
@@ -2103,6 +2107,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           onDeletePricingItem={handleDeletePricingItem}
                           onReport={handleReportShop}
                           onReapplyMenu={onReapplyShopMenu}
+                          menuState={shopMenuState(globalMenuPending, shop.name)}
                         />
                       ))}
                     </div>
@@ -2125,6 +2130,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                           onDeletePricingItem={handleDeletePricingItem}
                           onReport={handleReportShop}
                           onReapplyMenu={onReapplyShopMenu}
+                          menuState={shopMenuState(globalMenuPending, shop.name)}
                         />
                       ))}
                     </div>
@@ -2153,6 +2159,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     onDeletePricingItem={handleDeletePricingItem}
                     onReport={handleReportShop}
                     onReapplyMenu={onReapplyShopMenu}
+                    menuState={shopMenuState(globalMenuPending, shop.name)}
                   />
                 ))}
               </div>
@@ -2175,6 +2182,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                     onDeletePricingItem={handleDeletePricingItem}
                     onReport={handleReportShop}
                     onReapplyMenu={onReapplyShopMenu}
+                    menuState={shopMenuState(globalMenuPending, shop.name)}
                   />
                 ))}
               </div>

@@ -470,26 +470,26 @@ describe('splits cleared on edit (D1: merge writes keep an omitted field)', () =
 });
 
 describe('Version bump to v7.6.27 (build 342)', () => {  it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
-    expect(CURRENT_BUILD_NUMBER).toBe(369);
-    expect(VERSION_JSON.version).toBe('v7.6.55');
-    expect(VERSION_JSON.buildNumber).toBe(369);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
+    expect(CURRENT_BUILD_NUMBER).toBe(370);
+    expect(VERSION_JSON.version).toBe('v7.6.56');
+    expect(VERSION_JSON.buildNumber).toBe(370);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.55');
-    expect(entry.buildNumber).toBe(369);
-    expect(entry.releaseDate).toBe('2026-11-26');
+    expect(entry.version).toBe('v7.6.56');
+    expect(entry.buildNumber).toBe(370);
+    expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('မျက်နှာပြင် အသေးစိတ် ပြင်ဆင်မှုများ');
-    expect(entry.titleEn).toBe('Detail polish: vivid cards, one-line headers and filters');
+    expect(entry.titleMy).toBe('ဒေတာ ထပ်တူညီမှု နှင့် Menu Update ပြင်ဆင်မှုများ');
+    expect(entry.titleEn).toBe('Sync honesty, Data Management polish and Menu Update wiring');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(7);
-    expect(entry.changesEn).toHaveLength(7);
+    expect(entry.changesMy).toHaveLength(8);
+    expect(entry.changesEn).toHaveLength(8);
     expect(entry.changesMy[0]).toBe(
-      'စာရင်း (Transactions) ကတ်တွေ ပိုတောက်ပလာပါပြီ — ကဏ္ဍခွဲပြားတွေက ကဏ္ဍအရောင် ဖျော့ဖျော့ နဲ့ ပါလာပြီး ပမာဏတွေက ပိုထင်ရှားလာပါတယ်',
+      'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ပါဘူး — ဖျက်တာ Cloud ကို ရောက်တဲ့အထိ စောင့်ပြီး အတည်ပြုပါတယ်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Records cards are more vivid — sub-category pills are tinted with their category colour and amounts stand out more',
+      'Deleted records no longer reappear on other devices — deletes are confirmed only once they reach Cloud',
     );
   });
 

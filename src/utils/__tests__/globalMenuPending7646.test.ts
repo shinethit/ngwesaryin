@@ -16,7 +16,7 @@ import {
   type GlobalMenuShopEntry,
   type MenuShopListEntry,
 } from '../shopMenuUpdate';
-import type { Transaction, VehicleMaintenance } from '../../types';
+import type { Transaction, VehicleMaintenance, FuelLog } from '../../types';
 
 const SRC = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 
@@ -69,8 +69,10 @@ async function clickBuild(
   shops: MenuShopListEntry[],
   publicShops: Array<{ id: string; name: string }> = [],
   signedIn = true,
+  fuelLogs: FuelLog[] = [],
+  maintenanceLogs: VehicleMaintenance[] = [],
 ) {
-  const latestByShop = collectLatestItemsByShop(transactions, []);
+  const latestByShop = collectLatestItemsByShop(transactions, [], maintenanceLogs, fuelLogs);
   const entries: GlobalMenuShopEntry[] = [];
   for (const entry of latestByShop.values()) {
     const items = [...entry.latest.values()];
@@ -180,8 +182,11 @@ describe('deriveGlobalMenuPending (v7.6.46 Part E)', () => {
     const appSrc = SRC('../../App.tsx');
     expect(appSrc).toContain('deriveGlobalMenuPending');
     expect(appSrc).toContain('globalMenuPending={globalMenuPendingState}');
-    expect(appSrc).toContain('collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance)');
+    expect(appSrc).toContain('collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance, fuelLogs)');
     expect(appSrc).toContain('maintenanceLogs: vehicleMaintenance');
+    // [v7.6.56] The memo feeds fuel logs into the derivation too
+    // (and recomputes when they change).
+    expect(appSrc).toContain('[transactions, categories, shops, publicShops, user, vehicleMaintenance, fuelLogs]');
   });
 });
 
@@ -256,7 +261,11 @@ describe('re-apply labor rows (v7.6.54)', () => {
       ...tx('2026-11-26', 5, '', []),
       id: 'tx9',
     } as unknown as Transaction;
-    const byShop = collectLatestItemsByShop([laborOnly], [], [maint({ transactionId: 'tx9' })]);
+    // [v7.6.56] Truly labor-only: the visit total IS the labor, so
+    // the log synthesis yields no parts row — only the labor row
+    // (a cost above the labor would now synthesize a parts row
+    // too, per the F5 fix — see shopMenuSynthesis7656 Case E).
+    const byShop = collectLatestItemsByShop([laborOnly], [], [maint({ transactionId: 'tx9', cost: 40000 })]);
     const entry = byShop.get('ဗိုလ်ဟိန်း - လီမွန်သီး');
     expect(entry).toBeDefined();
     expect([...entry!.latest.values()]).toEqual([

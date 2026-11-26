@@ -60,6 +60,26 @@ export function getTransactionSyncStatus(
     }
   }
 
+  // [v7.6.56] A dead-lettered record must NEVER read "synced",
+  // even when a stale cloudTxIds still contains its id — check the
+  // dead-letter list BEFORE the cloud-set check below. Labels are
+  // duplicated deliberately from the queue-failed branch: the same
+  // failure reads the same everywhere.
+  if (syncQueue.isEntityInDeadLetter('transactions', tx.id)) {
+    const failedEntry = syncQueue.getFailedItems().find(
+      (q) => q.entityType === 'transactions' && q.entityId === tx.id
+    );
+    return {
+      state: 'failed',
+      labelMy: '⚠️ DB error (မရောက်ပါ)',
+      labelEn: '⚠️ DB Error',
+      badgeClass: 'bg-rose-100 text-rose-900 border-rose-300 animate-pulse',
+      iconName: 'AlertTriangle',
+      errorMessage: failedEntry?.lastError || 'Unknown sync error (Quota or permission blocked)',
+      lastAttemptAt: failedEntry?.lastAttemptAt,
+    };
+  }
+
   // Check if confirmed in cloud database via cloudTxIds Set
   if (cloudTxIds && cloudTxIds.has(tx.id)) {
     return {

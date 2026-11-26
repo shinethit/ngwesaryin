@@ -20,7 +20,7 @@
 // (safeUpdateDoc/safeSetDoc CORRUPT FieldValue sentinels; see
 // AGENTS.md v7.5.64 lesson).
 
-import type { Transaction, TransactionItem, VehicleMaintenance } from '../types';
+import type { Transaction, TransactionItem, VehicleMaintenance, FuelLog } from '../types';
 import { normalizeShopName } from './shopDetailsReminders';
 import { attributeItemsToShops } from './transactionSplits';
 import type { UnifiedItemInfo } from './itemIntelligence';
@@ -857,6 +857,36 @@ export interface LatestItemsByShopEntry {
   latest: Map<string, TransactionItem>;
 }
 
+/** Item key for latest-per-shop dedup: name + unit, case-insensitive. */
+function menuItemKey(item: TransactionItem): string {
+  return `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
+}
+
+/** Recency of a record for stamp-aware upserts: date first, createdAt tiebreak. */
+interface RecencyStamp {
+  date: string;
+  createdAt: number;
+}
+function recencyOf(date: unknown, createdAt: unknown): RecencyStamp {
+  return {
+    date: typeof date === 'string' ? date : '',
+    createdAt: typeof createdAt === 'number' ? createdAt : 0,
+  };
+}
+function isNewerRecency(a: RecencyStamp, b: RecencyStamp): boolean {
+  if (a.date !== b.date) return a.date > b.date;
+  return a.createdAt > b.createdAt;
+}
+
+/** Newest-first sort for vehicle logs (same date/createdAt order as transactions). */
+function byRecencyDesc(
+  a: { date: string; createdAt: number },
+  b: { date: string; createdAt: number },
+): number {
+  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+  return b.createdAt - a.createdAt;
+}
+
 /**
  * [v7.6.46] Shared attribution loop: newest-first over all
  * transactions, items attributed to shops with the same helpers the
@@ -870,12 +900,34 @@ export interface LatestItemsByShopEntry {
  * shop wins, like every other item; license_renewal never yields a
  * row; a visit with no shop at all is skipped, like a shopless
  * entry on the save path.
+ * [v7.6.56] When fuel logs are passed, EVERY fuel visit synthesizes
+ * its fuel-type item for its station (fuel transactions carry no
+ * shop name and no items, so the transaction loop can never see
+ * them). Maintenance logs ALSO synthesize directly: a visit whose
+ * transaction exists but contributed NOTHING to the workshop
+ * (saved from the Vehicles tab, or with no entry shop and no
+ * splits) contributes its UNPLACED transaction items to the
+ * workshop — first log per transaction wins, so the same items
+ * are never offered at two workshops. A visit whose transaction
+ * carries NO items at all falls back to the log itself (title /
+ * cost / labor via buildVehicleMenuCandidate), so old single-record
+ * visits no longer lose their parts price. A visit with NO
+ * transaction at all (sync-off, or the transaction was deleted)
+ * synthesizes from the log alone. Stamp-aware upserts keep the
+ * newest record's item per name+unit: an older log never
+ * overwrites a newer transaction item, and a newer log overwrites
+ * an older one. Labor is emitted exactly once per transaction.
  */
 export function collectLatestItemsByShop(
   transactions: Transaction[],
   suggestions: UnifiedItemInfo[],
   maintenanceLogs?: VehicleMaintenance[],
+  fuelLogs?: FuelLog[],
 ): Map<string, LatestItemsByShopEntry> {
+  const txById = new Map<string, Transaction>();
+  for (const tx of transactions) {
+    if (tx && tx.id) txById.set(tx.id, tx);
+  }
   const laborByTx = new Map<string, { labor: number; workshopName: string }>();
   for (const m of maintenanceLogs || []) {
     if (!m || !m.transactionId || m.serviceType === 'license_renewal') continue;
@@ -892,19 +944,44 @@ export function collectLatestItemsByShop(
     return bCreated - aCreated;
   });
   const latestByShop = new Map<string, LatestItemsByShopEntry>();
+  const stamps = new Map<string, Map<string, RecencyStamp>>();
+  // [v7.6.56] Which shops each transaction actually contributed
+  // items to, and which item objects were placed at all — the
+  // synthesis below needs both to find unplaced items.
+  const attributedShopsByTx = new Map<string, Set<string>>();
+  const placedItems = new Set<TransactionItem>();
+  const upsertLatest = (shopKey: string, displayName: string, item: TransactionItem, stamp: RecencyStamp) => {
+    let entry = latestByShop.get(shopKey);
+    if (!entry) {
+      entry = { displayName, latest: new Map() };
+      latestByShop.set(shopKey, entry);
+    }
+    let shopStamps = stamps.get(shopKey);
+    if (!shopStamps) {
+      shopStamps = new Map<string, RecencyStamp>();
+      stamps.set(shopKey, shopStamps);
+    }
+    const itemKey = menuItemKey(item);
+    const prevStamp = shopStamps.get(itemKey);
+    if (prevStamp && !isNewerRecency(stamp, prevStamp)) return;
+    entry.latest.set(itemKey, item);
+    shopStamps.set(itemKey, stamp);
+  };
   for (const tx of ordered) {
+    const stamp = recencyOf(tx.date, tx.createdAt);
     const byShop = attributeItemsToShops(tx.items || [], tx.splits, tx.shopName, suggestions);
     for (const [attributedShop, attributedItems] of byShop) {
       const key = normalizeShopName(attributedShop);
       if (!key) continue;
-      let entry = latestByShop.get(key);
-      if (!entry) {
-        entry = { displayName: attributedShop.trim(), latest: new Map() };
-        latestByShop.set(key, entry);
+      let shops = attributedShopsByTx.get(tx.id);
+      if (!shops) {
+        shops = new Set<string>();
+        attributedShopsByTx.set(tx.id, shops);
       }
+      shops.add(key);
       for (const item of attributedItems) {
-        const itemKey = `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
-        if (!entry.latest.has(itemKey)) entry.latest.set(itemKey, item);
+        placedItems.add(item);
+        upsertLatest(key, attributedShop.trim(), item, stamp);
       }
     }
     // [v7.6.54] Service fee for this visit, if any: its own row for
@@ -916,22 +993,105 @@ export function collectLatestItemsByShop(
       const laborShop = (tx.shopName || '').trim() || visitLabor.workshopName;
       const key = normalizeShopName(laborShop);
       if (key) {
-        let entry = latestByShop.get(key);
-        if (!entry) {
-          entry = { displayName: laborShop, latest: new Map() };
-          latestByShop.set(key, entry);
-        }
-        const laborKey = 'ဝန်ဆောင်ခ|';
-        if (!entry.latest.has(laborKey)) {
-          entry.latest.set(laborKey, {
-            name: 'ဝန်ဆောင်ခ',
-            price: visitLabor.labor,
-            quantity: 1,
-            amount: visitLabor.labor,
-          });
-        }
+        upsertLatest(key, laborShop, {
+          name: 'ဝန်ဆောင်ခ',
+          price: visitLabor.labor,
+          quantity: 1,
+          amount: visitLabor.labor,
+        }, stamp);
       }
     }
+  }
+  // [v7.6.56] Maintenance synthesis from the logs themselves (see
+  // the header comment). Newest log first; stamp-aware upserts
+  // decide every overwrite.
+  const orderedLogs = [...(maintenanceLogs || [])].sort(byRecencyDesc);
+  const synthesizedTxIds = new Set<string>();
+  const laborEmittedKeys = new Set<string>();
+  const isLaborRow = (item: TransactionItem) => (item.name || '').trim() === 'ဝန်ဆောင်ခ';
+  for (const m of orderedLogs) {
+    if (!m || m.serviceType === 'license_renewal') continue;
+    const workshop = (m.workshopName || '').trim();
+    const key = normalizeShopName(workshop);
+    if (!key) continue;
+    const stamp = recencyOf(m.date, m.createdAt);
+    const tx = m.transactionId ? txById.get(m.transactionId) : undefined;
+    if (tx) {
+      // The transaction already covered this workshop — nothing
+      // more to synthesize for it.
+      if (attributedShopsByTx.get(tx.id)?.has(key)) continue;
+      const txStamp = recencyOf(tx.date, tx.createdAt);
+      const unplaced = (tx.items || []).filter((item) => !placedItems.has(item));
+      if (unplaced.length > 0) {
+        // First log per transaction wins — the same items are
+        // never offered at two workshops.
+        if (synthesizedTxIds.has(tx.id)) continue;
+        synthesizedTxIds.add(tx.id);
+        for (const item of unplaced) upsertLatest(key, workshop, item, txStamp);
+        continue;
+      }
+      // The transaction carries items, all placed elsewhere — the
+      // visit's parts are already represented. Nothing to add.
+      if ((tx.items || []).length > 0) continue;
+      // F5: the transaction carries NO items — synthesize from the
+      // log itself so the parts price is not lost. Labor was
+      // already emitted by the transaction loop when the visit
+      // has a labor record; strip it here so it appears once.
+      const candidate = buildVehicleMenuCandidate({
+        entryModel: 'vehicle_service',
+        shopName: workshop,
+        maintServiceType: m.serviceType,
+        maintTitle: m.title,
+        extraNote: m.note,
+        finalAmount: m.cost,
+        laborCost: m.laborCost,
+      });
+      if (!candidate) continue;
+      const items = laborByTx.has(tx.id)
+        ? candidate.items.filter((item) => !isLaborRow(item))
+        : candidate.items;
+      for (const item of items) upsertLatest(key, workshop, item, txStamp);
+      continue;
+    }
+    // No linked transaction: standalone / sync-off visit, or the
+    // transaction was deleted. Synthesize from the log alone;
+    // labor at most once per visit.
+    const dedupeKey = m.transactionId || m.id;
+    const candidate = buildVehicleMenuCandidate({
+      entryModel: 'vehicle_service',
+      shopName: workshop,
+      maintServiceType: m.serviceType,
+      maintTitle: m.title,
+      extraNote: m.note,
+      finalAmount: m.cost,
+      laborCost: m.laborCost,
+    });
+    if (!candidate) continue;
+    const hasLaborRow = candidate.items.some(isLaborRow);
+    const items = laborEmittedKeys.has(dedupeKey)
+      ? candidate.items.filter((item) => !isLaborRow(item))
+      : candidate.items;
+    if (hasLaborRow) laborEmittedKeys.add(dedupeKey);
+    for (const item of items) upsertLatest(key, workshop, item, stamp);
+  }
+  // [v7.6.56] Fuel synthesis: fuel transactions carry no shop name
+  // and no items, so every fuel visit is synthesized from its log.
+  const orderedFuel = [...(fuelLogs || [])].sort(byRecencyDesc);
+  for (const f of orderedFuel) {
+    if (!f) continue;
+    const station = (f.gasStation || '').trim();
+    const key = normalizeShopName(station);
+    if (!key) continue;
+    const candidate = buildVehicleMenuCandidate({
+      entryModel: 'fuel',
+      shopName: station,
+      fuelType: f.fuelType,
+      fuelLiters: f.liters,
+      fuelPricePerLiter: f.pricePerLiter,
+    });
+    if (!candidate) continue;
+    const stamp = recencyOf(f.date, f.createdAt);
+    for (const item of candidate.items) upsertLatest(key, station, item, stamp);
   }
   return latestByShop;
 }
@@ -968,6 +1128,35 @@ export interface GlobalMenuPendingState {
   checkedCount: number;
   /** Resolved private shops whose menu already matches. */
   upToDateCount: number;
+  /** [v7.6.56] Folded shop keys, per outcome — the per-card button
+      state derives from these (see shopMenuState). */
+  pendingKeys: string[];
+  doubtKeys: string[];
+  checkedKeys: string[];
+}
+
+/** Per-shop menu button state: coloured while work remains or the
+ *  state is unknown, dimmed only when provably up to date. */
+export type ShopMenuState = 'upToDate' | 'pending' | 'unknown';
+
+/**
+ * [v7.6.56] Derive one shop card's Menu button state from the
+ * global derivation. 'upToDate' ONLY when the shop is in
+ * checkedKeys and in neither pendingKeys nor doubtKeys; every
+ * other attributed shop — and every shop the derivation never
+ * saw — reads 'pending'/'unknown', both coloured and pressable,
+ * so the button never looks done while work may remain.
+ */
+export function shopMenuState(
+  pending: GlobalMenuPendingState | undefined,
+  shopName: string,
+): ShopMenuState {
+  if (!pending) return 'unknown';
+  const key = normalizeShopName(shopName);
+  if (!key) return 'unknown';
+  if (pending.pendingKeys.includes(key) || pending.doubtKeys.includes(key)) return 'pending';
+  if (pending.checkedKeys.includes(key)) return 'upToDate';
+  return 'unknown';
 }
 
 /**
@@ -985,14 +1174,19 @@ export function deriveGlobalMenuPending(args: {
   isSignedIn: boolean;
   /** [v7.6.54] Maintenance logs for the labor-row synthesis. */
   maintenanceLogs?: VehicleMaintenance[];
+  /** [v7.6.56] Fuel logs for the fuel-visit synthesis. */
+  fuelLogs?: FuelLog[];
 }): GlobalMenuPendingState {
-  const { transactions, suggestions, privateShops, publicShopNames, isSignedIn, maintenanceLogs } = args;
-  const latestByShop = collectLatestItemsByShop(transactions, suggestions, maintenanceLogs);
+  const { transactions, suggestions, privateShops, publicShopNames, isSignedIn, maintenanceLogs, fuelLogs } = args;
+  const latestByShop = collectLatestItemsByShop(transactions, suggestions, maintenanceLogs, fuelLogs);
   const publicKeys = new Set(publicShopNames.map((n) => normalizeShopName(n)));
   let pendingCount = 0;
   let hasDoubt = false;
   let checkedCount = 0;
   let upToDateCount = 0;
+  const pendingKeys: string[] = [];
+  const doubtKeys: string[] = [];
+  const checkedKeys: string[] = [];
   for (const [key, entry] of latestByShop) {
     const items = [...entry.latest.values()];
     if (items.length === 0) continue;
@@ -1003,15 +1197,21 @@ export function deriveGlobalMenuPending(args: {
       // Unknown here — doubt, never up-to-date.
       hasDoubt = true;
       checkedCount++;
+      doubtKeys.push(key);
       continue;
     }
     if (!local) continue; // Deleted/renamed shop: the click build skips it.
     checkedCount++;
     const rows = buildMenuPromptRows(items, local, isSignedIn);
-    if (rows) pendingCount++;
-    else upToDateCount++;
+    if (rows) {
+      pendingCount++;
+      pendingKeys.push(key);
+    } else {
+      upToDateCount++;
+      checkedKeys.push(key);
+    }
   }
-  return { pendingCount, hasDoubt, checkedCount, upToDateCount };
+  return { pendingCount, hasDoubt, checkedCount, upToDateCount, pendingKeys, doubtKeys, checkedKeys };
 }
 
 export type ApplyResolvedMenuUpdateResult = 'applied' | 'not-found' | 'failed';

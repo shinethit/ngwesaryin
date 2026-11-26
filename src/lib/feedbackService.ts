@@ -5,6 +5,7 @@ import {
   query,
   orderBy,
   limit,
+  where,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from './firebase';
 import { Feedback, FeedbackCategory, PlanType } from '../types';
@@ -13,14 +14,31 @@ import { safeGetItem, safeSetItem } from '../utils/storage';
 const FEEDBACKS_STORAGE_KEY = 'ngwe_feedbacks_cache';
 
 /**
- * Real-time listener for public feedbacks & comments
+ * Real-time listener for public feedbacks & comments.
+ *
+ * [v7.6.56] The query MUST be constrained to a branch the
+ * firestore.rules list rule can prove, or Firestore denies the
+ * whole list: 'all' reads only public feedbacks
+ * (where isPublic == true), 'mine' reads only the caller's own
+ * (where userId == uid), admins read unconstrained. Sorting is
+ * client-side for the constrained queries — an equality filter
+ * plus orderBy on another field needs a composite index that may
+ * not exist, and a missing index fails the whole list.
  */
 export function subscribeFeedbacks(
-  onUpdate: (feedbacks: Feedback[]) => void
+  onUpdate: (feedbacks: Feedback[]) => void,
+  opts?: { scope?: 'all' | 'mine'; userId?: string; isAdmin?: boolean }
 ): () => void {
   const path = 'feedbacks';
   try {
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'), limit(100));
+    const scope = opts?.scope ?? 'all';
+    const constrained = !opts?.isAdmin && !(scope === 'mine' && !opts?.userId);
+    const q =
+      opts?.isAdmin
+        ? query(collection(db, path), orderBy('createdAt', 'desc'), limit(100))
+        : scope === 'mine' && opts?.userId
+          ? query(collection(db, path), where('userId', '==', opts.userId), limit(100))
+          : query(collection(db, path), where('isPublic', '==', true), limit(100));
 
     return onSnapshot(
       q,
@@ -29,6 +47,12 @@ export function subscribeFeedbacks(
           id: d.id,
           ...(d.data() as Omit<Feedback, 'id'>),
         }));
+        // Newest first — the constrained queries carry no orderBy
+        // (see above); the admin query already arrives ordered and
+        // sorting it again is a no-op.
+        if (constrained) {
+          list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        }
 
         // Cache to local storage
         safeSetItem(FEEDBACKS_STORAGE_KEY, JSON.stringify(list));
@@ -61,7 +85,12 @@ function fallbackToLocalCache(onUpdate: (feedbacks: Feedback[]) => void) {
 }
 
 /**
- * Submit a new Review / Feedback
+ * Submit a new Review / Feedback. Returns true only when the write
+ * actually landed: [v7.6.56] the old code ignored safeSetDoc's
+ * return value, so a denied write (e.g. a guest, whom the rules
+ * refuse) still fired the confetti and cached the feedback as if
+ * it had been sent. The caller shows the failure and keeps the
+ * text for retry.
  */
 export async function submitFeedback(data: {
   userId?: string;
@@ -71,7 +100,7 @@ export async function submitFeedback(data: {
   rating: number;
   category: FeedbackCategory;
   comment: string;
-}): Promise<Feedback> {
+}): Promise<boolean> {
   const newId = `fb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const feedback: Feedback = {
     id: newId,
@@ -89,7 +118,8 @@ export async function submitFeedback(data: {
 
   // Save to Firestore
   const docRef = doc(db, 'feedbacks', newId);
-  await safeSetDoc(docRef, feedback);
+  const ok = await safeSetDoc(docRef, feedback);
+  if (!ok) return false;
 
   // Update Local Cache
   try {
@@ -101,7 +131,7 @@ export async function submitFeedback(data: {
     // Ignore cache error
   }
 
-  return feedback;
+  return true;
 }
 
 /**

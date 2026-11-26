@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History, Database } from 'lucide-react';
+import { LayoutDashboard, Wallet, Tags, ArrowLeftRight, HandCoins, Crown, X, Search, Cloud, RefreshCw, WifiOff, User as UserIcon, Download, ShieldCheck, ChevronRight, Sliders, LogIn, Lock, BookOpen, Share2, Car, History, Database, Clock } from 'lucide-react';
 import { PlanType } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { syncQueue } from '../lib/syncQueue';
 import { FortuneLogo } from './FortuneLogo';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { CURRENT_APP_VERSION } from '../data/versionHistory';
@@ -56,6 +57,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { user, isGuest, isSyncing, isAdmin, logout, activeWorkspaceId } = useAuth();
   const { isInstalled, isStandalone } = usePWAInstall();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  // [v7.6.56] "Cloud Synced" must not show while queue/dead-letter
+  // work is outstanding — the same subscribe pattern as the
+  // Navbar spinner (which only tracks activity).
+  const [hasOutstandingSync, setHasOutstandingSync] = useState(false);
+  useEffect(() => {
+    return syncQueue.subscribe((items) => {
+      setHasOutstandingSync(items.length > 0 || syncQueue.getFailedItems().length > 0);
+    });
+  }, []);
 
   // Logo tap goes home (Dashboard). The Navbar logo keeps the
   // long-press logo-style picker; the Sidebar copy was never wired.
@@ -315,10 +325,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <>
                         {isSyncing ? (
                           <RefreshCw className="w-2.5 h-2.5 text-sky-600 animate-spin" />
+                        ) : hasOutstandingSync ? (
+                          <Clock className="w-2.5 h-2.5 text-amber-600" />
                         ) : (
                           <Cloud className="w-2.5 h-2.5 text-emerald-600" />
                         )}
-                        <span>{isSyncing ? 'Syncing...' : lang === 'my' ? 'Cloud ချိတ်ဆက်ပြီး' : 'Cloud Synced'}</span>
+                        <span>{isSyncing ? 'Syncing...' : hasOutstandingSync ? (lang === 'my' ? 'ပို့ရန်ကျန်ရှိသည်' : 'Sync pending') : lang === 'my' ? 'Cloud ချိတ်ဆက်ပြီး' : 'Cloud Synced'}</span>
                       </>
                     ) : (
                       <span>{lang === 'my' ? 'စက်တွင်း၌ သိမ်းထားသည်' : 'Local Storage Only'}</span>

@@ -187,29 +187,34 @@ describe('global button + combined modal wiring (v7.6.44)', () => {
     expect(src).toContain('မလုပ်တော့');
   });
 
-  it('the per-shop button and handler stay untouched', () => {
+  it('the per-shop button and handler use the shared synthesis (P2c), labels kept', () => {
     const app = SRC('../../App.tsx');
     expect(app).toContain('handleReapplyShopMenu');
     expect(app).toContain('onReapplyShopMenu={handleReapplyShopMenu}');
+    // [v7.6.56] The handler's tx-only loop is replaced by the shared
+    // collectLatestItemsByShop (standalone visits, fuel, labor) —
+    // the button label and the onReapplyMenu prop contract stay.
+    expect(app).toContain('collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance, fuelLogs)');
     const card = SRC('../../components/shops/ShopCard.tsx');
     expect(card).toContain('Menu ပြန် Update');
     expect(card).toContain('onReapplyMenu');
+    expect(card).toContain('Menu ကိုက်ညီနေပါပြီ');
   });
 });
 
 describe('Version pins roll to v7.6.52 / build 366', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
-    expect(CURRENT_BUILD_NUMBER).toBe(369);
-    expect(VERSION_JSON.version).toBe('v7.6.55');
-    expect(VERSION_JSON.buildNumber).toBe(369);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
+    expect(CURRENT_BUILD_NUMBER).toBe(370);
+    expect(VERSION_JSON.version).toBe('v7.6.56');
+    expect(VERSION_JSON.buildNumber).toBe(370);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.55');
-    expect(top.buildNumber).toBe(369);
+    expect(top.version).toBe('v7.6.56');
+    expect(top.buildNumber).toBe(370);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(7);
-    expect(top.changesEn.length).toBe(7);
+    expect(top.changesMy.length).toBe(8);
+    expect(top.changesEn.length).toBe(8);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

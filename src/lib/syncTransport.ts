@@ -18,17 +18,23 @@
  *   long-standing behaviour; the listener + cloudTxIds verify it).
  * - Shared-wallet transaction DELETE: REST first (same WebKit reason),
  *   SDK fallback. Shared-wallet UPSERT: SDK first, REST fallback.
- * - Everything else: SDK only (no REST helper exists); a resolved SDK
- *   call counts as confirmed for these kinds (documented asymmetry:
- *   additive + listener-verified kinds vs destructive transaction
- *   deletes, which need REST confirmation).
+ * - Everything else: REST DELETE first (generic document path),
+ *   SDK fallback. A resolved SDK call is 'local', NEVER
+ *   confirmation — the queue task stays until REST (or the
+ *   listener/pull observing the server absence) confirms it.
+ *   (v7.6.56: the old "SDK resolve counts as confirmed for these
+ *   kinds" asymmetry is gone — it let an offline-accepted delete
+ *   drop its queue task while the server never heard it.)
  *
  * Outcomes:
  * - 'confirmed': the server acknowledged the write/delete.
- * - 'local': ONLY for transaction deletes — the SDK accepted the
- *   mutation locally (offline persistence) but the server has NOT
- *   confirmed it. The caller MUST keep the queue task so the delete
- *   is re-attempted (REST-first) until confirmed.
+ * - 'local': for DELETES — the SDK accepted the mutation locally
+ *   (offline persistence) but the server has NOT confirmed it.
+ *   The caller MUST keep the queue task so the delete is
+ *   re-attempted (REST-first) until confirmed. For direct safe*
+ *   calls with no queue intent (admin / public paths), the
+ *   caller treats 'local' as success — there is no queue task
+ *   and no listener to confirm later (see safeDeleteDoc).
  * - 'failed': neither transport worked. The caller keeps/queues the
  *   task with backoff; permission-denied failures are flagged so the
  *   queue can dead-letter them instead of retrying forever.
@@ -163,20 +169,39 @@ async function executeDelete(
     } catch (restErr: any) {
       console.warn('[syncTransport] REST delete threw, falling back to SDK:', restErr?.message || restErr);
     }
+  } else {
+    // [v7.6.56] Every other delete: generic REST DELETE first, same
+    // shape as the transaction path (ok/404 = confirmed, 403 =
+    // permission-denied). The transaction/shared branches above are
+    // left byte-for-byte alone — they are the proven paths.
+    try {
+      const { deleteDocumentDirectHttp } = await import('./directFirestoreHttp');
+      const restRes = await deleteDocumentDirectHttp(path);
+      if (restRes.success) {
+        return { outcome: 'confirmed', viaRest: true };
+      }
+      console.warn('[syncTransport] REST delete failed, falling back to SDK:', restRes.error);
+      if (restRes.error && restErrorIsPermission(restRes.error)) {
+        return {
+          outcome: 'failed',
+          error: restRes.error,
+          permissionDenied: true,
+        };
+      }
+    } catch (restErr: any) {
+      console.warn('[syncTransport] REST delete threw, falling back to SDK:', restErr?.message || restErr);
+    }
   }
 
   try {
     const docRef = task.docRef || resolveTaskDocRef(task.entityType, task.entityId, effectiveUid);
     await withTimeout(deleteDoc(docRef), SDK_TIMEOUT_MS);
-    // Non-transaction deletes have no REST confirmation available: an
-    // SDK resolve is the best signal there is. Transaction deletes
-    // MUST NOT count an SDK resolve as confirmation (offline
-    // persistence resolves locally while the server never hears it) —
-    // the queue task stays until REST (or the listener) confirms.
-    if (task.entityType === 'transactions' || sharedTx) {
-      return { outcome: 'local' };
-    }
-    return { outcome: 'confirmed' };
+    // [v7.6.56] An SDK resolve is NEVER server confirmation for a
+    // delete (offline persistence resolves locally while the
+    // server never hears it) — for ANY entity kind. The queue task
+    // stays until REST (or the listener) confirms; direct safe*
+    // calls without a queue intent map 'local' back to success.
+    return { outcome: 'local' };
   } catch (err: any) {
     handleFirestoreError(err, opType, path);
     const message = err instanceof Error ? err.message : String(err);

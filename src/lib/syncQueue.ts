@@ -258,6 +258,21 @@ export class SyncQueueManager {
   }
 
   /**
+   * [v7.6.56] Delete-only dead-letter check: a dead-lettered UPSERT
+   * must NOT block a later delete for the same id (the old
+   * isEntityInDeadLetter check treated ANY dead-letter entry as a
+   * delete block, so one failed write permanently vetoed the
+   * delete). Delete-blocked decisions use this; the generic
+   * isEntityInDeadLetter stays for the tracker/drawer surfaces
+   * that report ANY failure.
+   */
+  public isEntityDeleteInDeadLetter(entityType: SyncEntityType, entityId: string): boolean {
+    return this.deadLetter.some(
+      (item) => item.entityType === entityType && item.entityId === entityId && item.operation === 'delete'
+    );
+  }
+
+  /**
    * [v7.6.52] Re-queue ONE dead-letter item the user explicitly retries.
    * Returns false when no such item exists.
    */
@@ -285,7 +300,7 @@ export class SyncQueueManager {
    */
   public isDeleteBlocked(entityType: SyncEntityType, entityId: string): boolean {
     if (this.isEntityPendingDelete(entityType, entityId)) return true;
-    if (this.isEntityInDeadLetter(entityType, entityId)) return true;
+    if (this.isEntityDeleteInDeadLetter(entityType, entityId)) return true;
     if (entityType === 'transactions') {
       if (isTxDeleted(entityId) || isTxTombstoned(entityId)) return true;
     }
@@ -422,7 +437,18 @@ export class SyncQueueManager {
     }
 
     if (existingIdx >= 0) {
-      // Replace with latest operation
+      // Replace with latest operation, but PRESERVE the retry
+      // clock: resetting retryCount/lastAttemptAt on every replace
+      // let a flapping task retry forever without backoff or
+      // dead-lettering (the replace erased its history). A
+      // same-operation replace keeps the old counters; a new
+      // operation starts them over.
+      const prev = this.queue[existingIdx];
+      if (prev.operation === operation) {
+        newItem.retryCount = prev.retryCount || 0;
+        newItem.lastAttemptAt = prev.lastAttemptAt || 0;
+        newItem.status = prev.status === 'in_progress' ? 'pending' : prev.status;
+      }
       this.queue[existingIdx] = newItem;
     } else {
       this.queue.push(newItem);
@@ -536,6 +562,16 @@ export class SyncQueueManager {
       }
 
       if (existingIdx >= 0) {
+        // [v7.6.56] Same retry-clock preservation as enqueue():
+        // a batched same-operation replace keeps the old
+        // retryCount/lastAttemptAt/status instead of erasing the
+        // task's failure history.
+        const prev = this.queue[existingIdx];
+        if (prev.operation === operation) {
+          newItem.retryCount = prev.retryCount || 0;
+          newItem.lastAttemptAt = prev.lastAttemptAt || 0;
+          newItem.status = prev.status === 'in_progress' ? 'pending' : prev.status;
+        }
         this.queue[existingIdx] = newItem;
       } else {
         this.queue.push(newItem);
@@ -588,7 +624,14 @@ export class SyncQueueManager {
 
     const readyItems = this.queue.filter((item) => {
       if (item.status === 'in_progress') return false;
-      if (item.status === 'failed') {
+      // [v7.6.56] Backoff applies to EVERY retried task, not only
+      // 'failed' ones: an SDK-local accept ('local') leaves the
+      // task 'pending' with retryCount > 0, and without this gate
+      // every trigger (enqueue, focus, heartbeat) re-attempted it
+      // immediately — the retry storm. Manual retries
+      // (retryTargetedMissing / retryAllFailed / retryFailedItem)
+      // reset retryCount + lastAttemptAt, so they still run at once.
+      if (item.retryCount > 0) {
         const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, Math.max(0, item.retryCount - 1)), MAX_BACKOFF_MS);
         if (now - (item.lastAttemptAt || 0) < backoff) {
           return false;
@@ -660,9 +703,12 @@ export class SyncQueueManager {
           } else if (result.outcome === 'local') {
             // SDK accepted the delete locally; the server has NOT
             // confirmed it. Keep the task (REST-first re-attempt on
-            // the next run) without inflating the failure count.
+            // the next run) without inflating the failure count —
+            // but COUNT the attempt, so the ready-filter backoff
+            // spaces the re-attempts instead of storming them.
             awaitingConfirmation++;
             task.status = 'pending';
+            task.retryCount = (task.retryCount || 0) + 1;
             task.lastAttemptAt = Date.now();
           } else {
             failed++;
@@ -678,7 +724,12 @@ export class SyncQueueManager {
             if (result.permissionDenied && task.retryCount >= PERMISSION_MAX_RETRIES) {
               this.moveToDeadLetter(task);
             } else if (task.retryCount >= MAX_RETRIES) {
-              console.warn(`[SyncQueue] Task ${task.id} reached maximum retries (${MAX_RETRIES}):`, task.lastError);
+              // [v7.6.56] A task that can never succeed must NOT
+              // retry forever: the old code only warned and kept
+              // retrying at the 30s cap without end, flooding the
+              // console and burning quota. Dead-letter it like a
+              // permission denial — visible, never auto-retried.
+              this.moveToDeadLetter(task);
             }
           }
         }
@@ -761,6 +812,11 @@ export class SyncQueueManager {
         await withTimeout(batch.commit(), 12000);
 
         chunk.forEach((tx) => {
+          // [v7.6.56] Re-check the delete block per item: a delete
+          // may have landed while the batch was in flight — never
+          // confirm or drop the queue task for an id that is
+          // delete-blocked now.
+          if (this.isDeleteBlocked('transactions', tx.id)) return;
           succeededCount++;
           newlyConfirmedTxIds.push(tx.id);
           this.remove('transactions', tx.id);

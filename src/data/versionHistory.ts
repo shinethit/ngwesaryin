@@ -16,10 +16,43 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.55';
-export const CURRENT_BUILD_NUMBER = 369;
+export const CURRENT_APP_VERSION = 'v7.6.56';
+export const CURRENT_BUILD_NUMBER = 370;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.56',
+    buildNumber: 370,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ဒေတာ ထပ်တူညီမှု နှင့် Menu Update ပြင်ဆင်မှုများ',
+    titleEn: 'Sync honesty, Data Management polish and Menu Update wiring',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ဘဲ Cloud နဲ့ ထပ်တူညီမှု အခြေအနေကို အမှန်အတိုင်း ပြပါပြီ။ ယာဉ်စီမံခန့်ခွဲမှုကနေ သိမ်းလိုက်တဲ့ ဝန်ဆောင်မှု/ဆီမှတ်တမ်းတွေကလည်း ဆိုင်ရဲ့ Menu ကို ပြန် Update လုပ်ဖို့ မေးတော့မှာဖြစ်ပြီး ဆိုင်ခလုတ်တွေက လုပ်စရာ ကျန်သေးလား ပြီးပြီလား ရှင်းရှင်းလင်းလင်း ပြပါပြီ။',
+    descriptionEn: 'Deleted records no longer reappear on other devices, and the sync state is shown honestly. Service and fuel entries saved from Vehicle Management now offer to update the shop menu like the main entry form, and the shop buttons clearly show whether work remains or the menu is up to date.',
+    changesMy: [
+      'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ပါဘူး — ဖျက်တာ Cloud ကို ရောက်တဲ့အထိ စောင့်ပြီး အတည်ပြုပါတယ်',
+      'Cloud ချိတ်ဆက်မှု ပြတ်နေချိန်မှာ ထပ်ခါထပ်ခါ ကြိုးစားတာကို လျှော့ချပြီး စောင့်ဆိုင်းမှု ပိုမှန်ကန်လာပါပြီ',
+      'ကွန်ရက် နှေးတာနဲ့ Cloud အကောင့် တိုကင် ပြဿနာကို ခွဲခြားပြပေးပါပြီ — ချိတ်ဆက်မှု ပြန်ရရင် အလိုအလျောက် ပို့ပေးပါမယ်',
+      'ဒေတာ စီမံခန့်ခွဲမှု စာမျက်နှာက Cloud နဲ့ ထပ်တူညီမှု အခြေအနေကို အမှန်အတိုင်း ပြပါပြီ — ပို့ရန်ကျန်နေသေးရင် ၁၀၀% လို့ မပြတော့ပါ',
+      'ကိန်းဂဏန်း ၇ ခုပါတဲ့ အတန်းက ဖုန်းအကျယ် အားလုံးမှာ ညီညီညာညာ ပေါ်ပါပြီ',
+      'ဒေတာ အားလုံး ဖျက်တော့မယ့် သတိပေးစာမှာ ဖျက်မယ့် အရာအားလုံး ပါဝင်ပြီး အရန်သိမ်းတာ ပိုစုံလင်လာပါပြီ',
+      'ယာဉ်စီမံခန့်ခွဲမှုကနေ ဝန်ဆောင်မှု/ဆီထည့်တာတွေကို သိမ်းလိုက်ရင် ဆိုင်ရဲ့ Menu ပြန် Update လုပ်ဖို့ မေးတော့မှာပါ',
+      'ဆိုင်ရဲ့ Menu ပြန် Update ခလုတ်တွေက နှိပ်ရတာ ပိုသိသာလာပြီး လုပ်စရာ ကျန်သေးလား ပြီးပြီလား ရှင်းရှင်းလင်းလင်း ပြပါပြီ',
+    ],
+    changesEn: [
+      'Deleted records no longer reappear on other devices — deletes are confirmed only once they reach Cloud',
+      'Retries while the connection is down are spaced out instead of storming, so sync recovers cleanly',
+      'Connection problems now distinguish a slow network from a Cloud sign-in token problem — pending changes sync automatically when the connection recovers',
+      'The Data Management page now shows the true sync state — it never reads 100% while work is still pending',
+      'The 7-count stats strip lines up evenly on all phone widths',
+      'The Clear All warning now lists everything that will be deleted, and the automatic backup covers more of your data',
+      'Saving a service or fuel entry from Vehicle Management now offers to update the shop menu, like the main entry form',
+      'Shop menu refresh buttons look clearly pressable and show whether work remains or the menu is up to date',
+    ],
+  },
   {
     version: 'v7.6.55',
     buildNumber: 369,

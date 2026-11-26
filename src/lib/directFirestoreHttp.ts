@@ -243,6 +243,57 @@ export async function deleteTransactionDirectHttp(
 }
 
 /**
+ * [v7.6.56] Directly DELETE any Firestore document via HTTPS REST API.
+ * Same shape as deleteTransactionDirectHttp (token, 12s abort, 404 =
+ * idempotent success) but for an arbitrary document path such as
+ * `users/<uid>/wallets/<id>` or `sharedWallets/<docId>/debts/<id>`.
+ * Gives non-transaction deletes the same real server confirmation
+ * transaction deletes already had — an SDK resolve alone is never
+ * confirmation. Bypasses the Firestore SDK entirely.
+ */
+export async function deleteDocumentDirectHttp(
+  docPath: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!auth.currentUser || !docPath) {
+    return { success: false, error: 'Invalid params' };
+  }
+
+  try {
+    let idToken = '';
+    try {
+      idToken = await auth.currentUser.getIdToken(false);
+    } catch {
+      idToken = await auth.currentUser.getIdToken(true);
+    }
+
+    const encodedPath = docPath
+      .split('/')
+      .map((seg) => encodeURIComponent(seg))
+      .join('/');
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/${encodedPath}`;
+
+    const controller = new AbortController();
+    const timeoutTimer = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${idToken}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutTimer);
+
+    if (response.ok || response.status === 404) {
+      return { success: true };
+    }
+
+    const errText = await response.text().catch(() => '');
+    return { success: false, error: `HTTP ${response.status}: ${errText.slice(0, 200)}` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
  * Directly writes a single transaction into a shared wallet's subcollection
  * via HTTPS REST. Immune to iOS Safari WebKit / LTE timeouts.
  */

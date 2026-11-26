@@ -350,21 +350,21 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
-    expect(CURRENT_BUILD_NUMBER).toBe(369);
-    expect(VERSION_JSON.version).toBe('v7.6.55');
-    expect(VERSION_JSON.buildNumber).toBe(369);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
+    expect(CURRENT_BUILD_NUMBER).toBe(370);
+    expect(VERSION_JSON.version).toBe('v7.6.56');
+    expect(VERSION_JSON.buildNumber).toBe(370);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.55');
-    expect(entry.buildNumber).toBe(369);
-    expect(entry.releaseDate).toBe('2026-11-26');
+    expect(entry.version).toBe('v7.6.56');
+    expect(entry.buildNumber).toBe(370);
+    expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('မျက်နှာပြင် အသေးစိတ် ပြင်ဆင်မှုများ');
-    expect(entry.titleEn).toBe('Detail polish: vivid cards, one-line headers and filters');
+    expect(entry.titleMy).toBe('ဒေတာ ထပ်တူညီမှု နှင့် Menu Update ပြင်ဆင်မှုများ');
+    expect(entry.titleEn).toBe('Sync honesty, Data Management polish and Menu Update wiring');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(7);
-    expect(entry.changesEn).toHaveLength(7);
+    expect(entry.changesMy).toHaveLength(8);
+    expect(entry.changesEn).toHaveLength(8);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

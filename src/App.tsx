@@ -54,6 +54,7 @@ import {
   applyResolvedMenuUpdate,
   buildGlobalMenuSections,
   buildMenuPromptRows,
+  buildVehicleMenuCandidate,
   collectLatestItemsByShop,
   computeMenuDiff,
   deriveGlobalMenuPending,
@@ -101,7 +102,7 @@ import { getExpiryReminders } from './utils/expiryReminders';
 // [v7.6.08] Anomaly alerts — same helper and ids as NotificationModal.
 import { getAnomalyAlerts } from './utils/anomalyAlerts';
 // [v7.6.07] Split-aware budget badge math (same as NotificationModal).
-import { getSplitAttribution, splitAmountMatching, attributeItemsToShops } from './utils/transactionSplits';
+import { getSplitAttribution, splitAmountMatching } from './utils/transactionSplits';
 import { getAllItemSuggestions } from './utils/itemIntelligence';
 // [v7.6.15] Fuel-log join for the Records rows + search-hit detail view.
 import { findFuelLogForTransaction, findMaintenanceLogForTransaction } from './utils/fuelRowLine';
@@ -1450,26 +1451,16 @@ export default function App() {
     // Every purchased item attributed to THIS shop across all of
     // the user's records, newest first, keeping only the LATEST
     // price per name+unit (the diff itself dedupes the same way).
+    // [v7.6.56] Shared synthesis (P2c): the same
+    // collectLatestItemsByShop the global build uses, filtered to
+    // this shop — standalone visits, fuel visits and labor rows
+    // included, so the single-shop button can never drift from the
+    // global one (F4).
     const suggestions = getAllItemSuggestions(transactions, categories);
     const shopKey = normalizeShopName(resolved.shop.name);
-    const latestByItem = new Map<string, TransactionItem>();
-    const ordered = [...transactions].sort((a, b) => {
-      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-      const aCreated = typeof a.createdAt === 'number' ? a.createdAt : 0;
-      const bCreated = typeof b.createdAt === 'number' ? b.createdAt : 0;
-      return bCreated - aCreated;
-    });
-    for (const tx of ordered) {
-      const byShop = attributeItemsToShops(tx.items || [], tx.splits, tx.shopName, suggestions);
-      for (const [attributedShop, attributedItems] of byShop) {
-        if (normalizeShopName(attributedShop) !== shopKey) continue;
-        for (const item of attributedItems) {
-          const itemKey = `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
-          if (!latestByItem.has(itemKey)) latestByItem.set(itemKey, item);
-        }
-      }
-    }
-    const items = [...latestByItem.values()];
+    const latestByShop = collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance, fuelLogs);
+    const shopEntry = latestByShop.get(shopKey);
+    const items = shopEntry ? [...shopEntry.latest.values()] : [];
     if (items.length === 0) {
       showToast(
         lang === 'my' ? 'ဤဆိုင်မှာ ဝယ်ခဲ့သည့် မှတ်တမ်း မရှိသေးပါ။' : 'No purchase history for this shop yet.',
@@ -1541,8 +1532,10 @@ export default function App() {
         isSignedIn: !!user,
         // [v7.6.54] Maintenance logs feed the labor-row synthesis.
         maintenanceLogs: vehicleMaintenance,
+        // [v7.6.56] Fuel logs feed the fuel-visit synthesis.
+        fuelLogs,
       }),
-    [transactions, categories, shops, publicShops, user, vehicleMaintenance],
+    [transactions, categories, shops, publicShops, user, vehicleMaintenance, fuelLogs],
   );
 
   const handleReapplyAllShopMenus = async () => {
@@ -1563,7 +1556,8 @@ export default function App() {
       // (shared with the header button's sync derivation — same helper,
       // so the two can never drift apart).
       // [v7.6.54] Maintenance logs feed the labor-row synthesis.
-      const latestByShop = collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance);
+      // [v7.6.56] Fuel logs feed the fuel-visit synthesis.
+      const latestByShop = collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance, fuelLogs);
       if (latestByShop.size === 0) {
         showToast(
           lang === 'my' ? 'ဝယ်ခဲ့သည့် မှတ်တမ်း မရှိသေးပါ။' : 'No purchase history yet.',
@@ -2463,6 +2457,30 @@ export default function App() {
   }, [user?.uid, user?.email, wallets.length]);
 
   // Handlers
+  // [v7.6.56] Monthly savings targets + deletion markers, scanned
+  // from storage the same way for BOTH the manual export and the
+  // pre-delete auto-backup: the auto-backup used to omit them, so a
+  // restore after Clear All lost savings targets and resurrection
+  // guards. NEVER include the PIN.
+  const collectBackupExtras = () => {
+    const savingsTargets: Record<string, string> = {};
+    const deletedMarkers: Record<string, string[]> = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith('ngwe_savings_target_') || k === 'ngwe_savings_target_enabled' || k === 'ngwe_savings_target_default') {
+          const v = safeGetItem(k);
+          if (v !== null) savingsTargets[k] = v;
+        } else if (k.startsWith('ngwe_deleted_') && k.endsWith('_ids')) {
+          const v = safeGetItem(k);
+          if (v) { try { deletedMarkers[k] = JSON.parse(v); } catch { /* ignore */ } }
+        }
+      }
+    } catch { /* ignore */ }
+    return { savingsTargets, deletedMarkers };
+  };
+
   const handleClearAllData = async (force = false) => {
     // [v6.7f] Require typing confirmation + auto-backup
     if (!force) {
@@ -2481,6 +2499,10 @@ export default function App() {
       const backupData = {
         transactions, debts, wallets: computedWallets, categories, budgets,
         shops, vehicles, fuelLogs, vehicleMaintenance, tirePressureLogs, plan, lang,
+        // [v7.6.56] Same extras as the manual export (see
+        // collectBackupExtras) — the auto-backup used to omit
+        // savings targets + deletion markers entirely.
+        ...collectBackupExtras(),
       };
       const jsonStr = JSON.stringify(backupData, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -2632,21 +2654,7 @@ export default function App() {
     }
     // [v7.5.55 E4] Include monthly savings targets + deletion markers
     // (previously lost on export); NEVER include the PIN.
-    const savingsTargets: Record<string, string> = {};
-    const deletedMarkers: Record<string, string[]> = {};
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        if (k.startsWith('ngwe_savings_target_') || k === 'ngwe_savings_target_enabled' || k === 'ngwe_savings_target_default') {
-          const v = safeGetItem(k);
-          if (v !== null) savingsTargets[k] = v;
-        } else if (k.startsWith('ngwe_deleted_') && k.endsWith('_ids')) {
-          const v = safeGetItem(k);
-          if (v) { try { deletedMarkers[k] = JSON.parse(v); } catch { /* ignore */ } }
-        }
-      }
-    } catch { /* ignore */ }
+    const { savingsTargets, deletedMarkers } = collectBackupExtras();
     const data = {
       transactions,
       debts,
@@ -2698,9 +2706,22 @@ export default function App() {
         }
         // Import is a PER-COLLECTION PATCH, not a full replace:
         // collections missing from the file are left as-is.
-        const counts = ['transactions', 'debts', 'wallets', 'categories', 'budgets', 'shops', 'vehicles']
-          .filter((f) => Array.isArray((parsed as any)[f]))
-          .map((f) => `${f}: ${(parsed as any)[f].length}`).join(', ');
+        // [v7.6.56] The confirm counts EVERY collection the import
+        // actually restores — fuel/maintenance/tire logs and the
+        // savings-targets/deletion-marker maps used to be restored
+        // silently without being counted.
+        const countParts: string[] = [];
+        const countArray = (f: string) => {
+          const v = (parsed as any)[f];
+          if (Array.isArray(v)) countParts.push(`${f}: ${v.length}`);
+        };
+        ['transactions', 'debts', 'wallets', 'categories', 'budgets', 'shops', 'vehicles', 'fuelLogs', 'vehicleMaintenance', 'tirePressureLogs'].forEach(countArray);
+        const countObj = (f: string) => {
+          const v = (parsed as any)[f];
+          if (v && typeof v === 'object' && !Array.isArray(v)) countParts.push(`${f}: ${Object.keys(v).length}`);
+        };
+        ['savingsTargets', 'deletedMarkers'].forEach(countObj);
+        const counts = countParts.join(', ');
         if (!window.confirm(lang === 'my' ? `Backup ဖိုင်မှ ဒေတာများကို ထည့်သွင်းမည် — ⚠️ ဖိုင်တွင် ပါသော စာရင်းများ၏ လက်ရှိ ဒေတာ အစားထိုးခံရပါမည် (ဖိုင်တွင် မပါသော စာရင်းများ ပြောင်းလဲမည် မဟုတ်ပါ) — ${counts} — သေချာပါသလား?` : `Import data from this backup? ⚠️ Existing data in the included collections will be replaced (collections not in the file are left unchanged) — ${counts} — Continue?`)) {
           return;
         }
@@ -2786,6 +2807,20 @@ export default function App() {
         } else {
           showToast(t('toast.backupRestored', lang));
         }
+        // [v7.6.56] Guest drops of budgets/savings were silent — the
+        // old toast named debts only. Name every kind that was
+        // present in the file but skipped for the guest plan.
+        const droppedGuest: string[] = [];
+        if (!allowBudgets && parsed.budgets) droppedGuest.push(lang === 'my' ? 'ဘတ်ဂျက်' : 'budgets');
+        if (!allowSavings && parsed.savingsTargets) droppedGuest.push(lang === 'my' ? 'စုငွေပစ်မှတ်' : 'savings targets');
+        if (droppedGuest.length > 0) {
+          showToast(
+            lang === 'my'
+              ? `Guest Mode တွင် ${droppedGuest.join('၊ ')} ပြန်ထည့်၍ မရပါ — ကျော်သွားပါမည်`
+              : `${droppedGuest.join(' and ')} were not imported in Guest Mode — skipped`,
+            'warning'
+          );
+        }
       } catch (err) {
         alert(t('errors.fileRead', lang));
       }
@@ -2833,6 +2868,54 @@ export default function App() {
     transactions,
     setTransactions,
   });
+
+  // [v7.6.56] Vehicles-tab Menu Update wiring (F1/F2/F9): the
+  // Vehicles-tab save path never built a menu candidate — only the
+  // entry form did (TransactionModal). These wrappers run the SAME
+  // candidate/prompt flow as the entry form, AFTER the save, from
+  // the modal payload: fuel from the station/type/price, maintenance
+  // from the workshop/rows/labor (license_renewal yields null from
+  // the builder, like the entry form). Candidate first, details
+  // prompt second — the entry form's order. Saved data is
+  // unchanged; only the prompt flow is added.
+  const handleSaveFuelLogWithMenu = (log: Partial<FuelLog>) => {
+    handleSaveFuelLog(log as FuelLog);
+    const candidate = buildVehicleMenuCandidate({
+      entryModel: 'fuel',
+      shopName: log.gasStation || '',
+      fuelType: log.fuelType,
+      fuelLiters: log.liters,
+      fuelPricePerLiter: log.pricePerLiter,
+    });
+    if (candidate) {
+      handleShopMenuUpdateCandidates([candidate]);
+      const shopName = candidate.shopName;
+      if (isShopNameNeedingDetails(shopName, shops, publicShopsFull, loadShopDetailDismissedKeys())) {
+        handleShopNeedsDetails(shopName);
+      }
+    }
+  };
+
+  const handleSaveMaintenanceWithMenu = (maint: Partial<VehicleMaintenance> & { items?: TransactionItem[] }) => {
+    handleSaveMaintenance(maint as VehicleMaintenance);
+    const candidate = buildVehicleMenuCandidate({
+      entryModel: 'vehicle_service',
+      shopName: maint.workshopName || '',
+      maintServiceType: maint.serviceType,
+      maintTitle: maint.title,
+      extraNote: maint.note,
+      finalAmount: maint.cost,
+      laborCost: maint.laborCost,
+      rows: maint.items,
+    });
+    if (candidate) {
+      handleShopMenuUpdateCandidates([candidate]);
+      const shopName = candidate.shopName;
+      if (isShopNameNeedingDetails(shopName, shops, publicShopsFull, loadShopDetailDismissedKeys())) {
+        handleShopNeedsDetails(shopName);
+      }
+    }
+  };
 
   const {
     handleOpenAddTx,
@@ -3583,6 +3666,7 @@ export default function App() {
             onExportJson={handleExportJson}
             onImportJson={handleImportJson}
             onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
+            onOpenSyncStatus={() => setIsSyncStatusDrawerOpen(true)}
           />
         </div>
 
@@ -3863,9 +3947,9 @@ export default function App() {
             onOpenUpgradeModal={() => setIsPremiumModalOpen(true)}
                 onSaveVehicle={(v) => handleSaveVehicle(v as Vehicle)}
             onDeleteVehicle={handleDeleteVehicle}
-            onSaveFuelLog={(f) => handleSaveFuelLog(f as FuelLog)}
+            onSaveFuelLog={handleSaveFuelLogWithMenu}
             onDeleteFuelLog={handleDeleteFuelLog}
-            onSaveMaintenance={(m) => handleSaveMaintenance(m as VehicleMaintenance)}
+            onSaveMaintenance={handleSaveMaintenanceWithMenu}
             onDeleteMaintenance={handleDeleteMaintenance}
             onSaveTirePressure={(t) => handleSaveTirePressure(t as TirePressureLog)}
             onDeleteTirePressure={handleDeleteTirePressure}

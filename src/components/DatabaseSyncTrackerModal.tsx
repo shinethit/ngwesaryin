@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatMMK } from '../utils/formatters';
 import { testFirestoreQuotaPing, isQuotaExhausted } from '../lib/firebase';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
+import { getTransactionSyncSummary, isTransactionConfirmed } from '../utils/transactionSyncSummary';
 import {
   subscribeSyncOperationLogs,
   clearSyncOperationLogs,
@@ -51,6 +52,9 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
+  // [v7.6.56] Dead-letter items, refreshed with the queue subscription
+  // — the header counts must include failures, not just the queue.
+  const [failedItems, setFailedItems] = useState<SyncQueueItem[]>([]);
   const [isQueueProcessing, setIsQueueProcessing] = useState(false);
   const [isRetryingSyncs, setIsRetryingSyncs] = useState(false);
 
@@ -93,12 +97,20 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
   };
 
   // Consolidated and mathematically accurate sync metrics
+  // [v7.6.56] ONE source of truth with the Data Management card and
+  // Sync Health (transactionSyncSummary): the old header counted a
+  // record synced on cloudTxIds alone and fell back to the raw
+  // queue length, so dead-lettered failures and stale ids read as
+  // synced. The retry list is the unconfirmed list — dead-lettered
+  // records included, so an explicit retry can re-push them (the
+  // reconcile gate still blocks delete-blocked ids).
+  const syncSummary = getTransactionSyncSummary(transactions, cloudTxIds, queueItems, failedItems);
   const totalLocalTxs = transactions.length;
-  const syncedTxsCount = transactions.filter((t) => cloudTxIds.has(t.id) && !syncQueue.isEntityPending('transactions', t.id)).length;
-  const localMissingFromCloud = transactions.filter((t) => !cloudTxIds.has(t.id) || syncQueue.isEntityPending('transactions', t.id));
-  const pendingTxsCount = localMissingFromCloud.length;
+  const syncedTxsCount = syncSummary.confirmedCount;
+  const localMissingFromCloud = transactions.filter((t) => !isTransactionConfirmed(t, cloudTxIds, queueItems, failedItems));
+  const pendingTxsCount = syncSummary.unconfirmedCount;
 
-  const totalUnsyncedCount = pendingTxsCount > 0 ? pendingTxsCount : queueItems.length;
+  const totalUnsyncedCount = syncSummary.outstandingCount;
   const totalStuckOrMissingCount = totalUnsyncedCount;
 
   const handleRetryFailedSyncs = async () => {
@@ -222,6 +234,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
   useEffect(() => {
     return syncQueue.subscribe((items, processing) => {
       setQueueItems(items);
+      setFailedItems(syncQueue.getFailedItems());
       setIsQueueProcessing(processing);
     });
   }, []);
@@ -245,7 +258,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
 
   // Filtered list for detailed view
   const filteredList = transactions.filter((t) => {
-    const isSynced = cloudTxIds.has(t.id);
+    const isSynced = isTransactionConfirmed(t, cloudTxIds, queueItems, failedItems);
     if (statusFilter === 'synced' && !isSynced) return false;
     if (statusFilter === 'pending' && isSynced) return false;
 
@@ -587,7 +600,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
 
             {/* Card 2: Confirmed in Cloud Database */}
             <div className={`rounded-2xl p-3 border text-center space-y-0.5 ${
-              totalLocalTxs > 0 && pendingTxsCount === 0 && queueItems.length === 0
+              totalLocalTxs > 0 && syncSummary.isFullySynced
                 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
                 : 'bg-indigo-50/80 border-indigo-200 text-indigo-950'
             }`}>
@@ -603,7 +616,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
                     nothing to sync yet. Show that honestly. */}
                 {totalLocalTxs === 0
                   ? (lang === 'my' ? 'မှတ်တမ်း မရှိသေးပါ' : 'No records yet')
-                  : pendingTxsCount === 0 && queueItems.length === 0
+                  : syncSummary.isFullySynced
                   ? (lang === 'my' ? '၁၀၀% တပြေးညီ ✓' : '100% In-Sync ✓')
                   : pendingTxsCount === 0
                   ? (lang === 'my' ? `${syncedTxsCount}/${totalLocalTxs} (Queue တွင် ကျန်)` : `${syncedTxsCount}/${totalLocalTxs} (Queue Pending)`)
@@ -627,7 +640,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
               <div className="text-[10px] text-slate-400 font-medium">
                 {pendingTxsCount > 0
                   ? (lang === 'my' ? 'Cloud သို့ ပို့ရန်' : 'Needs Push')
-                  : queueItems.length > 0
+                  : syncSummary.outstandingCount > 0
                   ? (lang === 'my' ? 'Queue တန်းစီဆဲ' : 'Queue pending')
                   : (lang === 'my' ? 'အားလုံးပြီးစီး' : 'All pushed')}
               </div>
@@ -919,7 +932,7 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
                     </div>
                   ) : (
                     filteredList.map((t) => {
-                      const isSynced = cloudTxIds.has(t.id);
+                      const isSynced = isTransactionConfirmed(t, cloudTxIds, queueItems, failedItems);
                       const isIncome = t.type === 'income';
 
                       return (

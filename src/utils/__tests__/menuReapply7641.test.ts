@@ -124,7 +124,8 @@ describe('menu re-apply button wiring (v7.6.41 B)', () => {
     expect(src).toContain('Refresh Menu');
     expect(src).toContain('RefreshCw');
     expect(src).toContain('min-h-[44px]');
-    expect(src).toContain('onReapplyMenu(shop, isPublic)');
+    expect(src).toContain('onReapplyMenu?.(shop, isPublic)');
+    expect((src.match(/\{onReapplyMenu && renderMenuReapplyButton\(\)\}/g) || []).length).toBe(2);
   });
 
   it('ShopsView threads the handler to every ShopCard', () => {
@@ -138,7 +139,7 @@ describe('menu re-apply button wiring (v7.6.41 B)', () => {
     expect(src).toContain('handleReapplyShopMenu');
     expect(src).toContain('onReapplyShopMenu={handleReapplyShopMenu}');
     expect(src).toContain('getAllItemSuggestions(transactions, categories)');
-    expect(src).toContain('attributeItemsToShops(');
+    expect(src).toContain('collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance, fuelLogs)');
     expect(src).toContain('computeMenuDiff(');
     expect(src).toContain('shouldOfferMenuUpdate({');
   });
@@ -146,13 +147,13 @@ describe('menu re-apply button wiring (v7.6.41 B)', () => {
 
 describe('Version bump to v7.6.42 (build 356)', () => {
   it('version surfaces agree on v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
-    expect(CURRENT_BUILD_NUMBER).toBe(369);
-    expect(VERSION_JSON.version).toBe('v7.6.55');
-    expect(VERSION_JSON.buildNumber).toBe(369);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
+    expect(CURRENT_BUILD_NUMBER).toBe(370);
+    expect(VERSION_JSON.version).toBe('v7.6.56');
+    expect(VERSION_JSON.buildNumber).toBe(370);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.55');
-    expect(entry.buildNumber).toBe(369);
+    expect(entry.version).toBe('v7.6.56');
+    expect(entry.buildNumber).toBe(370);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
   });

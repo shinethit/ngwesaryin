@@ -242,8 +242,8 @@ export const QuotaDashboard: React.FC<QuotaDashboardProps> = ({
               </div>
               <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
                 {lang === 'my'
-                  ? '⚠️ ဤကိန်းဂဏန်းများသည် ဤဖုန်းတစ်လုံးတည်းတွင် ခန့်မှန်းတိုင်းတာထားသော ဒေသတွင်း ခန့်မှန်းခြေသာ ဖြစ်ပါသည် — Firebase အမှန်တကယ် သုံးစွဲမှုမဟုတ်ပါ။ အမှန်တကယ် သုံးစွဲမှုကို Firebase Console &gt; Firestore &gt; Usage တွင် ကြည့်ပါ။'
-                  : '⚠️ These numbers are estimates counted on this device only — not real Firebase usage. See real usage in Firebase Console &gt; Firestore &gt; Usage.'}
+                  ? '⚠️ ဤကိန်းဂဏန်းများသည် ဤဖုန်းတစ်လုံးတည်းတွင် ခန့်မှန်းတိုင်းတာထားသော ဒေသတွင်း ခန့်မှန်းခြေသာ ဖြစ်ပါသည် — Firebase အမှန်တကယ် သုံးစွဲမှုမဟုတ်ပါ။ အမှန်တကယ် သုံးစွဲမှုကို Firebase Console > Firestore > Usage တွင် ကြည့်ပါ။'
+                  : '⚠️ These numbers are estimates counted on this device only — not real Firebase usage. See real usage in Firebase Console > Firestore > Usage.'}
               </p>
             </div>
           </div>

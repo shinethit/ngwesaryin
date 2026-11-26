@@ -4,7 +4,7 @@ import { ShopContact, PublicShop } from '../../types';
 import { PRESET_TAGS } from './shopConstants';
 import { auth } from '../../lib/firebase';
 import { parseMyanmarNumber } from '../../utils/myanmarDigits';
-import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS, OTHER_MENU_UNIT, collectNewCustomUnits, menuUnitSelectOptions, normalizeMenuUnit, resolveSavedMenuUnit } from '../../utils/shopMenuUpdate';
+import { DEFAULT_MENU_UNIT, SHOP_MENU_UNITS, OTHER_MENU_UNIT, collectNewCustomUnits, menuUnitSelectOptions, normalizeMenuUnit, resolveSavedMenuUnit, type ShopMenuState } from '../../utils/shopMenuUpdate';
 import { mergeSharedUnits } from '../../utils/sharedUnits';
 import { filterItemNameSuggestions } from '../../utils/shopItemSearch';
 import { usePersistedState } from '../../hooks/usePersistedState';
@@ -29,6 +29,11 @@ interface ShopCardProps {
   // the transactions + the menu prompt); ShopCard only renders the
   // button. Optional: other call sites pass nothing.
   onReapplyMenu?: (shop: ShopContact | PublicShop, isPublic: boolean) => void;
+  // [v7.6.56] Per-card menu state from App's global derivation
+  // (shopMenuState): 'upToDate' dims + disables the button, every
+  // other state keeps it filled and pressable. Defaults to
+  // 'unknown' (pressable) when the caller passes nothing.
+  menuState?: ShopMenuState;
   // [v7.5.86] All distinct menu item names in the tab's shops (from
   // ShopsView) — the add-price form suggests from the DATABASE, not from
   // the user's own transactions, so an item that exists in another shop's
@@ -53,11 +58,54 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   onDeletePricingItem,
   onReport,
   onReapplyMenu,
+  menuState = 'unknown',
   menuItemNames = [],
   sharedUnits = [],
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isItemsExpanded, setIsItemsExpanded] = useState(false);
+
+  // [v7.6.56] Menu re-apply button: ONE render helper for both
+  // views (grid + compact) so the two instances can never drift
+  // apart. Filled + raised + shadow while work may remain
+  // (pending/unknown — unmistakably pressable); dimmed + disabled
+  // with a Check icon and a "done" label ONLY when the global
+  // derivation proves this shop's menu matches. ≥44px kept.
+  const renderMenuReapplyButton = () => {
+    const done = menuState === 'upToDate';
+    return (
+      <button
+        type="button"
+        onClick={() => onReapplyMenu?.(shop, isPublic)}
+        disabled={done}
+        className={
+          done
+            ? 'w-full min-h-[44px] px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700/60 text-xs font-bold flex items-center justify-center gap-1.5 cursor-default opacity-70'
+            : 'w-full min-h-[44px] px-3 py-2 rounded-xl border border-emerald-700 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all'
+        }
+        title={
+          done
+            ? lang === 'my'
+              ? 'ဒီဆိုင်ရဲ့ Menu က ဈေးနှုန်း အသစ်နဲ့ ကိုက်ညီနေပါပြီ'
+              : 'This shop menu is already up to date'
+            : lang === 'my'
+              ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဒီဆိုင်ရဲ့ Menu ကို ပြန် Update လုပ်မည်'
+              : 'Re-check this shop menu against my own purchase history'
+        }
+      >
+        {done ? <Check className="w-3.5 h-3.5 shrink-0" /> : <RefreshCw className="w-3.5 h-3.5 shrink-0" />}
+        <span>
+          {done
+            ? lang === 'my'
+              ? 'Menu ကိုက်ညီနေပါပြီ'
+              : 'Menu Up to Date'
+            : lang === 'my'
+              ? 'Menu ပြန် Update'
+              : 'Refresh Menu'}
+        </span>
+      </button>
+    );
+  };
   const [showAllPhones, setShowAllPhones] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
@@ -503,17 +551,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 same prompt as the save path. Full-width, directly
                 under the section header — visible the moment the
                 menu is expanded, in both views. */}
-            {onReapplyMenu && (
-              <button
-                type="button"
-                onClick={() => onReapplyMenu(shop, isPublic)}
-                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-                title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဒီဆိုင်ရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check this shop menu against my own purchase history'}
-              >
-                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                <span>{lang === 'my' ? 'Menu ပြန် Update' : 'Refresh Menu'}</span>
-              </button>
-            )}
+            {onReapplyMenu && renderMenuReapplyButton()}
 
             {(shop.items || []).length === 0 ? (
               <div className="text-xs text-slate-400 italic py-2">
@@ -874,17 +912,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
                 same prompt as the save path. Full-width, directly
                 under the disclaimer — visible the moment the menu is
                 expanded, in both views. */}
-            {onReapplyMenu && (
-              <button
-                type="button"
-                onClick={() => onReapplyMenu(shop, isPublic)}
-                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-                title={lang === 'my' ? 'ကိုယ့်မှတ်တမ်းတွေထဲက ဈေးနှုန်းအသစ်တွေနဲ့ ဒီဆိုင်ရဲ့ Menu ကို ပြန် Update လုပ်မည်' : 'Re-check this shop menu against my own purchase history'}
-              >
-                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                <span>{lang === 'my' ? 'Menu ပြန် Update' : 'Refresh Menu'}</span>
-              </button>
-            )}
+            {onReapplyMenu && renderMenuReapplyButton()}
 
             {/* List of items */}
             {(shop.items || []).length === 0 ? (

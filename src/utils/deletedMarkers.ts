@@ -133,16 +133,23 @@ export const fetchTombstoneTxIds = async (uid: string): Promise<Set<string>> => 
       snap.forEach((d: any) => {
         if (d && d.id) ids.add(d.id);
       });
-      setTombstonedTxIds(ids);
-      return ids;
+      // [v7.6.56] UNION, never replace: the server snapshot may not
+      // know of a tombstone this device just wrote (its upsert is
+      // still queued), and replacing the cache with the server set
+      // would drop that local tombstone — reopening resurrection.
+      const merged = new Set<string>([...cached, ...ids]);
+      setTombstonedTxIds(merged);
+      return merged;
     } catch {
       const snap = await getDocs(colRef);
       const ids = new Set<string>();
       snap.forEach((d: any) => {
         if (d && d.id) ids.add(d.id);
       });
-      if (ids.size > 0) setTombstonedTxIds(ids);
-      return ids.size > 0 ? ids : cached;
+      // [v7.6.56] Same union rule for the cached-snapshot fallback.
+      const merged = new Set<string>([...cached, ...ids]);
+      if (ids.size > 0) setTombstonedTxIds(merged);
+      return ids.size > 0 ? merged : cached;
     }
   } catch {
     return cached;

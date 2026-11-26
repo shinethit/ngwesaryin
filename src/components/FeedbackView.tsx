@@ -31,11 +31,17 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = subscribeFeedbacks((list) => {
-      setFeedbacks(list);
-    });
+    // [v7.6.56] The list query is constrained to a branch the
+    // rules can prove (public for 'all', own for 'mine', open for
+    // admins) — an unconstrained query is denied outright.
+    const unsubscribe = subscribeFeedbacks(
+      (list) => {
+        setFeedbacks(list);
+      },
+      { scope: selectedScope, userId: user?.uid, isAdmin }
+    );
     return () => unsubscribe();
-  }, []);
+  }, [selectedScope, user?.uid, isAdmin]);
 
   // Compute stats
   // [v7.5.60 M-21] Zero feedback => average is "—", NOT a fake 5.0.

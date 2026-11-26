@@ -88,7 +88,10 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await submitFeedback({
+      // [v7.6.56] A denied write returns false — show the failure
+      // and keep the text for retry instead of celebrating a
+      // feedback that never reached the server.
+      const ok = await submitFeedback({
         userId: user?.uid,
         userName: userName.trim() || 'Anonymous User',
         userEmail: userEmail.trim() || undefined,
@@ -97,6 +100,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         category,
         comment: comment.trim(),
       });
+      if (!ok) throw new Error('Feedback write failed');
 
       // Confetti celebration
       try {

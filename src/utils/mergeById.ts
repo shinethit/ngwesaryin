@@ -26,6 +26,39 @@ export function mergeById<T extends { id: string }>(
 }
 
 /**
+ * [v7.6.56] Drop local items that were confirmed in an earlier SERVER
+ * snapshot but are missing from this one — i.e. deleted on another
+ * client. The three guards are what keep this safe:
+ *  - cached snapshots never prune (fromCache) — a cached snapshot
+ *    may simply not have the doc yet;
+ *  - ids never confirmed in a server snapshot are never pruned
+ *    (guest / offline / never-synced items must survive);
+ *  - `shouldKeep` vetoes the drop for items with outstanding work
+ *    (a pending queue task or a dead-lettered task for the id) —
+ *    dropping those would lose data that is still being pushed.
+ * Callers run this on the PREVIOUS local list BEFORE mergeById /
+ * mergeByKey, so a confirmed-missing item cannot be resurrected by
+ * the merge. `cloudKeys` must be the RAW snapshot keys (before any
+ * delete-blocked / lag filtering): a sighting proves server
+ * presence even when the doc is filtered out of the merge.
+ */
+export function pruneConfirmedMissing<T>(
+  prev: T[],
+  cloudKeys: Set<string>,
+  confirmedKeys: Set<string>,
+  keyOf: (item: T) => string,
+  shouldKeep: (item: T) => boolean,
+  fromCache: boolean
+): T[] {
+  if (fromCache) return prev;
+  return prev.filter((item) => {
+    const key = keyOf(item);
+    if (!key || cloudKeys.has(key) || !confirmedKeys.has(key)) return true;
+    return shouldKeep(item);
+  });
+}
+
+/**
  * Utility to merge two arrays of objects by their 'categoryId' property.
  */
 export function mergeByKey<T extends { categoryId: string }>(
@@ -39,3 +72,4 @@ export function mergeByKey<T extends { categoryId: string }>(
   
   return Array.from(map.values());
 }
+

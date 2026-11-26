@@ -1279,7 +1279,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           for (const op of chunk) {
             currentBatch.set(op.ref, cleanForFirestore(op.data), { merge: true });
           }
-          await withTimeout(currentBatch.commit(), 20000, 'Cloud သို့ သိမ်းဆည်းခြင်း အချိန်ကုန်သွားပါသည်');
+          await withTimeout(currentBatch.commit(), 20000, 'Cloud အကောင့် တိုကင် ပြန်လည်ရယူ၍ မရပါ။ ပြောင်းလဲမှုကို စက်ထဲတွင် သိမ်းထားပြီး ချိတ်ဆက်မှု ပြန်ရလျှင် ပို့ပေးပါမည်');
         } catch (batchErr) {
           console.warn('Batch write encountered error, falling back to granular per-document sync & retry queue:', batchErr);
           // Fallback to per-document execution so partial successes are preserved and errors isolated

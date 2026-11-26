@@ -16,16 +16,26 @@ import { readFileSync } from 'node:fs';
 const h = vi.hoisted(() => {
   const server = new Map<string, any>();
   const behavior = {
-    sdkSetDoc: 'ok' as 'ok' | 'hang' | 'throw-permission' | 'throw-network',
-    sdkDeleteDoc: 'ok' as 'ok' | 'hang' | 'throw-permission' | 'throw-network',
+    sdkSetDoc: 'ok' as 'ok' | 'hang' | 'throw-permission' | 'throw-network' | 'throw-auth',
+    sdkDeleteDoc: 'ok' as 'ok' | 'hang' | 'throw-permission' | 'throw-network' | 'throw-auth',
     restPatch: 'ok' as 'ok' | '403' | '429' | 'network-error',
     restDelete: 'ok' as 'ok' | '403' | '404' | 'network-error',
+    // [v7.6.56] When true, getIdToken throws auth/network-request-failed
+    // (the user's 12:08 log: the token endpoint itself was blocked).
+    tokenFail: false,
   };
   const calls = { sdkSetDoc: 0, sdkDeleteDoc: 0, restPatch: 0, restDelete: 0 };
   const fakeUser = {
     uid: 'user_1',
     email: 'test@example.com',
-    getIdToken: async () => 'fake-token',
+    getIdToken: async () => {
+      if (h.behavior.tokenFail) {
+        const e: any = new Error('auth/network-request-failed');
+        e.code = 'auth/network-request-failed';
+        throw e;
+      }
+      return 'fake-token';
+    },
   };
   const fakeAuth = { currentUser: fakeUser as any };
   return { server, behavior, calls, fakeUser, fakeAuth };
@@ -36,6 +46,7 @@ function resetBehavior() {
   h.behavior.sdkDeleteDoc = 'ok';
   h.behavior.restPatch = 'ok';
   h.behavior.restDelete = 'ok';
+  h.behavior.tokenFail = false;
   h.calls.sdkSetDoc = 0;
   h.calls.sdkDeleteDoc = 0;
   h.calls.restPatch = 0;
@@ -79,6 +90,12 @@ function permError(): any {
   return e;
 }
 
+function authError(): any {
+  const e: any = new Error('auth/network-request-failed');
+  e.code = 'auth/network-request-failed';
+  return e;
+}
+
 vi.mock('firebase/app', () => ({
   initializeApp: vi.fn(() => ({})),
   getApps: vi.fn(() => []),
@@ -112,6 +129,7 @@ vi.mock('firebase/firestore', () => {
     if (mode === 'hang') return new Promise(() => {});
     if (mode === 'throw-permission') throw permError();
     if (mode === 'throw-network') throw new Error('Network timed out');
+    if (mode === 'throw-auth') throw authError();
     h.server.set(ref.path, { ...(h.server.get(ref.path) || {}), ...data });
   });
   const deleteDoc = vi.fn(async (ref: any) => {
@@ -120,6 +138,7 @@ vi.mock('firebase/firestore', () => {
     if (mode === 'hang') return new Promise(() => {});
     if (mode === 'throw-permission') throw permError();
     if (mode === 'throw-network') throw new Error('Network timed out');
+    if (mode === 'throw-auth') throw authError();
     h.server.delete(ref.path);
   });
   const updateDoc = vi.fn(async (ref: any, data: any) => {
@@ -463,7 +482,15 @@ describe('delete REST fallback', () => {
     const res1 = await m.queue.processQueue();
     expect(res1.awaitingConfirmation).toBe(1);
     expect(m.queue.getQueue().some((t: any) => t.entityId === 'tx1' && t.operation === 'delete')).toBe(true);
-    // Reconnect: REST works again.
+    // [v7.6.56] A 'local' outcome counts the attempt, so the
+    // backoff gate spaces re-attempts: an immediate second run
+    // must make NO new transport attempt (the retry storm fix).
+    const callsAfterFirst = h.calls.sdkDeleteDoc + h.calls.restDelete;
+    await m.queue.processQueue();
+    expect(h.calls.sdkDeleteDoc + h.calls.restDelete).toBe(callsAfterFirst);
+    // Reconnect after the backoff (retryCount 1 → 1000ms): REST
+    // works again and the delete confirms.
+    await new Promise((r) => setTimeout(r, 1100));
     h.behavior.restDelete = 'ok';
     const res2 = await m.queue.processQueue();
     expect(res2.succeeded).toBeGreaterThan(0);
@@ -604,6 +631,148 @@ describe('tombstone reconcile gate (cross-device resurrection)', () => {
   });
 });
 
+describe('v7.6.56 bounded retry + token failure + tombstone independence', () => {
+  it('T1: a task that can never succeed dead-letters after MAX_RETRIES instead of retrying forever', async () => {
+    const m = await fresh();
+    vi.useFakeTimers();
+    try {
+      h.behavior.restDelete = 'network-error';
+      h.behavior.restPatch = 'network-error';
+      h.behavior.sdkDeleteDoc = 'throw-network';
+      h.behavior.sdkSetDoc = 'throw-network';
+      h.server.set(serverTxPath('tx1'), tx('tx1'));
+      m.queue.enqueueTxDelete('tx1', UID);
+      // 10 attempts, backoff-spaced (fake clock: 31s per step covers
+      // the 30s cap). Advance-before-await keeps any internal timer
+      // in the executor from deadlocking the test.
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const p = m.queue.processQueue();
+        await vi.advanceTimersByTimeAsync(31000);
+        await p;
+      }
+      const failed = m.queue.getFailedItems();
+      expect(failed.some((t: any) => t.entityId === 'tx1' && t.operation === 'delete')).toBe(true);
+      expect(m.queue.getQueue().filter((t: any) => t.entityId === 'tx1')).toHaveLength(0);
+      // Bounded: dead-lettered work is never auto-retried again.
+      const callsBefore = h.calls.restDelete + h.calls.sdkDeleteDoc + h.calls.sdkSetDoc;
+      const p2 = m.queue.processQueue();
+      await vi.advanceTimersByTimeAsync(61000);
+      await p2;
+      expect(h.calls.restDelete + h.calls.sdkDeleteDoc + h.calls.sdkSetDoc).toBe(callsBefore);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('T3: fetchTombstoneTxIds unions the server set with the local cache instead of replacing it', async () => {
+    const m = await fresh();
+    m.markers.addTxTombstone('tx-local');
+    h.server.set(serverTombPath('tx-server'), { id: 'tx-server', userId: UID, entityType: 'transactions', deletedAt: Date.now() });
+    const ids = await m.markers.fetchTombstoneTxIds(UID);
+    expect(ids.has('tx-local')).toBe(true);
+    expect(ids.has('tx-server')).toBe(true);
+    // The merged set is persisted, so the local tombstone survives
+    // a restart even though the server never saw it land.
+    expect(m.markers.getTombstonedTxIds().has('tx-local')).toBe(true);
+    expect(m.markers.getTombstonedTxIds().has('tx-server')).toBe(true);
+  });
+
+  it('T4: a dead-lettered upsert does NOT delete-block a later delete for the same id', async () => {
+    const m = await fresh();
+    h.behavior.sdkSetDoc = 'throw-permission';
+    h.behavior.restPatch = '403';
+    m.queue.enqueue('transactions', 'tx1', 'upsert', UID, tx('tx1'));
+    await m.queue.processQueue();
+    await new Promise((r) => setTimeout(r, 1100));
+    await m.queue.processQueue();
+    expect(m.queue.getFailedItems().some((t: any) => t.entityId === 'tx1' && t.operation === 'upsert')).toBe(true);
+    expect(m.queue.isEntityInDeadLetter('transactions', 'tx1')).toBe(true);
+    expect(m.queue.isDeleteBlocked('transactions', 'tx1')).toBe(false);
+    // The delete proceeds: it is enqueued and lands.
+    m.queue.enqueueTxDelete('tx1', UID);
+    expect(m.queue.getQueue().some((t: any) => t.entityId === 'tx1' && t.operation === 'delete')).toBe(true);
+    h.behavior.sdkSetDoc = 'ok';
+    h.behavior.restPatch = 'ok';
+    await new Promise((r) => setTimeout(r, 1100));
+    await m.queue.processQueue();
+    expect(h.server.has(serverTxPath('tx1'))).toBe(false);
+  });
+
+  it('T5: safeDeleteDoc for a shared-wallet path records a durable task via the auth fallback uid', async () => {
+    const m = await fresh();
+    h.behavior.restDelete = 'network-error';
+    h.behavior.sdkDeleteDoc = 'throw-network';
+    const sharedPath = `sharedWallets/sw1/transactions/txShared`;
+    const ok = await m.firebase.safeDeleteDoc({ path: sharedPath });
+    expect(ok).toBe(false);
+    expect(m.queue.isEntityPendingDelete('sharedWallets', 'sw1/transactions/txShared')).toBe(true);
+    expect(
+      m.queue.getQueue().some((t: any) => t.entityType === 'sharedWallets' && t.entityId === 'sw1/transactions/txShared' && t.operation === 'delete')
+    ).toBe(true);
+  });
+
+  it('T8: delete while the auth token fails stays queued, then lands and prunes when the token recovers', async () => {
+    const m = await fresh();
+    h.server.set(serverTxPath('tx1'), tx('tx1'));
+    // Token endpoint blocked (the user's 12:08 log): REST cannot
+    // get a token, the SDK throws auth/network-request-failed.
+    h.behavior.tokenFail = true;
+    h.behavior.sdkDeleteDoc = 'throw-auth';
+    h.behavior.sdkSetDoc = 'throw-auth';
+    m.queue.enqueueTxDelete('tx1', UID);
+    const res1 = await m.queue.processQueue();
+    expect(res1.awaitingConfirmation).toBe(0);
+    expect(m.queue.getQueue().some((t: any) => t.entityId === 'tx1' && t.operation === 'delete')).toBe(true);
+    expect(h.server.has(serverTxPath('tx1'))).toBe(true);
+    // Bounded while failing: an immediate re-run makes no new
+    // transport attempt (backoff gate).
+    const callsAfterFirst = h.calls.sdkDeleteDoc + h.calls.sdkSetDoc;
+    await m.queue.processQueue();
+    expect(h.calls.sdkDeleteDoc + h.calls.sdkSetDoc).toBe(callsAfterFirst);
+    // Token recovers: the queued delete + tombstone land.
+    await new Promise((r) => setTimeout(r, 1100));
+    h.behavior.tokenFail = false;
+    h.behavior.sdkDeleteDoc = 'ok';
+    h.behavior.sdkSetDoc = 'ok';
+    await m.queue.processQueue();
+    expect(h.server.has(serverTxPath('tx1'))).toBe(false);
+    expect(h.server.has(serverTombPath('tx1'))).toBe(true);
+    expect(m.queue.getQueue().filter((t: any) => t.entityId === 'tx1')).toHaveLength(0);
+  });
+
+  it('T9: reconcile never re-pushes a record with a pending delete task', async () => {
+    const m = await fresh();
+    m.queue.enqueueTxDelete('txC', UID);
+    const res = await m.queue.reconcileMissingTxsWithWriteBatch({
+      missingTxs: [tx('txC'), tx('txD')],
+      targetUid: UID,
+      cloudTxIds: new Set<string>(),
+    });
+    expect(h.server.has(serverTxPath('txC'))).toBe(false);
+    expect(h.server.get(serverTxPath('txD'))?.id).toBe('txD');
+    expect(res.newlyConfirmedTxIds).not.toContain('txC');
+    expect(res.newlyConfirmedTxIds).toContain('txD');
+  });
+
+  it('T10: a denied tombstone write can never block or stall the doc delete', async () => {
+    const m = await fresh();
+    h.server.set(serverTxPath('tx1'), tx('tx1'));
+    // Tombstone upserts are SDK-only and the rules deny them here;
+    // the delete itself goes through REST and must still land.
+    h.behavior.sdkSetDoc = 'throw-permission';
+    m.queue.enqueueTxDelete('tx1', UID);
+    await m.queue.processQueue();
+    await new Promise((r) => setTimeout(r, 1100));
+    await m.queue.processQueue();
+    expect(h.server.has(serverTxPath('tx1'))).toBe(false);
+    expect(m.queue.getQueue().filter((t: any) => t.entityId === 'tx1')).toHaveLength(0);
+    // The tombstone task dead-lettered visibly instead of looping.
+    expect(m.queue.getFailedItems().some((t: any) => t.entityType === 'tombstones' && t.entityId === 'tx1')).toBe(true);
+    // And the local tombstone cache still protects this device.
+    expect(m.markers.getTombstonedTxIds().has('tx1')).toBe(true);
+  });
+});
+
 describe('safeDeleteDoc / safeSetDoc lifecycle', () => {
   it('safeDeleteDoc confirms via REST, removes the task, and writes the tombstone', async () => {
     const m = await fresh();
@@ -652,13 +821,34 @@ describe('safeDeleteDoc / safeSetDoc lifecycle', () => {
     expect(h.server.get(serverTxPath('tx1'))?.id).toBe('tx1');
   });
 
-  it('safeDeleteDoc for a non-transaction entity uses the SDK path and confirms', async () => {
+  it('safeDeleteDoc for a non-transaction entity uses generic REST-first delete and confirms', async () => {
     const m = await fresh();
     const walletPath = `users/${UID}/wallets/wallet_1`;
     h.server.set(walletPath, { id: 'wallet_1', userId: UID });
     const ok = await m.firebase.safeDeleteDoc({ path: walletPath });
     expect(ok).toBe(true);
+    // [v7.6.56] Generic REST-first: the REST DELETE ran (not just
+    // the SDK), so the confirmation is real.
+    expect(h.calls.restDelete).toBeGreaterThan(0);
     expect(h.server.has(walletPath)).toBe(false);
+  });
+
+  it('safeDeleteDoc for a non-transaction entity: REST failing + SDK resolving keeps the durable task (local, not confirmed)', async () => {
+    const m = await fresh();
+    const walletPath = `users/${UID}/wallets/wallet_1`;
+    h.server.set(walletPath, { id: 'wallet_1', userId: UID });
+    h.behavior.restDelete = 'network-error';
+    const ok = await m.firebase.safeDeleteDoc({ path: walletPath });
+    // [v7.6.56] An SDK resolve is 'local', not confirmation — and a
+    // queue intent WAS recorded, so safeDeleteDoc honestly
+    // reports false and the task stays for REST re-confirmation.
+    expect(ok).toBe(false);
+    expect(m.queue.isEntityPendingDelete('wallets', 'wallet_1')).toBe(true);
+    await new Promise((r) => setTimeout(r, 1100));
+    h.behavior.restDelete = 'ok';
+    await m.queue.processQueue();
+    expect(h.server.has(walletPath)).toBe(false);
+    expect(m.queue.isEntityPendingDelete('wallets', 'wallet_1')).toBe(false);
   });
 });
 
@@ -676,6 +866,67 @@ describe('firestore.rules tombstones (source text)', () => {
     expect(tombBlock).toContain('request.resource.data.userId == userId');
     expect(tombBlock).toContain('request.resource.data.id == tombstoneId');
     expect(tombBlock).toContain('allow delete: if canWriteOwnerOnly(userId) || isAdmin();');
+  });
+});
+
+describe('firestore.rules admin + feedbacks (source text)', () => {
+  it('activationCodes admin unmark/revoke updates are allowed (R1)', () => {
+    const rules = readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+    const block = rules.slice(rules.indexOf('match /activationCodes/{codeId}'));
+    const adminBlock = block.slice(0, block.indexOf('match /', 10) === -1 ? undefined : block.indexOf('match /', 10));
+    expect(adminBlock).toContain('allow update: if isAdmin();');
+  });
+
+  it('feedbacks list is split so an unfiltered list query can never be denied (R2)', () => {
+    const rules = readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+    const block = rules.slice(rules.indexOf('match /feedbacks/{feedbackId}'));
+    const feedbackBlock = block.slice(0, 600);
+    expect(feedbackBlock).toContain('allow get:');
+    expect(feedbackBlock).toContain('allow list:');
+    expect(feedbackBlock).toContain("data.isPublic == true");
+    // No bare resource-dependent list rule remains.
+    expect(feedbackBlock).not.toContain('allow read: if');
+  });
+});
+
+describe('v7.6.56 wiring pins (source text)', () => {
+  it('the five listeners prune confirmed-missing docs and record server ids', () => {
+    const src = readFileSync(new URL('../hooks/useCloudListeners.ts', import.meta.url), 'utf8');
+    expect(src).toContain('pruneConfirmedMissing');
+    for (const key of ['wallets', 'debts', 'categories', 'budgets', 'shops']) {
+      expect(src).toContain(`confirmedIdsRef.current.${key}.add`);
+    }
+    expect(src).toContain('isConfirmedMissingWallet');
+  });
+
+  it('the feedback subscription constrains non-admin queries (R2 companion)', () => {
+    const src = readFileSync(new URL('../lib/feedbackService.ts', import.meta.url), 'utf8');
+    expect(src).toContain("where('isPublic', '==', true)");
+    expect(src).toContain("where('userId', '==', opts.userId)");
+    expect(src).toContain('submitFeedback');
+  });
+
+  it('the pre-delete auto-backup includes every exported collection (P10)', () => {
+    const src = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
+    expect(src).toContain('collectBackupExtras');
+    expect(src).toContain('savingsTargets');
+    expect(src).toContain('deletedMarkers');
+  });
+
+  it('the global menu derivation and both re-apply paths read fuel logs (P2a/P2b)', () => {
+    const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
+    expect(app).toContain('collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance, fuelLogs)');
+    expect(app).toContain('fuelLogs,');
+    const menu = readFileSync(new URL('../utils/shopMenuUpdate.ts', import.meta.url), 'utf8');
+    expect(menu).toContain('fuelLogs?: FuelLog[]');
+    expect(menu).toContain('shopMenuState');
+  });
+
+  it('the Vehicles-tab save wrappers build menu candidates after saving (P1b)', () => {
+    const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
+    expect(app).toContain('handleSaveFuelLogWithMenu');
+    expect(app).toContain('handleSaveMaintenanceWithMenu');
+    expect(app).toContain('buildVehicleMenuCandidate');
   });
 });
 

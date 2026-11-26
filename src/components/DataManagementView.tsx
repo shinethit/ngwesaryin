@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Database, Trash2, Download, Upload, KeyRound, AlertTriangle, Crown, Cloud, CloudOff, CheckCircle2, Clock } from 'lucide-react';
 import { BudgetConfig, Category, Debt, PlanType, ShopContact, Transaction, Vehicle, Wallet } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { exportToCSV } from '../utils/formatters';
 import { buildCsvExportData } from '../utils/csvExport';
+import { syncQueue, type SyncQueueItem } from '../lib/syncQueue';
+import { getTransactionSyncSummary } from '../utils/transactionSyncSummary';
 
 interface DataManagementViewProps {
   transactions: Transaction[];
@@ -20,6 +22,8 @@ interface DataManagementViewProps {
   onExportJson: () => void;
   onImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenPremiumModal: () => void;
+  /** Open the Sync Status drawer (queued / failed work detail). */
+  onOpenSyncStatus?: () => void;
 }
 
 export const DataManagementView: React.FC<DataManagementViewProps> = ({
@@ -37,8 +41,24 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   onExportJson,
   onImportJson,
   onOpenPremiumModal,
+  onOpenSyncStatus,
 }) => {
-  const { isGuest } = useAuth();
+  const { isGuest, isSyncing } = useAuth();
+
+  // [v7.6.56] The sync card subscribes to the queue (same pattern as
+  // SyncStatusDrawer) so it re-renders the moment work lands,
+  // finishes, or dead-letters — it never goes stale.
+  const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
+  const [failedItems, setFailedItems] = useState<SyncQueueItem[]>([]);
+  const [isQueueProcessing, setIsQueueProcessing] = useState(false);
+  useEffect(() => {
+    const unsubscribe = syncQueue.subscribe((items, processing) => {
+      setQueueItems(items);
+      setFailedItems(syncQueue.getFailedItems());
+      setIsQueueProcessing(processing);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // [v7.6.26] CSV export — moved here from the Records header.
   // Premium-only: hidden entirely for other plans (no locked button,
@@ -82,48 +102,61 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           </div>
         </div>
 
-        {/* Live Stored Data Counts Strip — all seven counts on one line [v7.6.33] */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100 text-xs sm:text-sm">
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'စာရင်းမှတ်တမ်း' : 'Transactions'}</span>
-            <span className="font-bold text-slate-900 text-base">{transactions.length}</span>
-            <span className="text-[10px] text-slate-400">records</span>
+        {/* Live Stored Data Counts Strip — aligned columns [v7.6.56]:
+            the old flex-wrap row with freestanding separators wrapped
+            into ragged rows with no column structure (user screenshot:
+            "Alignment မမှန်"). A grid keeps every label/number/unit
+            column lined up at 390px AND 360px, MY + EN. All 7 counts,
+            labels and values are UNCHANGED; units stay English. */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-slate-100 text-xs sm:text-sm">
+          <span className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-slate-400 text-[11px] font-medium min-w-0">{lang === 'my' ? 'စာရင်းမှတ်တမ်း' : 'Transactions'}</span>
+            <span className="flex items-baseline gap-1 shrink-0">
+              <span className="font-bold text-slate-900 text-base">{transactions.length}</span>
+              <span className="text-[10px] text-slate-400">records</span>
+            </span>
           </span>
-          <span aria-hidden="true" className="text-slate-300">·</span>
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'အကြွေးစာရင်း' : 'Debts'}</span>
-            <span className="font-bold text-slate-900 text-base">{debts.length}</span>
-            <span className="text-[10px] text-slate-400">entries</span>
+          <span className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-slate-400 text-[11px] font-medium min-w-0">{lang === 'my' ? 'အကြွေးစာရင်း' : 'Debts'}</span>
+            <span className="flex items-baseline gap-1 shrink-0">
+              <span className="font-bold text-slate-900 text-base">{debts.length}</span>
+              <span className="text-[10px] text-slate-400">entries</span>
+            </span>
           </span>
-          <span aria-hidden="true" className="text-slate-300">·</span>
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets'}</span>
-            <span className="font-bold text-slate-900 text-base">{wallets.length}</span>
-            <span className="text-[10px] text-slate-400">accounts</span>
+          <span className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-slate-400 text-[11px] font-medium min-w-0">{lang === 'my' ? 'ပိုက်ဆံအိတ်များ' : 'Wallets'}</span>
+            <span className="flex items-baseline gap-1 shrink-0">
+              <span className="font-bold text-slate-900 text-base">{wallets.length}</span>
+              <span className="text-[10px] text-slate-400">accounts</span>
+            </span>
           </span>
-          <span aria-hidden="true" className="text-slate-300">·</span>
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ကဏ္ဍများ' : 'Categories'}</span>
-            <span className="font-bold text-slate-900 text-base">{categories.length}</span>
-            <span className="text-[10px] text-slate-400">categories</span>
+          <span className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-slate-400 text-[11px] font-medium min-w-0">{lang === 'my' ? 'ကဏ္ဍများ' : 'Categories'}</span>
+            <span className="flex items-baseline gap-1 shrink-0">
+              <span className="font-bold text-slate-900 text-base">{categories.length}</span>
+              <span className="text-[10px] text-slate-400">categories</span>
+            </span>
           </span>
-          <span aria-hidden="true" className="text-slate-300">·</span>
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်ချက်' : 'Budgets'}</span>
-            <span className="font-bold text-slate-900 text-base">{budgets.length}</span>
-            <span className="text-[10px] text-slate-400">targets</span>
+          <span className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-slate-400 text-[11px] font-medium min-w-0">{lang === 'my' ? 'ဘတ်ဂျက်သတ်မှတ်ချက်' : 'Budgets'}</span>
+            <span className="flex items-baseline gap-1 shrink-0">
+              <span className="font-bold text-slate-900 text-base">{budgets.length}</span>
+              <span className="text-[10px] text-slate-400">targets</span>
+            </span>
           </span>
-          <span aria-hidden="true" className="text-slate-300">·</span>
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ယာဉ်များ' : 'Vehicles'}</span>
-            <span className="font-bold text-slate-900 text-base">{vehicles.length}</span>
-            <span className="text-[10px] text-slate-400">vehicles</span>
+          <span className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-slate-400 text-[11px] font-medium min-w-0">{lang === 'my' ? 'ယာဉ်များ' : 'Vehicles'}</span>
+            <span className="flex items-baseline gap-1 shrink-0">
+              <span className="font-bold text-slate-900 text-base">{vehicles.length}</span>
+              <span className="text-[10px] text-slate-400">vehicles</span>
+            </span>
           </span>
-          <span aria-hidden="true" className="text-slate-300">·</span>
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-slate-400 text-[11px] font-medium">{lang === 'my' ? 'ဆိုင်များ' : 'Shops'}</span>
-            <span className="font-bold text-slate-900 text-base">{shops.length}</span>
-            <span className="text-[10px] text-slate-400">shops</span>
+          <span className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-slate-400 text-[11px] font-medium min-w-0">{lang === 'my' ? 'ဆိုင်များ' : 'Shops'}</span>
+            <span className="flex items-baseline gap-1 shrink-0">
+              <span className="font-bold text-slate-900 text-base">{shops.length}</span>
+              <span className="text-[10px] text-slate-400">shops</span>
+            </span>
           </span>
         </div>
       </div>
@@ -140,14 +173,24 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         </div>
 
         {(() => {
-          const txTotal = transactions.length;
-          const txCloud = cloudTxIds ? cloudTxIds.size : 0;
-          const txPending = Math.max(0, txTotal - txCloud);
+          // [v7.6.56] ONE source of truth with the tracker/health
+          // (transactionSyncSummary): confirmed = in the server set
+          // AND no queue/dead-letter work for the id. The old count
+          // (cloudTxIds.size vs .length, queue never consulted)
+          // read 100% while delete tasks were outstanding.
+          const summary = getTransactionSyncSummary(transactions, cloudTxIds, queueItems, failedItems);
+          const txTotal = summary.totalCount;
+          const txCloud = summary.confirmedCount;
+          const txPending = summary.unconfirmedCount;
           // [v7.5.60 S-92] 0/0 is NOT "100% synced" — there is nothing to
           // sync yet. Say so honestly instead of a false perfect score.
-          const txPct = txTotal > 0 ? Math.round((txCloud / txTotal) * 100) : 0;
+          const txPct = summary.percent;
           const hasNoRecords = txTotal === 0;
-          const allSynced = !hasNoRecords && txPending === 0;
+          const isWorking = isSyncing || isQueueProcessing;
+          // Green ONLY when nothing is outstanding AND nothing is
+          // actively syncing — a spinning indicator beside a green
+          // 100% card was the exact lie this screen told.
+          const allSynced = !hasNoRecords && summary.isFullySynced && !isWorking;
 
           return (
             <div className="space-y-2">
@@ -158,6 +201,8 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                     <Database className="w-5 h-5 text-slate-400 shrink-0" />
                   ) : allSynced ? (
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  ) : isWorking ? (
+                    <Clock className="w-5 h-5 text-amber-600 shrink-0" />
                   ) : (
                     <CloudOff className="w-5 h-5 text-amber-600 shrink-0" />
                   )}
@@ -170,6 +215,12 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                         ? (lang === 'my' ? 'မှတ်တမ်း မရှိသေးပါ — စစ်ဆေးစရာ မရှိပါ' : 'No records yet — nothing to sync')
                         : allSynced
                         ? (lang === 'my' ? '✓ အားလုံး Cloud Database ပေါ် ရောက်ရှိပြီးဖြစ်သည်' : '✓ All records synced to Cloud')
+                        : failedItems.length > 0
+                        ? (lang === 'my'
+                          ? `⚠️ ${failedItems.length} ခု ပို့၍မရပါ — အသေးစိတ်ကြည့်ပြီး ပြန်ကြိုးစားပါ`
+                          : `⚠️ ${failedItems.length} failed to sync — view details and retry`)
+                        : isWorking
+                        ? (lang === 'my' ? 'Cloud နှင့် ချိတ်ဆက်နေပါသည်…' : 'Syncing with Cloud…')
                         : (lang === 'my'
                           ? `⚠️ ${txPending} ခု စက်တွင်းတွင် ကျန်ရှိသည် (Cloud ရောက်ရန် စောင့်ဆိုင်းနေသည်)`
                           : `⚠️ ${txPending} pending (waiting to sync)`)}
@@ -183,6 +234,15 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                   <span className={`text-[10px] font-bold ml-1.5 ${hasNoRecords ? 'text-slate-400' : allSynced ? 'text-emerald-600' : 'text-amber-700'}`}>
                     {hasNoRecords ? '—' : `${txPct}% synced`}
                   </span>
+                  {summary.outstandingCount > 0 && onOpenSyncStatus && (
+                    <button
+                      type="button"
+                      onClick={onOpenSyncStatus}
+                      className="block ml-auto mt-1 px-2 py-1 rounded-lg bg-white border border-amber-300 text-amber-800 text-[10px] font-bold active:scale-95 transition-all cursor-pointer"
+                    >
+                      {lang === 'my' ? 'အသေးစိတ် ကြည့်မည်' : 'View details'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -220,8 +280,8 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
 
         <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed max-w-2xl">
           {lang === 'my'
-            ? 'စာရင်းမှတ်တမ်းအားလုံး (Transactions)၊ အကြွေးစာရင်းများ (Debts)၊ သတ်မှတ်ထားသော ဘတ်ဂျက်များနှင့် မိမိစိတ်ကြိုက်ထည့်ထားသော ကဏ္ဍများကို ဖျက်ပစ်ပါမည်။ မူလအခြေခံ Cash ပိုက်ဆံအိတ်တစ်ခုသာ ကျန်ရှိစေမည် ဖြစ်ပါသည်။'
-            : 'Permanently deletes all transactions, active debts, budget plans, and custom categories. Retains a clean default Cash wallet for a fresh start.'}
+            ? 'စာရင်းမှတ်တမ်းအားလုံး၊ အကြွေးစာရင်းများ၊ ဘတ်ဂျက်များ၊ စိတ်ကြိုက်ကဏ္ဍများ၊ ဆိုင်များ၊ ယာဉ်များနှင့် ယာဉ်မှတ်တမ်းများ (ဆီ၊ ပြုပြင်ထိန်းသိမ်းမှု၊ တာယာဖိအား) ကို အပြီးတိုင် ဖျက်ပစ်ပါမည်။ မူလအခြေခံ Cash ပိုက်ဆံအိတ်တစ်ခုနှင့် မူလကဏ္ဍများသာ ကျန်ရှိစေမည် ဖြစ်ပါသည်။'
+            : 'Permanently deletes all transactions, debts, budgets, custom categories, shops, vehicles, and vehicle logs (fuel, maintenance, tire pressure). Only a clean default Cash wallet and the default categories remain.'}
         </p>
 
         <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

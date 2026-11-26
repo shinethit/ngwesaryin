@@ -13,7 +13,7 @@ import { safeGetItem, safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
 import { areArraysEqual } from '../utils/syncGuards';
 import { detectConflicts } from '../utils/conflictResolver';
-import { mergeById, mergeByKey } from '../utils/mergeById';
+import { mergeById, mergeByKey, pruneConfirmedMissing } from '../utils/mergeById';
 import {
   markTxDeleted,
   unmarkTxDeleted,
@@ -196,6 +196,15 @@ export function useCloudListeners({
     fuelLogs: new Set<string>(),
     vehicleMaintenance: new Set<string>(),
     tirePressureLogs: new Set<string>(),
+    // [v7.6.56] Same confirmed-ids idea for the five collections
+    // below, which never pruned at all (F7) — wallets, debts,
+    // categories, budgets and shops deleted on another client came
+    // back after a reload.
+    wallets: new Set<string>(),
+    debts: new Set<string>(),
+    categories: new Set<string>(),
+    budgets: new Set<string>(),
+    shops: new Set<string>(),
   });
   // [v7.5.56 C] Personal-transactions listener must NOT drop
   // shared-only transactions (finding 6). Same confirmed-ids idea as
@@ -428,6 +437,15 @@ export function useCloudListeners({
             }
           });
 
+          // [v7.6.56] Record every server-snapshot id as confirmed
+          // and keep the RAW snapshot id set: a sighting proves
+          // presence even when the doc is filtered out of the merge.
+          const walletSnapshotIds = new Set(snap.docs.map((d) => d.id));
+          if (!snap.metadata.fromCache) {
+            snap.docs.forEach((d) => { if (d.id) confirmedIdsRef.current.wallets.add(d.id); });
+          }
+          const isConfirmedMissingWallet = (id: string) => !snap.metadata.fromCache && confirmedIdsRef.current.wallets.has(id) && !walletSnapshotIds.has(id);
+
           const cloudWallets = snap.docs
             .map((d) => ({ id: d.id, ...d.data() } as Wallet))
             .filter((w) => w && w.id && !w.id.startsWith('shared_') && !w.isSharedFromOther && !deletedWalletIds.includes(w.id) && !syncQueue.isDeleteBlocked('wallets', w.id));
@@ -435,7 +453,7 @@ export function useCloudListeners({
           const unpushedWallets: Wallet[] = [];
           walletsLatestRef.current.forEach((w) => {
             if (w && w.id && !w.isSharedFromOther && !w.id.startsWith('shared_') && !isWalletDeleted(w.id) && !deletedWalletIds.includes(w.id) && !syncQueue.isDeleteBlocked('wallets', w.id)) {
-              if (!cloudWallets.some((cw) => cw.id === w.id)) {
+              if (!cloudWallets.some((cw) => cw.id === w.id) && !isConfirmedMissingWallet(w.id)) {
                 const pushKey = `${targetUid}:${w.id}`;
                 if (!walletPushRequestedRef.current.has(pushKey)) {
                   walletPushRequestedRef.current.add(pushKey);
@@ -453,7 +471,11 @@ export function useCloudListeners({
 
           setWallets((prevLocal) => {
             detectConflicts('wallets', prevLocal, cloudWallets, user?.uid);
-            const merged = mergeById(prevLocal, cloudWallets);
+            // [v7.6.56] Prune wallets deleted elsewhere (reload hole)
+            // BEFORE the merge — shared wallets and wallets with
+            // outstanding work are never pruned.
+            const prunedPrev = pruneConfirmedMissing(prevLocal, walletSnapshotIds, confirmedIdsRef.current.wallets, (w) => w.id, (w) => Boolean(w.isSharedFromOther) || w.id.startsWith('shared_') || syncQueue.isEntityPending('wallets', w.id) || syncQueue.isEntityInDeadLetter('wallets', w.id), snap.metadata.fromCache);
+            const merged = mergeById(prunedPrev, cloudWallets);
             const sharedFromOther = prevLocal.filter((w) => (w.isSharedFromOther || w.id.startsWith('shared_')) && !deletedWalletIds.includes(w.id));
             const finalWallets = [...merged, ...sharedFromOther];
             if (finalWallets.length === 0) return INITIAL_WALLETS;
@@ -468,8 +490,17 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'debts'), (snap) => {
           isRemoteUpdateRef.current = true;
+          // [v7.6.56] Confirmed-ids recording for the prune below.
+          const debtSnapshotIds = new Set(snap.docs.map((d) => d.id));
+          if (!snap.metadata.fromCache) {
+            snap.docs.forEach((d) => { if (d.id) confirmedIdsRef.current.debts.add(d.id); });
+          }
           const cloudDebts = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Debt));
           setDebts((prevLocal) => {
+            // [v7.6.56] Prune debts deleted elsewhere (reload hole)
+            // BEFORE the merge — debts with outstanding work are
+            // never pruned.
+            const prunedPrev = pruneConfirmedMissing(prevLocal, debtSnapshotIds, confirmedIdsRef.current.debts, (d) => d.id, (d) => syncQueue.isEntityPending('debts', d.id) || syncQueue.isEntityInDeadLetter('debts', d.id), snap.metadata.fromCache);
             // [v6.3.3] Skip cloud entries for IDs we just wrote locally (cloud lag protection)
             const now = Date.now();
             const filtered = cloudDebts.filter((d) => {
@@ -480,8 +511,8 @@ export function useCloudListeners({
             Array.from(debtLocalWriteRef.current.entries()).forEach(([id, ts]) => {
               if (now - ts > 20000) debtLocalWriteRef.current.delete(id);
             });
-            detectConflicts('debts', prevLocal, filtered, user?.uid);
-            const merged = mergeById(prevLocal, filtered);
+            detectConflicts('debts', prunedPrev, filtered, user?.uid);
+            const merged = mergeById(prunedPrev, filtered);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_debts', JSON.stringify(merged));
             return merged;
@@ -493,13 +524,21 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'categories'), (snap) => {
           isRemoteUpdateRef.current = true;
+          // [v7.6.56] Confirmed-ids recording for the prune below.
+          const categorySnapshotIds = new Set(snap.docs.map((d) => d.id));
+          if (!snap.metadata.fromCache) {
+            snap.docs.forEach((d) => { if (d.id) confirmedIdsRef.current.categories.add(d.id); });
+          }
           // [v7.0.6 SAFE] filter out deprecated custom category from cloud
           const cloudCats = snap.docs
             .map((d) => ({ id: d.id, ...d.data() } as Category))
             .filter((c) => c.id !== 'cat_custom_1789797767607' && !syncQueue.isDeleteBlocked('categories', c.id));
           setCategories((prevLocal) => {
             detectConflicts('categories', prevLocal, cloudCats, user?.uid);
-            const merged = mergeById(prevLocal, cloudCats);
+            // [v7.6.56] Prune categories deleted elsewhere (reload
+            // hole) BEFORE the merge.
+            const prunedPrev = pruneConfirmedMissing(prevLocal, categorySnapshotIds, confirmedIdsRef.current.categories, (c) => c.id, (c) => syncQueue.isEntityPending('categories', c.id) || syncQueue.isEntityInDeadLetter('categories', c.id), snap.metadata.fromCache);
+            const merged = mergeById(prunedPrev, cloudCats);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_categories', JSON.stringify(merged));
             return merged;
@@ -511,10 +550,25 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'budgets'), (snap) => {
           isRemoteUpdateRef.current = true;
+          // [v7.6.56] Confirmed-ids recording for the prune below —
+          // budgets merge by categoryId, so record both the doc id
+          // and the categoryId as confirmed keys.
+          const budgetSnapshotKeys = new Set<string>();
+          snap.docs.forEach((d) => {
+            budgetSnapshotKeys.add(d.id);
+            const catId = (d.data() as { categoryId?: string } | undefined)?.categoryId;
+            if (catId) budgetSnapshotKeys.add(catId);
+          });
+          if (!snap.metadata.fromCache) {
+            budgetSnapshotKeys.forEach((k) => confirmedIdsRef.current.budgets.add(k));
+          }
           const cloudBudgets = snap.docs.map((d) => ({ id: d.id, ...d.data() } as unknown as BudgetConfig)).filter((b) => !syncQueue.isDeleteBlocked('budgets', b.id));
           setBudgets((prevLocal) => {
             detectConflicts('budgets', prevLocal, cloudBudgets, user?.uid);
-            const merged = mergeByKey(prevLocal, cloudBudgets);
+            // [v7.6.56] Prune budgets deleted elsewhere (reload hole)
+            // BEFORE the mergeByKey — keyed by categoryId.
+            const prunedPrev = pruneConfirmedMissing(prevLocal, budgetSnapshotKeys, confirmedIdsRef.current.budgets, (b) => b.categoryId || b.id, (b) => syncQueue.isEntityPending('budgets', b.categoryId || b.id) || syncQueue.isEntityInDeadLetter('budgets', b.categoryId || b.id), snap.metadata.fromCache);
+            const merged = mergeByKey(prunedPrev, cloudBudgets);
             if (areArraysEqual(prevLocal, merged)) return prevLocal;
             safeSetItem('ngwe_budgets', JSON.stringify(merged));
             return merged;
@@ -526,11 +580,20 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'shops'), (snap) => {
           isRemoteUpdateRef.current = true;
+          // [v7.6.56] Confirmed-ids recording for the prune below.
+          const shopSnapshotIds = new Set(snap.docs.map((d) => d.id));
+          if (!snap.metadata.fromCache) {
+            snap.docs.forEach((d) => { if (d.id) confirmedIdsRef.current.shops.add(d.id); });
+          }
           const cloudShops = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShopContact)).filter((x) => !syncQueue.isDeleteBlocked('shops', x.id));
           setShops((prevLocal) => {
             detectConflicts('shops', prevLocal, cloudShops, user?.uid);
             const map = new Map<string, ShopContact>();
-            prevLocal.forEach((s) => { if (s && s.id) map.set(s.id, s); });
+            // [v7.6.56] Prune shops deleted elsewhere (reload hole)
+            // BEFORE the merge — shops with outstanding work are
+            // never pruned.
+            const prunedPrev = pruneConfirmedMissing(prevLocal, shopSnapshotIds, confirmedIdsRef.current.shops, (s) => s.id, (s) => syncQueue.isEntityPending('shops', s.id) || syncQueue.isEntityInDeadLetter('shops', s.id), snap.metadata.fromCache);
+            prunedPrev.forEach((s) => { if (s && s.id) map.set(s.id, s); });
             cloudShops.forEach((s) => { if (s && s.id) map.set(s.id, { ...map.get(s.id), ...s }); });
             const merged = Array.from(map.values());
             if (areArraysEqual(prevLocal, merged)) return prevLocal;

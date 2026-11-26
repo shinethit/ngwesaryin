@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Activity, CheckCircle2, AlertTriangle, Zap, Cloud, Smartphone, ShieldCheck, RotateCcw, Wifi, WifiOff, Server, HelpCircle, Clock, AlertOctagon, Trash2, Copy, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { syncQueue, SyncQueueItem } from '../lib/syncQueue';
+import { getTransactionSyncSummary, isTransactionConfirmed } from '../utils/transactionSyncSummary';
 import { testFirestoreQuotaPing } from '../lib/firebase';
 import { SyncErrorEntry, subscribeToSyncErrors, clearSyncErrorHistory } from '../lib/syncErrorHistory';
 import { Transaction, Debt, Wallet } from '../types';
@@ -27,6 +28,9 @@ export const SyncHealthModal: React.FC<SyncHealthModalProps> = ({
 }) => {
   const { user, isSyncing, lastSyncedAt } = useAuth();
   const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
+  // [v7.6.56] Dead-letter items, refreshed with the queue subscription
+  // — the score must count failures, not just the live queue.
+  const [failedItems, setFailedItems] = useState<SyncQueueItem[]>([]);
   const [isQueueProcessing, setIsQueueProcessing] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isTestingPing, setIsTestingPing] = useState(false);
@@ -39,6 +43,7 @@ export const SyncHealthModal: React.FC<SyncHealthModalProps> = ({
   useEffect(() => {
     const unsubQueue = syncQueue.subscribe((items, processing) => {
       setQueueItems(items);
+      setFailedItems(syncQueue.getFailedItems());
       setIsQueueProcessing(processing);
     });
     const unsubErrors = subscribeToSyncErrors((errors) => {
@@ -80,11 +85,17 @@ Code: ${err.errorCode || 'N/A'}`;
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
   // Calculate Metrics
+  // [v7.6.56] ONE source of truth with the Data Management card and
+  // the tracker (transactionSyncSummary): the old count credited
+  // every server-set id as synced (stale ids included) and the
+  // failure penalty counted live-queue failures only, so the score
+  // could read 99% "Optimal" with dead-lettered failures.
+  const syncSummary = getTransactionSyncSummary(transactions, cloudTxIds, queueItems, failedItems);
   const totalLocalTxs = transactions.length;
-  const syncedTxsCount = transactions.filter((t) => cloudTxIds.has(t.id)).length;
-  const pendingTxsCount = totalLocalTxs - syncedTxsCount;
+  const syncedTxsCount = syncSummary.confirmedCount;
+  const pendingTxsCount = syncSummary.unconfirmedCount;
 
-  const failedQueueCount = queueItems.filter((q) => q.status === 'failed').length;
+  const failedQueueCount = queueItems.filter((q) => q.status === 'failed').length + failedItems.length;
 
   // Calculate Health Score (0 - 100%)
   let healthScore = 100;
@@ -93,8 +104,8 @@ Code: ${err.errorCode || 'N/A'}`;
     const baseScore = syncRatio * 100;
     const failurePenalty = failedQueueCount * 4;
     healthScore = Math.max(0, Math.min(100, Math.round(baseScore - failurePenalty)));
-    // If any items are unsynced or queued, health score should never report a false 100%
-    if ((pendingTxsCount > 0 || queueItems.length > 0) && healthScore === 100) {
+    // If any items are unsynced, queued, or dead-lettered, health score should never report a false 100%
+    if (!syncSummary.isFullySynced && healthScore === 100) {
       healthScore = 99;
     }
   }
@@ -184,11 +195,11 @@ Code: ${err.errorCode || 'N/A'}`;
       };
 
   // Missing or stuck transactions
-  const localMissingFromCloud = transactions.filter((t) => !cloudTxIds.has(t.id));
+  const localMissingFromCloud = transactions.filter((t) => !isTransactionConfirmed(t, cloudTxIds, queueItems, failedItems));
   const stuckQueueItems = queueItems.filter(
     (q) => q.status === 'failed' || (q.entityType === 'transactions' && !cloudTxIds.has(q.entityId))
   );
-  const totalStuckOrMissingCount = Math.max(localMissingFromCloud.length, stuckQueueItems.length);
+  const totalStuckOrMissingCount = Math.max(localMissingFromCloud.length, stuckQueueItems.length, failedItems.length);
 
   const handleForcedReconciliation = async () => {
     if (!user) return;

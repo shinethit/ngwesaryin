@@ -1,4 +1,4 @@
-// [v7.6.50] PDF stacked-column chart + Dashboard compacting: the
+// [v7.6.51] PDF stacked-column chart + Dashboard compacting: the
 // statement's per-category/per-sub horizontal bars are replaced by
 // ONE hand-rolled SVG stacked-column chart (print-safe, like the
 // donut — no recharts in the print flow); the Dashboard header is
@@ -46,7 +46,7 @@ function count(src: string, needle: string): number {
   return src.split(needle).length - 1;
 }
 
-describe('PDF stacked-column chart (v7.6.50 item 1)', () => {
+describe('PDF stacked-column chart (v7.6.51 item 1)', () => {
   it('renders one hand-rolled SVG chart, capped columns + legend, no bars, no recharts', () => {
     expect(PRINT_VIEW_SRC).toContain('stmt-chart-svg');
     expect(PRINT_VIEW_SRC).toContain('CHART_MAX_COLUMNS = 8');
@@ -78,9 +78,9 @@ describe('PDF stacked-column chart (v7.6.50 item 1)', () => {
   });
 });
 
-describe('Dashboard one-row header + Hero gap (v7.6.50 items 2, 4, 5)', () => {
+describe('Dashboard one-row header + Hero gap (v7.6.51 items 2, 4, 5)', () => {
   it('header is one row: date + wallet pill, no wallet-count subline', () => {
-    // [v7.6.50 render fix] gap-1.5 (was gap-2): the full date only
+    // [v7.6.51 render fix] gap-1.5 (was gap-2): the full date only
     // fits beside the pill at 360px with the tighter gap + 40% pill
     // cap. The negative pin still rules out the old wrapping row.
     expect(DASH_SRC).toContain('flex items-center justify-between gap-1.5');
@@ -110,7 +110,7 @@ describe('Dashboard one-row header + Hero gap (v7.6.50 items 2, 4, 5)', () => {
   });
 
   it('wallet pill keeps its count visible + the popover stays 320px wide', () => {
-    // [v7.6.50 render fixes] Compact label wraps to two lines (the
+    // [v7.6.51 render fixes] Compact label wraps to two lines (the
     // count used to truncate away in the narrow one-row pill), and
     // the popover width is independent of the trigger width.
     const SELECTOR_SRC = readFileSync(
@@ -123,7 +123,7 @@ describe('Dashboard one-row header + Hero gap (v7.6.50 items 2, 4, 5)', () => {
   });
 });
 
-describe('Quick Access one row of 6 (v7.6.50 item 3)', () => {
+describe('Quick Access one row of 6 (v7.6.51 item 3)', () => {
   it('grid is 6 columns with 6 compact chips, all targets unchanged', () => {
     expect(DASH_SRC).toContain('grid grid-cols-6 gap-1');
     expect(count(DASH_SRC, 'px-1 py-1.5 rounded-xl bg-')).toBe(6);
@@ -134,19 +134,19 @@ describe('Quick Access one row of 6 (v7.6.50 item 3)', () => {
   });
 });
 
-describe('Version pins roll to v7.6.50 / build 364', () => {
+describe('Version pins roll to v7.6.51 / build 365', () => {
   it('constants, version.json and the top history entry agree', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.50');
-    expect(top.buildNumber).toBe(364);
+    expect(top.version).toBe('v7.6.51');
+    expect(top.buildNumber).toBe(365);
     expect(top.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(top.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(top.changesMy).toHaveLength(5);
-    expect(top.changesEn).toHaveLength(5);
+    expect(top.changesMy).toHaveLength(2);
+    expect(top.changesEn).toHaveLength(2);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
     expect(VERSION_JSON.changesMy.join(' ')).not.toContain('Admin');

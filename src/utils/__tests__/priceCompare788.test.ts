@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,19 +141,19 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.50');
-    expect(entry.buildNumber).toBe(364);
+    expect(entry.version).toBe('v7.6.51');
+    expect(entry.buildNumber).toBe(365);
     expect(entry.releaseDate).toBe('2026-11-26');
-    expect(entry.tag).toBe('feature');
-    expect(entry.tagLabelMy).toBe('Feature အသစ်');
-    expect(entry.tagLabelEn).toBe('New Feature');
-    expect(entry.titleMy).toBe('PDF ဂရပ်ဖ်နဲ့ Dashboard ကျစ်လစ်မှု');
-    expect(entry.titleEn).toBe('PDF chart and a more compact Dashboard');
+    expect(entry.tag).toBe('fix');
+    expect(entry.tagLabelMy).toBe('Bug Fix');
+    expect(entry.tagLabelEn).toBe('Bug Fix');
+    expect(entry.titleMy).toBe('အမှားသတိပေးချက်များ ရှင်းလင်းခြင်း');
+    expect(entry.titleEn).toBe('Console warnings cleaned up');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(5);
-    expect(entry.changesEn).toHaveLength(5);
+    expect(entry.changesMy).toHaveLength(2);
+    expect(entry.changesEn).toHaveLength(2);
   });
 });

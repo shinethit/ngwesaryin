@@ -153,17 +153,17 @@ describe('Redesigned shop cards (v7.6.40)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.50');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.51');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်',
+      'ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'The PDF statement now shows spending by category as a stacked-column chart — sub-categories stack inside each column, and it takes much less space',
+      'Fixed one console error triggered by browser extensions — the app itself works exactly as before',
     );
   });
 });

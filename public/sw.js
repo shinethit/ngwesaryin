@@ -575,6 +575,14 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
+  // [v7.6.51] Skip non-http(s) requests (e.g. chrome-extension://
+  // requests from browser extensions): the Cache API rejects them
+  // and cache.put throws an uncaught TypeError. Let them pass
+  // through to the network untouched (no respondWith).
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
   // Skip Firebase Auth, Firestore and GCP Cloud live sync calls
   if (
     url.hostname.includes('firestore.googleapis.com') ||

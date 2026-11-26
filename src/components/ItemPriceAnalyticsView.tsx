@@ -13,6 +13,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { DeferredChart } from './DeferredChart';
 import { Category, PlanType, Transaction, Wallet, ShopContact, PublicShop } from '../types';
 import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { normalizeItemName, parseNoteAsItem } from '../utils/itemIntelligence';
@@ -1284,6 +1285,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       : 'No purchase data available for selected items'}
                   </div>
                 ) : (
+                  <DeferredChart>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={priceChartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -1370,6 +1372,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       })}
                     </LineChart>
                   </ResponsiveContainer>
+                  </DeferredChart>
                 )
               ) : (
                 /* Bar Chart for Frequency / Purchase Count */
@@ -1380,6 +1383,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                       : 'No items selected — pick items from the catalog'}
                   </div>
                 ) : (
+                <DeferredChart>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={frequencyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -1441,6 +1445,7 @@ export const ItemPriceAnalyticsView: React.FC<ItemPriceAnalyticsViewProps> = ({
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+                </DeferredChart>
                 )
               )}
             </div>

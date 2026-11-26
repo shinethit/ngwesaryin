@@ -11,6 +11,7 @@ import {
   LineChart,
   Line,
 } from 'recharts';
+import { DeferredChart } from './DeferredChart';
 import { BarChart3, TrendingUp, TrendingDown, Sparkles, Filter } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs } from '../utils/formatters';
@@ -515,6 +516,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
 
           {/* Recharts Cashflow Container */}
           <div className="w-full h-64 sm:h-72 pt-2">
+            <DeferredChart>
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'bar' ? (
                 <BarChart
@@ -615,6 +617,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                 </LineChart>
               )}
             </ResponsiveContainer>
+            </DeferredChart>
           </div>
         </>
       ) : (
@@ -681,6 +684,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
 
           {/* Category Cost Recharts Container */}
           <div className="w-full h-64 sm:h-72 pt-2">
+            <DeferredChart>
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'bar' ? (
                 <BarChart
@@ -758,6 +762,7 @@ export const MonthlySummaryChart: React.FC<MonthlySummaryChartProps> = ({
                 </LineChart>
               )}
             </ResponsiveContainer>
+            </DeferredChart>
           </div>
         </>
       )}

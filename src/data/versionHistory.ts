@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.50';
-export const CURRENT_BUILD_NUMBER = 364;
+export const CURRENT_APP_VERSION = 'v7.6.51';
+export const CURRENT_BUILD_NUMBER = 365;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.51',
+    buildNumber: 365,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'အမှားသတိပေးချက်များ ရှင်းလင်းခြင်း',
+    titleEn: 'Console warnings cleaned up',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ။ ဂရပ်ဖ်ဇယားတွေကိုလည်း မြင်ရတဲ့ တက်ဘ်မှာမှ ဖွင့်တော့မှာမို့ အရွယ်အစား သတိပေးချက်တွေ မပေါ်တော့ပါ — ဇယားတွေရဲ့ ပုံစံနဲ့ အချက်အလက်တွေက အတူတူပါပဲ။',
+    descriptionEn: 'Fixed one console error triggered by browser extensions. Charts now load only when their tab is visible, so the chart-size warnings are gone — the charts themselves look and behave exactly as before.',
+    changesMy: [
+      'ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ',
+      'ဂရပ်ဖ်ဇယားတွေကို မြင်ရတဲ့အချိန်မှသာ ဖွင့်တော့မှာမို့ အရွယ်အစား သတိပေးချက်တွေ မပေါ်တော့ပါ — ဇယားပုံစံ အတူတူပါပဲ',
+    ],
+    changesEn: [
+      'Fixed one console error triggered by browser extensions — the app itself works exactly as before',
+      'Charts now load only when their tab is visible, so the chart-size warnings are gone — the charts themselves are unchanged',
+    ],
+  },
   {
     version: 'v7.6.50',
     buildNumber: 364,

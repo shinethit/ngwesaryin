@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.50');
-    expect(entry.buildNumber).toBe(364);
-    expect(entry.changesMy[0]).toBe('PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်');
+    expect(entry.version).toBe('v7.6.51');
+    expect(entry.buildNumber).toBe(365);
+    expect(entry.changesMy[0]).toBe('ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

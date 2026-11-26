@@ -215,19 +215,19 @@ describe('vehicle display names (v7.6.45 Part B)', () => {
   });
 });
 
-describe('Version pins roll to v7.6.50 / build 364', () => {
+describe('Version pins roll to v7.6.51 / build 365', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.50');
-    expect(top.buildNumber).toBe(364);
+    expect(top.version).toBe('v7.6.51');
+    expect(top.buildNumber).toBe(365);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(5);
-    expect(top.changesEn.length).toBe(5);
+    expect(top.changesMy.length).toBe(2);
+    expect(top.changesEn.length).toBe(2);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

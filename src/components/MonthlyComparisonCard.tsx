@@ -10,6 +10,7 @@ import {
   Legend,
   Cell,
 } from 'recharts';
+import { DeferredChart } from './DeferredChart';
 import { BarChart3, TrendingUp, TrendingDown, Calendar, ArrowRight, Sparkles } from 'lucide-react';
 import { Category, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
@@ -525,6 +526,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
             /* Mode 1: Overall Bar Chart */
             <div>
               <div className="h-56 w-full pt-2">
+                <DeferredChart>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={overallBarData} margin={{ top: 15, right: 15, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
@@ -553,6 +555,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+                </DeferredChart>
               </div>
 
               {/* Chart Legend & Context Note */}
@@ -579,6 +582,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
             /* Mode 2: Category Breakdown Bar Chart */
             <div>
               <div className="h-64 w-full pt-2">
+                <DeferredChart>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={categoryBarData}
@@ -626,6 +630,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
                     />
                   </BarChart>
                 </ResponsiveContainer>
+                </DeferredChart>
               </div>
 
               {/* Category Breakdown Details Mini-List */}

@@ -3,6 +3,7 @@ import { ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Area, AreaCh
 import { FuelLog } from '../../types';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { formatLakhs, formatShortDate } from '../../utils/formatters';
+import { DeferredChart } from '../DeferredChart';
 
 interface FuelPriceChartProps {
   logs: FuelLog[];
@@ -196,6 +197,7 @@ export const FuelPriceChart: React.FC<FuelPriceChartProps> = ({ logs, lang }) =>
 
       {/* Chart */}
       <div className="h-56 w-full pt-2">
+        <DeferredChart>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
@@ -280,6 +282,7 @@ export const FuelPriceChart: React.FC<FuelPriceChartProps> = ({ logs, lang }) =>
             ))}
           </AreaChart>
         </ResponsiveContainer>
+        </DeferredChart>
       </div>
     </div>
   );

@@ -325,10 +325,10 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
   });
 
   it('the shipped identity is 7.6.26 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
   });
 });
 
@@ -366,30 +366,30 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.50');
-    expect(entry.buildNumber).toBe(364);
+    expect(entry.version).toBe('v7.6.51');
+    expect(entry.buildNumber).toBe(365);
     expect(entry.releaseDate).toBe('2026-11-26');
-    expect(entry.tag).toBe('feature');
+    expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'PDF ဂရပ်ဖ်နဲ့ Dashboard ကျစ်လစ်မှု',
+      'အမှားသတိပေးချက်များ ရှင်းလင်းခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'PDF chart and a more compact Dashboard',
+      'Console warnings cleaned up',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(5);
-    expect(entry.changesEn).toHaveLength(5);
+    expect(entry.changesMy).toHaveLength(2);
+    expect(entry.changesEn).toHaveLength(2);
     expect(entry.changesMy[0]).toBe(
-      'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်',
+      'ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The PDF statement now shows spending by category as a stacked-column chart — sub-categories stack inside each column, and it takes much less space',
+      'Fixed one console error triggered by browser extensions — the app itself works exactly as before',
     );
   });
 

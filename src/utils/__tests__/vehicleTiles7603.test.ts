@@ -341,10 +341,10 @@ describe('auto-select wiring (v7.6.03)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
-    expect(CURRENT_BUILD_NUMBER).toBe(364);
-    expect(VERSION_JSON.version).toBe('v7.6.50');
-    expect(VERSION_JSON.buildNumber).toBe(364);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
+    expect(CURRENT_BUILD_NUMBER).toBe(365);
+    expect(VERSION_JSON.version).toBe('v7.6.51');
+    expect(VERSION_JSON.buildNumber).toBe(365);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -353,28 +353,22 @@ describe('Version bump to v7.6.27 (build 342)', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.50');
-    expect(entry.buildNumber).toBe(364);
+    expect(entry.version).toBe('v7.6.51');
+    expect(entry.buildNumber).toBe(365);
     expect(entry.releaseDate).toBe('2026-11-26');
-    expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('PDF ဂရပ်ဖ်နဲ့ Dashboard ကျစ်လစ်မှု');
+    expect(entry.tag).toBe('fix');
+    expect(entry.titleMy).toBe('အမှားသတိပေးချက်များ ရှင်းလင်းခြင်း');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်',
-      'Dashboard အပေါ်မှာ ရက်စွဲနဲ့ ပိုက်ဆံအိတ်ရွေးတဲ့ခလုတ်ကို တစ်ကြောင်းတည်း ဖြစ်အောင် စုလိုက်ပါပြီ',
-      'အမြန် ဝင်ရောက်ရန် ၆ ခုကို တစ်တန်းတည်း ဖြစ်အောင် စုလိုက်ပါပြီ',
-      'ရက်စွဲရွေးတာနဲ့ Sync ခလုတ်ကို Hero ကတ်ထဲက နေရာလွတ်မှာ ထည့်လိုက်ပါပြီ',
-      'Dashboard က ရှာဖွေရန်ခလုတ်ကို ဖြုတ်လိုက်ပါပြီ — အပေါ်ဘားက ရှာဖွေရန်ခလုတ်က နေရာတိုင်းမှာ အလုပ်ဖြစ်ပါတယ်',
+      'ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ',
+      'ဂရပ်ဖ်ဇယားတွေကို မြင်ရတဲ့အချိန်မှသာ ဖွင့်တော့မှာမို့ အရွယ်အစား သတိပေးချက်တွေ မပေါ်တော့ပါ — ဇယားပုံစံ အတူတူပါပဲ',
     ]);
     expect(entry.changesEn).toEqual([
-      'The PDF statement now shows spending by category as a stacked-column chart — sub-categories stack inside each column, and it takes much less space',
-      'The Dashboard header is now a single row: the date and the wallet picker sit side by side',
-      'The 6 Quick Access tiles now sit in a single row',
-      'The period picker and sync button moved into the empty space in the Hero card',
-      'Removed the duplicate search button on the Dashboard — the top-bar search works on every tab',
+      'Fixed one console error triggered by browser extensions — the app itself works exactly as before',
+      'Charts now load only when their tab is visible, so the chart-size warnings are gone — the charts themselves are unchanged',
     ]);
   });
 });

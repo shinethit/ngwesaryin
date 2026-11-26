@@ -12,6 +12,7 @@ import { TrendingUp } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { buildWalletMap, isTransferTransaction, isWalletMatch, isScopedTx as sharedIsScopedTx, convertTxToMMK as sharedConvertTxToMMK } from '../utils/walletBalance';
+import { DeferredChart } from './DeferredChart';
 import { getSplitAttribution, splitAmountMatching } from '../utils/transactionSplits';
 import { useAuth } from '../context/AuthContext';
 
@@ -180,6 +181,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
         </div>
       ) : (
       <div className="w-full h-64 sm:h-72">
+        <DeferredChart>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
@@ -234,6 +236,7 @@ export const CategorySpendingTrendLineChart: React.FC<CategorySpendingTrendLineC
             })}
           </LineChart>
         </ResponsiveContainer>
+        </DeferredChart>
       </div>
       )}
 

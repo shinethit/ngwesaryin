@@ -29,11 +29,15 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
 }) => {
   const { user } = useAuth();
   const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
+  // [v7.6.52] Dead-lettered items (permission/quota failures) live
+  // outside the queue — without this state they were invisible.
+  const [failedItems, setFailedItems] = useState<SyncQueueItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const loadQueue = () => {
     setQueueItems(syncQueue.getQueue());
+    setFailedItems(syncQueue.getFailedItems());
   };
 
   useEffect(() => {
@@ -41,6 +45,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
       loadQueue();
       const unsubscribe = syncQueue.subscribe((items) => {
         setQueueItems(items);
+        setFailedItems(syncQueue.getFailedItems());
       });
       return () => {
         unsubscribe();
@@ -186,6 +191,70 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
     }
   };
 
+  // [v7.6.52] Retry one dead-lettered item: move it back to the
+  // queue, process, and verify it actually left both lists.
+  const handleRetryFailedItem = async (item: SyncQueueItem) => {
+    setIsProcessing(true);
+    setActionNotice(null);
+    try {
+      const moved = syncQueue.retryFailedItem(item.entityType, item.entityId);
+      if (moved) await syncQueue.processQueue();
+      loadQueue();
+      const stillFailed = syncQueue.isEntityInDeadLetter(item.entityType, item.entityId);
+      const stillQueued = isStillQueued(item.entityType, item.entityId);
+      if (!stillFailed && !stillQueued) {
+        setActionNotice(
+          lang === 'my'
+            ? `✅ အမှတ် ${item.entityId} ကို DB သို့ ထပ်မံ ပို့ဆောင်ပြီးပါပြီ!`
+            : `✅ Successfully retried syncing item ${item.entityId}!`
+        );
+      } else {
+        setActionNotice(
+          lang === 'my'
+            ? `⚠️ မအောင်မြင်သေးပါ — အမှတ် ${item.entityId} သည် ထပ်မံကြိုးစားရန် ကျန်နေသေးသည်။`
+            : `⚠️ Not synced yet — item ${item.entityId} still needs retry.`
+        );
+      }
+    } catch (err: any) {
+      setActionNotice(
+        lang === 'my'
+          ? `❌ ထပ်မံပို့ဆောင်မှု မအောင်မြင်ပါ: ${err?.message || 'Error'}`
+          : `❌ Retry failed: ${err?.message || 'Error'}`
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRetryAllFailed = async () => {
+    setIsProcessing(true);
+    setActionNotice(null);
+    try {
+      const beforeCount = syncQueue.getFailedItems().length;
+      syncQueue.retryAllFailed();
+      await syncQueue.processQueue();
+      loadQueue();
+      const remaining = syncQueue.getFailedItems().length + syncQueue.getQueue().length;
+      if (remaining > 0) {
+        setActionNotice(
+          lang === 'my'
+            ? `⚠️ ${beforeCount} ခုထဲမှ ${remaining} ခု မအောင်မြင်သေးပါ — နောက်တစ်ကြိမ် ကြိုးစားပါ`
+            : `⚠️ ${remaining} item(s) still pending — please try again.`
+        );
+      } else {
+        setActionNotice(
+          lang === 'my' ? '✅ မအောင်မြင်သော အရာအားလုံးကို ထပ်မံ ပို့ဆောင်ပြီးပါပြီ!' : '✅ All failed items retried successfully!'
+        );
+      }
+    } catch (err: any) {
+      setActionNotice(
+        lang === 'my' ? `❌ အားလုံးပို့ဆောင်မှုတွင် အမှားရှိသည်: ${err?.message}` : `❌ Error processing queue: ${err?.message}`
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -203,8 +272,8 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
               </h2>
               <p className="text-[11px] text-slate-500 font-medium">
                 {lang === 'my'
-                  ? `မအောင်မြင်သေးသော / စောင့်ဆိုင်းနေသော မှတ်တမ်းများ (${queueItems.length} ခု)`
-                  : `${queueItems.length} items pending or failed sync`}
+                  ? `မအောင်မြင်သေးသော / စောင့်ဆိုင်းနေသော မှတ်တမ်းများ (${queueItems.length + failedItems.length} ခု)`
+                  : `${queueItems.length + failedItems.length} items pending or failed sync`}
               </p>
             </div>
           </div>
@@ -227,7 +296,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
 
         {/* Drawer Body - Failed / Pending Queue Items */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 space-y-3.5">
-          {queueItems.length === 0 && pendingOrFailedTransactions.length === 0 ? (
+          {queueItems.length === 0 && failedItems.length === 0 && pendingOrFailedTransactions.length === 0 ? (
             <div className="py-20 text-center text-slate-400 space-y-3">
               <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-500" />
               <p className="text-sm font-bold text-slate-800">
@@ -334,6 +403,82 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
                   );
                 })}
               </div>
+
+              {/* [v7.6.52] Dead-lettered items: permission/quota
+                  failures that will NOT auto-retry. Previously these
+                  were invisible — the delete or write simply never
+                  landed and nothing said so. */}
+              {failedItems.length > 0 && (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-rose-800">
+                      {lang === 'my'
+                        ? `မအောင်မြင်သော အရာများ — အလိုအလျောက် ထပ်မကြိုးစားပါ (${failedItems.length} ခု)`
+                        : `Failed items — will NOT auto-retry (${failedItems.length})`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRetryAllFailed}
+                      disabled={isProcessing}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isProcessing ? 'animate-spin' : ''}`} />
+                      <span>{lang === 'my' ? 'အားလုံး ထပ်မံကြိုးစားမည် (Retry All)' : 'Retry All Failed'}</span>
+                    </button>
+                  </div>
+                  {failedItems.map((item) => {
+                    const txData = item.data;
+                    const amt = txData?.amount ? formatLakhs(txData.amount, lang) : '';
+                    const amtExact = txData?.amount ? formatMMK(txData.amount) : '';
+                    return (
+                      <div key={item.id} className="p-4 rounded-2xl border space-y-2.5 bg-rose-50/70 border-rose-200">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-rose-500" />
+                            <span className="font-bold text-xs text-slate-900 uppercase truncate">
+                              {item.entityType} ({item.operation})
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/80 border text-rose-700 font-semibold shrink-0">
+                            {lang === 'my' ? '❌ မအောင်မြင် (Failed)' : 'Failed'}
+                          </span>
+                        </div>
+                        {txData && (
+                          <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200 text-xs space-y-1">
+                            <div className="flex items-center justify-between font-bold text-slate-900">
+                              <span className="min-w-0 truncate">{getCategoryDisplayName(txData.category, categories, lang)}</span>
+                              {amt && <span className="font-mono text-emerald-700 shrink-0" title={amtExact}>{amt}</span>}
+                            </div>
+                            {txData.note && <p className="text-slate-600 italic text-[11px]">"{txData.note}"</p>}
+                          </div>
+                        )}
+                        {item.lastError && (
+                          <div className="p-2.5 rounded-xl bg-rose-100/80 border border-rose-300 text-xs text-rose-950 space-y-1">
+                            <div className="font-bold flex items-center gap-1 text-rose-900">
+                              <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                              <span>{lang === 'my' ? 'Firestore Operation Error:' : 'Firestore Error Message:'}</span>
+                            </div>
+                            <p className="font-mono text-[11px] bg-white p-2 rounded-lg border border-rose-200 text-rose-900 break-all">
+                              {item.lastError}
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleRetryFailedItem(item)}
+                            disabled={isProcessing}
+                            className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>{lang === 'my' ? '🔄 Retry (ထပ်ကြိုးစားမည်)' : 'Retry'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* [v7.5.60 M-22] Pending records NOT in the queue — previously
                   computed but never shown anywhere, so the user knew a

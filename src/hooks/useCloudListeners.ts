@@ -23,6 +23,8 @@ import {
   markVehicleLogDeleted,
   unmarkVehicleLogDeleted,
   isVehicleLogDeleted,
+  getTombstonedTxIds,
+  setTombstonedTxIds,
   type VehicleLogKind,
 } from '../utils/deletedMarkers';
 import type {
@@ -253,13 +255,18 @@ export function useCloudListeners({
             if (!snap.metadata.fromCache && t && t.id) confirmedTxIdsRef.current.add(t.id);
             // [v7.0.6 SAFE] remap deprecated custom category on read
             if (t && t.category === 'cat_custom_1789797767607') t.category = 'cat_vehicle';
-            if (t && t.id && !deletedIds.includes(t.id) && !isTxDeleted(t.id)) {
+            if (t && t.id && !deletedIds.includes(t.id) && !isTxDeleted(t.id) && !syncQueue.isDeleteBlocked('transactions', t.id)) {
               const isPendingInQueue = syncQueue.isEntityPending('transactions', t.id);
               const isConfirmed = (!d.metadata.hasPendingWrites || savedConfirmedIds.has(t.id)) && !isPendingInQueue;
 
               if (isConfirmed) {
                 confirmedServerTxIds.add(t.id);
-                unmarkTxDeleted(t.id);
+                // [v7.6.52] Never clear the marker while a delete is
+                // outstanding: a server sighting that raced an
+                // in-flight delete must not resurrect the record.
+                if (!syncQueue.isEntityPendingDelete('transactions', t.id) && !syncQueue.isEntityInDeadLetter('transactions', t.id)) {
+                  unmarkTxDeleted(t.id);
+                }
                 confirmedServerTxs.push(t);
               } else {
                 localPendingTxs.push(t);
@@ -326,6 +333,7 @@ export function useCloudListeners({
               if (!t || !t.id) return;
               if (deletedIds.includes(t.id)) return;
               if (isTxDeleted(t.id)) return;
+              if (syncQueue.isDeleteBlocked('transactions', t.id)) return;
               if (map.has(t.id)) return;
               const isPendingUpsert = syncQueue
                 .getQueue()
@@ -343,14 +351,23 @@ export function useCloudListeners({
               const wasConfirmed = confirmedTxIdsRef.current.has(t.id);
               const confirmedMissing =
                 wasConfirmed && !confirmedServerTxIds.has(t.id) && !snap.metadata.fromCache;
-              if (!confirmedMissing) map.set(t.id, t);
+              if (!confirmedMissing) {
+                map.set(t.id, t);
+              } else if (!(t.walletId && t.walletId.startsWith('shared_'))) {
+                // [v7.6.52] The delete elsewhere is confirmed: the
+                // local delete task must not retry a delete that
+                // already landed. (The REST executor also confirms
+                // via 404; this is the listener's copy.)
+                syncQueue.remove('transactions', t.id);
+                unmarkTxDeleted(t.id);
+              }
             });
 
             // [v7.5.56 C] Union the separate shared set with the
             // personal set (cloud wins on id collision — confirmed txs
             // were already put in the map above).
             sharedTxsRef.current.forEach((t, sid) => {
-              if (t && t.id && !map.has(sid) && !isTxDeleted(sid) && !deletedIds.includes(sid)) {
+              if (t && t.id && !map.has(sid) && !isTxDeleted(sid) && !deletedIds.includes(sid) && !syncQueue.isDeleteBlocked('transactions', sid)) {
                 map.set(sid, t);
               }
             });
@@ -374,7 +391,29 @@ export function useCloudListeners({
           setIsCloudLoaded(true);
         }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${targetUid}/transactions`)));
       }, 0));
-  
+
+      // [v7.6.52] Tombstone listener: ids deleted on ANY device.
+      // Learning a tombstone prunes the local record at once and
+      // refreshes the local tombstone cache, so a later push or
+      // reconcile on this device cannot resurrect it.
+      timers.push(setTimeout(() => {
+        unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'tombstones'), (snap) => {
+          const ids = snap.docs.map((d) => d.id);
+          if (ids.length === 0) return;
+          setTombstonedTxIds([...new Set([...getTombstonedTxIds(), ...ids])]);
+          ids.forEach((id) => markTxDeleted(id));
+          setTransactions((prev) => {
+            const pruned = prev.filter((t) => t && t.id && !ids.includes(t.id));
+            if (pruned.length !== prev.length) {
+              ids.forEach((id) => sharedTxsRef.current.delete(id));
+              safeSetItem('ngwe_transactions', JSON.stringify(pruned));
+              return pruned;
+            }
+            return prev;
+          });
+        }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${targetUid}/tombstones`)));
+      }, 0));
+
       // 2. Wallets
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'wallets'), (snap) => {
@@ -391,11 +430,11 @@ export function useCloudListeners({
 
           const cloudWallets = snap.docs
             .map((d) => ({ id: d.id, ...d.data() } as Wallet))
-            .filter((w) => w && w.id && !w.id.startsWith('shared_') && !w.isSharedFromOther && !deletedWalletIds.includes(w.id));
+            .filter((w) => w && w.id && !w.id.startsWith('shared_') && !w.isSharedFromOther && !deletedWalletIds.includes(w.id) && !syncQueue.isDeleteBlocked('wallets', w.id));
 
           const unpushedWallets: Wallet[] = [];
           walletsLatestRef.current.forEach((w) => {
-            if (w && w.id && !w.isSharedFromOther && !w.id.startsWith('shared_') && !isWalletDeleted(w.id) && !deletedWalletIds.includes(w.id)) {
+            if (w && w.id && !w.isSharedFromOther && !w.id.startsWith('shared_') && !isWalletDeleted(w.id) && !deletedWalletIds.includes(w.id) && !syncQueue.isDeleteBlocked('wallets', w.id)) {
               if (!cloudWallets.some((cw) => cw.id === w.id)) {
                 const pushKey = `${targetUid}:${w.id}`;
                 if (!walletPushRequestedRef.current.has(pushKey)) {
@@ -435,7 +474,7 @@ export function useCloudListeners({
             const now = Date.now();
             const filtered = cloudDebts.filter((d) => {
               const ts = debtLocalWriteRef.current.get(d.id);
-              return !(ts && (now - ts) < 20000);
+              return !(ts && (now - ts) < 20000) && !syncQueue.isDeleteBlocked('debts', d.id);
             });
             // GC expired entries
             Array.from(debtLocalWriteRef.current.entries()).forEach(([id, ts]) => {
@@ -457,7 +496,7 @@ export function useCloudListeners({
           // [v7.0.6 SAFE] filter out deprecated custom category from cloud
           const cloudCats = snap.docs
             .map((d) => ({ id: d.id, ...d.data() } as Category))
-            .filter((c) => c.id !== 'cat_custom_1789797767607');
+            .filter((c) => c.id !== 'cat_custom_1789797767607' && !syncQueue.isDeleteBlocked('categories', c.id));
           setCategories((prevLocal) => {
             detectConflicts('categories', prevLocal, cloudCats, user?.uid);
             const merged = mergeById(prevLocal, cloudCats);
@@ -472,7 +511,7 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'budgets'), (snap) => {
           isRemoteUpdateRef.current = true;
-          const cloudBudgets = snap.docs.map((d) => ({ id: d.id, ...d.data() } as unknown as BudgetConfig));
+          const cloudBudgets = snap.docs.map((d) => ({ id: d.id, ...d.data() } as unknown as BudgetConfig)).filter((b) => !syncQueue.isDeleteBlocked('budgets', b.id));
           setBudgets((prevLocal) => {
             detectConflicts('budgets', prevLocal, cloudBudgets, user?.uid);
             const merged = mergeByKey(prevLocal, cloudBudgets);
@@ -487,7 +526,7 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'shops'), (snap) => {
           isRemoteUpdateRef.current = true;
-          const cloudShops = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShopContact));
+          const cloudShops = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShopContact)).filter((x) => !syncQueue.isDeleteBlocked('shops', x.id));
           setShops((prevLocal) => {
             detectConflicts('shops', prevLocal, cloudShops, user?.uid);
             const map = new Map<string, ShopContact>();
@@ -519,7 +558,7 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'vehicles'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
-          const cloudVehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Vehicle));
+          const cloudVehicles = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Vehicle)).filter((v) => !syncQueue.isDeleteBlocked('vehicles', v.id));
           setVehicles((prevLocal) => {
             detectConflicts('vehicles', prevLocal, cloudVehicles, user?.uid);
             const merged = reconcileCloudList(prevLocal, cloudVehicles, 'vehicles', confirmedIdsRef.current.vehicles, snap.metadata.fromCache);
@@ -534,7 +573,7 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'fuelLogs'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
-          const cloudLogs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FuelLog));
+          const cloudLogs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FuelLog)).filter((f) => !syncQueue.isDeleteBlocked('fuelLogs', f.id));
           setFuelLogs((prevLocal) => {
             detectConflicts('fuelLogs', prevLocal, cloudLogs, user?.uid);
             const merged = reconcileCloudList(prevLocal, cloudLogs, 'fuelLogs', confirmedIdsRef.current.fuelLogs, snap.metadata.fromCache);
@@ -549,7 +588,7 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'vehicleMaintenance'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
-          const cloudMaint = snap.docs.map((d) => ({ id: d.id, ...d.data() } as VehicleMaintenance));
+          const cloudMaint = snap.docs.map((d) => ({ id: d.id, ...d.data() } as VehicleMaintenance)).filter((m) => !syncQueue.isDeleteBlocked('vehicleMaintenance', m.id));
           setVehicleMaintenance((prevLocal) => {
             detectConflicts('vehicleMaintenance', prevLocal, cloudMaint, user?.uid);
             const merged = reconcileCloudList(prevLocal, cloudMaint, 'vehicleMaintenance', confirmedIdsRef.current.vehicleMaintenance, snap.metadata.fromCache);
@@ -564,7 +603,7 @@ export function useCloudListeners({
       timers.push(setTimeout(() => {
         unsubscribers.push(onSnapshot(collection(db, 'users', targetUid, 'tirePressureLogs'), { includeMetadataChanges: true }, (snap) => {
           isRemoteUpdateRef.current = true;
-          const cloudTires = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TirePressureLog));
+          const cloudTires = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TirePressureLog)).filter((t) => !syncQueue.isDeleteBlocked('tirePressureLogs', t.id));
           setTirePressureLogs((prevLocal) => {
             detectConflicts('tirePressureLogs', prevLocal, cloudTires, user?.uid);
             const merged = reconcileCloudList(prevLocal, cloudTires, 'tirePressureLogs', confirmedIdsRef.current.tirePressureLogs, snap.metadata.fromCache);

@@ -125,22 +125,22 @@ describe('addSplitRow wiring (v7.6.30)', () => {
 
 describe('Version bump to v7.6.30 (build 344)', () => {
   it('version surfaces agree on v7.6.30 / build 344', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
-    expect(CURRENT_BUILD_NUMBER).toBe(365);
-    expect(VERSION_JSON.version).toBe('v7.6.51');
-    expect(VERSION_JSON.buildNumber).toBe(365);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.52');
+    expect(CURRENT_BUILD_NUMBER).toBe(366);
+    expect(VERSION_JSON.version).toBe('v7.6.52');
+    expect(VERSION_JSON.buildNumber).toBe(366);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.51');
-    expect(entry.buildNumber).toBe(365);
+    expect(entry.version).toBe('v7.6.52');
+    expect(entry.buildNumber).toBe(366);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(2);
-    expect(entry.changesEn).toHaveLength(2);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ',
+      'မှတ်တမ်းများ စာမျက်နှာမှာ Cloud နဲ့ ချိတ်ဆက်တဲ့ ခလုတ်အသစ် ပါလာပါပြီ — ပင်မ စာမျက်နှာက ခလုတ်လိုပဲ နှိပ်လိုက်ရင် အချက်အလက်တွေ ချိတ်ဆက်ပေးပါတယ်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Fixed one console error triggered by browser extensions — the app itself works exactly as before',
+      'The Records page now has its own sync button, just like the home page — tap it to sync your records with Cloud',
     );
   });
 

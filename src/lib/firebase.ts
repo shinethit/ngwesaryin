@@ -428,9 +428,39 @@ export async function safeSetDoc(
     return false;
   }
 
+  // [v7.6.52] DELETE WINS: never write an entity with a pending delete,
+  // a dead-lettered delete, a tombstone, or a local deletion marker.
+  // The old code wrote first and trusted queue dedup — the immediate
+  // write itself resurrected the record on the server.
+  if (entityType && entityId) {
+    try {
+      const { syncQueue } = await import('./syncQueue');
+      if (syncQueue.isDeleteBlocked(entityType as any, entityId)) return false;
+    } catch {}
+  }
+
   try {
-    // 8-second timeout to prevent infinite hanging on mobile LTE or iOS Safari WebKit
-    await withTimeout(setDoc(docRef, cleanForFirestore(data), options), 8000);
+    // [v7.6.52] ONE transport: the immediate attempt and the queue
+    // retry engine share executeSyncTask() (SDK + REST fallback).
+    // Every setDoc in the app uses { merge: true }; the executor does
+    // the same, so `options` is accepted for signature compatibility
+    // and intentionally not forwarded.
+    const { executeSyncTask } = await import('./syncTransport');
+    const result = await executeSyncTask({
+      id: `safe_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      entityType: entityType || (isSharedTx ? 'sharedWallets' : undefined),
+      entityId: entityId || (isSharedTx ? `${sharedDocId}/transactions/${sharedTxId}` : undefined),
+      operation: 'upsert',
+      data,
+      targetUid: targetUid || auth.currentUser?.uid || '',
+      timestamp: Date.now(),
+      retryCount: 0,
+      status: 'pending',
+      docRef,
+    } as any);
+    if (result.outcome === 'failed') {
+      throw new Error(result.error || 'Sync failed');
+    }
     recordFirestoreOp('write', docRef?.parent?.id || path || 'system', 1);
     if (entityType && entityId) {
       import('./syncQueue')
@@ -439,58 +469,18 @@ export async function safeSetDoc(
         })
         .catch(() => {});
     }
+    // Real-time confirmation bridge: a REST-confirmed upsert
+    // immediately marks the id confirmed in UI (App listener).
+    const confirmedId = entityType === 'transactions' ? entityId : isSharedTx ? sharedTxId : undefined;
+    if (result.viaRest && confirmedId && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('ngwe_cloud_tx_confirmed', { detail: [confirmedId] })
+      );
+    }
     return true;
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-
-    // Skip REST fallback on quota or permission errors
-    if (!isQuotaExhaustedError(error) && !isPermissionError(error)) {
-      // [v7.2.0] Shared wallet transaction REST fallback
-      if (isSharedTx && sharedDocId && sharedTxId && data) {
-        try {
-          const { pushSharedTransactionDirectHttp } = await import('./directFirestoreHttp');
-          const httpRes = await pushSharedTransactionDirectHttp(sharedDocId, data);
-          if (httpRes.success) {
-            console.log(`[safeSetDoc] Recovered shared tx ${sharedTxId} via REST push!`);
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(
-                new CustomEvent('ngwe_cloud_tx_confirmed', { detail: [sharedTxId] })
-              );
-            }
-            return true;
-          }
-          console.warn('[safeSetDoc] Shared tx REST fallback failed:', httpRes.error);
-        } catch (httpErr) {
-          console.warn('[safeSetDoc] Shared tx REST fallback error:', httpErr);
-        }
-      }
-      if (entityType === 'transactions' && targetUid && data) {
-        try {
-          const { pushTransactionsDirectHttp } = await import('./directFirestoreHttp');
-          const httpRes = await pushTransactionsDirectHttp([data], targetUid);
-          if (httpRes.success) {
-            console.log(
-              `[safeSetDoc] Recovered tx ${entityId} via direct HTTPS REST push!`
-            );
-            import('./syncQueue')
-              .then(({ syncQueue }) => {
-                syncQueue.remove('transactions', entityId);
-              })
-              .catch(() => {});
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(
-                new CustomEvent('ngwe_cloud_tx_confirmed', { detail: [entityId] })
-              );
-            }
-            return true;
-          }
-        } catch (httpErr) {
-          console.warn('[safeSetDoc] Direct HTTP fallback attempt:', httpErr);
-        }
-      }
-    }
-
-    // Automatically enqueue to transactional syncQueue for retry-on-failure
+    // Transport errors are already recorded by the executor; only the
+    // retry enqueue below is this function's job now.
     if (entityType && entityId && targetUid) {
       import('./syncQueue')
         .then(({ syncQueue }) => {
@@ -508,98 +498,100 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
   const targetUid = parts.length === 4 && parts[0] === 'users' ? parts[1] : undefined;
   const entityType = parts.length === 4 && parts[0] === 'users' ? parts[2] : undefined;
   const entityId = parts.length === 4 && parts[0] === 'users' ? parts[3] : undefined;
+  // Shared-wallet transaction path (deleteSharedWalletTransaction).
+  const isSharedTx = parts.length === 4 && parts[0] === 'sharedWallets' && parts[2] === 'transactions';
+  const sharedDocId = isSharedTx ? parts[1] : undefined;
+  const sharedTxId = isSharedTx ? parts[3] : undefined;
+  const queueEntityType = entityType || (isSharedTx ? 'sharedWallets' : undefined);
+  const queueEntityId = entityId || (isSharedTx ? `${sharedDocId}/transactions/${sharedTxId}` : undefined);
+
+  // [v7.6.52] Durable intent FIRST: the delete task (+ tombstone for
+  // own transaction deletes) is persisted before any attempt, so a
+  // failed attempt can never lose the delete. The task leaves the
+  // queue ONLY on server confirmation (executor REST success, or
+  // the listener/pull observing the server absence) — never here on
+  // a local SDK ack. The old code enqueued on failure and let callers
+  // remove the task, which is how deletes were silently lost.
+  const recordDeleteIntent = async () => {
+    if (!queueEntityType || !queueEntityId || !targetUid) return;
+    try {
+      const { syncQueue } = await import('./syncQueue');
+      if (queueEntityType === 'transactions') {
+        syncQueue.enqueueTxDelete(queueEntityId, targetUid);
+      } else {
+        syncQueue.enqueue(queueEntityType as any, queueEntityId, 'delete', targetUid);
+      }
+    } catch {}
+  };
 
   // Guard against quota exhaustion and enqueue delete task
   if (isQuotaExhausted()) {
-    if (entityType && entityId && targetUid) {
-      import('./syncQueue')
-        .then(({ syncQueue }) => {
-          syncQueue.enqueue(entityType as any, entityId, 'delete', targetUid);
-        })
-        .catch(() => {});
-    }
+    await recordDeleteIntent();
     return false;
   }
 
-  // ⚡ iOS Safari WebKit: deleteDoc() silently hangs. Issue REST DELETE first.
-  if (entityType === 'transactions' && entityId && targetUid) {
-    try {
-      const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
-      const restRes = await deleteTransactionDirectHttp(entityId, targetUid);
-      if (restRes.success) {
-        recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
-        import('./syncQueue')
-          .then(({ syncQueue }) => syncQueue.remove('transactions', entityId))
-          .catch(() => {});
-        return true;
-      }
-      console.warn('[safeDeleteDoc] REST delete failed, falling back to SDK:', restRes.error);
-    } catch (restErr) {
-      console.warn('[safeDeleteDoc] REST delete error:', restErr);
-    }
-  }
+  await recordDeleteIntent();
 
   try {
-    // ⚡ For transaction deletes we already used REST; if SDK ever runs it
-    // still has 8s timeout as fail-safe.
-    await withTimeout(deleteDoc(docRef), 8000);
-    recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
-    if (entityType && entityId) {
-      import('./syncQueue')
-        .then(({ syncQueue }) => {
-          syncQueue.remove(entityType as any, entityId);
-        })
-        .catch(() => {});
-    }
-    return true;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
-
-    // ─────────────────────────────────────────────────────────────
-    // iOS / Safari / PWA REST DELETE fallback.
-    // On iOS Safari WebKit, deleteDoc() frequently hangs or silently
-    // fails without throwing a catchable error, so the doc stays in
-    // Firestore forever (confirmed by cross-device tests where even
-    // clear-data + re-signin still shows the deleted record).
-    // Fall back to a direct HTTPS REST DELETE — immune to WebKit.
-    // ─────────────────────────────────────────────────────────────
-    if (!isQuotaExhaustedError(error) && !isPermissionError(error)) {
-      if (entityType === 'transactions' && entityId && targetUid) {
-        try {
-          const { deleteTransactionDirectHttp } = await import('./directFirestoreHttp');
-          const httpRes = await deleteTransactionDirectHttp(entityId, targetUid);
-          if (httpRes.success) {
-            console.log(`[safeDeleteDoc] Recovered tx delete ${entityId} via REST`);
-            import('./syncQueue')
-              .then(({ syncQueue }) => {
-                syncQueue.remove('transactions', entityId);
-              })
-              .catch(() => {});
-            return true;
-          }
-        } catch (httpErr) {
-          console.warn('[safeDeleteDoc] REST delete fallback failed:', httpErr);
-        }
+    // [v7.6.52] ONE transport (see safeSetDoc): REST-first for
+    // transaction deletes (immune to the iOS WebKit deleteDoc hang),
+    // SDK fallback. An SDK-local accept ('local') is NOT server
+    // confirmation — the queued task stays for REST re-confirmation.
+    const { executeSyncTask } = await import('./syncTransport');
+    const result = await executeSyncTask({
+      id: `safe_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      entityType: queueEntityType,
+      entityId: queueEntityId,
+      operation: 'delete',
+      targetUid: targetUid || auth.currentUser?.uid || '',
+      timestamp: Date.now(),
+      retryCount: 0,
+      status: 'pending',
+      docRef,
+    } as any);
+    if (result.outcome === 'confirmed') {
+      recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
+      if (queueEntityType && queueEntityId) {
+        import('./syncQueue')
+          .then(({ syncQueue }) => {
+            syncQueue.remove(queueEntityType as any, queueEntityId);
+          })
+          .catch(() => {});
       }
+      return true;
     }
-
-    // Automatically enqueue to transactional syncQueue for retry-on-failure
-    if (entityType && entityId && targetUid) {
-      import('./syncQueue')
-        .then(({ syncQueue }) => {
-          syncQueue.enqueue(entityType as any, entityId, 'delete', targetUid);
-        })
-        .catch(() => {});
+    if (result.outcome === 'local') {
+      recordFirestoreOp('delete', docRef?.parent?.id || path || 'system', 1);
+      return false;
     }
+    return false;
+  } catch (error) {
+    // Transport errors are already recorded by the executor; the
+    // queued task above owns the retry.
     return false;
   }
 }
+
 
 export async function safeUpdateDoc(docRef: any, data: any): Promise<boolean> {
   // Guard against quota exhaustion in safeUpdateDoc
   if (isQuotaExhausted()) {
     return false;
   }
+
+  // [v7.6.52] DELETE WINS: a partial update must never resurrect a
+  // doc with a pending delete (updateDoc on a deleted doc recreates
+  // it). This function stays attempt-only by design — partial-update
+  // payloads (incl. deleteField sentinels) cannot round-trip through
+  // the upsert queue — so refusal, not enqueueing, is the guard.
+  try {
+    const path = docRef?.path || null;
+    const parts = path ? path.split('/') : [];
+    if (parts.length === 4 && parts[0] === 'users') {
+      const { syncQueue } = await import('./syncQueue');
+      if (syncQueue.isDeleteBlocked(parts[2] as any, parts[3])) return false;
+    }
+  } catch {}
 
   try {
     // Wrap updateDoc in withTimeout(..., 8000) to prevent hanging

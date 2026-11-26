@@ -1227,10 +1227,12 @@ export function useTransactionHandlers({
       return;
     }
 
-    // [v7.5.56 A5] Cloud deletes FIRST — only mark/remove locally once
-    // the cloud confirms. A failure that safeDeleteDoc already queued
-    // for retry (offline / quota-exhausted) still proceeds locally;
-    // a live failure does NOT mark, toasts the error, and keeps the tx.
+    // [v7.6.52] The cloud attempt below is awaited (as before), but
+    // its result no longer decides whether the record disappears
+    // locally: safeDeleteDoc now persists the delete task (+ tombstone)
+    // BEFORE attempting, so a failed attempt leaves a durable,
+    // retrying delete — never a silently kept record. The delete stays
+    // UI-visible as pending until the server confirms it.
     const pairTxForDelete = txToDelete.transferPairId
       ? transactions.find((t) => t.id === txToDelete.transferPairId)
       : undefined;
@@ -1252,18 +1254,17 @@ export function useTransactionHandlers({
       const pairWallet = wallets.find((w) => isWalletMatch(w, pairTxForDelete.walletId));
       pairCloudOk = await deleteOneTxFromCloud(pairTxForDelete, pairWallet);
     }
-    const deleteQueuedForRetry =
-      (typeof navigator !== 'undefined' && !navigator.onLine) || isQuotaExhausted();
-    if ((!mainCloudOk || !pairCloudOk) && !deleteQueuedForRetry) {
+    if (!mainCloudOk || !pairCloudOk) {
+      // The delete task is queued and will retry; say so plainly
+      // instead of claiming the delete landed.
       showToast(
         lang === 'my'
-          ? '⚠️ Cloud မှ ဖျက်၍ မရပါ — မှတ်တမ်းကို ထားရှိထားပါသည်။ အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ'
-          : '⚠️ Could not delete from cloud — the record was kept. Check your connection and retry'
+          ? '⚠️ Cloud သို့ ဖျက်ရန် ပေးပို့ထားပါသည် — အတည်ပြုရန် ကျန်ရှိနေပါသည်။'
+          : '⚠️ Delete queued for Cloud — awaiting confirmation.'
       );
-      return;
     }
 
-    // Cloud confirmed (or queued for retry) — mark as deleted
+    // Delete attempted (confirmed or queued for retry) — mark as deleted
     markTxDeleted(id);
 
     // 1. Calculate next state synchronously (including paired transfer if any)
@@ -1280,27 +1281,13 @@ export function useTransactionHandlers({
       safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
       return next;
     });
-    syncQueue.remove('transactions', id);
+    // [v7.6.52] The delete task stays in the queue until the server
+    // confirms (REST success, 404, or listener/pull-observed absence).
+    // Removing it here is what silently lost deletes before. The
+    // REST-first attempt already ran inside safeDeleteDoc, so the old
+    // parallel REST-verify block is gone with it.
     if (pairId) {
       markTxDeleted(pairId);
-      syncQueue.remove('transactions', pairId);
-    }
-
-    // iOS Safari WebKit: force a direct REST DELETE on both collections
-    // in parallel to guarantee cloud deletion even when the SDK hangs.
-    if (user?.uid) {
-      const targetUid = activeWorkspaceId || user.uid;
-      (async () => {
-        try {
-          const { deleteTransactionDirectHttp } = await import('../lib/directFirestoreHttp');
-          await Promise.allSettled([
-            deleteTransactionDirectHttp(id, targetUid),
-            pairId ? deleteTransactionDirectHttp(pairId, targetUid) : Promise.resolve(),
-          ]);
-        } catch (e) {
-          console.warn('[delete] REST verify notice:', e);
-        }
-      })();
     }
 
     // Recalculate vehicle odometer if linked logs are deleted

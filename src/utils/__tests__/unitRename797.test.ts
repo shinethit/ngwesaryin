@@ -350,21 +350,21 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
-    expect(CURRENT_BUILD_NUMBER).toBe(365);
-    expect(VERSION_JSON.version).toBe('v7.6.51');
-    expect(VERSION_JSON.buildNumber).toBe(365);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.52');
+    expect(CURRENT_BUILD_NUMBER).toBe(366);
+    expect(VERSION_JSON.version).toBe('v7.6.52');
+    expect(VERSION_JSON.buildNumber).toBe(366);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.51');
-    expect(entry.buildNumber).toBe(365);
+    expect(entry.version).toBe('v7.6.52');
+    expect(entry.buildNumber).toBe(366);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('အမှားသတိပေးချက်များ ရှင်းလင်းခြင်း');
-    expect(entry.titleEn).toBe('Console warnings cleaned up');
+    expect(entry.titleMy).toBe('ချိတ်ဆက်မှုစနစ် အသစ်နှင့် မှတ်တမ်းများ Sync ခလုပ်');
+    expect(entry.titleEn).toBe('Rebuilt sync system + Records sync button');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(2);
-    expect(entry.changesEn).toHaveLength(2);
+    expect(entry.changesMy).toHaveLength(3);
+    expect(entry.changesEn).toHaveLength(3);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

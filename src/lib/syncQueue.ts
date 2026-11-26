@@ -5,8 +5,17 @@
  * without full state refreshes or UI freezes.
  */
 
-import { doc, setDoc, deleteDoc, waitForPendingWrites, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, waitForPendingWrites, writeBatch } from 'firebase/firestore';
 import { db, cleanForFirestore, handleFirestoreError, OperationType, withTimeout, auth, isQuotaExhausted, isPermissionError } from './firebase';
+import { executeSyncTask } from './syncTransport';
+import {
+  addTxTombstone,
+  fetchTombstoneTxIds,
+  isTxDeleted,
+  isTxTombstoned,
+  isVehicleLogDeleted,
+  isWalletDeleted,
+} from '../utils/deletedMarkers';
 
 
 export type SyncEntityType =
@@ -24,7 +33,11 @@ export type SyncEntityType =
   // [v7.5.56] Top-level shared wallet writes: sharedWallets/{docId}
   // (wallet doc) or sharedWallets/{docId}/transactions/{txId}.
   // entityId carries the path segments after 'sharedWallets/'.
-  | 'sharedWallets';
+  | 'sharedWallets'
+  // [v7.6.52] Server-side deletion tombstones: users/{uid}/tombstones/{txId}.
+  // Written through the same queue so a delete is resurrection-proof
+  // across devices (see docs/SYNC_MECHANISM.md).
+  | 'tombstones';
 
 export type SyncOperationType = 'upsert' | 'delete';
 
@@ -45,6 +58,8 @@ export interface SyncQueueItem {
 export interface ProcessQueueResult {
   succeeded: number;
   failed: number;
+  /** [v7.6.52] Deletes the SDK accepted locally but the server has not confirmed yet. */
+  awaitingConfirmation: number;
   succeededEntityIds: { entityType: SyncEntityType; entityId: string }[];
   succeededTxIds: string[];
 }
@@ -64,7 +79,7 @@ const DEAD_LETTER_KEY = 'ngwe_sync_queue_dead_letter';
 
 type QueueListener = (items: SyncQueueItem[], isProcessing: boolean) => void;
 
-class SyncQueueManager {
+export class SyncQueueManager {
   private queue: SyncQueueItem[] = [];
   // [v7.5.56] Dead letter: items that gave up (permission-denied after
   // PERMISSION_MAX_RETRIES, or exhausted MAX_RETRIES). They are NOT
@@ -169,6 +184,9 @@ class SyncQueueManager {
     this.deadLetter.push({ ...task, status: 'failed' });
     this.queue = this.queue.filter((q) => q.id !== task.id);
     this.saveDeadLetter();
+    // [v7.6.52] Subscribers (SyncStatusDrawer) must refresh: a
+    // dead-lettered delete used to vanish silently from every UI.
+    this.notifyListeners();
     console.warn(
       `[SyncQueue] Giving up on ${task.entityType}/${task.entityId} after ${task.retryCount} attempt(s) — moved to dead letter (not synced, will NOT auto-retry):`,
       task.lastError
@@ -228,6 +246,89 @@ class SyncQueueManager {
   }
 
   /**
+   * [v7.6.52] Check if a specific entity gave up and sits in the
+   * dead-letter list. A dead-lettered delete must keep blocking
+   * re-merges/re-pushes exactly like a pending one — otherwise the
+   * listener unmarks it and the record resurrects.
+   */
+  public isEntityInDeadLetter(entityType: SyncEntityType, entityId: string): boolean {
+    return this.deadLetter.some(
+      (item) => item.entityType === entityType && item.entityId === entityId
+    );
+  }
+
+  /**
+   * [v7.6.52] Re-queue ONE dead-letter item the user explicitly retries.
+   * Returns false when no such item exists.
+   */
+  public retryFailedItem(entityType: SyncEntityType, entityId: string): boolean {
+    const idx = this.deadLetter.findIndex(
+      (item) => item.entityType === entityType && item.entityId === entityId
+    );
+    if (idx < 0) return false;
+    const [item] = this.deadLetter.splice(idx, 1);
+    this.queue.push({ ...item, status: 'pending', lastAttemptAt: 0, retryCount: 0, lastError: undefined });
+    this.saveDeadLetter();
+    this.saveQueue();
+    this.notifyListeners();
+    this.triggerImmediateProcess();
+    return true;
+  }
+
+  /**
+   * [v7.6.52] SINGLE gate every push/merge/reconcile path must consult
+   * before writing or re-merging an entity: a pending delete, a
+   * dead-lettered delete, a server tombstone, or a local deletion
+   * marker all mean "do not resurrect this id". For shared-wallet
+   * transaction paths the caller checks the composite id separately
+   * (see syncDataToCloud); this method covers the entity's own id.
+   */
+  public isDeleteBlocked(entityType: SyncEntityType, entityId: string): boolean {
+    if (this.isEntityPendingDelete(entityType, entityId)) return true;
+    if (this.isEntityInDeadLetter(entityType, entityId)) return true;
+    if (entityType === 'transactions') {
+      if (isTxDeleted(entityId) || isTxTombstoned(entityId)) return true;
+    }
+    if (entityType === 'wallets' && isWalletDeleted(entityId)) return true;
+    if (
+      (entityType === 'fuelLogs' ||
+        entityType === 'vehicleMaintenance' ||
+        entityType === 'tirePressureLogs') &&
+      isVehicleLogDeleted(entityType, entityId)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * [v7.6.52] Durably record a transaction delete: the server
+   * tombstone (cross-device resurrection guard) AND the delete task,
+   * in one call. The tombstone is written only for the signed-in
+   * user's own deletes — an admin deleting another user's records
+   * must not create dead-letter noise in the victim's collection.
+   * Also updates the local tombstone cache immediately so this
+   * device gates pushes even before the tombstone lands server-side.
+   */
+  public enqueueTxDelete(txId: string, targetUid: string): string[] {
+    if (!txId || !targetUid) return [];
+    const ids: string[] = [];
+    if (targetUid === auth.currentUser?.uid) {
+      addTxTombstone(txId);
+      ids.push(
+        this.enqueue('tombstones', txId, 'upsert', targetUid, {
+          id: txId,
+          userId: targetUid,
+          entityType: 'transactions',
+          deletedAt: new Date().toISOString(),
+        })
+      );
+    }
+    ids.push(this.enqueue('transactions', txId, 'delete', targetUid));
+    return ids;
+  }
+
+  /**
    * Remove a specific item from the queue when confirmed or resolved elsewhere
    */
   public remove(entityType: SyncEntityType, entityId: string) {
@@ -269,6 +370,21 @@ class SyncQueueManager {
   ): string {
     if (!targetUid || !entityId) return '';
 
+    // [v7.6.52] DELETE WINS (tombstone/marker leg): refuse an upsert
+    // for an id with a pending delete, a dead-lettered delete, a
+    // tombstone, or a local deletion marker — even when no delete
+    // task is currently queued (e.g. the delete already confirmed).
+    // The pending-task leg below only covers deletes still in the
+    // queue; without this leg any later enqueue() resurrects the
+    // record. Tombstone upserts themselves are exempt: they ARE the
+    // marker.
+    if (operation === 'upsert' && entityType !== 'tombstones' && this.isDeleteBlocked(entityType, entityId)) {
+      console.warn(
+        `[SyncQueue] Dropping upsert for ${entityType}/${entityId}: delete-blocked (pending delete, dead-letter, tombstone, or marker) — delete wins.`
+      );
+      return '';
+    }
+
     const existingIdx = this.queue.findIndex(
       (item) => item.entityType === entityType && item.entityId === entityId && item.targetUid === targetUid
     );
@@ -289,6 +405,21 @@ class SyncQueueManager {
       retryCount: 0,
       status: 'pending',
     };
+
+    // [v7.6.52] DELETE WINS: an upsert for an id with a pending
+    // delete must never replace (cancel) that delete — the old
+    // replace-with-latest behaviour silently resurrected deletes
+    // whenever any later upsert enqueue raced them.
+    if (
+      existingIdx >= 0 &&
+      operation === 'upsert' &&
+      this.queue[existingIdx].operation === 'delete'
+    ) {
+      console.warn(
+        `[SyncQueue] Dropping upsert for ${entityType}/${entityId}: a delete is already pending — delete wins.`
+      );
+      return this.queue[existingIdx].id;
+    }
 
     if (existingIdx >= 0) {
       // Replace with latest operation
@@ -371,6 +502,10 @@ class SyncQueueManager {
     if (!items || items.length === 0) return;
 
     items.forEach(({ entityType, entityId, operation, targetUid, data }) => {
+      // [v7.6.52] DELETE WINS (tombstone/marker leg, same as enqueue()).
+      if (operation === 'upsert' && entityType !== 'tombstones' && this.isDeleteBlocked(entityType, entityId)) {
+        return;
+      }
       const existingIdx = this.queue.findIndex(
         (item) => item.entityType === entityType && item.entityId === entityId && item.targetUid === targetUid
       );
@@ -389,6 +524,16 @@ class SyncQueueManager {
         retryCount: 0,
         status: 'pending',
       };
+
+      // [v7.6.52] DELETE WINS (same rule as enqueue()): a batched
+      // upsert never cancels a pending delete for the same entity.
+      if (
+        existingIdx >= 0 &&
+        operation === 'upsert' &&
+        this.queue[existingIdx].operation === 'delete'
+      ) {
+        return;
+      }
 
       if (existingIdx >= 0) {
         this.queue[existingIdx] = newItem;
@@ -412,7 +557,7 @@ class SyncQueueManager {
    */
   public async processQueue(): Promise<ProcessQueueResult> {
     if (isQuotaExhausted()) {
-      return { succeeded: 0, failed: 0, succeededEntityIds: [], succeededTxIds: [] };
+      return { succeeded: 0, failed: 0, awaitingConfirmation: 0, succeededEntityIds: [], succeededTxIds: [] };
     }
     if (this.processingPromise) {
       return this.processingPromise;
@@ -430,7 +575,7 @@ class SyncQueueManager {
    */
   private async doProcessQueue(): Promise<ProcessQueueResult> {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return { succeeded: 0, failed: 0, succeededEntityIds: [], succeededTxIds: [] };
+      return { succeeded: 0, failed: 0, awaitingConfirmation: 0, succeededEntityIds: [], succeededTxIds: [] };
     }
 
     const now = Date.now();
@@ -453,7 +598,7 @@ class SyncQueueManager {
     });
 
     if (readyItems.length === 0) {
-      return { succeeded: 0, failed: 0, succeededEntityIds: [], succeededTxIds: [] };
+      return { succeeded: 0, failed: 0, awaitingConfirmation: 0, succeededEntityIds: [], succeededTxIds: [] };
     }
 
     this.isProcessing = true;
@@ -468,6 +613,8 @@ class SyncQueueManager {
 
     let succeeded = 0;
     let failed = 0;
+    let awaitingConfirmation = 0;
+
     const succeededEntityIds: { entityType: SyncEntityType; entityId: string }[] = [];
     const succeededTxIds: string[] = [];
 
@@ -477,101 +624,61 @@ class SyncQueueManager {
       for (let i = 0; i < readyItems.length; i += BATCH_SIZE) {
         const batchItems = readyItems.slice(i, i + BATCH_SIZE);
 
-        const results = await Promise.allSettled(
+        // [v7.6.52] ONE transport: every task executes through
+        // executeSyncTask() (SDK attempt + REST fallback, transport
+        // order per kind). The old upsert-only REST fallback block is
+        // gone — deletes get the same fallback inside the executor.
+        const outcomes = await Promise.all(
           batchItems.map(async (task) => {
-            const effectiveUid = task.targetUid || auth.currentUser?.uid;
-            if (!effectiveUid) throw new Error('User not authenticated');
-            // [v7.5.56] sharedWallets lives at the top level, NOT under
-            // users/{uid}/. entityId is '{docId}' (wallet doc),
-            // '{docId}/transactions/{txId}' or '{docId}/debts/{debtId}'.
-            let docRef;
-            if (task.entityType === 'sharedWallets') {
-              const parts = task.entityId.split('/');
-              if (parts.length === 1 && parts[0]) {
-                docRef = doc(db, 'sharedWallets', parts[0]);
-              } else if (parts.length === 3 && (parts[1] === 'transactions' || parts[1] === 'debts') && parts[0] && parts[2]) {
-                docRef = doc(db, 'sharedWallets', parts[0], parts[1], parts[2]);
-              } else {
-                throw new Error(`Invalid sharedWallets entityId: ${task.entityId}`);
-              }
-            } else {
-              docRef = doc(db, 'users', effectiveUid, task.entityType, task.entityId);
+            try {
+              const result = await executeSyncTask(task);
+              return { task, result };
+            } catch (err: any) {
+              // The executor never throws for transport failures, but
+              // a docRef parse error (invalid sharedWallets entityId)
+              // surfaces here — treat it as a failure, not a crash.
+              return {
+                task,
+                result: {
+                  outcome: 'failed' as const,
+                  error: err instanceof Error ? err.message : String(err),
+                  permissionDenied: isPermissionError(err),
+                },
+              };
             }
-            if (task.operation === 'delete') {
-              await withTimeout(deleteDoc(docRef), 12000);
-            } else {
-              await withTimeout(
-                setDoc(docRef, cleanForFirestore(task.data || { id: task.entityId, userId: effectiveUid }), { merge: true }),
-                12000
-              );
-            }
-            return task.id;
           })
         );
 
-        const failedTasks: SyncQueueItem[] = [];
-
-        results.forEach((res, idx) => {
-          const task = batchItems[idx];
-          if (res.status === 'fulfilled') {
+        for (const { task, result } of outcomes) {
+          if (result.outcome === 'confirmed') {
             succeeded++;
             succeededEntityIds.push({ entityType: task.entityType, entityId: task.entityId });
             if (task.entityType === 'transactions' && task.operation === 'upsert') {
               succeededTxIds.push(task.entityId);
             }
-            // Remove succeeded item from queue
             this.queue = this.queue.filter((q) => q.id !== task.id);
+          } else if (result.outcome === 'local') {
+            // SDK accepted the delete locally; the server has NOT
+            // confirmed it. Keep the task (REST-first re-attempt on
+            // the next run) without inflating the failure count.
+            awaitingConfirmation++;
+            task.status = 'pending';
+            task.lastAttemptAt = Date.now();
           } else {
             failed++;
-            failedTasks.push(task);
-            const err = res.reason;
             task.status = 'failed';
             task.retryCount = (task.retryCount || 0) + 1;
-            task.lastError = err instanceof Error ? err.message : String(err);
-            handleFirestoreError(
-              err,
-              task.operation === 'delete' ? OperationType.DELETE : OperationType.WRITE,
-              task.entityType === 'sharedWallets'
-                ? `sharedWallets/${task.entityId}`
-                : `users/${task.targetUid}/${task.entityType}/${task.entityId}`
-            );
-
+            task.lastError = result.error || 'Sync failed';
             // [v7.5.56] Bounded retry for permission-denied: the rules
             // will keep denying this write, so retrying forever burns
             // quota and lies about the sync state. Give up after
             // PERMISSION_MAX_RETRIES attempts and surface the failure
             // via the dead-letter list (getFailedItems) — honest
             // "not synced", never a false success.
-            if (isPermissionError(err) && task.retryCount >= PERMISSION_MAX_RETRIES) {
+            if (result.permissionDenied && task.retryCount >= PERMISSION_MAX_RETRIES) {
               this.moveToDeadLetter(task);
             } else if (task.retryCount >= MAX_RETRIES) {
               console.warn(`[SyncQueue] Task ${task.id} reached maximum retries (${MAX_RETRIES}):`, task.lastError);
-            }
-          }
-        });
-
-        // Direct HTTPS REST Fallback for failed transactions (Bypasses iOS Safari WebKit freezes)
-        if (failedTasks.length > 0) {
-          const failedTxTasks = failedTasks.filter((t) => t.entityType === 'transactions' && t.operation === 'upsert' && t.data);
-          if (failedTxTasks.length > 0) {
-            try {
-              const { pushTransactionsDirectHttp } = await import('./directFirestoreHttp');
-              const txs = failedTxTasks.map((t) => t.data);
-              const effectiveUid = failedTxTasks[0].targetUid || auth.currentUser?.uid;
-              if (effectiveUid) {
-                const httpRes = await pushTransactionsDirectHttp(txs, effectiveUid);
-                if (httpRes.success && httpRes.pushedCount > 0) {
-                  failedTxTasks.forEach((task) => {
-                    succeeded++;
-                    if (failed > 0) failed--;
-                    succeededEntityIds.push({ entityType: task.entityType, entityId: task.entityId });
-                    succeededTxIds.push(task.entityId);
-                    this.queue = this.queue.filter((q) => q.id !== task.id);
-                  });
-                }
-              }
-            } catch (httpErr) {
-              console.warn('[SyncQueue] Direct HTTP fallback attempt:', httpErr);
             }
           }
         }
@@ -583,7 +690,7 @@ class SyncQueueManager {
       this.saveQueue();
     }
 
-    return { succeeded, failed, succeededEntityIds, succeededTxIds };
+    return { succeeded, failed, awaitingConfirmation, succeededEntityIds, succeededTxIds };
   }
 
   /**
@@ -608,13 +715,22 @@ class SyncQueueManager {
       return { succeededCount: 0, failedCount: 0, newlyConfirmedTxIds: [] };
     }
 
+    // [v7.6.52] Tombstone gate: a tx deleted on ANY device must
+    // never be re-pushed by this device's reconcile. The passed
+    // cloudTxIds may be stale, so fetch the server's tombstones
+    // fresh (falls back to the local cache offline). The local
+    // delete-blocked check covers pending/dead-letter deletes and
+    // local markers as well — reconcile must respect all of them.
+    const tombstones = await fetchTombstoneTxIds(targetUid);
+
     // Filter strictly for items truly missing in cloudTxIds.
     // ALSO skip items currently queued for deletion — pushing them would
     // resurrect a delete that was just issued on this device.
     const trulyMissing = missingTxs.filter((tx) => {
       if (!tx || !tx.id) return false;
       if (cloudTxIds.has(tx.id)) return false;
-      if (this.isEntityPendingDelete('transactions', tx.id)) return false;
+      if (tombstones.has(tx.id)) return false;
+      if (this.isDeleteBlocked('transactions', tx.id)) return false;
       return true;
     });
     if (trulyMissing.length === 0) {
@@ -652,6 +768,9 @@ class SyncQueueManager {
       } catch (err: any) {
         console.warn('[SyncQueue] writeBatch reconciliation error, executing individual fallback writes:', err);
         for (const tx of chunk) {
+          // [v7.6.52] Re-check the delete block per item: a delete
+          // may have landed while the batch was in flight.
+          if (this.isDeleteBlocked('transactions', tx.id)) continue;
           try {
             const docRef = doc(db, 'users', targetUid, 'transactions', tx.id);
             await withTimeout(setDoc(docRef, cleanForFirestore({ ...tx, userId: targetUid }), { merge: true }), 5000);
@@ -659,9 +778,27 @@ class SyncQueueManager {
             newlyConfirmedTxIds.push(tx.id);
             this.remove('transactions', tx.id);
           } catch (itemErr) {
-            failedCount++;
-            this.enqueue('transactions', tx.id, 'upsert', targetUid, tx);
-            handleFirestoreError(itemErr, OperationType.WRITE, `users/${targetUid}/transactions/${tx.id}`);
+            // [v7.6.52] REST fallback before giving up and queueing:
+            // the SDK transport is the flaky one on iOS WebKit.
+            let restRecovered = false;
+            try {
+              const { pushTransactionsDirectHttp } = await import('./directFirestoreHttp');
+              const httpRes = await pushTransactionsDirectHttp([{ ...tx, userId: targetUid } as any], targetUid);
+              if (httpRes.success || httpRes.succeededIds.includes(tx.id)) {
+                restRecovered = true;
+              }
+            } catch {
+              // Fall through to enqueue below.
+            }
+            if (restRecovered) {
+              succeededCount++;
+              newlyConfirmedTxIds.push(tx.id);
+              this.remove('transactions', tx.id);
+            } else {
+              failedCount++;
+              this.enqueue('transactions', tx.id, 'upsert', targetUid, tx);
+              handleFirestoreError(itemErr, OperationType.WRITE, `users/${targetUid}/transactions/${tx.id}`);
+            }
           }
         }
       }
@@ -761,6 +898,7 @@ class SyncQueueManager {
       this.queue = [];
     }
     this.saveQueue();
+    this.notifyListeners();
   }
 
   /**
@@ -783,6 +921,7 @@ class SyncQueueManager {
       this.saveDeadLetter();
     }
     this.saveQueue();
+    this.notifyListeners();
     this.triggerImmediateProcess();
   }
 }

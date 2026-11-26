@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { isQuotaExhausted } from '../lib/firebase';
 import { syncQueue } from '../lib/syncQueue';
 import { recordSyncOperationStart, finishSyncOperation } from '../lib/syncOperationLogger';
-import { isTxDeleted, unmarkTxDeleted, isWalletDeleted, isVehicleLogDeleted } from '../utils/deletedMarkers';
+import { isTxDeleted, unmarkTxDeleted, isWalletDeleted, isVehicleLogDeleted, getTombstonedTxIds, setTombstonedTxIds } from '../utils/deletedMarkers';
 import { safeSetItem } from '../utils/storage';
 import type {
   BudgetConfig,
@@ -117,7 +117,26 @@ export function useSyncOperations({
       cloudTxIds
     );
     if (success) {
-      showToast(lang === 'my' ? 'Cloud ပေါ်သို့ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ ✓' : 'Synced to Cloud successfully ✓');
+      // [v7.6.52] Honest state: a batch with no errors is not the
+      // same as everything confirmed. Pending tasks and dead-letter
+      // failures are named, never hidden behind a "synced" toast.
+      const pendingCount = syncQueue.getPendingCount();
+      const failedItems = syncQueue.getFailedItems();
+      if (failedItems.length > 0) {
+        showToast(
+          lang === 'my'
+            ? `⚠️ Cloud သို့ ပို့ပြီး​သော်လည်း (${failedItems.length}) ခု မအောင်မြင်ပါ — Sync အခြေအနေတွင် ပြန်စစ်နိုင်ပါသည်။`
+            : `⚠️ Synced with ${failedItems.length} failed item(s) — retry from the sync status view.`
+        );
+      } else if (pendingCount > 0) {
+        showToast(
+          lang === 'my'
+            ? `Cloud ပေါ်သို့ ပို့ပြီးပါပြီ။ (${pendingCount}) ခု အတည်ပြုရန် ကျန်ရှိနေပါသည်။`
+            : `Uploaded to Cloud. ${pendingCount} item(s) awaiting confirmation.`
+        );
+      } else {
+        showToast(lang === 'my' ? 'Cloud ပေါ်သို့ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ ✓' : 'Synced to Cloud successfully ✓');
+      }
     }
   };
 
@@ -145,6 +164,24 @@ export function useSyncOperations({
       cloudTxIds
     );
     await handleManualSyncDown();
+    // [v7.6.52] The pull toast above says records merged; say plainly
+    // when work is still pending or has failed, so the user never
+    // reads "synced" while deletes are unconfirmed.
+    const failedItems = syncQueue.getFailedItems();
+    const pendingCount = syncQueue.getPendingCount();
+    if (failedItems.length > 0) {
+      showToast(
+        lang === 'my'
+          ? `⚠️ (${failedItems.length}) ခု မအောင်မြင်ပါ — Sync အခြေအနေတွင် ပြန်စစ်နိုင်ပါသည်။`
+          : `⚠️ ${failedItems.length} item(s) failed — retry from the sync status view.`
+      );
+    } else if (pendingCount > 0) {
+      showToast(
+        lang === 'my'
+          ? `(${pendingCount}) ခု အတည်ပြုရန် ကျန်ရှိနေပါသည်။`
+          : `${pendingCount} item(s) awaiting confirmation.`
+      );
+    }
   };
 
   const handleForcePushAll = async (): Promise<boolean> => {
@@ -155,11 +192,43 @@ export function useSyncOperations({
     const targetUid = activeWorkspaceId || user.uid;
     const ownWallets = computedWallets.filter((w) => !w.isSharedFromOther && !w.id.startsWith('shared_'));
     
-    // 1. Target all pending or local transactions
-    const pendingTxs = transactions.filter((t) => t && t.id && (!cloudTxIds.has(t.id) || isTxDeleted(t.id)));
-    const txsToPush = pendingTxs;
+    // 1. Target all pending or local transactions. Records with a
+    // pending delete, a dead-lettered delete, a tombstone, or a local
+    // deletion marker are NEVER re-upserted here — the delete path
+    // owns them (see the repair-enqueue below).
+    const pendingTxs = transactions.filter((t) => t && t.id && !cloudTxIds.has(t.id));
+    const txsToPush = pendingTxs.filter((t) => !syncQueue.isDeleteBlocked('transactions', t.id));
+    // Repair: a delete whose task was lost (older builds removed the
+    // task) is re-enqueued here so the delete is retried, not dropped.
+    const deletedTxs = transactions.filter(
+      (t) =>
+        t && t.id &&
+        syncQueue.isDeleteBlocked('transactions', t.id) &&
+        !syncQueue.isEntityPendingDelete('transactions', t.id) &&
+        !syncQueue.isEntityInDeadLetter('transactions', t.id)
+    );
+    deletedTxs.forEach((tx) => syncQueue.enqueueTxDelete(tx.id, targetUid));
 
     if (txsToPush.length === 0) {
+      const blockedCount = transactions.filter((t) => t && t.id && syncQueue.isDeleteBlocked('transactions', t.id)).length;
+      if (blockedCount > 0) {
+        // Retry the outstanding deletes, then report honestly about
+        // any that are still unconfirmed.
+        await (syncQueue.processQueue as any)({ force: true });
+        const stillPending = transactions.filter(
+          (t) => t && t.id && (syncQueue.isEntityPendingDelete('transactions', t.id) || syncQueue.isEntityInDeadLetter('transactions', t.id))
+        ).length;
+        showToast(
+          lang === 'my'
+            ? stillPending > 0
+              ? `⚠️ ဖျက်ထားသော စာရင်း (${stillPending}) ခု ပေးပို့ရန် ကျန်ရှိနေသေးပါသည်။`
+              : 'ဖျက်ထားသော စာရင်းများ Cloud သို့ ပေးပို့ပြီးပါပြီ ✓'
+            : stillPending > 0
+              ? `⚠️ ${stillPending} deleted records still pending sync.`
+              : 'Deleted records synced to Cloud ✓'
+        );
+        return true;
+      }
       showToast(lang === 'my' ? 'Cloud နှင့် အချက်အလက်များ ကိုက်ညီပြီးဖြစ်သည် (အသစ်တင်ရန် မရှိပါ) ✓' : 'Already in sync with Cloud (no changes to upload) ✓');
       return true;
     }
@@ -167,9 +236,6 @@ export function useSyncOperations({
     const opId = recordSyncOperationStart('push', `Force push ${txsToPush.length} transactions to Cloud`, txsToPush.length, targetUid);
 
     try {
-      // Clear any deletion flags for live pushed items
-      txsToPush.forEach((tx) => unmarkTxDeleted(tx.id));
-
       // Enqueue to transactional queue
       syncQueue.enqueueBatch(
         txsToPush.map((tx) => ({
@@ -313,14 +379,54 @@ export function useSyncOperations({
               .map((t: any) => t.id);
             setCloudTxIds(new Set(confirmedIds));
           }
+          // [v7.6.52] Tombstones learned from the server join the
+          // local cache FIRST (union, never a clear): every later
+          // push/reconcile/merge on this device then knows of the
+          // delete even if the next tombstone fetch fails.
+          const serverTombstones = Array.isArray(cloudData.tombstoneTxIds) ? cloudData.tombstoneTxIds : [];
+          if (serverTombstones.length > 0) {
+            const cached = getTombstonedTxIds();
+            setTombstonedTxIds([...new Set([...cached, ...serverTombstones])]);
+          }
+          const cloudIds = new Set((cloudData.transactions || []).filter((t: any) => t && t.id).map((t: any) => t.id));
+          const blockedTx = (id: string) => syncQueue.isDeleteBlocked('transactions', id);
           setTransactions((prevLocal) => {
             const map = new Map<string, Transaction>();
             prevLocal.forEach((t) => {
-              if (t && t.id && !isTxDeleted(t.id)) map.set(t.id, t);
+              if (!t || !t.id) return;
+              // [v7.6.52] DELETE WINS: never keep a record with a
+              // pending delete, a dead-lettered delete, a tombstone,
+              // or a local deletion marker — the server copy (if any)
+              // is stale and must not come back.
+              if (blockedTx(t.id)) return;
+              // [v7.6.52] Confirmed-missing prune: when the server
+              // snapshot is authoritative, a local record the server
+              // no longer has was deleted elsewhere. Never prune a
+              // record with a pending upsert, a dead-lettered entry,
+              // or a shared-wallet copy (its server home is the shared
+              // doc, not this collection).
+              if (cloudData.transactionsFromServer && !cloudIds.has(t.id)) {
+                if (syncQueue.isEntityPending('transactions', t.id)) return;
+                if (syncQueue.isEntityInDeadLetter('transactions', t.id)) return;
+                if (t.walletId && t.walletId.startsWith('shared_')) return;
+                // The delete elsewhere is now confirmed: drop any
+                // local delete task and the local marker, then drop
+                // the record (same as the live listener).
+                syncQueue.remove('transactions', t.id);
+                unmarkTxDeleted(t.id);
+                return;
+              }
+              if (isTxDeleted(t.id)) return;
+              map.set(t.id, t);
             });
             cloudData.transactions?.forEach((t: any) => {
-              if (t && t.id) {
-                unmarkTxDeleted(t.id);
+              if (t && t.id && !blockedTx(t.id)) {
+                // Unmark ONLY when no delete task is outstanding: a
+                // tombstone fetch that raced an in-flight delete must
+                // not resurrect the local record.
+                if (!syncQueue.isEntityPendingDelete('transactions', t.id) && !syncQueue.isEntityInDeadLetter('transactions', t.id)) {
+                  unmarkTxDeleted(t.id);
+                }
                 const existing = map.get(t.id);
                 map.set(t.id, { ...(existing as any), ...(t as any) } as Transaction);
               }
@@ -336,10 +442,10 @@ export function useSyncOperations({
           setDebts((prevLocal) => {
             const map = new Map<string, Debt>();
             prevLocal.forEach((d) => {
-              if (d && d.id) map.set(d.id, d);
+              if (d && d.id && !syncQueue.isDeleteBlocked('debts', d.id)) map.set(d.id, d);
             });
             cloudData.debts?.forEach((d: any) => {
-              if (d && d.id) {
+              if (d && d.id && !syncQueue.isDeleteBlocked('debts', d.id)) {
                 const existing = map.get(d.id);
                 map.set(d.id, { ...(existing as any), ...(d as any) } as Debt);
               }
@@ -353,17 +459,17 @@ export function useSyncOperations({
           setWallets((prevLocal) => {
             const map = new Map<string, Wallet>();
             prevLocal.forEach((w) => {
-              if (w && w.id && !isWalletDeleted(w.id)) map.set(w.id, w);
+              if (w && w.id && !isWalletDeleted(w.id) && !syncQueue.isDeleteBlocked('wallets', w.id)) map.set(w.id, w);
             });
             cloudData.wallets?.forEach((w: any) => {
-              if (w && w.id && !isWalletDeleted(w.id)) {
+              if (w && w.id && !isWalletDeleted(w.id) && !syncQueue.isDeleteBlocked('wallets', w.id)) {
                 const existing = map.get(w.id);
                 map.set(w.id, { ...(existing as any), ...(w as any) } as Wallet);
               }
             });
             if (map.size === 0) {
               INITIAL_WALLETS.forEach((w) => {
-                if (!isWalletDeleted(w.id)) map.set(w.id, w);
+                if (!isWalletDeleted(w.id) && !syncQueue.isDeleteBlocked('wallets', w.id)) map.set(w.id, w);
               });
             }
             const merged = Array.from(map.values());
@@ -376,7 +482,7 @@ export function useSyncOperations({
             const map = new Map<string, Category>();
             INITIAL_CATEGORIES.forEach((c) => map.set(c.id, c));
             prevLocal.forEach((c) => {
-              if (c && c.id) {
+              if (c && c.id && !syncQueue.isDeleteBlocked('categories', c.id)) {
                 const existing = map.get(c.id);
                 map.set(c.id, {
                   ...(existing as any),
@@ -386,7 +492,7 @@ export function useSyncOperations({
               }
             });
             cloudData.categories?.forEach((c: any) => {
-              if (c && c.id) {
+              if (c && c.id && !syncQueue.isDeleteBlocked('categories', c.id)) {
                 const existing = map.get(c.id);
                 map.set(c.id, {
                   ...(existing as any),
@@ -404,9 +510,9 @@ export function useSyncOperations({
           setBudgets((prevLocal) => {
             const map = new Map<string, BudgetConfig>();
             INITIAL_BUDGETS.forEach((b) => map.set(b.categoryId, b));
-            prevLocal.forEach((b) => map.set(b.categoryId, b));
+            prevLocal.forEach((b) => { if (b && b.categoryId && !syncQueue.isDeleteBlocked('budgets', b.categoryId)) map.set(b.categoryId, b); });
             (cloudData.budgets as any[])?.forEach((b: any) => {
-              if (b && b.categoryId) {
+              if (b && b.categoryId && !syncQueue.isDeleteBlocked('budgets', b.categoryId)) {
                 const existing = map.get(b.categoryId);
                 map.set(b.categoryId, { ...(existing as any), ...(b as any) } as BudgetConfig);
               }
@@ -420,10 +526,10 @@ export function useSyncOperations({
           setShops((prevLocal) => {
             const map = new Map<string, ShopContact>();
             prevLocal.forEach((s) => {
-              if (s && s.id) map.set(s.id, s);
+              if (s && s.id && !syncQueue.isDeleteBlocked('shops', s.id)) map.set(s.id, s);
             });
             cloudData.shops?.forEach((s: any) => {
-              if (s && s.id) {
+              if (s && s.id && !syncQueue.isDeleteBlocked('shops', s.id)) {
                 const existing = map.get(s.id);
                 map.set(s.id, { ...(existing as any), ...(s as any) } as ShopContact);
               }
@@ -436,9 +542,9 @@ export function useSyncOperations({
         if (cloudData.vehicles) {
           setVehicles((prevLocal) => {
             const map = new Map<string, Vehicle>();
-            prevLocal.forEach((v) => { if (v && v.id) map.set(v.id, v); });
+            prevLocal.forEach((v) => { if (v && v.id && !syncQueue.isDeleteBlocked('vehicles', v.id)) map.set(v.id, v); });
             cloudData.vehicles?.forEach((v: any) => {
-              if (v && v.id) {
+              if (v && v.id && !syncQueue.isDeleteBlocked('vehicles', v.id)) {
                 const existing = map.get(v.id);
                 map.set(v.id, { ...(existing as any), ...(v as any) } as Vehicle);
               }
@@ -451,9 +557,9 @@ export function useSyncOperations({
         if (cloudData.fuelLogs) {
           setFuelLogs((prevLocal) => {
             const map = new Map<string, FuelLog>();
-            prevLocal.forEach((f) => { if (f && f.id) map.set(f.id, f); });
+            prevLocal.forEach((f) => { if (f && f.id && !syncQueue.isDeleteBlocked('fuelLogs', f.id)) map.set(f.id, f); });
             cloudData.fuelLogs?.forEach((f: any) => {
-              if (f && f.id && !isVehicleLogDeleted('fuelLogs', f.id)) {
+              if (f && f.id && !isVehicleLogDeleted('fuelLogs', f.id) && !syncQueue.isDeleteBlocked('fuelLogs', f.id)) {
                 const existing = map.get(f.id);
                 map.set(f.id, { ...(existing as any), ...(f as any) } as FuelLog);
               }
@@ -466,9 +572,9 @@ export function useSyncOperations({
         if (cloudData.maintenanceLogs) {
           setVehicleMaintenance((prevLocal) => {
             const map = new Map<string, VehicleMaintenance>();
-            prevLocal.forEach((m) => { if (m && m.id) map.set(m.id, m); });
+            prevLocal.forEach((m) => { if (m && m.id && !syncQueue.isDeleteBlocked('vehicleMaintenance', m.id)) map.set(m.id, m); });
             cloudData.maintenanceLogs?.forEach((m: any) => {
-              if (m && m.id && !isVehicleLogDeleted('vehicleMaintenance', m.id)) {
+              if (m && m.id && !isVehicleLogDeleted('vehicleMaintenance', m.id) && !syncQueue.isDeleteBlocked('vehicleMaintenance', m.id)) {
                 const existing = map.get(m.id);
                 map.set(m.id, { ...(existing as any), ...(m as any) } as VehicleMaintenance);
               }
@@ -481,9 +587,9 @@ export function useSyncOperations({
         if (cloudData.tireLogs) {
           setTirePressureLogs((prevLocal) => {
             const map = new Map<string, TirePressureLog>();
-            prevLocal.forEach((t) => { if (t && t.id) map.set(t.id, t); });
+            prevLocal.forEach((t) => { if (t && t.id && !syncQueue.isDeleteBlocked('tirePressureLogs', t.id)) map.set(t.id, t); });
             cloudData.tireLogs?.forEach((t: any) => {
-              if (t && t.id && !isVehicleLogDeleted('tirePressureLogs', t.id)) {
+              if (t && t.id && !isVehicleLogDeleted('tirePressureLogs', t.id) && !syncQueue.isDeleteBlocked('tirePressureLogs', t.id)) {
                 const existing = map.get(t.id);
                 map.set(t.id, { ...(existing as any), ...(t as any) } as TirePressureLog);
               }

@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
-    expect(CURRENT_BUILD_NUMBER).toBe(365);
-    expect(VERSION_JSON.version).toBe('v7.6.51');
-    expect(VERSION_JSON.buildNumber).toBe(365);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.52');
+    expect(CURRENT_BUILD_NUMBER).toBe(366);
+    expect(VERSION_JSON.version).toBe('v7.6.52');
+    expect(VERSION_JSON.buildNumber).toBe(366);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.51');
-    expect(entry.buildNumber).toBe(365);
-    expect(entry.changesMy[0]).toBe('ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ');
+    expect(entry.version).toBe('v7.6.52');
+    expect(entry.buildNumber).toBe(366);
+    expect(entry.changesMy[0]).toBe('မှတ်တမ်းများ စာမျက်နှာမှာ Cloud နဲ့ ချိတ်ဆက်တဲ့ ခလုတ်အသစ် ပါလာပါပြီ — ပင်မ စာမျက်နှာက ခလုတ်လိုပဲ နှိပ်လိုက်ရင် အချက်အလက်တွေ ချိတ်ဆက်ပေးပါတယ်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

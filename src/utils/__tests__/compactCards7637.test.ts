@@ -99,17 +99,17 @@ describe('Wallet cards are compact (v7.6.37)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
-    expect(CURRENT_BUILD_NUMBER).toBe(365);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.51');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(365);
-    expect(VERSION_JSON.version).toBe('v7.6.51');
-    expect(VERSION_JSON.buildNumber).toBe(365);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.52');
+    expect(CURRENT_BUILD_NUMBER).toBe(366);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.52');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(366);
+    expect(VERSION_JSON.version).toBe('v7.6.52');
+    expect(VERSION_JSON.buildNumber).toBe(366);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ဘရောက်ဇာ extension တွေကြောင့် ပေါ်နေတဲ့ အမှားစာတစ်မျိုးကို ပြင်လိုက်ပါပြီ — အက်ပ်အလုပ်လုပ်ပုံ မပြောင်းပါ',
+      'မှတ်တမ်းများ စာမျက်နှာမှာ Cloud နဲ့ ချိတ်ဆက်တဲ့ ခလုတ်အသစ် ပါလာပါပြီ — ပင်မ စာမျက်နှာက ခလုတ်လိုပဲ နှိပ်လိုက်ရင် အချက်အလက်တွေ ချိတ်ဆက်ပေးပါတယ်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Fixed one console error triggered by browser extensions — the app itself works exactly as before',
+      'The Records page now has its own sync button, just like the home page — tap it to sync your records with Cloud',
     );
   });
 });

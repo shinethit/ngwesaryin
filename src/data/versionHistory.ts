@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.51';
-export const CURRENT_BUILD_NUMBER = 365;
+export const CURRENT_APP_VERSION = 'v7.6.52';
+export const CURRENT_BUILD_NUMBER = 366;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.52',
+    buildNumber: 366,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ချိတ်ဆက်မှုစနစ် အသစ်နှင့် မှတ်တမ်းများ Sync ခလုပ်',
+    titleEn: 'Rebuilt sync system + Records sync button',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'မှတ်တမ်းများ စာမျက်နှာမှာ Cloud နဲ့ ချိတ်ဆက်တဲ့ ခလုတ်အသစ် ပါလာပါပြီ။ ဖျက်ထားတဲ့ မှတ်တမ်းတွေ Cloud ပေါ်မှာ သေချာပျောက်အောင် ချိတ်ဆက်မှုစနစ်ကို အသစ်ပြန်တည်ဆောက်လိုက်ပြီး ပို့လို့မရတဲ့ အချက်အလက်တွေကို Sync အခြေအနေမှာ မြင်ရအောင် လုပ်ပေးလိုက်ပါပြီ။',
+    descriptionEn: 'The Records page now has its own sync button. The sync system was rebuilt so deleted records reliably disappear from Cloud too, and items that could not be sent are now visible in the sync status view with a retry button.',
+    changesMy: [
+      'မှတ်တမ်းများ စာမျက်နှာမှာ Cloud နဲ့ ချိတ်ဆက်တဲ့ ခလုတ်အသစ် ပါလာပါပြီ — ပင်မ စာမျက်နှာက ခလုတ်လိုပဲ နှိပ်လိုက်ရင် အချက်အလက်တွေ ချိတ်ဆက်ပေးပါတယ်',
+      'ဖျက်ထားတဲ့ မှတ်တမ်းတွေ Cloud ပေါ်မှာ သေချာပျောက်အောင် ချိတ်ဆက်မှုစနစ်ကို အသစ်ပြန်တည်ဆောက်လိုက်ပါပြီ — အင်တာနက်မရတဲ့အချိန်မှာလည်း ဖျက်ထားတာတွေ မပျောက်တော့ပါ',
+      'ပို့လို့မရတဲ့ အချက်အလက်တွေကို Sync အခြေအနေမှာ မြင်ရပြီး ထပ်မံကြိုးစားလို့ရပါပြီ — အောင်မြင်ပြီလို့ အမှားပြတာမျိုး မရှိတော့ပါ',
+    ],
+    changesEn: [
+      'The Records page now has its own sync button, just like the home page — tap it to sync your records with Cloud',
+      'The sync system was rebuilt so deleted records reliably disappear from Cloud too — deletions made offline are kept and applied when you reconnect',
+      'Items that could not be sent are now visible in the sync status view with a retry button — no more false "synced" messages',
+    ],
+  },
   {
     version: 'v7.6.51',
     buildNumber: 365,

@@ -704,6 +704,22 @@ service cloud.firestore {
         allow delete: if canWriteOwnerOnly(userId) || isAdmin();
       }
 
+      // ----- Tombstones (v7.6.52) -----
+      // Deletion markers for transactions, written by the owning
+      // device so every other device learns of the delete and can
+      // never re-push the record. Owner-only (a collaborator's
+      // tombstone write under the owner's path is denied; the delete
+      // itself still proceeds through the shared-wallet path). The
+      // doc id is the deleted transaction id; the payload carries
+      // userId + id, mirroring the wallets pattern above.
+      match /tombstones/{tombstoneId} {
+        allow read: if canAccess(userId);
+        allow create, update: if canWriteOwnerOnly(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.id == tombstoneId;
+        allow delete: if canWriteOwnerOnly(userId) || isAdmin();
+      }
+
       // ----- Debts -----
       // [v7.5.56] Debts are the ONE users/{uid} subcollection a shared-
       // wallet member may read: only debts whose walletId belongs to a

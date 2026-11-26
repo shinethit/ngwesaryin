@@ -1020,9 +1020,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // New/edited txs are enqueued by the caller; deleted txs are handled by
       // their own 'delete' queue operation. Anything else is either already
       // synced or was deleted by another device — leave it alone.
-      const txsToPush = (cloudTxIds && !forceSync)
-        ? transactions.filter((tx) => syncQueue.isEntityPending('transactions', tx.id))
-        : transactions;
+      // [v7.6.52] DELETE WINS on every branch: a tx with a pending
+      // delete, a dead-lettered delete, a tombstone, or a local
+      // deletion marker is NEVER batch-pushed — not even on a forced
+      // full sync. The old forceSync branch pushed ALL local txs and
+      // resurrected deletes made on other devices.
+      const txsToPush = transactions.filter(
+        (tx) =>
+          tx &&
+          tx.id &&
+          !syncQueue.isDeleteBlocked('transactions', tx.id) &&
+          ((cloudTxIds && !forceSync)
+            ? syncQueue.isEntityPending('transactions', tx.id)
+            : true)
+      );
 
       console.log(`[syncDataToCloud] Total local: ${transactions.length}, Queue-pending to push: ${txsToPush.length}`);
 
@@ -1040,6 +1051,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const sharedDocId = getSharedWalletDocId(sw, uid);
         const txsForSw = transactions.filter((t) => isWalletMatch(sw, t.walletId));
         for (const tx of txsForSw) {
+          // [v7.6.52] DELETE WINS: skip txs deleted anywhere — a
+          // personal delete task/marker/tombstone, or a shared-copy
+          // delete task for this shared doc.
+          if (syncQueue.isDeleteBlocked('transactions', tx.id)) continue;
+          if (syncQueue.isEntityPendingDelete('sharedWallets', `${sharedDocId}/transactions/${tx.id}`)) continue;
           // [v7.5.56] Write the SHARED DOC ID as walletId: the rules
           // require request.resource.data.walletId == path walletId, so
           // the raw local walletId was always denied.
@@ -1052,6 +1068,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // 3. Debts (Upsert)
       for (const debt of debts) {
+        if (syncQueue.isDeleteBlocked('debts', debt.id)) continue;
         operations.push({
           ref: doc(db, 'users', targetUid, 'debts', debt.id),
           data: { ...debt, userId: targetUid },
@@ -1061,6 +1078,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 4. Wallets (Upsert only OWN wallets)
       const ownWallets = wallets.filter((w) => !w.isSharedFromOther && !w.id.startsWith('shared_'));
       for (const wallet of ownWallets) {
+        if (syncQueue.isDeleteBlocked('wallets', wallet.id)) continue;
         operations.push({
           ref: doc(db, 'users', targetUid, 'wallets', wallet.id),
           data: { ...wallet, userId: targetUid },
@@ -1114,6 +1132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 5. Categories (Upsert)
       if (categories && categories.length > 0) {
         for (const cat of categories) {
+          if (syncQueue.isDeleteBlocked('categories', cat.id)) continue;
           operations.push({
             ref: doc(db, 'users', targetUid, 'categories', cat.id),
             data: { ...cat, userId: targetUid },
@@ -1123,6 +1142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // 6. Budgets (Upsert)
       for (const budget of budgets) {
+        if (syncQueue.isDeleteBlocked('budgets', budget.categoryId)) continue;
         operations.push({
           ref: doc(db, 'users', targetUid, 'budgets', budget.categoryId),
           data: { ...budget, userId: targetUid },
@@ -1132,6 +1152,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 7. Shops (Upsert)
       if (shops && shops.length > 0) {
         for (const shop of shops) {
+          if (syncQueue.isDeleteBlocked('shops', shop.id)) continue;
           operations.push({
             ref: doc(db, 'users', targetUid, 'shops', shop.id),
             data: { ...shop, userId: targetUid },
@@ -1142,6 +1163,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 8. Vehicles (Upsert)
       if (vehicles && vehicles.length > 0) {
         for (const veh of vehicles) {
+          if (syncQueue.isDeleteBlocked('vehicles', veh.id)) continue;
           operations.push({
             ref: doc(db, 'users', targetUid, 'vehicles', veh.id),
             data: { ...veh, userId: targetUid },
@@ -1152,6 +1174,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 9. Fuel Logs (Upsert)
       if (fuelLogs && fuelLogs.length > 0) {
         for (const fl of fuelLogs) {
+          if (syncQueue.isDeleteBlocked('fuelLogs', fl.id)) continue;
           operations.push({
             ref: doc(db, 'users', targetUid, 'fuelLogs', fl.id),
             data: { ...fl, userId: targetUid },
@@ -1162,6 +1185,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 10. Vehicle Maintenance (Upsert)
       if (maintenanceLogs && maintenanceLogs.length > 0) {
         for (const ml of maintenanceLogs) {
+          if (syncQueue.isDeleteBlocked('vehicleMaintenance', ml.id)) continue;
           operations.push({
             ref: doc(db, 'users', targetUid, 'vehicleMaintenance', ml.id),
             data: { ...ml, userId: targetUid },
@@ -1172,6 +1196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 11. Tire Pressure Logs (Upsert)
       if (tireLogs && tireLogs.length > 0) {
         for (const tl of tireLogs) {
+          if (syncQueue.isDeleteBlocked('tirePressureLogs', tl.id)) continue;
           operations.push({
             ref: doc(db, 'users', targetUid, 'tirePressureLogs', tl.id),
             data: { ...tl, userId: targetUid },
@@ -1194,7 +1219,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Fallback to per-document execution so partial successes are preserved and errors isolated
           const results = await Promise.allSettled(
             chunk.map(async (op) => {
-              await setDoc(op.ref, cleanForFirestore(op.data), { merge: true });
+              // [v7.6.52] Bounded: an unbounded setDoc can hang
+              // forever on iOS WebKit and stall the whole sync.
+              await withTimeout(setDoc(op.ref, cleanForFirestore(op.data), { merge: true }), 8000);
               return op.ref.path;
             })
           );
@@ -1236,7 +1263,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.warn('Shared wallet batch failed, falling back to per-document writes:', batchErr);
             const results = await Promise.allSettled(
               chunk.map(async (op) => {
-                await setDoc(op.ref, cleanForFirestore(op.data), { merge: true });
+                // [v7.6.52] Bounded, like the personal fallback above.
+                await withTimeout(setDoc(op.ref, cleanForFirestore(op.data), { merge: true }), 8000);
                 return op.ref.path;
               })
             );
@@ -1325,6 +1353,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fuelLogsSnap,
         maintSnap,
         tiresSnap,
+        tombstonesSnap,
         sharedDocs,
       ] = await Promise.all([
         safeFetch(
@@ -1380,6 +1409,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         safeFetch(
           () => getDocsFromServer(collection(db, 'users', targetUid, 'tirePressureLogs')),
           () => getDocs(collection(db, 'users', targetUid, 'tirePressureLogs')),
+          12000
+        ),
+        // [v7.6.52] Deletion tombstones: ids deleted on any device.
+        // A failed fetch returns null and the caller falls back to
+        // the local tombstone cache — never an empty clear.
+        safeFetch(
+          () => getDocsFromServer(collection(db, 'users', targetUid, 'tombstones')),
+          () => getDocs(collection(db, 'users', targetUid, 'tombstones')),
           12000
         ),
         // [v7.5.56] sharedWallets list is DISABLED in the rules
@@ -1640,6 +1677,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fuelLogs: pullCollection(fuelLogsSnap, fuelLogs),
         maintenanceLogs: pullCollection(maintSnap, maintenanceLogs),
         tireLogs: pullCollection(tiresSnap, tireLogs),
+        // [v7.6.52] Tombstone ids from this pull (empty when the fetch
+        // failed — the caller unions them into the local cache).
+        tombstoneTxIds: tombstonesSnap ? tombstonesSnap.docs.map((d) => d.id) : [],
+        // [v7.6.52] True only when the transactions snapshot came from
+        // the server: only then may the caller prune local records
+        // the server no longer has (deleted elsewhere).
+        transactionsFromServer: txSnap ? txSnap.metadata?.fromCache === false : false,
         plan: userPlan,
         premiumExpiresAt,
         premiumActivatedAt,

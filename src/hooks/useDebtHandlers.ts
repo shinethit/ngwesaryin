@@ -355,31 +355,28 @@ export function useDebtHandlers({
       });
     }
 
-    // Cloud deletes first (debt docs, then linked txs). Anything that
-    // fails live stays local so the user can retry it.
+    // [v7.6.52] Cloud deletes first (debt doc, then linked txs).
+    // safeDeleteDoc persists the delete task (+ tombstone) BEFORE
+    // attempting, so a failed attempt leaves a durable retrying
+    // delete — the records are removed locally either way and the
+    // failure stays visible as pending/failed in the sync UI.
     const failedTxIds = new Set<string>();
+    let debtCloudFailed = false;
     if (user?.uid) {
       const targetUid = activeWorkspaceId || user.uid;
       const debtWallet = walletOfDebt(targetDebtForDel);
       const sharedDocId =
         targetDebtForDel.sharedWalletId ||
         (debtWallet && isSharedWallet(debtWallet) ? getSharedWalletDocId(debtWallet, user.uid) : undefined);
-      const queuedForRetry =
-        (typeof navigator !== 'undefined' && !navigator.onLine) || isQuotaExhausted();
-
       const debtDocOk = await safeDeleteDoc(doc(db, 'users', targetUid, 'debts', id));
       let mirrorOk = true;
       if (sharedDocId) {
         mirrorOk = await deleteSharedDebtMirrorChecked(id, sharedDocId);
       }
-      if ((!debtDocOk || !mirrorOk) && !queuedForRetry) {
-        showToast(
-          lang === 'my'
-            ? '⚠️ Cloud မှ အကြွေးကို ဖျက်၍ မရပါ — စာရင်းကို ထားရှိထားပါသည်။ အင်တာနက်စစ်ပြီး ထပ်ကြိုးစားပါ'
-            : '⚠️ Could not delete the debt from cloud — the record was kept. Check your connection and retry'
-        );
-        return;
-      }
+      // [v7.6.52] No early return: the delete task is durable, so
+      // the debt is removed locally below and the failure stays
+      // visible as pending/failed in the sync UI.
+      debtCloudFailed = !debtDocOk || !mirrorOk;
 
       // Linked txs (personal + shared path where the wallet is shared).
       const runningBalances = new Map<string, number>();
@@ -399,11 +396,11 @@ export function useDebtHandlers({
             if (!sharedOk) ok = false;
           }
         }
-        if (!ok && !queuedForRetry) failedTxIds.add(tid);
+        if (!ok) failedTxIds.add(tid);
       }
     }
 
-    const removedTxIds = new Set(Array.from(txIdsToDelete).filter((tid) => !failedTxIds.has(tid)));
+    const removedTxIds = new Set(txIdsToDelete);
 
     setDebts((prev) => {
       const next = prev.filter((d) => d.id !== id);
@@ -424,25 +421,16 @@ export function useDebtHandlers({
       safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
       return next;
     });
-    removedTxIds.forEach((tid) => syncQueue.remove('transactions', tid));
+    // [v7.6.52] The delete tasks stay queued until the server
+    // confirms; removing them here is what silently lost deletes.
+    // The REST-first attempt already ran inside safeDeleteDoc.
 
-    if (user?.uid && removedTxIds.size > 0) {
-      const targetUid = activeWorkspaceId || user.uid;
-      (async () => {
-        try {
-          const { deleteTransactionDirectHttp } = await import('../lib/directFirestoreHttp');
-          await Promise.allSettled(Array.from(removedTxIds).map((tid) => deleteTransactionDirectHttp(tid, targetUid)));
-        } catch (e) {
-          console.warn('[deleteDebt] REST verify notice:', e);
-        }
-      })();
-    }
-
+    const anyCloudFailed = debtCloudFailed || failedTxIds.size > 0;
     showToast(
-      failedTxIds.size > 0
+      anyCloudFailed
         ? (lang === 'my'
-          ? `⚠️ အကြွေးစာရင်း ဖျက်ပြီးပါပြီ — တွဲဖက် ငွေစာရင်း ${failedTxIds.size} ခု Cloud မှ ဖျက်၍ မရသဖြင့် ထားရှိထားပါသည်`
-          : `Debt deleted — ${failedTxIds.size} linked transaction(s) could not be deleted from cloud and were kept`)
+          ? '⚠️ အကြွေးစာရင်း ဖျက်လိုက်ပါပြီ — Cloud သို့ ဖျက်ရန် ပေးပို့ထားပြီး အတည်ပြုရန် ကျန်ရှိနေပါသည်။'
+          : 'Debt deleted — delete queued for Cloud, awaiting confirmation.')
         : (lang === 'my'
           ? `အကြွေးစာရင်းနှင့် တွဲဖက်ငွေစာရင်း (${removedTxIds.size}) ခု ဖျက်လိုက်ပါပြီ`
           : `Debt record & ${removedTxIds.size} linked transactions deleted`)
@@ -601,7 +589,8 @@ export function useDebtHandlers({
         safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
         return next;
       });
-      deletedSettlementTxIds.forEach((tid) => syncQueue.remove('transactions', tid));
+      // [v7.6.52] The delete tasks (enqueued by safeDeleteDoc below)
+      // stay queued until the server confirms — never removed here.
     }
 
     if (user?.uid) {
@@ -653,14 +642,6 @@ export function useDebtHandlers({
             }
           }
         });
-        (async () => {
-          try {
-            const { deleteTransactionDirectHttp } = await import('../lib/directFirestoreHttp');
-            await Promise.allSettled(deletedSettlementTxIds.map((tid) => deleteTransactionDirectHttp(tid, targetUid)));
-          } catch (e) {
-            console.warn('[toggleDebtStatus] REST verify notice:', e);
-          }
-        })();
       }
     }
 
@@ -1133,7 +1114,8 @@ export function useDebtHandlers({
         safeSetItem('ngwe_cloud_tx_ids', JSON.stringify(Array.from(next)));
         return next;
       });
-      syncQueue.remove('transactions', linkedTxIdToDel);
+      // [v7.6.52] The delete task enqueued by safeDeleteDoc below
+      // stays queued until the server confirms — never removed here.
 
       if (user?.uid) {
         const targetUid = activeWorkspaceId || user.uid;

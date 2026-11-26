@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, ChevronDown, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart, Eye, EyeOff } from 'lucide-react';
+import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, ChevronDown, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { Category, FuelLog, PlanType, SubCategory, Transaction, VehicleMaintenance, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
@@ -165,7 +165,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   onRefreshSync,
   onSelectTab,
 }) => {
-  const { user } = useAuth();
+  const { user, isSyncing } = useAuth();
+  // [v7.6.52] Local spin state for the Records Manual Sync button
+  // (covers the queue-retry part; isSyncing covers the parent sync).
+  const [isCardSyncing, setIsCardSyncing] = useState(false);
   // [v7.5.56] Working All / ကိုယ်ပိုင် / မျှဝေထား filter (finding 25):
   // dataScope already existed but nothing in the UI ever set it. When the
   // parent supplies onSetDataScope the prop is authoritative; otherwise
@@ -618,6 +621,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     }
   };
 
+  // [v7.6.52] Records Manual Sync button: same behavior as the
+  // Dashboard Hero sync button — spin + disabled while syncing,
+  // signed-in only. Reuses handleRefreshSync (queue retry + the
+  // parent's full cloud refresh), which previously only fed the
+  // sync-detail modal.
+  const handleCardSync = async () => {
+    if (isCardSyncing) return;
+    setIsCardSyncing(true);
+    try {
+      await handleRefreshSync();
+    } finally {
+      setIsCardSyncing(false);
+    }
+  };
+
   // [v7.5.60 S18] Type and category filters must never contradict each
   // other: picking a category adopts that category's type, and picking
   // a type clears a category of the other type — otherwise the list
@@ -707,6 +725,18 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             >
               {balanceHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
+            {user && (
+              <button
+                type="button"
+                onClick={handleCardSync}
+                disabled={isSyncing || isCardSyncing}
+                className="min-w-11 min-h-11 p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-50"
+                title="Sync"
+                aria-label={lang === 'my' ? 'Cloud နှင့် ထပ်မံချိတ်ဆက်မည်' : 'Sync with Cloud'}
+              >
+                <RefreshCw className={'w-3.5 h-3.5 ' + ((isSyncing || isCardSyncing) ? 'animate-spin' : '')} />
+              </button>
+            )}
           </div>
         </div>
 

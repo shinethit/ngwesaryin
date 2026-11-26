@@ -134,19 +134,19 @@ describe('Quick Access one row of 6 (v7.6.51 item 3)', () => {
   });
 });
 
-describe('Version pins roll to v7.6.51 / build 365', () => {
+describe('Version pins roll to v7.6.52 / build 366', () => {
   it('constants, version.json and the top history entry agree', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.51');
-    expect(CURRENT_BUILD_NUMBER).toBe(365);
-    expect(VERSION_JSON.version).toBe('v7.6.51');
-    expect(VERSION_JSON.buildNumber).toBe(365);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.52');
+    expect(CURRENT_BUILD_NUMBER).toBe(366);
+    expect(VERSION_JSON.version).toBe('v7.6.52');
+    expect(VERSION_JSON.buildNumber).toBe(366);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.51');
-    expect(top.buildNumber).toBe(365);
+    expect(top.version).toBe('v7.6.52');
+    expect(top.buildNumber).toBe(366);
     expect(top.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(top.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(top.changesMy).toHaveLength(2);
-    expect(top.changesEn).toHaveLength(2);
+    expect(top.changesMy).toHaveLength(3);
+    expect(top.changesEn).toHaveLength(3);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
     expect(VERSION_JSON.changesMy.join(' ')).not.toContain('Admin');

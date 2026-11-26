@@ -138,13 +138,17 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
         return;
       }
 
-      // Direct HTTPS fallback for missing local transactions
-      if (localMissingFromCloud.length > 0) {
+      // Direct HTTPS fallback for missing local transactions.
+      // [v7.6.52] DELETE WINS: records with a pending delete are
+      // excluded — this fallback bypasses the queue, so the queue's
+      // delete-wins dedup cannot protect them here.
+      const restPushable = localMissingFromCloud.filter((t) => !syncQueue.isDeleteBlocked('transactions', t.id));
+      if (restPushable.length > 0) {
         try {
           const { pushTransactionsDirectHttp } = await import('../lib/directFirestoreHttp');
-          const httpRes = await pushTransactionsDirectHttp(localMissingFromCloud, targetUid);
+          const httpRes = await pushTransactionsDirectHttp(restPushable, targetUid);
           if (httpRes.success && httpRes.pushedCount > 0) {
-            const confirmedIds = localMissingFromCloud.map((t) => t.id);
+            const confirmedIds = restPushable.map((t) => t.id);
             onUpdateCloudTxIds?.(confirmedIds);
             finishSyncOperation(opId, 'success', {
               itemCount: httpRes.pushedCount,
@@ -281,15 +285,17 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
         onUpdateCloudTxIds?.(res.newlyConfirmedTxIds);
       }
 
-      // Direct HTTP push for any remaining missing local records
+      // Direct HTTP push for any remaining missing local records.
+      // [v7.6.52] DELETE WINS: same gate as the retry handler above.
       let restCount = 0;
-      if (localMissingFromCloud.length > 0) {
+      const restPushable = localMissingFromCloud.filter((t) => !syncQueue.isDeleteBlocked('transactions', t.id));
+      if (restPushable.length > 0) {
         try {
           const { pushTransactionsDirectHttp } = await import('../lib/directFirestoreHttp');
-          const httpRes = await pushTransactionsDirectHttp(localMissingFromCloud, targetUid);
+          const httpRes = await pushTransactionsDirectHttp(restPushable, targetUid);
           if (httpRes.success && httpRes.pushedCount > 0) {
             restCount = httpRes.pushedCount;
-            onUpdateCloudTxIds?.(localMissingFromCloud.map((t) => t.id));
+            onUpdateCloudTxIds?.(restPushable.map((t) => t.id));
           }
         } catch (httpErr) {
           console.warn('Direct HTTP push in handlePush:', httpErr);
@@ -344,61 +350,58 @@ export const DatabaseSyncTrackerModal: React.FC<DatabaseSyncTrackerModalProps> =
       targetUid
     );
 
-    try {
-      const { doc, setDoc } = await import('firebase/firestore');
-      const { db, cleanForFirestore, withTimeout } = await import('../lib/firebase');
-      
-      const docRef = doc(db, 'users', targetUid, 'transactions', tx.id);
-      await withTimeout(
-        setDoc(docRef, cleanForFirestore({ ...tx, id: tx.id, userId: targetUid }), { merge: true }),
-        8000
-      );
-      syncQueue.remove('transactions', tx.id);
-      onUpdateCloudTxIds?.([tx.id]);
-      finishSyncOperation(opId, 'success', {
-        itemCount: 1,
-        details: `Record ${tx.id} confirmed to Firestore via SDK`,
-      });
-      setActionNotice(
-        lang === 'my'
-          ? `✅ မှတ်တမ်း (${tx.note || tx.id}) အား Cloud Database သို့ တိုက်ရိုက် ပို့ပြီးပါပြီ!`
-          : `✅ Record ${tx.id} pushed to Database!`
-      );
-    } catch (setErr: any) {
-      // First attempt direct HTTPS REST fallback (bypasses iOS WebKit lockups)
-      try {
-        const { pushTransactionsDirectHttp } = await import('../lib/directFirestoreHttp');
-        const httpRes = await pushTransactionsDirectHttp([tx], targetUid);
-        if (httpRes.success) {
-          syncQueue.remove('transactions', tx.id);
-          onUpdateCloudTxIds?.([tx.id]);
-          finishSyncOperation(opId, 'success', {
-            itemCount: 1,
-            details: `Record ${tx.id} confirmed via Direct HTTPS REST fallback`,
-          });
-          setActionNotice(
-            lang === 'my'
-              ? `✅ မှတ်တမ်း (${tx.note || tx.id}) အား Direct HTTPS ဖြင့် Cloud Database သို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ!`
-              : `✅ Record ${tx.id} pushed via direct HTTPS connection!`
-          );
-          return;
-        }
-      } catch (httpErr) {
-        console.warn('Direct HTTP push attempt failed:', httpErr);
-      }
-
-      // Fallback: enqueue to syncQueue for background retry
-      syncQueue.enqueue('transactions', tx.id, 'upsert', targetUid, tx);
+    // [v7.6.52] DELETE WINS: a record with a pending delete is never
+    // single-pushed back to the cloud. Its delete task owns it.
+    if (syncQueue.isDeleteBlocked('transactions', tx.id)) {
       finishSyncOperation(opId, 'failed', {
         itemCount: 0,
-        details: `Record ${tx.id} failed direct push, queued to syncQueue`,
-        errorMessage: setErr?.message || String(setErr),
+        details: `Record ${tx.id} has a pending delete — push refused`,
       });
       setActionNotice(
         lang === 'my'
-          ? `🔄 မှတ်တမ်း (${tx.note || tx.id}) အား Retry Queue ထဲသို့ ထည့်သွင်းထားပြီး နောက်ခံမှ အလိုအလျောက် ပို့ဆောင်နေပါသည်...`
-          : `🔄 Record queued for background retry...`
+          ? `⚠️ မှတ်တမ်း (${tx.note || tx.id}) ဖျက်ရန် ပေးပို့ထားပါသည် — ပြန်တင်၍ မရပါ။`
+          : `⚠️ Record ${tx.id} has a pending delete — push refused.`
       );
+      return;
+    }
+
+    try {
+      // [v7.6.52] ONE pipeline: enqueue, then run the queue engine
+      // (SDK + REST fallback). Confirm only when the task has left
+      // the queue — never on a local SDK ack, which is how the old
+      // direct setDoc path claimed success for unconfirmed writes.
+      syncQueue.enqueue('transactions', tx.id, 'upsert', targetUid, { ...tx, userId: targetUid });
+      await (syncQueue.processQueue as any)({ force: true });
+      const stillPending = syncQueue.isEntityPending('transactions', tx.id);
+      const failed = syncQueue.isEntityInDeadLetter('transactions', tx.id);
+      if (!stillPending && !failed) {
+        onUpdateCloudTxIds?.([tx.id]);
+        finishSyncOperation(opId, 'success', {
+          itemCount: 1,
+          details: `Record ${tx.id} confirmed via the sync queue`,
+        });
+        setActionNotice(
+          lang === 'my'
+            ? `✅ မှတ်တမ်း (${tx.note || tx.id}) အား Cloud Database သို့ ပို့ပြီးပါပြီ!`
+            : `✅ Record ${tx.id} pushed to Database!`
+        );
+      } else {
+        finishSyncOperation(opId, 'failed', {
+          itemCount: 0,
+          details: `Record ${tx.id} ${failed ? 'failed and is visible in sync status' : 'still pending confirmation'}`,
+        });
+        setActionNotice(
+          lang === 'my'
+            ? `🔄 မှတ်တမ်း (${tx.note || tx.id}) အား ပို့ဆောင်နေပါသည် — အတည်ပြုရန် ကျန်ရှိနေပါသည်။`
+            : `🔄 Record ${tx.id} still pending confirmation...`
+        );
+      }
+    } catch (pushErr: any) {
+      finishSyncOperation(opId, 'failed', {
+        details: 'Push failed due to error',
+        errorMessage: pushErr?.message || String(pushErr),
+      });
+      setActionNotice(lang === 'my' ? '❌ ချိတ်ဆက်မှု ချို့ယွင်းချက် ဖြစ်ပေါ်ခဲ့ပါသည်။' : '❌ Network or sync error occurred.');
     }
   };
 

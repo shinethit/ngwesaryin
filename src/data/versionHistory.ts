@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.48';
-export const CURRENT_BUILD_NUMBER = 362;
+export const CURRENT_APP_VERSION = 'v7.6.49';
+export const CURRENT_BUILD_NUMBER = 363;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.49',
+    buildNumber: 363,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ',
+    titleEn: 'Service fees for vehicle maintenance',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) ကို ပစ္စည်းဖိုးနဲ့ ခွဲပြီး သီးခြားထည့်နိုင်ပါပြီ။ ပစ္စည်းဖိုး + ဝန်ဆောင်ခ = စုစုပေါင်းကို အလိုအလျောက် ပေါင်းပေးပြီး၊ မှတ်တမ်းမှာ ခွဲပြပေးပါတယ်။ ဝန်ဆောင်ခမထည့်ထားတဲ့ မှတ်တမ်းဟောင်းတွေလည်း အရင်အတိုင်း ပြပေးပါတယ်။',
+    descriptionEn: 'Maintenance records can now include a service fee (labor), entered separately from parts costs. Parts + labor are added up automatically into the total, and records show the breakdown. Older records without a service fee keep showing exactly as before.',
+    changesMy: [
+      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
+      'ပစ္စည်းဖိုး + ဝန်ဆောင်ခ = စုစုပေါင်းကို အလိုအလျောက် ပေါင်းပြပေးပါတယ်',
+      'မှတ်တမ်းမှာ ပစ္စည်းဖိုး၊ ဝန်ဆောင်ခနဲ့ စုစုပေါင်းကို ခွဲပြပေးပါတယ်',
+      'ဝန်ဆောင်ခမထည့်ထားတဲ့ မှတ်တမ်းဟောင်းတွေလည်း အရင်အတိုင်း ပြပေးပါတယ်',
+    ],
+    changesEn: [
+      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
+      'Parts cost + service fee are added up automatically into the total',
+      'Records show the breakdown: parts, service fee, and total',
+      'Older records without a service fee keep showing exactly as before',
+    ],
+  },
   {
     version: 'v7.6.48',
     buildNumber: 362,

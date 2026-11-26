@@ -70,6 +70,10 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   const [serviceType, setServiceType] = useState<VehicleServiceType>('engine_oil');
   const [title, setTitle] = useState('');
   const [cost, setCost] = useState<number | ''>('');
+  // [v7.6.49] Service fee / labor charge, entered separately from
+  // parts / rows. The saved `cost` is parts + labor (see
+  // visitTotal below); this state holds the labor part only.
+  const [laborCost, setLaborCost] = useState<number | ''>('');
   const [sparePartBrand, setSparePartBrand] = useState('');
   const [workshopName, setWorkshopName] = useState('');
   const [expectedLifespanKm, setExpectedLifespanKm] = useState<number | ''>(5000);
@@ -205,6 +209,12 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
   // Cost shown in the single cost field: the rows total while rows
   // are shown, the editable input otherwise.
   const displayCost = showServiceRows ? serviceRowsTotal : (cost === '' ? 0 : Number(cost));
+  // [v7.6.49] Labor is never negative (the number input rejects it
+  // and the save clamps again); the visit TOTAL is parts + labor.
+  // `cost` keeps its stored meaning (the single total), so
+  // analytics, sync-to-expense and totals need no changes.
+  const laborNum = Math.max(0, Number(laborCost) || 0);
+  const visitTotal = displayCost + laborNum;
 
   const handleServiceTypeChange = (type: VehicleServiceType) => {
     setServiceType(type);
@@ -287,7 +297,20 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       setOdometer(editingMaintenance.odometer);
       setServiceType(editingMaintenance.serviceType);
       setTitle(editingMaintenance.title);
-      setCost(editingMaintenance.cost);
+      // [v7.6.49] The cost field holds the PARTS base: the stored
+      // total minus the labor part, so re-saving the same values
+      // reproduces the same total (no double-count). Labor itself
+      // lives on the primary record — or, for a multi-type visit,
+      // on the first record of the visit (same transactionId).
+      const ownLabor = editingMaintenance.laborCost || 0;
+      const siblingLabor = editingMaintenance.transactionId
+        ? (vehicleMaintenance.find(
+            (m) => m.transactionId === editingMaintenance.transactionId && (m.laborCost || 0) > 0,
+          )?.laborCost || 0)
+        : 0;
+      const restoredLabor = ownLabor > 0 ? ownLabor : siblingLabor;
+      setLaborCost(restoredLabor > 0 ? restoredLabor : '');
+      setCost(Math.max(0, editingMaintenance.cost - restoredLabor));
       setSparePartBrand(editingMaintenance.sparePartBrand || '');
       setWorkshopName(editingMaintenance.workshopName || '');
       setExpectedLifespanKm(editingMaintenance.expectedLifespanKm ?? 5000);
@@ -333,6 +356,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       setServiceType('engine_oil');
       setTitle(lang === 'my' ? 'အင်ဂျင်ဝိုင်နှင့် ဝိုင်စစ်လဲလှယ်ခြင်း' : 'Engine Oil & Filter Change');
       setCost('');
+      setLaborCost('');
       setSparePartBrand('');
       setWorkshopName('');
       setExpectedLifespanKm(5000);
@@ -364,7 +388,7 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       return;
     }
     if (rowsActive) {
-      if (serviceRowsTotal <= 0) return;
+      if (visitTotal <= 0) return;
     } else if (cost === '') {
       return;
     }
@@ -416,7 +440,13 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
       odometer: isLicenseRenewal ? (currentVehicle?.currentOdometer || 0) : Number(odometer),
       serviceType,
       title: title.trim() || (isLicenseRenewal ? (lang === 'my' ? '🪪 လိုင်စင် သက်တမ်းတိုး' : '🪪 License Renewal') : ''),
-      cost: rowsActive ? serviceRowsTotal : Number(cost),
+      cost: rowsActive ? serviceRowsTotal + laborNum : Number(cost) + laborNum,
+      // [v7.6.49] Labor is stored alongside the total for the
+      // breakdown; empty labor stays unset (never 0). The handler
+      // folds it into the first per-type record (see
+      // applyLaborCostToRowGroups) and the single-record path keeps
+      // it via spread.
+      laborCost: laborNum > 0 ? laborNum : undefined,
       sparePartBrand: sparePartBrand.trim() || undefined,
       workshopName: workshopName.trim() || undefined,
       expectedLifespanKm: expectedLifespanKm !== '' ? Number(expectedLifespanKm) : undefined,
@@ -598,13 +628,30 @@ export const AddMaintenanceModal: React.FC<AddMaintenanceModalProps> = ({
               {showServiceRows && (
                 <p className="text-[10px] text-slate-500 mt-1">{lang === 'my' ? '* အထက်ပါ ပစ္စည်းစာရင်းမှ အလိုအလျောက် စုစုပေါင်း တွက်ပါသည်' : '* Auto-totalled from the items list above'}</p>
               )}
-              {lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && displayCost > 0 && (
+              {/* [v7.6.49] Service fee / labor, entered separately
+                  from parts. The saved total is parts + labor; the
+                  breakdown below shows the live sum. Hidden for
+                  licence renewal (a single fee, no labor split). */}
+              {!isLicenseRenewal && (
+                <div className="mt-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">{lang === 'my' ? 'ဝန်ဆောင်ခ (လက်ခ) (MMK)' : 'Service Fee (Labor) (MMK)'}</label>
+                  <input type="text" inputMode="decimal" value={laborCost} onChange={(e) => setLaborCost(handleNumberInput(e.target.value))} placeholder="e.g. 20000" className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-900" />
+                  {laborNum > 0 && (
+                    <p className="text-[11px] font-bold text-indigo-700 mt-1">
+                      {lang === 'my'
+                        ? `ပစ္စည်းဖိုး ${displayCost.toLocaleString()} + ဝန်ဆောင်ခ ${laborNum.toLocaleString()} = စုစုပေါင်း ${visitTotal.toLocaleString()} MMK`
+                        : `Parts ${displayCost.toLocaleString()} + labor ${laborNum.toLocaleString()} = total ${visitTotal.toLocaleString()} MMK`}
+                    </p>
+                  )}
+                </div>
+              )}
+              {lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && visitTotal > 0 && (
                 <div className="text-[10px] mt-1 flex items-center gap-1">
                   <span className="text-slate-500">{lang === 'my' ? 'ယခင်ကုန်ကျစရိတ်:' : 'Prev Cost:'} {lastMaintLogForComparison.cost.toLocaleString()} Ks</span>
-                  {displayCost > lastMaintLogForComparison.cost ? (
-                    <span className="text-rose-600 font-bold flex items-center gap-0.5"><TrendingUp className="w-3 h-3" /> +{Math.round(((displayCost - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
-                  ) : displayCost < lastMaintLogForComparison.cost ? (
-                    <span className="text-emerald-600 font-bold flex items-center gap-0.5"><TrendingDown className="w-3 h-3" /> {Math.round(((displayCost - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
+                  {visitTotal > lastMaintLogForComparison.cost ? (
+                    <span className="text-rose-600 font-bold flex items-center gap-0.5"><TrendingUp className="w-3 h-3" /> +{Math.round(((visitTotal - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
+                  ) : visitTotal < lastMaintLogForComparison.cost ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-0.5"><TrendingDown className="w-3 h-3" /> {Math.round(((visitTotal - lastMaintLogForComparison.cost) / lastMaintLogForComparison.cost) * 100)}%</span>
                   ) : <span className="text-slate-400">(Same)</span>}
                 </div>
               )}

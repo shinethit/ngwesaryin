@@ -517,6 +517,12 @@ export interface VehicleMaintenance {
   serviceType: VehicleServiceType;
   title: string;
   cost: number;
+  // [v7.6.49] Service fee / labor charge for the visit, entered
+  // separately from parts / service rows. `cost` stays the single
+  // total (parts + labor); this field is the breakdown only.
+  // Absent (or 0) = no separate labor — old records render exactly
+  // as before. Never stored as 0: empty labor is unset.
+  laborCost?: number;
   sparePartBrand?: string;
   workshopName?: string;
   expectedLifespanKm?: number;
@@ -579,6 +585,11 @@ export interface VehicleLinkData {
   maintTitle?: string;
   sparePartBrand?: string;
   workshopName?: string;
+  // [v7.6.49] Service fee / labor charge typed in the entry form's
+  // maintenance section. The handler adds it to the first per-type
+  // record (see applyLaborCostToRowGroups) and the single-record
+  // path stores it alongside the total cost.
+  laborCost?: number;
   expectedLifespanKm?: number;
   expectedLifespanDays?: number;
   // Tire fields

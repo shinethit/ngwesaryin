@@ -350,21 +350,21 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
-    expect(CURRENT_BUILD_NUMBER).toBe(362);
-    expect(VERSION_JSON.version).toBe('v7.6.48');
-    expect(VERSION_JSON.buildNumber).toBe(362);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
+    expect(CURRENT_BUILD_NUMBER).toBe(363);
+    expect(VERSION_JSON.version).toBe('v7.6.49');
+    expect(VERSION_JSON.buildNumber).toBe(363);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.48');
-    expect(entry.buildNumber).toBe(362);
+    expect(entry.version).toBe('v7.6.49');
+    expect(entry.buildNumber).toBe(363);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု');
-    expect(entry.titleEn).toBe('Complete pictorial icon library — 14 packs, 463 pictures');
+    expect(entry.titleMy).toBe('ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ');
+    expect(entry.titleEn).toBe('Service fees for vehicle maintenance');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(8);
-    expect(entry.changesEn).toHaveLength(8);
+    expect(entry.changesMy).toHaveLength(4);
+    expect(entry.changesEn).toHaveLength(4);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

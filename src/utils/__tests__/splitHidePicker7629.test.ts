@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
-    expect(CURRENT_BUILD_NUMBER).toBe(362);
-    expect(VERSION_JSON.version).toBe('v7.6.48');
-    expect(VERSION_JSON.buildNumber).toBe(362);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
+    expect(CURRENT_BUILD_NUMBER).toBe(363);
+    expect(VERSION_JSON.version).toBe('v7.6.49');
+    expect(VERSION_JSON.buildNumber).toBe(363);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.48');
-    expect(entry.buildNumber).toBe(362);
-    expect(entry.changesMy[0]).toBe('ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်');
+    expect(entry.version).toBe('v7.6.49');
+    expect(entry.buildNumber).toBe(363);
+    expect(entry.changesMy[0]).toBe('ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

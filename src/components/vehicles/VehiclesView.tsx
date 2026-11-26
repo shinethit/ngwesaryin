@@ -1274,6 +1274,18 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
                         <span className="text-[11px] text-slate-400">
                           {lang === 'my' ? 'ကုန်ကျငွေ' : 'Total Cost'}
                         </span>
+                        {/* [v7.6.49] Parts + labor breakdown — only when
+                            the record carries a service fee. Parts =
+                            total − labor (cost keeps its single-total
+                            meaning). Old records without laborCost
+                            render exactly as before. */}
+                        {(log.laborCost || 0) > 0 && (
+                          <span className="text-[11px] font-bold text-indigo-700 block">
+                            {lang === 'my'
+                              ? `ပစ္စည်းဖိုး ${(Number(log.cost) - (log.laborCost || 0)).toLocaleString()} + ဝန်ဆောင်ခ ${(log.laborCost || 0).toLocaleString()}`
+                              : `Parts ${(Number(log.cost) - (log.laborCost || 0)).toLocaleString()} + labor ${(log.laborCost || 0).toLocaleString()}`}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1">

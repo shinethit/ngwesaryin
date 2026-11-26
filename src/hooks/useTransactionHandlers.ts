@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { doc } from 'firebase/firestore';
+import { deleteField, doc, updateDoc } from 'firebase/firestore';
 import { db, safeSetDoc, safeDeleteDoc, isQuotaExhausted } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { syncQueue } from '../lib/syncQueue';
@@ -8,7 +8,7 @@ import { getCollaboratorPermissions } from '../utils/permissions';
 import { getLocalDateString } from '../utils/dateUtils';
 // [v7.5.93] Multi-row vehicle service entries: one maintenance record
 // per distinct row service type, each with its own cost + title.
-import { groupServiceRowsByType, resolvePerTypeTitle } from '../utils/vehicleServiceRows';
+import { applyLaborCostToRowGroups, groupServiceRowsByType, resolvePerTypeTitle } from '../utils/vehicleServiceRows';
 import { isWalletMatch, isSharedWallet } from '../utils/walletBalance';
 // [v7.6.07 D1] Clearing splits on edit: a merge write keeps an
 // omitted `splits` field, so had-splits → now-none edits write
@@ -544,10 +544,14 @@ export function useTransactionHandlers({
           // No items (old-style / license) → the exact old
           // single-record update below.
           const linkedMaints = vehicleMaintenance.filter((m) => m.transactionId === editingTransaction.id);
-          const editRowGroups =
+          // [v7.6.49] Labor folds into the first group, same as the
+          // create path below (single source of truth).
+          const editRowGroups = applyLaborCostToRowGroups(
             sanitizedTx.items && sanitizedTx.items.length > 0
               ? groupServiceRowsByType(sanitizedTx.items, vehicleLinkData.serviceType || linkedMaint.serviceType || 'general_repair')
-              : [];
+              : [],
+            vehicleLinkData.laborCost,
+          );
           if (editRowGroups.length > 0 && linkedMaints.length > 0) {
             const uid = user?.uid ? activeWorkspaceId || user.uid : null;
             setVehicleMaintenance((prev) => {
@@ -574,6 +578,8 @@ export function useTransactionHandlers({
                 sanitizedTx.note || '',
               ),
               cost: g.cost,
+              // [v7.6.49] First group only (see the helper).
+              ...(g.laborCost ? { laborCost: g.laborCost } : {}),
               sparePartBrand: vehicleLinkData.sparePartBrand || linkedMaint.sparePartBrand,
               workshopName: vehicleLinkData.workshopName || linkedMaint.workshopName,
               expectedLifespanKm: vehicleLinkData.expectedLifespanKm || linkedMaint.expectedLifespanKm,
@@ -615,6 +621,14 @@ export function useTransactionHandlers({
             note: sanitizedTx.note,
             updatedAt: Date.now(),
           };
+          // [v7.6.49] The spread above would keep a STALE laborCost
+          // when the user clears labor (cleanAmount already excludes
+          // it). Set the new value, or drop the key entirely.
+          if (vehicleLinkData.laborCost) {
+            updatedMaint.laborCost = vehicleLinkData.laborCost;
+          } else {
+            delete updatedMaint.laborCost;
+          }
           setVehicleMaintenance((prev) => {
             const next = prev.map((m) => (m.id === updatedMaint.id ? updatedMaint : m));
             safeSetItem('ngwe_vehicle_maintenance', JSON.stringify(next));
@@ -623,6 +637,16 @@ export function useTransactionHandlers({
           if (user?.uid) {
             const uid = activeWorkspaceId || user.uid;
             persistDoc(doc(db, 'users', uid, 'vehicleMaintenance', updatedMaint.id), { ...updatedMaint, userId: uid }, { merge: true });
+            // [v7.6.49] Clearing labor must actively delete the field
+            // in Firestore too: merge writes omit the dropped key
+            // (cleanForFirestore), so the old value would resurrect
+            // on the next pull. Best-effort raw updateDoc +
+            // deleteField(), same pattern as useVehicleHandlers.
+            if ((linkedMaint.laborCost || 0) > 0 && !vehicleLinkData.laborCost) {
+              updateDoc(doc(db, 'users', uid, 'vehicleMaintenance', updatedMaint.id), {
+                laborCost: deleteField(),
+              }).catch(() => {});
+            }
           }
           // [v7.5.93] Edit-down-to-zero-rows: the single-record update
           // above keeps only the first linked record — delete any
@@ -1027,10 +1051,12 @@ export function useTransactionHandlers({
         // tracks the latest record PER service type,
         // vehicleAnalytics.ts:334-390). No items (old-style / license)
         // → the exact old single-record behavior below.
-        const rowGroups =
+        const rowGroups = applyLaborCostToRowGroups(
           sanitizedTx.items && sanitizedTx.items.length > 0
             ? groupServiceRowsByType(sanitizedTx.items, vehicleLinkData.serviceType || 'general_repair')
-            : [];
+            : [],
+          vehicleLinkData.laborCost,
+        );
         if (rowGroups.length > 0) {
           const newMaints: VehicleMaintenance[] = rowGroups.map((g, gi) => ({
             id: `maint_${Date.now()}_${gi}`,
@@ -1047,6 +1073,8 @@ export function useTransactionHandlers({
               sanitizedTx.note || '',
             ),
             cost: g.cost,
+            // [v7.6.49] First group only (see the helper).
+            ...(g.laborCost ? { laborCost: g.laborCost } : {}),
             sparePartBrand: vehicleLinkData.sparePartBrand,
             workshopName: vehicleLinkData.workshopName,
             expectedLifespanKm: vehicleLinkData.expectedLifespanKm,
@@ -1088,6 +1116,9 @@ export function useTransactionHandlers({
           serviceType: vehicleLinkData.serviceType || 'general_repair',
           title: vehicleLinkData.title || sanitizedTx.note || (lang === 'my' ? 'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု' : 'Vehicle Maintenance'),
           cost: cleanAmount,
+          // [v7.6.49] cleanAmount already includes labor (the modal
+          // adds it to the visit total); store the split alongside.
+          ...(vehicleLinkData.laborCost ? { laborCost: vehicleLinkData.laborCost } : {}),
           sparePartBrand: vehicleLinkData.sparePartBrand,
           workshopName: vehicleLinkData.workshopName,
           expectedLifespanKm: vehicleLinkData.expectedLifespanKm,

@@ -104,17 +104,17 @@ describe('Shop cards are compact (v7.6.39)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
-    expect(CURRENT_BUILD_NUMBER).toBe(362);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.48');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(362);
-    expect(VERSION_JSON.version).toBe('v7.6.48');
-    expect(VERSION_JSON.buildNumber).toBe(362);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
+    expect(CURRENT_BUILD_NUMBER).toBe(363);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.49');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(363);
+    expect(VERSION_JSON.version).toBe('v7.6.49');
+    expect(VERSION_JSON.buildNumber).toBe(363);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်',
+      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'The full pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more',
+      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
     );
   });
 });

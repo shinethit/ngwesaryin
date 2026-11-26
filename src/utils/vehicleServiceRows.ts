@@ -22,6 +22,10 @@ export interface ServiceRowGroup {
   rows: TransactionItem[];
   /** Sum of the group's row amounts — the record's cost for this type. */
   cost: number;
+  /** [v7.6.49] Visit-level service fee carried by the FIRST group
+   *  only (see applyLaborCostToRowGroups). Absent on every other
+   *  group — labor is never split or duplicated across records. */
+  laborCost?: number;
 }
 
 /**
@@ -54,6 +58,28 @@ export function groupServiceRowsByType(
     group.cost += Number(row.amount) || 0;
   }
   return groups;
+}
+
+/**
+ * [v7.6.49] Fold a visit-level service fee (labor) into grouped
+ * service rows. The WHOLE fee lands on the FIRST group (the
+ * visit's primary record — the same record edit mode reopens),
+ * so the groups' costs still sum to exactly the visit total
+ * (parts + labor) and no total, analytic or sync amount changes.
+ * Later groups are returned untouched. Zero / negative / missing
+ * labor returns the groups unchanged (no zero-stored field, no
+ * record carries laborCost). Pure: the input groups are not
+ * mutated.
+ */
+export function applyLaborCostToRowGroups(
+  groups: ServiceRowGroup[],
+  laborCost: number | undefined,
+): ServiceRowGroup[] {
+  const labor = Number(laborCost) || 0;
+  if (!Array.isArray(groups) || groups.length === 0 || !(labor > 0)) return groups;
+  return groups.map((g, i) =>
+    i === 0 ? { ...g, cost: g.cost + labor, laborCost: labor } : g,
+  );
 }
 
 /** Default title when nothing more specific exists. */

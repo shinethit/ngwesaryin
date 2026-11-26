@@ -282,6 +282,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [maintTitle, setMaintTitle] = useState<string>('');
   const [maintSparePartBrand, setMaintSparePartBrand] = useState<string>('');
   const [maintWorkshopName, setMaintWorkshopName] = useState<string>('');
+  // [v7.6.49] Service fee / labor for the visit, typed separately
+  // from parts rows. Stored as a string (Myanmar digits allowed)
+  // like the other maintenance inputs; parsed at save time.
+  const [maintLaborCost, setMaintLaborCost] = useState<string>('');
+  // Labor is never negative; the visit total is parts + labor.
+  const maintLaborNum = Math.max(0, parseMyanmarNumber(maintLaborCost) || 0);
+  // Parts total for the live labor breakdown line (same sum the
+  // save handler recomputes from the rows).
+  const maintPartsTotal = shoppingItems.reduce(
+    (s, it) => s + (parseMyanmarNumber(it.amount as any) || 0),
+    0,
+  );
+  // [v7.6.49] Typing labor re-derives the shared amount input
+  // (parts rows + labor) so the shown total is always the saved
+  // total; item edits re-derive it the same way in
+  // updateShoppingItem.
+  const handleMaintLaborChange = (val: string) => {
+    setMaintLaborCost(val);
+    const labor = Math.max(0, parseMyanmarNumber(val) || 0);
+    const total = maintPartsTotal + labor;
+    setAmount(total > 0 ? String(total) : '');
+  };
   const [maintLifespanKm, setMaintLifespanKm] = useState<string>('5000');
   const [maintLifespanDays, setMaintLifespanDays] = useState<string>('180');
   const [maintExpiryDate, setMaintExpiryDate] = useState<string>('');
@@ -437,6 +459,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           const linkedMaint = vehicleMaintenance.find((m) => m.transactionId === editTransaction.id);
           const linkedTire = tirePressureLogs.find((tp) => tp.transactionId === editTransaction.id);
           const linkedLog = linkedFuel || linkedMaint || linkedTire;
+          // [v7.6.49] The visit's labor, stored on the first per-type
+          // record of the visit (not necessarily the first array
+          // match). Needed twice below: the labor field restore, and
+          // the synthetic-row restore — a no-items tx restores as one
+          // row at the FULL total, so that row must carry parts only
+          // (total − labor) or re-saving would double-count the fee.
+          const restoredVisitLabor = vehicleMaintenance.find(
+            (m) => m.transactionId === editTransaction.id && (m.laborCost || 0) > 0,
+          )?.laborCost || 0;
 
           if (linkedLog) {
             setVehicleId(linkedLog.vehicleId || '');
@@ -463,6 +494,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             setMaintServiceType((linkedMaint.serviceType as VehicleServiceType) || 'engine_oil');
             setMaintTitle(linkedMaint.title || '');
             setMaintWorkshopName(linkedMaint.workshopName || '');
+            // [v7.6.49] Restore the visit's labor (see
+            // restoredVisitLabor above).
+            setMaintLaborCost(restoredVisitLabor > 0 ? String(restoredVisitLabor) : '');
             setMaintSparePartBrand(linkedMaint.sparePartBrand || '');
             setMaintLifespanKm(String(linkedMaint.expectedLifespanKm || 5000));
             setMaintLifespanDays(String(linkedMaint.expectedLifespanDays || 180));
@@ -529,9 +563,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             // one falls back to the visit's main type at save time.
             setShoppingItems(editTransaction.items.map((it, i) => ({ ...it, id: it.id || `item_${Date.now()}_${i}` })));
           } else if (editTransaction.unitPrice) {
-            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: editTransaction.unitPrice, quantity: editTransaction.quantity || 1, amount: editTransaction.amount, unit: DEFAULT_MENU_UNIT }]);
+            // [v7.6.49] The synthetic row carries parts only: the
+            // stored total already includes labor (see
+            // restoredVisitLabor), and the save adds labor back.
+            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: editTransaction.unitPrice, quantity: editTransaction.quantity || 1, amount: Math.max(0, editTransaction.amount - restoredVisitLabor), unit: DEFAULT_MENU_UNIT }]);
           } else {
-            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: editTransaction.amount, quantity: 1, amount: editTransaction.amount, unit: DEFAULT_MENU_UNIT }]);
+            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: Math.max(0, editTransaction.amount - restoredVisitLabor), quantity: 1, amount: Math.max(0, editTransaction.amount - restoredVisitLabor), unit: DEFAULT_MENU_UNIT }]);
           }
           setNewSubName('');
         }
@@ -659,6 +696,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setCustomGasStation('');
         setMaintTitle('');
         setMaintWorkshopName('');
+        setMaintLaborCost('');
         // [v7.6.05] Clear the expiry date on a new entry — never reuse
         // the previous entry's date (same rule as AddMaintenanceModal).
         setMaintExpiryDate('');
@@ -733,7 +771,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         return item;
       });
       const totalSum = updated.reduce((sum, item) => sum + (item.amount || 0), 0);
-      setAmount(totalSum > 0 ? String(totalSum) : '');
+      // [v7.6.49] The shared amount input is the visit TOTAL: parts
+      // rows + labor (vehicle-service visits only — general entries
+      // have no labor field, so their total is unchanged).
+      const visitLabor = entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal' ? maintLaborNum : 0;
+      const visitTotal = totalSum + visitLabor;
+      setAmount(visitTotal > 0 ? String(visitTotal) : '');
       return updated;
     });
   };
@@ -791,7 +834,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setShoppingItems((prev) => {
       const filtered = prev.filter((i) => i.id !== id);
       const totalSum = filtered.reduce((sum, item) => sum + (item.amount || 0), 0);
-      setAmount(totalSum > 0 ? String(totalSum) : '');
+      // [v7.6.49] Same visit-total rule as updateShoppingItem:
+      // removing a row must not drop the labor part of the total.
+      const visitLabor = entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal' ? maintLaborNum : 0;
+      const visitTotal = totalSum + visitLabor;
+      setAmount(visitTotal > 0 ? String(visitTotal) : '');
       return filtered.length > 0 ? filtered : [{ id: `item_${Date.now()}`, name: '', price: 0, quantity: 1, amount: 0 }];
     });
   };
@@ -1570,7 +1617,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const isTransferLike = isTransferCategory || subCategoryId === 'sub_tf_out' || subCategoryId === 'sub_tf_in';
     const isMultiRow = (entryModel === 'general' && !isTransferLike) || (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal');
     if (isMultiRow && validItems.length > 0) {
-      finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);
+      // [v7.6.49] Labor adds to the visit total (parts + labor) for
+      // vehicle-service entries. ONLY inside this branch: when no
+      // row is valid (e.g. an old no-items tx restored as one
+      // unnamed synthetic row) the shared amount input already IS
+      // the total — the live row/labor handlers include labor in it
+      // — so adding labor again here would double-count. The
+      // fallback keeps finalAmount as the typed total, exactly as
+      // before labor existed.
+      finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0)
+        + (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal' ? maintLaborNum : 0);
     }
 
     // [v7.5.95 U2] Save typed custom units so they reappear as select
@@ -1675,6 +1731,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           maintTitle: maintTitle.trim() || undefined,
           sparePartBrand: maintSparePartBrand.trim() || undefined,
           workshopName: maintWorkshopName.trim() || undefined,
+          // [v7.6.49] Labor travels with the visit payload; the
+          // handler folds it into the first per-type record.
+          laborCost: maintLaborNum > 0 ? maintLaborNum : undefined,
           expectedLifespanKm: parseMyanmarNumber(maintLifespanKm) || undefined,
           expectedLifespanDays: parseMyanmarNumber(maintLifespanDays) || undefined,
           odometer: odoNum,
@@ -2704,6 +2763,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
                       <input type="text" value={maintWorkshopName} onChange={(e) => setMaintWorkshopName(e.target.value)} placeholder={lang === 'my' ? 'ဝပ်ရှော့ အမည်' : 'Workshop name'} className="flex-1 min-w-0 text-sm font-bold bg-transparent border-0 focus:outline-none" />
+                    </div>
+                    {/* [v7.6.49] Service fee / labor, entered
+                        separately from parts rows. The saved total
+                        is parts + labor; the breakdown shows live. */}
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'ဝန်ဆောင်ခ (လက်ခ)' : 'Service Fee (Labor)'}</div>
+                          <input type="text" inputMode="decimal" value={maintLaborCost} onChange={(e) => handleMaintLaborChange(e.target.value)} placeholder="0" className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none font-mono mt-0.5" />
+                        </div>
+                      </div>
+                      {maintLaborNum > 0 && (
+                        <p className="text-[11px] font-bold text-indigo-700 mt-1">
+                          {lang === 'my'
+                            ? `ပစ္စည်းဖိုး ${maintPartsTotal.toLocaleString()} + ဝန်ဆောင်ခ ${maintLaborNum.toLocaleString()} = စုစုပေါင်း ${(maintPartsTotal + maintLaborNum).toLocaleString()} MMK`
+                            : `Parts ${maintPartsTotal.toLocaleString()} + labor ${maintLaborNum.toLocaleString()} = total ${(maintPartsTotal + maintLaborNum).toLocaleString()} MMK`}
+                        </p>
+                      )}
                     </div>
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><Gauge className="w-5 h-5 text-slate-600" /></div>

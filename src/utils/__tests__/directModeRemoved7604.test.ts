@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
-    expect(CURRENT_BUILD_NUMBER).toBe(362);
-    expect(VERSION_JSON.version).toBe('v7.6.48');
-    expect(VERSION_JSON.buildNumber).toBe(362);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
+    expect(CURRENT_BUILD_NUMBER).toBe(363);
+    expect(VERSION_JSON.version).toBe('v7.6.49');
+    expect(VERSION_JSON.buildNumber).toBe(363);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,30 +330,22 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.48');
-    expect(top.buildNumber).toBe(362);
+    expect(top.version).toBe('v7.6.49');
+    expect(top.buildNumber).toBe(363);
     expect(top.tag).toBe('feature');
-    expect(top.titleMy).toBe('အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု');
-    expect(top.titleEn).toBe('Complete pictorial icon library — 14 packs, 463 pictures');
+    expect(top.titleMy).toBe('ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ');
+    expect(top.titleEn).toBe('Service fees for vehicle maintenance');
     expect(top.changesMy).toEqual([
-      'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်',
-      'အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ ရုပ်ပုံတွေကို သူ့အုပ်စုနဲ့သူ ခွဲပြထားပါပြီ — လိုချင်တဲ့အုပ်စုကို နှိပ်ပြီး ရှာရလွယ်ပါတယ်',
-      'အခြေခံအိုင်ကွန် (Free) — အုပ်စုတစ်ခုမှာ အသုံးအများဆုံး ၁၀ ခုကို အားလုံးသုံးနိုင်ပါတယ်',
-      'အထူးအိုင်ကွန် (Premium) — အုပ်စုတိုင်းရဲ့ ကျန်တဲ့ရုပ်ပုံအကုန်လုံးကို Premium နဲ့ သုံးနိုင်ပါတယ်',
-      'Premium နဲ့ ရွေးထားတဲ့ အိုင်ကွန်က Premium သက်တမ်းကုန်သွားရင်လည်း ကဏ္ဍမှာ ဆက်ကျန်နေပါမယ် — ပြောင်းလိုက်မှသာ ပြန်ရွေးလို့ မရတော့ပါဘူး',
-      'အိုင်ကွန်ရုပ်ပုံအကုန်လုံးကို အင်တာနက်မရှိလည်း ဖွင့်လို့ရအောင် ဖုန်းထဲမှာ သိမ်းထားပေးပါပြီ',
-      'အိုင်ကွန်ဟောင်း (ရိုးရိုးပုံလေးတွေ) ကိုလည်း ဆက်သုံးနိုင်ပါပြီ — ကိုယ်တိုင်ထည့်ထားတဲ့ ကဏ္ဍတွေမှာ အရင်အတိုင်း ပြပေးပါတယ်',
-      'ကဏ္ဍခွဲတွေမှာလည်း ကိုယ်ပိုင်အိုင်ကွန်ထည့်နိုင်ပါပြီ — မူရင်းကဏ္ဍခွဲတိုင်းမှာ သူ့အဓိပ္ပာယ်နဲ့ ကိုက်တဲ့ အိုင်ကွန်ကို ကြိုတင်ထည့်ပေးထားပါတယ်'
+      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
+      'ပစ္စည်းဖိုး + ဝန်ဆောင်ခ = စုစုပေါင်းကို အလိုအလျောက် ပေါင်းပြပေးပါတယ်',
+      'မှတ်တမ်းမှာ ပစ္စည်းဖိုး၊ ဝန်ဆောင်ခနဲ့ စုစုပေါင်းကို ခွဲပြပေးပါတယ်',
+      'ဝန်ဆောင်ခမထည့်ထားတဲ့ မှတ်တမ်းဟောင်းတွေလည်း အရင်အတိုင်း ပြပေးပါတယ်',
     ]);
     expect(top.changesEn).toEqual([
-      'The full pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more',
-      'The icon picker groups every picture into its own pack, so the one you want is easy to find',
-      'Core icons (Free) — the 10 most everyday pictures in each pack are free for everyone',
-      'Special icons (Premium) — all the remaining pictures in every pack are available with Premium',
-      'An icon chosen while Premium stays on its category after Premium lapses — it only becomes unavailable again once you change away from it',
-      'All icon pictures are saved on the phone so they still show without internet',
-      'The classic plain icons still work too — custom categories keep showing them exactly as before',
-      'Sub-categories can have their own icons too — every default sub-category comes pre-assigned with a matching icon'
+      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
+      'Parts cost + service fee are added up automatically into the total',
+      'Records show the breakdown: parts, service fee, and total',
+      'Older records without a service fee keep showing exactly as before',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

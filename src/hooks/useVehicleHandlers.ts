@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { doc } from 'firebase/firestore';
+import { deleteField, doc, updateDoc } from 'firebase/firestore';
 import { db, safeSetDoc, safeDeleteDoc } from '../lib/firebase';
 import { safeSetItem } from '../utils/storage';
 import { markVehicleLogDeleted, markTxDeleted } from '../utils/deletedMarkers';
@@ -14,6 +14,7 @@ import type {
   Wallet,
 } from '../types';
 import {
+  applyLaborCostToRowGroups,
   groupServiceRowsByType,
   resolvePerTypeTitle,
   resolveVehicleServiceSubCategory,
@@ -368,10 +369,16 @@ export function useVehicleHandlers({
     // 0, zero-price rows kept). A licence visit has no rows, so its
     // items are ignored and the old single-record path runs. No rows
     // (old-style) → the exact old single-record behavior below.
-    const rowGroups =
+    // [v7.6.49] Visit-level labor folds into the FIRST per-type
+    // group (see applyLaborCostToRowGroups) so the groups still sum
+    // to the visit total and the fee is never duplicated.
+    const labor = Math.max(0, Number(maintInput.laborCost) || 0);
+    const rowGroups = applyLaborCostToRowGroups(
       maintInput.serviceType === 'license_renewal'
         ? []
-        : groupServiceRowsByType(incomingItems || [], maintInput.serviceType);
+        : groupServiceRowsByType(incomingItems || [], maintInput.serviceType),
+      labor,
+    );
     const hasRows = rowGroups.length > 0;
     const rowsTotal = rowGroups.reduce((s, g) => s + g.cost, 0);
     const visitCost = hasRows ? rowsTotal : maintInput.cost;
@@ -478,6 +485,10 @@ export function useVehicleHandlers({
             // TransactionModal path, which passes the tx note).
             title: resolvePerTypeTitle(maint.title, maint.serviceType, g.serviceType, g.rows, maint.note ?? ''),
             cost: g.cost,
+            // [v7.6.49] Labor rides on the first group's record only
+            // (the helper put the whole fee there); other groups
+            // carry no laborCost key at all.
+            ...(g.laborCost ? { laborCost: g.laborCost } : {}),
             sparePartBrand: maint.sparePartBrand,
             workshopName: maint.workshopName,
             expectedLifespanKm: maint.expectedLifespanKm,
@@ -538,6 +549,21 @@ export function useVehicleHandlers({
       }
 
       recalculateVehicleOdometer(maint.vehicleId, fuelLogs, nextMaint, tirePressureLogs);
+    }
+
+    // [v7.6.49] Clearing labor must actively delete the field: merge
+    // writes omit undefined keys (cleanForFirestore), so a dropped
+    // laborCost would resurrect from Firestore on the next pull.
+    // Only the re-saved single record can carry a stale value — the
+    // multi-row branch deletes every old record and recreates fresh
+    // ones. Best-effort raw updateDoc + deleteField(), the same
+    // pattern as AdminPanel's code unmark (never safeUpdateDoc —
+    // cleanForFirestore mangles the sentinel).
+    if (!hasRows && (vehicleMaintenance.find((m) => m.id === maintId)?.laborCost || 0) > 0 && labor === 0 && user?.uid) {
+      const targetUid = activeWorkspaceId || user.uid;
+      updateDoc(doc(db, 'users', targetUid, 'vehicleMaintenance', maintId), {
+        laborCost: deleteField(),
+      }).catch(() => {});
     }
 
     showToast(lang === 'my' ? 'ပြုပြင်ထိန်းသိမ်းမှု မှတ်တမ်း သိမ်းဆည်းပြီးပါပြီ ✓' : 'Maintenance record saved ✓');

@@ -72,6 +72,16 @@ export function usePersistedState<T>(
 
   const setPersistedState = (value: T | ((prev: T) => T)) => {
     const nextValue = value instanceof Function ? value(stateRef.current) : value;
+    // [v7.6.49] Advance the ref SYNCHRONOUSLY: two functional
+    // updates in one handler (the multi-row maintenance edit's
+    // delete-filter + prepend) must chain like React's setState, or
+    // the first is silently lost and the edited visit duplicates
+    // (the old record survives next to its replacement, doubling
+    // the visit's cost in every total). The render effect below
+    // re-assigns the same value — harmless. The same-reference
+    // bail-out for the dispatching instance's own broadcast is
+    // unchanged.
+    stateRef.current = nextValue;
     setState(nextValue);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(

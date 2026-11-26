@@ -28,6 +28,9 @@ export interface MaintenanceLifespanItem {
   date: string;
   odometer: number;
   cost: number;
+  // [v7.6.49] Service fee carried through the lifespan projection
+  // so history cards can show the parts + labor breakdown.
+  laborCost?: number;
   sparePartBrand?: string;
   workshopName?: string;
   expectedLifespanKm?: number;
@@ -410,6 +413,7 @@ export function calculateMaintenanceLifespans(
       date: m.date,
       odometer: m.odometer,
       cost: m.cost,
+      laborCost: m.laborCost,
       sparePartBrand: m.sparePartBrand,
       workshopName: m.workshopName,
       expectedLifespanKm: m.expectedLifespanKm,

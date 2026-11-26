@@ -453,34 +453,43 @@ describe('splits cleared on edit (D1: merge writes keep an omitted field)', () =
     // survives into the canonical doc and the owner mirror.
     expect(SHARED_SVC_SRC).toContain('let txForShared: Transaction = { ...tx, walletId: docIdToUse }');
     expect(SHARED_SVC_SRC).toContain('safeSetDoc(txRef, cleanForFirestore(txForShared), { merge: true })');
-    // No sentinel anywhere in the clearing path: deleteField must
-    // never pass through the safe* wrappers (cleanForFirestore
-    // corrupts it) — this fix uses no sentinel at all.
-    expect(HANDLERS_SRC).not.toContain('deleteField');
+    // No sentinel anywhere in the SPLITS-clearing path: deleteField
+    // must never pass through the safe* wrappers (cleanForFirestore
+    // corrupts it) — the splits fix uses no sentinel at all. The
+    // ONLY code use of deleteField() in this file is the [v7.6.49]
+    // labor-clear (raw updateDoc, best-effort, maintenance-edit
+    // path only) — it never touches a splits write, and no safe*
+    // or persistDoc call carries a sentinel.
+    expect(HANDLERS_SRC.match(/laborCost: deleteField\(\)/g)).toHaveLength(1);
+    expect(HANDLERS_SRC).not.toMatch(/safeSetDoc\([^)]*deleteField/);
+    expect(HANDLERS_SRC).not.toMatch(/persistDoc\([^)]*deleteField/);
+    const laborIdx = HANDLERS_SRC.indexOf('Clearing labor must actively delete the field');
+    expect(laborIdx).toBeGreaterThan(-1);
+    expect(HANDLERS_SRC.slice(laborIdx)).toContain('updateDoc(doc(db,');
   });
 });
 
 describe('Version bump to v7.6.27 (build 342)', () => {  it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
-    expect(CURRENT_BUILD_NUMBER).toBe(362);
-    expect(VERSION_JSON.version).toBe('v7.6.48');
-    expect(VERSION_JSON.buildNumber).toBe(362);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
+    expect(CURRENT_BUILD_NUMBER).toBe(363);
+    expect(VERSION_JSON.version).toBe('v7.6.49');
+    expect(VERSION_JSON.buildNumber).toBe(363);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.48');
-    expect(entry.buildNumber).toBe(362);
+    expect(entry.version).toBe('v7.6.49');
+    expect(entry.buildNumber).toBe(363);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု');
-    expect(entry.titleEn).toBe('Complete pictorial icon library — 14 packs, 463 pictures');
+    expect(entry.titleMy).toBe('ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ');
+    expect(entry.titleEn).toBe('Service fees for vehicle maintenance');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(8);
-    expect(entry.changesEn).toHaveLength(8);
+    expect(entry.changesMy).toHaveLength(4);
+    expect(entry.changesEn).toHaveLength(4);
     expect(entry.changesMy[0]).toBe(
-      'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်',
+      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The full pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more',
+      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
     );
   });
 

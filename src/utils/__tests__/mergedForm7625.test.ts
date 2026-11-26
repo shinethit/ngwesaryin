@@ -50,13 +50,24 @@ describe('merged form — one form, rows drive the total (v7.6.25)', () => {
       "const isMultiRow = (entryModel === 'general' && !isTransferLike) || (entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal');",
     );
     expect(MODAL_SRC).toContain(
-      'finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);',
+      'finalAmount = validItems.reduce((sum, item) => sum + item.amount, 0)',
+    );
+    // [v7.6.49] The row-sum branch is also where labor joins the
+    // total (vehicle-service only, valid rows only) — the
+    // no-valid-rows fallback keeps the typed total instead, so an
+    // old no-items tx never double-counts its fee on re-save.
+    expect(MODAL_SRC).toContain(
+      "maintServiceType !== 'license_renewal' ? maintLaborNum : 0);",
     );
     expect(MODAL_SRC).not.toContain('parseMyanmarNumber(unitPrice) * parseMyanmarNumber(quantity)');
     // The split remaining indicator reads the shared amount input,
     // which the row edits drive live.
     expect(MODAL_SRC).toContain('const splitTotalAmount = parseMyanmarNumber(amount)');
-    expect(MODAL_SRC).toContain('setAmount(totalSum > 0 ? String(totalSum) : \'\')');
+    // [v7.6.49] Row edits drive the shared amount input as the visit
+    // total: rows + labor for vehicle-service visits (labor is 0 for
+    // every other entry type, so their total is exactly the row sum).
+    expect(MODAL_SRC).toContain("setAmount(visitTotal > 0 ? String(visitTotal) : '');");
+    expect(MODAL_SRC).toContain("const visitLabor = entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal' ? maintLaborNum : 0;");
     // The amount>0 validation gates the save on the same total
     // (numAmount is parsed from the row-driven amount state).
     expect(MODAL_SRC).toContain('const numAmount = parseMyanmarNumber(amount);');
@@ -69,11 +80,12 @@ describe('merged form — one form, rows drive the total (v7.6.25)', () => {
     const end = MODAL_SRC.indexOf('const removeShoppingItemRow', start);
     expect(end).toBeGreaterThan(start);
     const block = MODAL_SRC.slice(start, end);
-    expect(block).toContain("setAmount(totalSum > 0 ? String(totalSum) : '')");
+    expect(block).toContain("setAmount(visitTotal > 0 ? String(visitTotal) : '');");
+    expect(block).toContain("const visitLabor = entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal' ? maintLaborNum : 0;");
     const removeStart = MODAL_SRC.indexOf('const removeShoppingItemRow');
     const removeEnd = MODAL_SRC.indexOf('const handlePrimaryCategorySelect', removeStart);
     expect(removeEnd).toBeGreaterThan(removeStart);
-    expect(MODAL_SRC.slice(removeStart, removeEnd)).toContain("setAmount(totalSum > 0 ? String(totalSum) : '')");
+    expect(MODAL_SRC.slice(removeStart, removeEnd)).toContain("setAmount(visitTotal > 0 ? String(visitTotal) : '');");
   });
 
   it('applying a previous price sets the single row price (row math drives the total)', () => {
@@ -144,40 +156,32 @@ describe('merged form — one form, rows drive the total (v7.6.25)', () => {
 
 describe('version pins for v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
-    expect(CURRENT_BUILD_NUMBER).toBe(362);
-    expect(VERSION_JSON.version).toBe('v7.6.48');
-    expect(VERSION_JSON.buildNumber).toBe(362);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
+    expect(CURRENT_BUILD_NUMBER).toBe(363);
+    expect(VERSION_JSON.version).toBe('v7.6.49');
+    expect(VERSION_JSON.buildNumber).toBe(363);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.48');
-    expect(top.buildNumber).toBe(362);
+    expect(top.version).toBe('v7.6.49');
+    expect(top.buildNumber).toBe(363);
     expect(top.tag).toBe('feature');
-    expect(top.titleMy).toBe('အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု');
-    expect(top.titleEn).toBe('Complete pictorial icon library — 14 packs, 463 pictures');
+    expect(top.titleMy).toBe('ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ');
+    expect(top.titleEn).toBe('Service fees for vehicle maintenance');
     expect(top.changesMy).toEqual([
-      'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်',
-      'အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ ရုပ်ပုံတွေကို သူ့အုပ်စုနဲ့သူ ခွဲပြထားပါပြီ — လိုချင်တဲ့အုပ်စုကို နှိပ်ပြီး ရှာရလွယ်ပါတယ်',
-      'အခြေခံအိုင်ကွန် (Free) — အုပ်စုတစ်ခုမှာ အသုံးအများဆုံး ၁၀ ခုကို အားလုံးသုံးနိုင်ပါတယ်',
-      'အထူးအိုင်ကွန် (Premium) — အုပ်စုတိုင်းရဲ့ ကျန်တဲ့ရုပ်ပုံအကုန်လုံးကို Premium နဲ့ သုံးနိုင်ပါတယ်',
-      'Premium နဲ့ ရွေးထားတဲ့ အိုင်ကွန်က Premium သက်တမ်းကုန်သွားရင်လည်း ကဏ္ဍမှာ ဆက်ကျန်နေပါမယ် — ပြောင်းလိုက်မှသာ ပြန်ရွေးလို့ မရတော့ပါဘူး',
-      'အိုင်ကွန်ရုပ်ပုံအကုန်လုံးကို အင်တာနက်မရှိလည်း ဖွင့်လို့ရအောင် ဖုန်းထဲမှာ သိမ်းထားပေးပါပြီ',
-      'အိုင်ကွန်ဟောင်း (ရိုးရိုးပုံလေးတွေ) ကိုလည်း ဆက်သုံးနိုင်ပါပြီ — ကိုယ်တိုင်ထည့်ထားတဲ့ ကဏ္ဍတွေမှာ အရင်အတိုင်း ပြပေးပါတယ်',
-      'ကဏ္ဍခွဲတွေမှာလည်း ကိုယ်ပိုင်အိုင်ကွန်ထည့်နိုင်ပါပြီ — မူရင်းကဏ္ဍခွဲတိုင်းမှာ သူ့အဓိပ္ပာယ်နဲ့ ကိုက်တဲ့ အိုင်ကွန်ကို ကြိုတင်ထည့်ပေးထားပါတယ်'
+      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
+      'ပစ္စည်းဖိုး + ဝန်ဆောင်ခ = စုစုပေါင်းကို အလိုအလျောက် ပေါင်းပြပေးပါတယ်',
+      'မှတ်တမ်းမှာ ပစ္စည်းဖိုး၊ ဝန်ဆောင်ခနဲ့ စုစုပေါင်းကို ခွဲပြပေးပါတယ်',
+      'ဝန်ဆောင်ခမထည့်ထားတဲ့ မှတ်တမ်းဟောင်းတွေလည်း အရင်အတိုင်း ပြပေးပါတယ်',
     ]);
     expect(top.changesEn).toEqual([
-      'The full pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more',
-      'The icon picker groups every picture into its own pack, so the one you want is easy to find',
-      'Core icons (Free) — the 10 most everyday pictures in each pack are free for everyone',
-      'Special icons (Premium) — all the remaining pictures in every pack are available with Premium',
-      'An icon chosen while Premium stays on its category after Premium lapses — it only becomes unavailable again once you change away from it',
-      'All icon pictures are saved on the phone so they still show without internet',
-      'The classic plain icons still work too — custom categories keep showing them exactly as before',
-      'Sub-categories can have their own icons too — every default sub-category comes pre-assigned with a matching icon'
+      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
+      'Parts cost + service fee are added up automatically into the total',
+      'Records show the breakdown: parts, service fee, and total',
+      'Older records without a service fee keep showing exactly as before',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

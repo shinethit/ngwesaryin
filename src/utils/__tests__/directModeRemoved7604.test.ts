@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
-    expect(CURRENT_BUILD_NUMBER).toBe(372);
-    expect(VERSION_JSON.version).toBe('v7.6.58');
-    expect(VERSION_JSON.buildNumber).toBe(372);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
+    expect(CURRENT_BUILD_NUMBER).toBe(373);
+    expect(VERSION_JSON.version).toBe('v7.6.59');
+    expect(VERSION_JSON.buildNumber).toBe(373);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,19 +330,19 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.58');
-    expect(top.buildNumber).toBe(372);
+    expect(top.version).toBe('v7.6.59');
+    expect(top.buildNumber).toBe(373);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('လက်ကျန်ကတ် တစ်ကတ်လုံး အရောင်စိုစိုတောက်တောက်');
-    expect(top.titleEn).toBe('Whole-card vivid treatment for the Records balance card');
+    expect(top.titleMy).toBe('လက်ကျန်ကတ် အဓိကပမာဏ Hero အတိုင်း ထူထူစိုစို');
+    expect(top.titleEn).toBe('Records balance figure matches the Hero — thick and vivid');
     expect(top.changesMy).toEqual([
-      'လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ',
-      'အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်ကတ်ပြားလေးတွေထဲမှာ ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အနီ၊ အဝါ၊ အစိမ်း၊ အဖြူ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ',
+      'အရောင် တောက်ပမှုနဲ့ အဓိပ္ပာယ်တွေ (အနီ၊ အဝါ၊ အဖြူ) အတိုင်းပါပဲ',
       'ဖုန်း အကျယ် 360px မှာလည်း စာတွေ ညှပ်မသွားဘဲ အပြည့်အစုံ ပေါ်ပါပြီ',
         ]);
     expect(top.changesEn).toEqual([
-      'The balance card now sits on a rich gradient ground with a luminous main figure',
-      'Opening, closing and net sit in tinted chips with bright labels — red, yellow, green and white keep their meanings',
+      'The main figure is now as large and bold as the Dashboard Hero figure',
+      'Glow and colour meanings (red, yellow, white) unchanged',
       'No clipped text at any phone width, including 360px',
         ]);
     expect(JSON.stringify(top)).not.toContain('Admin');

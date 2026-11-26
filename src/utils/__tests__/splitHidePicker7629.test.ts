@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
-    expect(CURRENT_BUILD_NUMBER).toBe(372);
-    expect(VERSION_JSON.version).toBe('v7.6.58');
-    expect(VERSION_JSON.buildNumber).toBe(372);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
+    expect(CURRENT_BUILD_NUMBER).toBe(373);
+    expect(VERSION_JSON.version).toBe('v7.6.59');
+    expect(VERSION_JSON.buildNumber).toBe(373);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.58');
-    expect(entry.buildNumber).toBe(372);
-    expect(entry.changesMy[0]).toBe('လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ');
+    expect(entry.version).toBe('v7.6.59');
+    expect(entry.buildNumber).toBe(373);
+    expect(entry.changesMy[0]).toBe('အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

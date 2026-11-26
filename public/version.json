@@ -1,15 +1,15 @@
 {
-  "version": "v7.6.58",
-  "buildNumber": 372,
+  "version": "v7.6.59",
+  "buildNumber": 373,
   "releasedAt": "2026-11-12T00:14:37.485Z",
   "changesMy": [
-    "လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ",
-    "အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်ကတ်ပြားလေးတွေထဲမှာ ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အနီ၊ အဝါ၊ အစိမ်း၊ အဖြူ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ",
+    "အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ",
+    "အရောင် တောက်ပမှုနဲ့ အဓိပ္ပာယ်တွေ (အနီ၊ အဝါ၊ အဖြူ) အတိုင်းပါပဲ",
     "ဖုန်း အကျယ် 360px မှာလည်း စာတွေ ညှပ်မသွားဘဲ အပြည့်အစုံ ပေါ်ပါပြီ"
   ],
   "changesEn": [
-    "The balance card now sits on a rich gradient ground with a luminous main figure",
-    "Opening, closing and net sit in tinted chips with bright labels — red, yellow, green and white keep their meanings",
+    "The main figure is now as large and bold as the Dashboard Hero figure",
+    "Glow and colour meanings (red, yellow, white) unchanged",
     "No clipped text at any phone width, including 360px"
   ]
 }

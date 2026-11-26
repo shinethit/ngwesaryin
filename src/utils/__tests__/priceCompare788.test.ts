@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
-    expect(CURRENT_BUILD_NUMBER).toBe(372);
-    expect(VERSION_JSON.version).toBe('v7.6.58');
-    expect(VERSION_JSON.buildNumber).toBe(372);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
+    expect(CURRENT_BUILD_NUMBER).toBe(373);
+    expect(VERSION_JSON.version).toBe('v7.6.59');
+    expect(VERSION_JSON.buildNumber).toBe(373);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,14 +141,14 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.58');
-    expect(entry.buildNumber).toBe(372);
+    expect(entry.version).toBe('v7.6.59');
+    expect(entry.buildNumber).toBe(373);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
     expect(entry.tagLabelMy).toBe('Bug Fix');
     expect(entry.tagLabelEn).toBe('Bug Fix');
-    expect(entry.titleMy).toBe('လက်ကျန်ကတ် တစ်ကတ်လုံး အရောင်စိုစိုတောက်တောက်');
-    expect(entry.titleEn).toBe('Whole-card vivid treatment for the Records balance card');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် အဓိကပမာဏ Hero အတိုင်း ထူထူစိုစို');
+    expect(entry.titleEn).toBe('Records balance figure matches the Hero — thick and vivid');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);

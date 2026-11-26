@@ -71,7 +71,10 @@ describe('vivid card wiring (v7.6.58)', () => {
   });
 
   it('the big figure is larger, black weight, and glows', () => {
-    expect(TX_SRC).toContain('text-[26px] leading-tight font-black font-mono');
+    // [v7.6.59] Hero parity: the figure is the Hero's exact phone
+    // size (text-3xl, 30px — Dashboard.tsx:541), not 26px.
+    expect(TX_SRC).toContain('text-3xl leading-tight font-black font-mono');
+    expect(TX_SRC).not.toContain('text-[26px] leading-tight font-black');
     expect(TX_SRC).toContain('balanceGlowClass(monthBalance.closing)');
   });
 

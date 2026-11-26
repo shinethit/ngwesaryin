@@ -113,25 +113,25 @@ describe('Data Management Cloud Sync slim row (v7.6.35)', () => {
 // ---------- Version bump to v7.6.41 (build 355) ----------
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
-    expect(CURRENT_BUILD_NUMBER).toBe(372);
-    expect(VERSION_JSON.version).toBe('v7.6.58');
-    expect(VERSION_JSON.buildNumber).toBe(372);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
+    expect(CURRENT_BUILD_NUMBER).toBe(373);
+    expect(VERSION_JSON.version).toBe('v7.6.59');
+    expect(VERSION_JSON.buildNumber).toBe(373);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.58');
-    expect(entry.buildNumber).toBe(372);
+    expect(entry.version).toBe('v7.6.59');
+    expect(entry.buildNumber).toBe(373);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('လက်ကျန်ကတ် တစ်ကတ်လုံး အရောင်စိုစိုတောက်တောက်');
-    expect(entry.titleEn).toBe('Whole-card vivid treatment for the Records balance card');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် အဓိကပမာဏ Hero အတိုင်း ထူထူစိုစို');
+    expect(entry.titleEn).toBe('Records balance figure matches the Hero — thick and vivid');
     expect(entry.changesMy).toEqual([
-      'လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ',
-      'အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်ကတ်ပြားလေးတွေထဲမှာ ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အနီ၊ အဝါ၊ အစိမ်း၊ အဖြူ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ',
+      'အရောင် တောက်ပမှုနဲ့ အဓိပ္ပာယ်တွေ (အနီ၊ အဝါ၊ အဖြူ) အတိုင်းပါပဲ',
       'ဖုန်း အကျယ် 360px မှာလည်း စာတွေ ညှပ်မသွားဘဲ အပြည့်အစုံ ပေါ်ပါပြီ',
         ]);
     expect(entry.changesEn).toEqual([
-      'The balance card now sits on a rich gradient ground with a luminous main figure',
-      'Opening, closing and net sit in tinted chips with bright labels — red, yellow, green and white keep their meanings',
+      'The main figure is now as large and bold as the Dashboard Hero figure',
+      'Glow and colour meanings (red, yellow, white) unchanged',
       'No clipped text at any phone width, including 360px',
         ]);
   });

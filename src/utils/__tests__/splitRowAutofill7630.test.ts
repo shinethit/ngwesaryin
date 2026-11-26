@@ -125,22 +125,22 @@ describe('addSplitRow wiring (v7.6.30)', () => {
 
 describe('Version bump to v7.6.30 (build 344)', () => {
   it('version surfaces agree on v7.6.30 / build 344', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.58');
-    expect(CURRENT_BUILD_NUMBER).toBe(372);
-    expect(VERSION_JSON.version).toBe('v7.6.58');
-    expect(VERSION_JSON.buildNumber).toBe(372);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
+    expect(CURRENT_BUILD_NUMBER).toBe(373);
+    expect(VERSION_JSON.version).toBe('v7.6.59');
+    expect(VERSION_JSON.buildNumber).toBe(373);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.58');
-    expect(entry.buildNumber).toBe(372);
+    expect(entry.version).toBe('v7.6.59');
+    expect(entry.buildNumber).toBe(373);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(3);
     expect(entry.changesEn).toHaveLength(3);
     expect(entry.changesMy[0]).toBe(
-      'လက်ကျန်ကတ်ရဲ့ အောက်ခံက ရောင်စုံအလင်းအမှောင် ဖြစ်လာပြီး အဓိကပမာဏက တောက်ပလာပါပြီ',
+      'အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The balance card now sits on a rich gradient ground with a luminous main figure',
+      'The main figure is now as large and bold as the Dashboard Hero figure',
     );
   });
 

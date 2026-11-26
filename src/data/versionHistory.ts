@@ -16,10 +16,33 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.58';
-export const CURRENT_BUILD_NUMBER = 372;
+export const CURRENT_APP_VERSION = 'v7.6.59';
+export const CURRENT_BUILD_NUMBER = 373;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.59',
+    buildNumber: 373,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'လက်ကျန်ကတ် အဓိကပမာဏ Hero အတိုင်း ထူထူစိုစို',
+    titleEn: 'Records balance figure matches the Hero — thick and vivid',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အဓိကပမာဏက Dashboard Hero ရဲ့ ပမာဏအတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ။ အနီ၊ အဝါ၊ အဖြူ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ။',
+    descriptionEn: 'The Records balance card main figure is now as large and bold as the Dashboard Hero figure. Red, yellow and white keep their meanings.',
+    changesMy: [
+      'အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ',
+      'အရောင် တောက်ပမှုနဲ့ အဓိပ္ပာယ်တွေ (အနီ၊ အဝါ၊ အဖြူ) အတိုင်းပါပဲ',
+      'ဖုန်း အကျယ် 360px မှာလည်း စာတွေ ညှပ်မသွားဘဲ အပြည့်အစုံ ပေါ်ပါပြီ',
+    ],
+    changesEn: [
+      'The main figure is now as large and bold as the Dashboard Hero figure',
+      'Glow and colour meanings (red, yellow, white) unchanged',
+      'No clipped text at any phone width, including 360px',
+    ],
+  },
   {
     version: 'v7.6.58',
     buildNumber: 372,

@@ -690,11 +690,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       {/* [v7.6.45] Records balance card (Part D) — Records tab ONLY,
           never the Dashboard hero. Compact navy: the title, wallet
           pill and eye share the top row (no dead space); the
-          balance is 26px with a luminous glow; opening /
-          closing / net sit on one compact row. The calendar
-          (Part E) opens inline below, default hidden. Amounts use
-          the lakh format with the exact kyat in the tooltip, like
-          the rows below.
+          balance is 30px (text-3xl, the Hero's exact phone size)
+          with a luminous glow; opening / closing / net sit on
+          one compact row. The calendar (Part E) opens inline
+          below, default hidden. Amounts use the lakh format with
+          the exact kyat in the tooltip, like the rows below.
           [v7.6.58] Whole-card vivid treatment: saturated gradient
           ground, tinted chips behind the three sub-figures with
           bright tinted labels, a luminous glow on the big figure
@@ -703,7 +703,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           [v7.6.58 top-up] At 360px and below the chip labels and
           values WRAP instead of truncating: no ellipsis anywhere —
           the longest label fits at 9px and a long value drops its
-          unit ('သိန်း' / 'L') to a second line. */}
+          unit ('သိန်း' / 'L') to a second line.
+          [v7.6.59] The big figure is the Hero's exact phone size
+          (text-3xl, 30px, font-black — Dashboard.tsx:541) with
+          the same glow and tone colour. Tone semantics, numbers,
+          labels, buttons and functions are unchanged. */}
       <div className="rounded-3xl bg-gradient-to-br from-[#0E2247] via-[#1E3A5F] to-[#1D4ED8] text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_12px_30px_rgba(29,78,216,0.40)] border border-indigo-300/25 space-y-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-extrabold text-white truncate">
@@ -750,7 +754,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         <div
-          className={`text-[26px] leading-tight font-black font-mono ${balanceToneClass(monthBalance.closing)} ${balanceGlowClass(monthBalance.closing)}`}
+          className={`text-3xl leading-tight font-black font-mono ${balanceToneClass(monthBalance.closing)} ${balanceGlowClass(monthBalance.closing)}`}
           title={formatMMK(monthBalance.closing)}
         >
           {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}

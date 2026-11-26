@@ -108,8 +108,8 @@ describe('Groups 3–4 — Dashboard and Records stacks (v7.6.42)', () => {
     expect(DASH_SRC).toContain('mt-1 flex flex-col items-start gap-1');
     expect(DASH_SRC).toContain('text-[11px] font-semibold text-slate-400 mt-1.5');
     expect(DASH_SRC).toContain('bg-white rounded-2xl border border-slate-200 p-1.5');
-    expect(DASH_SRC).toContain('grid grid-cols-3 gap-1');
-    expect(count(DASH_SRC, 'px-2 py-1.5 rounded-xl bg-')).toBe(6);
+    expect(DASH_SRC).toContain('grid grid-cols-6 gap-1');
+    expect(count(DASH_SRC, 'px-1 py-1.5 rounded-xl bg-')).toBe(6);
     // Amount leading (descender rule) untouched.
     expect(DASH_SRC).toContain('leading-[1.4]');
   });
@@ -196,18 +196,18 @@ describe('Group 8 — Debts, Vehicles, Data, Categories, Notifications (v7.6.42)
   });
 });
 
-describe('Version pins roll to v7.6.49 / build 363', () => {
+describe('Version pins roll to v7.6.50 / build 364', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
-    expect(CURRENT_BUILD_NUMBER).toBe(363);
-    expect(VERSION_JSON.version).toBe('v7.6.49');
-    expect(VERSION_JSON.buildNumber).toBe(363);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
+    expect(CURRENT_BUILD_NUMBER).toBe(364);
+    expect(VERSION_JSON.version).toBe('v7.6.50');
+    expect(VERSION_JSON.buildNumber).toBe(364);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.49');
-    expect(top.buildNumber).toBe(363);
+    expect(top.version).toBe('v7.6.50');
+    expect(top.buildNumber).toBe(364);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(4);
-    expect(top.changesEn.length).toBe(4);
+    expect(top.changesMy.length).toBe(5);
+    expect(top.changesEn.length).toBe(5);
   });
 });

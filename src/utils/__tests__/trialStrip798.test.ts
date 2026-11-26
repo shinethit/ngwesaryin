@@ -171,7 +171,8 @@ describe('TrialStrip visibility matrix + wording (v7.5.98 Fix 1)', () => {
     expect(DASH_SRC).toContain(
       '<TrialStrip plan={plan} lang={lang} onOpenUpgrade={onOpenUpgrade} />',
     );
-    expect(DASH_SRC).toContain('onOpenUpgrade, onOpenSearch,');
+    expect(DASH_SRC).toContain('onOpenUpgrade,');
+    expect(DASH_SRC).not.toContain('onOpenSearch');
   });
 });
 
@@ -263,22 +264,22 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
-    expect(CURRENT_BUILD_NUMBER).toBe(363);
-    expect(VERSION_JSON.version).toBe('v7.6.49');
-    expect(VERSION_JSON.buildNumber).toBe(363);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
+    expect(CURRENT_BUILD_NUMBER).toBe(364);
+    expect(VERSION_JSON.version).toBe('v7.6.50');
+    expect(VERSION_JSON.buildNumber).toBe(364);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.49');
-    expect(entry.buildNumber).toBe(363);
+    expect(entry.version).toBe('v7.6.50');
+    expect(entry.buildNumber).toBe(364);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
     expect(entry.titleMy).toBe(
-      'ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ',
+      'PDF ဂရပ်ဖ်နဲ့ Dashboard ကျစ်လစ်မှု',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(4);
-    expect(entry.changesEn).toHaveLength(4);
+    expect(entry.changesMy).toHaveLength(5);
+    expect(entry.changesEn).toHaveLength(5);
   });
 
   it('change log has no Admin content and releasedAt is present-only', () => {

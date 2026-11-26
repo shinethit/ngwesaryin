@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
-    expect(CURRENT_BUILD_NUMBER).toBe(363);
-    expect(VERSION_JSON.version).toBe('v7.6.49');
-    expect(VERSION_JSON.buildNumber).toBe(363);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
+    expect(CURRENT_BUILD_NUMBER).toBe(364);
+    expect(VERSION_JSON.version).toBe('v7.6.50');
+    expect(VERSION_JSON.buildNumber).toBe(364);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.49');
-    expect(entry.buildNumber).toBe(363);
-    expect(entry.changesMy[0]).toBe('ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်');
+    expect(entry.version).toBe('v7.6.50');
+    expect(entry.buildNumber).toBe(364);
+    expect(entry.changesMy[0]).toBe('PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

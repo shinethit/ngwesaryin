@@ -329,58 +329,93 @@
   min-width: 52px;
 }
 
-/* [v7.6.36] Horizontal bar chart (categories + sub-categories). */
-.stmt .stmt-bars-note {
+/* [v7.6.50] Stacked-column chart (categories + sub-categories). */
+.stmt .stmt-chart-note {
   color: #444;
   margin: 0 0 8px;
 }
 
-.stmt .stmt-bar-group {
+.stmt .stmt-chart {
   break-inside: avoid;
   page-break-inside: avoid;
-  margin: 0 0 6px;
 }
 
-.stmt .stmt-bar-row {
-  margin: 0 0 4px;
+.stmt .stmt-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-.stmt .stmt-bar-row.stmt-bar-sub {
-  margin-left: 16px;
-}
-
-.stmt .stmt-bar-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.stmt .stmt-bar-name {
-  flex: 1;
-  min-width: 0;
+.stmt .stmt-chart-seg-text {
+  fill: #fff;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.stmt .stmt-bar-sub .stmt-bar-name {
-  font-weight: 400;
+.stmt .stmt-chart-labels {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
 }
 
-.stmt .stmt-bar-track {
-  height: 8px;
-  background: #e2e8f0;
-  border-radius: 9999px;
+.stmt .stmt-chart-label {
+  min-width: 0;
+  text-align: center;
+}
+
+.stmt .stmt-chart-label-name {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  /* At most two lines: long Burmese names wrap once, then clip —
+     the legend below carries the full name. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-top: 2px;
+  overflow-wrap: break-word;
 }
 
-.stmt .stmt-bar-fill {
-  height: 100%;
-  background: #059669;
-  border-radius: 9999px;
+.stmt .stmt-chart-label-num {
+  font-size: 10px;
+  color: #334155;
+  line-height: 1.35;
+  /* The total ("1,200,000 MMK · 41%") wraps instead of bleeding
+     into the neighbouring cell (v7.6.50 render: adjacent totals
+     overlapped at both A4 and 390px widths). */
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
-.stmt .stmt-bar-fill-sub {
-  background: #6ee7b7;
+.stmt .stmt-chart-legend {
+  margin-top: 8px;
+}
+
+.stmt .stmt-chart-legend-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  margin: 0 0 3px;
+}
+
+.stmt .stmt-chart-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+  align-self: center;
+}
+
+.stmt .stmt-chart-legend-no {
+  font-weight: 700;
+  color: #475569;
+  flex: none;
+}
+
+.stmt .stmt-chart-legend-name {
+  flex: 1;
+  min-width: 0;
 }
 
 @media print {

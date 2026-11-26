@@ -354,13 +354,14 @@ describe('statement print wiring (v7.6.27)', () => {
     expect(ANALYTICS_SRC).toContain('statementPeriod');
   });
 
-  it('the print view renders the donut, the bars, the regrouped detail, and the split marker', () => {
+  it('the print view renders the donut, the stacked-column chart, the regrouped detail, and the split marker', () => {
     expect(PRINT_VIEW_SRC).toContain('စာရင်းရှင်းတမ်း');
     expect(PRINT_VIEW_SRC).toContain('Statement');
     expect(PRINT_VIEW_SRC).toContain('ခွဲရေး');
     expect(PRINT_VIEW_SRC).toContain('formatMMK');
     expect(PRINT_VIEW_SRC).toContain('stmt-donut');
-    expect(PRINT_VIEW_SRC).toContain('stmt-bar-fill');
+    expect(PRINT_VIEW_SRC).toContain('stmt-chart-svg');
+    expect(PRINT_VIEW_SRC).not.toContain('stmt-bar-fill');
     expect(PRINT_VIEW_SRC).toContain('stmt-group-row');
     expect(PRINT_VIEW_SRC).toContain('stmt-subhead-row');
     expect(PRINT_VIEW_SRC).toContain('groupStatementDetails');
@@ -379,7 +380,7 @@ describe('statement print wiring (v7.6.27)', () => {
     expect(CSS_SRC).toContain('size: A4');
     expect(CSS_SRC).toContain('#ngwe-preview-root');
     expect(CSS_SRC).toContain('stmt-no-print');
-    expect(CSS_SRC).toContain('stmt-bar-fill');
+    expect(CSS_SRC).toContain('stmt-chart-svg');
     expect(CSS_SRC).toContain('stmt-donut-balance');
   });
 
@@ -526,26 +527,26 @@ describe('iOS print fallback detection (v7.6.36)', () => {
 
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
-    expect(CURRENT_BUILD_NUMBER).toBe(363);
-    expect(VERSION_JSON.version).toBe('v7.6.49');
-    expect(VERSION_JSON.buildNumber).toBe(363);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
+    expect(CURRENT_BUILD_NUMBER).toBe(364);
+    expect(VERSION_JSON.version).toBe('v7.6.50');
+    expect(VERSION_JSON.buildNumber).toBe(364);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.49');
-    expect(entry.buildNumber).toBe(363);
+    expect(entry.version).toBe('v7.6.50');
+    expect(entry.buildNumber).toBe(364);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ');
-    expect(entry.titleEn).toBe('Service fees for vehicle maintenance');
+    expect(entry.titleMy).toBe('PDF ဂရပ်ဖ်နဲ့ Dashboard ကျစ်လစ်မှု');
+    expect(entry.titleEn).toBe('PDF chart and a more compact Dashboard');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(4);
-    expect(entry.changesEn).toHaveLength(4);
+    expect(entry.changesMy).toHaveLength(5);
+    expect(entry.changesEn).toHaveLength(5);
     expect(entry.changesMy[0]).toBe(
-      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
+      'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
+      'The PDF statement now shows spending by category as a stacked-column chart — sub-categories stack inside each column, and it takes much less space',
     );
   });
 

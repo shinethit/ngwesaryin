@@ -215,16 +215,24 @@ export const MultiWalletSelector: React.FC<MultiWalletSelectorProps> = ({
           compact ? 'px-3 py-1.5' : 'px-3.5 py-2.5'
         } ${!isAllSelected ? 'ring-2 ring-emerald-500/30 border-emerald-500 bg-emerald-50/50' : ''}`}
       >
-        <div className="flex items-center gap-1.5 min-w-0 truncate">
+        <div className={`flex items-center gap-1.5 min-w-0 ${compact ? '' : 'truncate'}`}>
           <Filter className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span className="truncate">{getTriggerLabel()}</span>
+          {/* [v7.6.50] Compact (Dashboard one-row header): the label
+              wraps to two lines so the wallet count stays visible in
+              the narrow pill instead of truncating to "ပါဝင်သ…".
+              Non-compact keeps the single-line truncate. */}
+          <span className={compact ? 'line-clamp-2 leading-snug text-left break-words' : 'truncate'}>{getTriggerLabel()}</span>
         </div>
         <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Popover / Dropdown Modal */}
+      {/* [v7.6.50] Popover width is independent of the trigger width:
+          right-aligned, capped at the viewport — the one-row
+          Dashboard header narrows the trigger, and a w-full popover
+          used to shrink to ~186px and cramp every row. */}
       {isOpen && (
-        <div className="absolute z-50 left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-80 bg-white rounded-2xl border border-slate-200 shadow-2xl p-3.5 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute z-50 right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] bg-white rounded-2xl border border-slate-200 shadow-2xl p-3.5 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 min-w-0">

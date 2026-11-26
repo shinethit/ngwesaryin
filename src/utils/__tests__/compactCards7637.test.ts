@@ -99,17 +99,17 @@ describe('Wallet cards are compact (v7.6.37)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
-    expect(CURRENT_BUILD_NUMBER).toBe(363);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.49');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(363);
-    expect(VERSION_JSON.version).toBe('v7.6.49');
-    expect(VERSION_JSON.buildNumber).toBe(363);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
+    expect(CURRENT_BUILD_NUMBER).toBe(364);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.50');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(364);
+    expect(VERSION_JSON.version).toBe('v7.6.50');
+    expect(VERSION_JSON.buildNumber).toBe(364);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
+      'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
+      'The PDF statement now shows spending by category as a stacked-column chart — sub-categories stack inside each column, and it takes much less space',
     );
   });
 });

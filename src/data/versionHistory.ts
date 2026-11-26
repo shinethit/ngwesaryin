@@ -16,10 +16,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.49';
-export const CURRENT_BUILD_NUMBER = 363;
+export const CURRENT_APP_VERSION = 'v7.6.50';
+export const CURRENT_BUILD_NUMBER = 364;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.50',
+    buildNumber: 364,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'PDF ဂရပ်ဖ်နဲ့ Dashboard ကျစ်လစ်မှု',
+    titleEn: 'PDF chart and a more compact Dashboard',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲတွေကို အပိုင်းလိုက် စီထားပြီး၊ အပိုင်းသေးတွေကို အောက်က စာရင်းနဲ့ ပြပေးပါတယ်။ Dashboard မှာလည်း ရက်စွဲနဲ့ ပိုက်ဆံအိတ်ရွေးတဲ့ခလုတ် တစ်ကြောင်းတည်း၊ အမြန် ဝင်ရောက်ရန် ၆ ခု တစ်တန်းတည်း၊ ရက်စွဲရွေးတာနဲ့ Sync ခလုတ် Hero ကတ်ထဲမှာ — နေရာသက်သာပြီး ကြည့်ရ ရှင်းပါတယ်။ ထပ်နေတဲ့ Dashboard ရှာဖွေရန်ခလုတ်ကိုလည်း ဖြုတ်လိုက်ပါပြီ။',
+    descriptionEn: 'The PDF statement now shows spending by category as a stacked-column chart, with sub-categories stacked inside each column and small segments listed in a legend below. The Dashboard is more compact too: the date and wallet picker share one row, the 6 Quick Access tiles sit in a single row, and the period picker and sync button moved into the empty space in the Hero card. The duplicate Dashboard search button is removed.',
+    changesMy: [
+      'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်',
+      'Dashboard အပေါ်မှာ ရက်စွဲနဲ့ ပိုက်ဆံအိတ်ရွေးတဲ့ခလုတ်ကို တစ်ကြောင်းတည်း ဖြစ်အောင် စုလိုက်ပါပြီ',
+      'အမြန် ဝင်ရောက်ရန် ၆ ခုကို တစ်တန်းတည်း ဖြစ်အောင် စုလိုက်ပါပြီ',
+      'ရက်စွဲရွေးတာနဲ့ Sync ခလုတ်ကို Hero ကတ်ထဲက နေရာလွတ်မှာ ထည့်လိုက်ပါပြီ',
+      'Dashboard က ရှာဖွေရန်ခလုတ်ကို ဖြုတ်လိုက်ပါပြီ — အပေါ်ဘားက ရှာဖွေရန်ခလုတ်က နေရာတိုင်းမှာ အလုပ်ဖြစ်ပါတယ်',
+    ],
+    changesEn: [
+      'The PDF statement now shows spending by category as a stacked-column chart — sub-categories stack inside each column, and it takes much less space',
+      'The Dashboard header is now a single row: the date and the wallet picker sit side by side',
+      'The 6 Quick Access tiles now sit in a single row',
+      'The period picker and sync button moved into the empty space in the Hero card',
+      'Removed the duplicate search button on the Dashboard — the top-bar search works on every tab',
+    ],
+  },
   {
     version: 'v7.6.49',
     buildNumber: 363,

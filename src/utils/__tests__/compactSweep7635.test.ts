@@ -111,28 +111,30 @@ describe('Data Management Cloud Sync slim row (v7.6.35)', () => {
 // ---------- Version bump to v7.6.41 (build 355) ----------
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.49');
-    expect(CURRENT_BUILD_NUMBER).toBe(363);
-    expect(VERSION_JSON.version).toBe('v7.6.49');
-    expect(VERSION_JSON.buildNumber).toBe(363);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.50');
+    expect(CURRENT_BUILD_NUMBER).toBe(364);
+    expect(VERSION_JSON.version).toBe('v7.6.50');
+    expect(VERSION_JSON.buildNumber).toBe(364);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.49');
-    expect(entry.buildNumber).toBe(363);
+    expect(entry.version).toBe('v7.6.50');
+    expect(entry.buildNumber).toBe(364);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('ဝန်ဆောင်ခ (လက်ခ) ထည့်နိုင်ပါပြီ');
-    expect(entry.titleEn).toBe('Service fees for vehicle maintenance');
+    expect(entry.titleMy).toBe('PDF ဂရပ်ဖ်နဲ့ Dashboard ကျစ်လစ်မှု');
+    expect(entry.titleEn).toBe('PDF chart and a more compact Dashboard');
     expect(entry.changesMy).toEqual([
-      'ယာဉ်ပြုပြင်မှုမှတ်တမ်းမှာ ဝန်ဆောင်ခ (လက်ခ) သီးခြား ထည့်လို့ရပါပြီ — ပစ္စည်းဖိုးနဲ့ ခွဲထည့်နိုင်ပါတယ်',
-      'ပစ္စည်းဖိုး + ဝန်ဆောင်ခ = စုစုပေါင်းကို အလိုအလျောက် ပေါင်းပြပေးပါတယ်',
-      'မှတ်တမ်းမှာ ပစ္စည်းဖိုး၊ ဝန်ဆောင်ခနဲ့ စုစုပေါင်းကို ခွဲပြပေးပါတယ်',
-      'ဝန်ဆောင်ခမထည့်ထားတဲ့ မှတ်တမ်းဟောင်းတွေလည်း အရင်အတိုင်း ပြပေးပါတယ်',
+      'PDF စာရင်းရှင်းတမ်းမှာ ကဏ္ဍအလိုက် သုံးငွေကို Stacked Column ဂရပ်ဖ်နဲ့ ပြပေးပါပြီ — ကဏ္ဍခွဲအလိုက် အပိုင်းလိုက် မြင်ရပြီး နေရာလည်း သက်သာပါတယ်',
+      'Dashboard အပေါ်မှာ ရက်စွဲနဲ့ ပိုက်ဆံအိတ်ရွေးတဲ့ခလုတ်ကို တစ်ကြောင်းတည်း ဖြစ်အောင် စုလိုက်ပါပြီ',
+      'အမြန် ဝင်ရောက်ရန် ၆ ခုကို တစ်တန်းတည်း ဖြစ်အောင် စုလိုက်ပါပြီ',
+      'ရက်စွဲရွေးတာနဲ့ Sync ခလုတ်ကို Hero ကတ်ထဲက နေရာလွတ်မှာ ထည့်လိုက်ပါပြီ',
+      'Dashboard က ရှာဖွေရန်ခလုတ်ကို ဖြုတ်လိုက်ပါပြီ — အပေါ်ဘားက ရှာဖွေရန်ခလုတ်က နေရာတိုင်းမှာ အလုပ်ဖြစ်ပါတယ်',
     ]);
     expect(entry.changesEn).toEqual([
-      'Maintenance records can now include a service fee (labor), entered separately from parts costs',
-      'Parts cost + service fee are added up automatically into the total',
-      'Records show the breakdown: parts, service fee, and total',
-      'Older records without a service fee keep showing exactly as before',
+      'The PDF statement now shows spending by category as a stacked-column chart — sub-categories stack inside each column, and it takes much less space',
+      'The Dashboard header is now a single row: the date and the wallet picker sit side by side',
+      'The 6 Quick Access tiles now sit in a single row',
+      'The period picker and sync button moved into the empty space in the Hero card',
+      'Removed the duplicate search button on the Dashboard — the top-bar search works on every tab',
     ]);
   });
 

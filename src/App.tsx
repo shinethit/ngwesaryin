@@ -3291,7 +3291,6 @@ export default function App() {
               onAddDebt={handleOpenAddDebt}
               onSelectTab={setActiveTab}
               onOpenUpgrade={() => setIsPremiumModalOpen(true)}
-              onOpenSearch={() => setIsSearchModalOpen(true)}
               onOpenAccountModal={() => setIsAccountModalOpen(true)}
               onClearAllData={handleClearAllData}
               onExportJson={handleExportJson}

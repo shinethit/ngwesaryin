@@ -16,10 +16,43 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.47';
-export const CURRENT_BUILD_NUMBER = 361;
+export const CURRENT_APP_VERSION = 'v7.6.48';
+export const CURRENT_BUILD_NUMBER = 362;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.48',
+    buildNumber: 362,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု',
+    titleEn: 'Complete pictorial icon library — 14 packs, 463 pictures',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု။ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများ၊ အခြားအကုန်ပါပါတယ်။ အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ သူ့အုပ်စုနဲ့သူ ခွဲပြထားပြီး၊ အခြေခံ ၁၀ ခုကို Free၊ ကျန်တာတွေကို Premium နဲ့ သုံးနိုင်ပါတယ်။',
+    descriptionEn: 'The complete pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more. The picker groups every picture into its own pack, the 10 most everyday pictures in each pack are free, and the rest are Premium.',
+    changesMy: [
+      'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်',
+      'အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ ရုပ်ပုံတွေကို သူ့အုပ်စုနဲ့သူ ခွဲပြထားပါပြီ — လိုချင်တဲ့အုပ်စုကို နှိပ်ပြီး ရှာရလွယ်ပါတယ်',
+      'အခြေခံအိုင်ကွန် (Free) — အုပ်စုတစ်ခုမှာ အသုံးအများဆုံး ၁၀ ခုကို အားလုံးသုံးနိုင်ပါတယ်',
+      'အထူးအိုင်ကွန် (Premium) — အုပ်စုတိုင်းရဲ့ ကျန်တဲ့ရုပ်ပုံအကုန်လုံးကို Premium နဲ့ သုံးနိုင်ပါတယ်',
+      'Premium နဲ့ ရွေးထားတဲ့ အိုင်ကွန်က Premium သက်တမ်းကုန်သွားရင်လည်း ကဏ္ဍမှာ ဆက်ကျန်နေပါမယ် — ပြောင်းလိုက်မှသာ ပြန်ရွေးလို့ မရတော့ပါဘူး',
+      'အိုင်ကွန်ရုပ်ပုံအကုန်လုံးကို အင်တာနက်မရှိလည်း ဖွင့်လို့ရအောင် ဖုန်းထဲမှာ သိမ်းထားပေးပါပြီ',
+      'အိုင်ကွန်ဟောင်း (ရိုးရိုးပုံလေးတွေ) ကိုလည်း ဆက်သုံးနိုင်ပါပြီ — ကိုယ်တိုင်ထည့်ထားတဲ့ ကဏ္ဍတွေမှာ အရင်အတိုင်း ပြပေးပါတယ်',
+      'ကဏ္ဍခွဲတွေမှာလည်း ကိုယ်ပိုင်အိုင်ကွန်ထည့်နိုင်ပါပြီ — မူရင်းကဏ္ဍခွဲတိုင်းမှာ သူ့အဓိပ္ပာယ်နဲ့ ကိုက်တဲ့ အိုင်ကွန်ကို ကြိုတင်ထည့်ပေးထားပါတယ်'
+    ],
+    changesEn: [
+      'The full pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more',
+      'The icon picker groups every picture into its own pack, so the one you want is easy to find',
+      'Core icons (Free) — the 10 most everyday pictures in each pack are free for everyone',
+      'Special icons (Premium) — all the remaining pictures in every pack are available with Premium',
+      'An icon chosen while Premium stays on its category after Premium lapses — it only becomes unavailable again once you change away from it',
+      'All icon pictures are saved on the phone so they still show without internet',
+      'The classic plain icons still work too — custom categories keep showing them exactly as before',
+      'Sub-categories can have their own icons too — every default sub-category comes pre-assigned with a matching icon'
+    ],
+  },
   {
     version: 'v7.6.47',
     buildNumber: 361,

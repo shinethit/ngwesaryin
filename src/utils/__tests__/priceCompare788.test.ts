@@ -127,10 +127,10 @@ describe('Price Compare v7.5.88 — Plans tile rename', () => {
 
 describe('Version v7.6.27 — history entry and version.json in sync', () => {
   it('current version is v7.6.27 / build 341', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
-    expect(CURRENT_BUILD_NUMBER).toBe(361);
-    expect(VERSION_JSON.version).toBe('v7.6.47');
-    expect(VERSION_JSON.buildNumber).toBe(361);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
+    expect(CURRENT_BUILD_NUMBER).toBe(362);
+    expect(VERSION_JSON.version).toBe('v7.6.48');
+    expect(VERSION_JSON.buildNumber).toBe(362);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine: the
     // v7.5.77 script sets it dynamically, so NEVER assert a specific
@@ -141,19 +141,19 @@ describe('Version v7.6.27 — history entry and version.json in sync', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.47');
-    expect(entry.buildNumber).toBe(361);
-    expect(entry.releaseDate).toBe('2026-11-25');
+    expect(entry.version).toBe('v7.6.48');
+    expect(entry.buildNumber).toBe(362);
+    expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
     expect(entry.tagLabelMy).toBe('Feature အသစ်');
     expect(entry.tagLabelEn).toBe('New Feature');
-    expect(entry.titleMy).toBe('ကဏ္ဍအိုင်ကွန် ရုပ်ပုံအသစ်များ');
-    expect(entry.titleEn).toBe('New pictorial category icons');
+    expect(entry.titleMy).toBe('အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု');
+    expect(entry.titleEn).toBe('Complete pictorial icon library — 14 packs, 463 pictures');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(7);
-    expect(entry.changesEn).toHaveLength(7);
+    expect(entry.changesMy).toHaveLength(8);
+    expect(entry.changesEn).toHaveLength(8);
   });
 });

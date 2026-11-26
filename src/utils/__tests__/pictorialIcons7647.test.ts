@@ -1,7 +1,7 @@
-// [v7.6.47] Redrawn flat pictorial category icons. Pure-helper
+// [v7.6.48] Redrawn flat pictorial category icons. Pure-helper
 // coverage (resolution + Free/Premium/guest selection gating) plus
 // wiring pins: the bundled image files exist and are real WebP,
-// the service worker precaches all 17, every render surface uses
+// the service worker precaches all 463, every render surface uses
 // CategoryTile with the category id, and the picker gates at
 // selection time only (rendering never checks the plan, so a
 // Premium icon chosen earlier is never stripped when the plan
@@ -30,7 +30,7 @@ const VERSION_JSON = JSON.parse(
   readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
 );
 
-describe('resolvePictorialIcon (v7.6.47)', () => {
+describe('resolvePictorialIcon (v7.6.48)', () => {
   it('an explicit pic: value wins over the default-category map', () => {
     expect(resolvePictorialIcon({ categoryId: 'cat_food', iconName: 'pic:vehicle' })).toBe('vehicle');
     expect(resolvePictorialIcon({ categoryId: 'cat_salary', iconName: 'pic:food' })).toBe('food');
@@ -67,7 +67,7 @@ describe('resolvePictorialIcon (v7.6.47)', () => {
   });
 });
 
-describe('isPictorialLocked (v7.6.47 selection gating)', () => {
+describe('isPictorialLocked (v7.6.48 selection gating)', () => {
   it('guest mode locks every pictorial, like Analysis / Price Compare', () => {
     for (const key of PICTORIAL_ICON_KEYS) {
       expect(isPictorialLocked(key, 'guest')).toBe(true);
@@ -80,10 +80,18 @@ describe('isPictorialLocked (v7.6.47 selection gating)', () => {
     }
   });
 
-  it('free unlocks all 17 basic icons shipped in v7.6.47 (every group has at most 10)', () => {
-    for (const key of PICTORIAL_ICON_KEYS) {
-      expect(isPictorialLocked(key, 'free')).toBe(false);
+  it('free unlocks exactly the first 10 basics of each group; later entries stay locked', () => {
+    for (const group of PICTORIAL_ICON_GROUPS) {
+      group.icons.forEach((entry, index) => {
+        expect(isPictorialLocked(entry.key, 'free')).toBe(index >= 10);
+      });
     }
+    // Spot checks at the tier boundary.
+    expect(isPictorialLocked('sofa', 'free')).toBe(false);
+    expect(isPictorialLocked('iron', 'free')).toBe(true);
+    expect(isPictorialLocked('sleigh', 'free')).toBe(false);
+    expect(isPictorialLocked('santa-belt', 'free')).toBe(true);
+    expect(isPictorialLocked('dollar-bills', 'free')).toBe(true);
   });
 
   it('an unknown key stays locked for non-premium plans', () => {
@@ -98,7 +106,7 @@ describe('isPictorialLocked (v7.6.47 selection gating)', () => {
   });
 });
 
-describe('pictorial icon groups (v7.6.47)', () => {
+describe('pictorial icon groups (v7.6.48)', () => {
   it('every key appears in exactly one group, and every group entry is a known key', () => {
     const seen: string[] = [];
     for (const group of PICTORIAL_ICON_GROUPS) {
@@ -122,7 +130,7 @@ describe('pictorial icon groups (v7.6.47)', () => {
   });
 });
 
-describe('pictorial wiring pins (v7.6.47)', () => {
+describe('pictorial wiring pins (v7.6.48)', () => {
   it('CategoryIcon renders pictorials and exports the shared CategoryTile', () => {
     const src = SRC('../../components/CategoryIcon.tsx');
     expect(src).toContain('resolvePictorialIcon');
@@ -155,9 +163,9 @@ describe('pictorial wiring pins (v7.6.47)', () => {
     expect(SRC('../../components/TransactionDetailModal.tsx')).not.toContain('isPictorialLocked');
   });
 
-  it('the service worker precaches all 17 icons under a bumped cache name', () => {
+  it('the service worker precaches all 463 icons under a bumped cache name', () => {
     const src = SRC('../../../public/sw.js');
-    expect(src).toContain("const CACHE_NAME = 'ngwesaryin-live-v10'");
+    expect(src).toContain("const CACHE_NAME = 'ngwesaryin-live-v11'");
     expect(src).toContain('bump CACHE_NAME on EVERY release');
     for (const key of PICTORIAL_ICON_KEYS) {
       expect(src).toContain(`'/icons/${key}.webp'`);
@@ -165,19 +173,19 @@ describe('pictorial wiring pins (v7.6.47)', () => {
   });
 });
 
-describe('Version pins roll to v7.6.47 / build 361', () => {
+describe('Version pins roll to v7.6.48 / build 362', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
-    expect(CURRENT_BUILD_NUMBER).toBe(361);
-    expect(VERSION_JSON.version).toBe('v7.6.47');
-    expect(VERSION_JSON.buildNumber).toBe(361);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
+    expect(CURRENT_BUILD_NUMBER).toBe(362);
+    expect(VERSION_JSON.version).toBe('v7.6.48');
+    expect(VERSION_JSON.buildNumber).toBe(362);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.47');
-    expect(top.buildNumber).toBe(361);
+    expect(top.version).toBe('v7.6.48');
+    expect(top.buildNumber).toBe(362);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(7);
-    expect(top.changesEn.length).toBe(7);
+    expect(top.changesMy.length).toBe(8);
+    expect(top.changesEn.length).toBe(8);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

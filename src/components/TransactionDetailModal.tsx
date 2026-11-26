@@ -3,7 +3,8 @@ import { X, Edit2, Lock } from 'lucide-react';
 import { Category, FuelLog, Transaction, VehicleMaintenance, Wallet } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
-import { CategoryTile } from './CategoryIcon';
+import { CategoryTile, CategoryIcon } from './CategoryIcon';
+import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { displayMenuUnit } from '../utils/shopMenuUpdate';
 import { hasSplits, getSplitAttribution } from '../utils/transactionSplits';
 import { isWalletMatch } from '../utils/walletBalance';
@@ -185,7 +186,11 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
           {subCat && (
             <div className="flex items-center justify-between gap-3">
               <span className="text-slate-500 text-xs">{lang === 'my' ? 'ကဏ္ဍခွဲ:' : 'Sub-category:'}</span>
-              <span className="font-semibold text-slate-900 text-right break-words">{lang === 'my' ? subCat.name : subCat.nameEn}</span>
+              <span className="inline-flex items-center gap-1.5 font-semibold text-slate-900 text-right break-words">
+                {/* [v7.6.48] Sub-category's own resolved icon; no categoryId. */}
+                <CategoryIcon name={resolveSubCategoryIconValue(subCat, cat)} className="w-4 h-4 shrink-0" />
+                <span>{lang === 'my' ? subCat.name : subCat.nameEn}</span>
+              </span>
             </div>
           )}
 
@@ -297,7 +302,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 <div key={idx} className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-800">
                   <span className="min-w-0 break-words">
                     {getCategoryDisplayName(slice.categoryId, categories, lang)}
-                    {sliceSub && <span className="text-slate-500"> · {lang === 'my' ? sliceSub.name : sliceSub.nameEn}</span>}
+                    {sliceSub && <span className="text-slate-500"> · <CategoryIcon name={resolveSubCategoryIconValue(sliceSub, sliceCat)} className="w-3 h-3 shrink-0 inline-block align-[-2px]" /> {lang === 'my' ? sliceSub.name : sliceSub.nameEn}</span>}
                     {/* [v7.6.41] A row bought at a different shop than
                         the entry shop names that shop here; rows on
                         the entry shop show nothing extra (the shop is

@@ -422,26 +422,26 @@ describe('picker wiring (v7.6.17)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
-    expect(CURRENT_BUILD_NUMBER).toBe(361);
-    expect(VERSION_JSON.version).toBe('v7.6.47');
-    expect(VERSION_JSON.buildNumber).toBe(361);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
+    expect(CURRENT_BUILD_NUMBER).toBe(362);
+    expect(VERSION_JSON.version).toBe('v7.6.48');
+    expect(VERSION_JSON.buildNumber).toBe(362);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.47');
-    expect(entry.buildNumber).toBe(361);
-    expect(entry.releaseDate).toBe('2026-11-25');
+    expect(entry.version).toBe('v7.6.48');
+    expect(entry.buildNumber).toBe(362);
+    expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('ကဏ္ဍအိုင်ကွန် ရုပ်ပုံအသစ်များ');
-    expect(entry.titleEn).toBe('New pictorial category icons');
+    expect(entry.titleMy).toBe('အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု');
+    expect(entry.titleEn).toBe('Complete pictorial icon library — 14 packs, 463 pictures');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(7);
-    expect(entry.changesEn).toHaveLength(7);
+    expect(entry.changesMy).toHaveLength(8);
+    expect(entry.changesEn).toHaveLength(8);
     expect(entry.changesMy[0]).toBe(
-      'ကဏ္ဍအိုင်ကွန်တွေကို ရုပ်ပုံအလှလေးတွေနဲ့ ပြပေးပါပြီ — ဝင်ငွေ/အသုံးစရိတ် ကဏ္ဍ ၁၇ ခုလုံးမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ',
+      'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်',
     );
     expect(entry.changesEn[0]).toBe(
-      'Category icons are now colourful pictures — all 17 default income and expense categories have their own pictorial circle icon',
+      'The full pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more',
     );
   });
 

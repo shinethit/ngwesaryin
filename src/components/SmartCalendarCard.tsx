@@ -13,6 +13,7 @@ import {
 import { isTransferTransaction, isWalletMatch, isSharedWallet } from '../utils/walletBalance';
 import { getLocalDateString } from '../utils/dateUtils';
 import { CategoryTile } from './CategoryIcon';
+import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 
 interface SmartCalendarCardProps {
   transactions: Transaction[];
@@ -657,6 +658,10 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                     const shopLine = !fuelLine && t.shopName && t.shopName.trim() ? t.shopName.trim() : null;
                     const catColor = cat?.color || (isInc ? '#10B981' : '#EF4444');
                     const catIcon = cat?.icon || 'Tag';
+                    // [v7.6.48] When the row's main label is a sub-category
+                    // name, the tile shows the sub-category's resolved
+                    // icon instead of the parent tile.
+                    const tileSub = t.subCategoryId ? cat?.subCategories?.find((s) => s.id === t.subCategoryId) : undefined;
                     // [v7.5.56] Shared badge on the row's wallet (finding 25).
                     const txWallet = findWalletForTx(t.walletId);
                     const txShared = isSharedWallet(txWallet);
@@ -667,8 +672,9 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <CategoryTile
-                              categoryId={cat?.id}
-                              icon={catIcon}
+                              {...(tileSub
+                                ? { icon: resolveSubCategoryIconValue(tileSub, cat) }
+                                : { categoryId: cat?.id, icon: catIcon })}
                               color={catColor}
                               sizeClassName="w-7 h-7"
                               roundedClassName="rounded-xl"

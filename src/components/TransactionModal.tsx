@@ -21,7 +21,8 @@ import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatter
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
-import { CategoryTile } from './CategoryIcon';
+import { CategoryTile, CategoryIcon } from './CategoryIcon';
+import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { CategoryPickerModal } from './CategoryPickerModal';
 import { FuelExpenseGuideModal } from './vehicles/FuelExpenseGuideModal';
@@ -2220,7 +2221,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 {categoryId ? (
                   <>
                     <div className="text-sm font-bold text-slate-900 truncate">{selectedCatObj ? (lang === 'my' ? selectedCatObj.name : selectedCatObj.nameEn) : ''}</div>
-                    {(() => { const sub = availableSubCats.find((s) => s.id === subCategoryId); if (!sub) return null; return (<div className="text-xs text-emerald-700 truncate mt-0.5">↳ {lang === 'my' ? sub.name : sub.nameEn}</div>); })()}
+                    {(() => { const sub = availableSubCats.find((s) => s.id === subCategoryId); if (!sub) return null; return (<div className="text-xs text-emerald-700 truncate mt-0.5 flex items-center gap-1">{/* [v7.6.48] Sub-category's own resolved icon; no categoryId. */}<CategoryIcon name={resolveSubCategoryIconValue(sub, selectedCatObj)} className="w-3 h-3 shrink-0" /><span className="truncate">↳ {lang === 'my' ? sub.name : sub.nameEn}</span></div>); })()}
                   </>
                 ) : <div className="text-sm font-bold text-slate-400">{lang === 'my' ? 'ကဏ္ဍ ရွေးရန်' : 'Select category'}</div>}
               </div>

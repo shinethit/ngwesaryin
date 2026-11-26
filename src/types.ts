@@ -197,6 +197,9 @@ export interface SubCategory {
   name: string;
   nameEn: string;
   isCustom?: boolean;
+  // [v7.6.48] Optional icon: a Lucide name or `pic:<key>` — same value
+  // domain as Category.icon. Unset = parent category icon fallback.
+  icon?: string;
 }
 
 export interface Category {

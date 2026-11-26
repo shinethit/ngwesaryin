@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, Plus, Lock, Check, ChevronRight } from 'lucide-react';
 import { Category, PlanType, SubCategory, Transaction, TransactionType } from '../types';
 import { CategoryTile } from './CategoryIcon';
+import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { sortCategoriesByFrequency, sortSubCategoriesByFrequency } from '../utils/categoryFrequency';
 
 interface Props {
@@ -270,9 +271,12 @@ export const CategoryPickerModal: React.FC<Props> = ({
 
                           <div className="absolute left-[-14px] top-1/2 w-3 h-px bg-slate-200" />
 
+                          {/* [v7.6.48] Sub-category's own resolved icon
+                              (own icon, else default map, else parent). No
+                              categoryId: a lucide sub icon must not be
+                              overridden by the parent pictorial. */}
                           <CategoryTile
-                            categoryId={cat.id}
-                            icon={cat.icon}
+                            icon={resolveSubCategoryIconValue(sub, cat)}
                             color={cat.color || '#94A3B8'}
                             sizeClassName="w-7 h-7"
                             roundedClassName="rounded-lg"

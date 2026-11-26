@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, X, ArrowDownLeft, HandCoins, Wallet, Tag, Layers, ChevronRight, Store, Car } from 'lucide-react';
-import { Category, Debt, Transaction, Wallet as WalletType, ShopContact, Vehicle } from '../types';
+import { Category, Debt, SubCategory, Transaction, Wallet as WalletType, ShopContact, Vehicle } from '../types';
 import { formatMMK } from '../utils/formatters';
-import { CategoryTile } from './CategoryIcon';
+import { CategoryTile, CategoryIcon } from './CategoryIcon';
+import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { buildWalletMap } from '../utils/walletBalance';
 import { toLatinDigits } from '../utils/myanmarDigits';
 // [v7.6.44] Shared debounced search input: typing re-renders only the
@@ -95,7 +96,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const walletMap = useMemo(() => buildWalletMap(wallets), [wallets]);
   const subCatMap = useMemo(() => {
-    const map = new Map<string, { name: string; nameEn: string }>();
+    const map = new Map<string, SubCategory>();
     categories.forEach((c) => {
       (c.subCategories || []).forEach((s) => {
         map.set(s.id, s);
@@ -471,8 +472,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                               <span>{lang === 'my' ? wallet?.name : wallet?.nameEn}</span>
                             </span>
                             {subCat && (
-                              <span className="text-[11px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">
-                                {lang === 'my' ? subCat.name : subCat.nameEn}
+                              <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">
+                                {/* [v7.6.48] Sub-category's own resolved icon; no categoryId. */}
+                                <CategoryIcon name={resolveSubCategoryIconValue(subCat, cat)} className="w-3 h-3 shrink-0" />
+                                <span>{lang === 'my' ? subCat.name : subCat.nameEn}</span>
                               </span>
                             )}
                           </div>

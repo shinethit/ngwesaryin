@@ -193,43 +193,45 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.47');
-    expect(CURRENT_BUILD_NUMBER).toBe(361);
-    expect(VERSION_JSON.version).toBe('v7.6.47');
-    expect(VERSION_JSON.buildNumber).toBe(361);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.48');
+    expect(CURRENT_BUILD_NUMBER).toBe(362);
+    expect(VERSION_JSON.version).toBe('v7.6.48');
+    expect(VERSION_JSON.buildNumber).toBe(362);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('top history entry is the v7.6.18 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.47');
-    expect(entry.buildNumber).toBe(361);
-    expect(entry.releaseDate).toBe('2026-11-25');
+    expect(entry.version).toBe('v7.6.48');
+    expect(entry.buildNumber).toBe(362);
+    expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('ကဏ္ဍအိုင်ကွန် ရုပ်ပုံအသစ်များ');
-    expect(entry.titleEn).toBe('New pictorial category icons');
+    expect(entry.titleMy).toBe('အိုင်ကွန်ရုပ်ပုံ အစုံအလင် — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု');
+    expect(entry.titleEn).toBe('Complete pictorial icon library — 14 packs, 463 pictures');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'ကဏ္ဍအိုင်ကွန်တွေကို ရုပ်ပုံအလှလေးတွေနဲ့ ပြပေးပါပြီ — ဝင်ငွေ/အသုံးစရိတ် ကဏ္ဍ ၁၇ ခုလုံးမှာ ကိုယ်ပိုင်အရုပ်ပုံပါတဲ့ စက်ဝိုင်းအိုင်ကွန်တွေ ပါလာပါပြီ',
-      'မှတ်တမ်းစာရင်း၊ ကဏ္ဍရွေးချယ်မှု၊ အသေးစိတ်ကြည့်ရှုမှုနဲ့ ပြက္ခဒိန်တို့မှာ အိုင်ကွန်အသစ်တွေကို တစ်နေရာတည်း တသမတ်တည်း ပြပေးပါပြီ',
-      'အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ ရုပ်ပုံအိုင်ကွန်တွေကို အုပ်စုခွဲပြီး ပြပေးပါပြီ — ငွေ၊ အစားအသောက်၊ အိမ်/ဈေးဝယ်၊ ယာဉ်/ခရီး၊ ကျန်းမာရေး၊ ဖျော်ဖြေရေးတို့အလိုက် ရှာရလွယ်ပါပြီ',
-      'ရုပ်ပုံအိုင်ကွန်အုပ်စုတွေကို အခြေခံအုပ်စု (Free) နဲ့ အထူးအုပ်စု (Premium) ဆိုပြီး ခွဲထားပါပြီ — အထူးအုပ်စုတွေကို နောက်ဗားရှင်းတွေမှာ ထပ်ထည့်ပေးပါမယ်',
+      'ကဏ္ဍအိုင်ကွန်ရုပ်ပုံတွေ အကုန်လုံး ရောက်လာပါပြီ — အုပ်စု ၁၄ ခု၊ ရုပ်ပုံ ၄၆၃ ခု၊ အိမ်၊ ပြုပြင်ရေး၊ အစားအသောက်၊ မီးဖိုချောင်၊ နေ့စဉ်သုံး၊ အလှအပ၊ အိမ်မွေးတိရစ္ဆာန်၊ ကျန်းမာရေး၊ အချစ်၊ ခရီး၊ ငွေ၊ ဖျော်ဖြေရေး၊ ရာသီပွဲများနဲ့ အခြားအကုန်ပါပါတယ်',
+      'အိုင်ကွန်ရွေးချယ်တဲ့နေရာမှာ ရုပ်ပုံတွေကို သူ့အုပ်စုနဲ့သူ ခွဲပြထားပါပြီ — လိုချင်တဲ့အုပ်စုကို နှိပ်ပြီး ရှာရလွယ်ပါတယ်',
+      'အခြေခံအိုင်ကွန် (Free) — အုပ်စုတစ်ခုမှာ အသုံးအများဆုံး ၁၀ ခုကို အားလုံးသုံးနိုင်ပါတယ်',
+      'အထူးအိုင်ကွန် (Premium) — အုပ်စုတိုင်းရဲ့ ကျန်တဲ့ရုပ်ပုံအကုန်လုံးကို Premium နဲ့ သုံးနိုင်ပါတယ်',
       'Premium နဲ့ ရွေးထားတဲ့ အိုင်ကွန်က Premium သက်တမ်းကုန်သွားရင်လည်း ကဏ္ဍမှာ ဆက်ကျန်နေပါမယ် — ပြောင်းလိုက်မှသာ ပြန်ရွေးလို့ မရတော့ပါဘူး',
-      'အိုင်ကွန်ရုပ်ပုံတွေကို အင်တာနက်မရှိလည်း ဖွင့်လို့ရအောင် ဖုန်းထဲမှာ သိမ်းထားပေးပါပြီ',
+      'အိုင်ကွန်ရုပ်ပုံအကုန်လုံးကို အင်တာနက်မရှိလည်း ဖွင့်လို့ရအောင် ဖုန်းထဲမှာ သိမ်းထားပေးပါပြီ',
       'အိုင်ကွန်ဟောင်း (ရိုးရိုးပုံလေးတွေ) ကိုလည်း ဆက်သုံးနိုင်ပါပြီ — ကိုယ်တိုင်ထည့်ထားတဲ့ ကဏ္ဍတွေမှာ အရင်အတိုင်း ပြပေးပါတယ်',
+      'ကဏ္ဍခွဲတွေမှာလည်း ကိုယ်ပိုင်အိုင်ကွန်ထည့်နိုင်ပါပြီ — မူရင်းကဏ္ဍခွဲတိုင်းမှာ သူ့အဓိပ္ပာယ်နဲ့ ကိုက်တဲ့ အိုင်ကွန်ကို ကြိုတင်ထည့်ပေးထားပါတယ်'
     ]);
     expect(entry.changesEn).toEqual([
-      'Category icons are now colourful pictures — all 17 default income and expense categories have their own pictorial circle icon',
-      'The new icons show consistently in the Records list, category picker, detail view and calendar',
-      'The icon picker now groups pictorial icons into packs — money, food, home and shopping, vehicle and travel, health and charity, entertainment — so they are easy to find',
-      'Pictorial icon packs are split into core packs (Free) and special packs (Premium); special packs will arrive in later versions',
+      'The full pictorial icon library is here — 463 pictures in 14 packs: home, repairing, food, kitchen, daily care, beauty, pets, health, love, travel, money, entertainment, seasonal and more',
+      'The icon picker groups every picture into its own pack, so the one you want is easy to find',
+      'Core icons (Free) — the 10 most everyday pictures in each pack are free for everyone',
+      'Special icons (Premium) — all the remaining pictures in every pack are available with Premium',
       'An icon chosen while Premium stays on its category after Premium lapses — it only becomes unavailable again once you change away from it',
-      'Icon pictures are saved on the phone so they still show without internet',
+      'All icon pictures are saved on the phone so they still show without internet',
       'The classic plain icons still work too — custom categories keep showing them exactly as before',
+      'Sub-categories can have their own icons too — every default sub-category comes pre-assigned with a matching icon'
     ]);
   });
 });

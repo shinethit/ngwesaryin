@@ -3,6 +3,7 @@ import { ArrowUpDown, TrendingUp, TrendingDown, Minus, Search, Wallet as WalletI
 import { Category, PlanType, Transaction, Wallet } from '../types';
 import { formatMMK, formatLakhs, formatDateDisplay } from '../utils/formatters';
 import { CategoryIcon, CategoryTile } from './CategoryIcon';
+import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { buildWalletMap, isWalletMatch, isTransferTransaction, effectiveIncludeInTotals } from '../utils/walletBalance';
 import { useAuth } from '../context/AuthContext';
 import { convertToMMK } from '../utils/currency';
@@ -1751,8 +1752,11 @@ export const SpendingComparisonView: React.FC<SpendingComparisonViewProps> = ({
                                         className="p-2.5 bg-slate-50/90 rounded-xl border border-slate-200/80 space-y-1.5"
                                       >
                                         <div className="flex items-center justify-between text-xs">
-                                          <span className="font-bold text-slate-900 truncate max-w-[140px]">
-                                            {sub.name}
+                                          <span className="flex items-center gap-1 min-w-0 max-w-[140px]">
+                                            {(() => { const subObj = sub.category?.subCategories?.find((s) => s.id === sub.subCategoryId); if (!subObj) return null; return (<CategoryIcon name={resolveSubCategoryIconValue(subObj, sub.category)} className="w-3.5 h-3.5 shrink-0" />); })()}
+                                            <span className="font-bold text-slate-900 truncate">
+                                              {sub.name}
+                                            </span>
                                           </span>
                                           <span
                                             className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${

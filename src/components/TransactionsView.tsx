@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {  Search, Filter, ArrowDownLeft, ArrowUpRight, Trash2, Edit2, Calendar, Lock, Tag, History, ChevronLeft, ChevronRight, ChevronDown, Cloud, WifiOff, AlertTriangle, Clock, Package , ShoppingCart, Eye, EyeOff } from 'lucide-react';
-import { Category, FuelLog, PlanType, Transaction, VehicleMaintenance, Wallet, DataScope } from '../types';
+import { Category, FuelLog, PlanType, SubCategory, Transaction, VehicleMaintenance, Wallet, DataScope } from '../types';
 import { formatMMK, formatLakhs, getCategoryDisplayName } from '../utils/formatters';
 import { formatCurrency, convertToMMK } from '../utils/currency';
 import { getLocalDateString } from '../utils/dateUtils';
 import { safeSetItem } from '../utils/storage';
-import { CategoryTile } from './CategoryIcon';
+import { CategoryTile, CategoryIcon } from './CategoryIcon';
+import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
 import { MultiWalletSelector } from './MultiWalletSelector';
 import { FinancialSummaryTable } from './FinancialSummaryTable';
@@ -339,7 +340,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   }, [categories, transactions, lang]);
 
   const subCatMap = useMemo(() => {
-    const map = new Map<string, { name: string; nameEn: string }>();
+    const map = new Map<string, SubCategory>();
     categories.forEach((c) => {
       (c.subCategories || []).forEach((s) => {
         map.set(s.id, s);
@@ -1241,7 +1242,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                 </span>
                                 {subCat && (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200 shrink-0">
-                                    <Tag className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                                    {/* [v7.6.48] Sub-category's own resolved icon; no categoryId. */}
+                                    <CategoryIcon name={resolveSubCategoryIconValue(subCat, cat)} className="w-3 h-3 shrink-0" />
                                     <span>{lang === 'my' ? subCat.name : subCat.nameEn}</span>
                                   </span>
                                 )}

@@ -3,7 +3,7 @@ import { Crown, Lock, Plus, Sparkles, Edit2, Trash2, Tag, Layers, ArrowUpRight, 
 import { Category, PlanType, SubCategory, Transaction, TransactionType, UNBUDGETED_CATEGORY_ID } from '../types';
 import { DEFAULT_PLAN_LIMITS } from '../data/initialData';
 import { CategoryIcon, CategoryTile, CATEGORY_ICON_GROUPS } from './CategoryIcon';
-import { PICTORIAL_ICON_GROUPS, isPictorialLocked, pictorialIconUrl } from '../utils/categoryPictures';
+import { PICTORIAL_ICON_GROUPS, isPictorialLocked, pictorialIconUrl, resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { useSearchSeed } from '../hooks/useSearchSeed';
 import { safeGetItem } from '../utils/storage';
 
@@ -37,6 +37,107 @@ const COLOR_PALETTE = [
   '#F43F5E', // Rose
   '#64748B', // Slate
 ];
+
+// [v7.6.48] Shared pictorial + lucide icon picker grid, used by the
+// category edit form AND the sub-category edit modal — one picker UI,
+// same 14 pictorial packs, same Free/Premium gating at selection time
+// (a locked tap opens the upgrade modal; stored icons are never
+// rewritten, so a Premium-chosen icon keeps rendering after lapse).
+function IconPickerGrid({
+  selectedValue,
+  onChange,
+  plan,
+  onOpenUpgradeModal,
+  lang,
+}: {
+  selectedValue: string;
+  onChange: (value: string) => void;
+  plan: PlanType;
+  onOpenUpgradeModal: () => void;
+  lang: 'my' | 'en';
+}) {
+  return (
+                <div className="max-h-72 overflow-y-auto overflow-x-hidden p-2 space-y-3 bg-slate-50 rounded-xl border border-slate-200">
+                  {/* [v7.6.48] Pictorial icons first, grouped into 14 packs
+                      (home, repairing, food, kitchen, daily care, beauty,
+                      pets, health/charity, love, vehicle/travel, money,
+                      entertainment, seasonal, other). Tapping a locked
+                      icon (guest mode, or a Premium pack on a Free
+                      plan) opens the upgrade modal instead of
+                      selecting — stored icons are never rewritten. */}
+                  {PICTORIAL_ICON_GROUPS.map((group) => (
+                    <div key={group.key}>
+                      <div className="px-1 pb-1.5 text-xs font-bold text-slate-500">
+                        {lang === 'my' ? group.labelMy : group.labelEn}
+                      </div>
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                        {group.icons.map((entry) => {
+                          const value = `pic:${entry.key}`;
+                          const isSelected = selectedValue === value;
+                          const locked = isPictorialLocked(entry.key, plan);
+                          return (
+                            <button
+                              key={entry.key}
+                              type="button"
+                              onClick={() => {
+                                if (locked) { onOpenUpgradeModal(); return; }
+                                onChange(value);
+                              }}
+                              className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                                isSelected
+                                  ? 'ring-2 ring-emerald-600 ring-offset-1 scale-105'
+                                  : 'hover:scale-105'
+                              } ${locked ? 'opacity-70' : ''}`}
+                              title={entry.key}
+                            >
+                              <img
+                                src={pictorialIconUrl(entry.key)}
+                                alt=""
+                                draggable={false}
+                                className="w-9 h-9 rounded-full object-cover"
+                              />
+                              {locked && (
+                                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center ring-1 ring-white">
+                                  <Lock className="w-2.5 h-2.5 text-white" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {/* [v7.6.28] Icons grouped by category, with headings. */}
+                  {CATEGORY_ICON_GROUPS.map((group) => (
+                    <div key={group.key}>
+                      <div className="px-1 pb-1.5 text-xs font-bold text-slate-500">
+                        {lang === 'my' ? group.labelMy : group.labelEn}
+                      </div>
+                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                        {group.icons.map((iconName) => {
+                          const isSelected = selectedValue === iconName;
+                          return (
+                            <button
+                              key={iconName}
+                              type="button"
+                              onClick={() => onChange(iconName)}
+                              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+                                isSelected
+                                  ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                              }`}
+                              title={iconName}
+                            >
+                              <CategoryIcon name={iconName} className="w-4 h-4" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+  );
+}
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({
   categories,
@@ -74,6 +175,8 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
     subCategory: SubCategory;
     name: string;
     nameEn: string;
+    // [v7.6.48] Picker value; '' = use the parent category icon.
+    icon: string;
   } | null>(null);
 
   // Form states for Category (Add / Edit)
@@ -243,7 +346,26 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
       subCategory: sub,
       name: sub.name,
       nameEn: sub.nameEn || '',
+      icon: sub.icon || '',
     });
+  };
+
+  // [v7.6.48] Sub-category save payload: when the picker value is empty
+  // (use parent icon), the old icon key is DROPPED so the resolver's
+  // parent/default fallback applies and stored data stays clean.
+  const buildUpdatedSubCategory = (m: {
+    subCategory: SubCategory;
+    name: string;
+    nameEn: string;
+    icon: string;
+  }): SubCategory => {
+    const { icon: _droppedIcon, ...rest } = m.subCategory;
+    return {
+      ...rest,
+      name: m.name.trim(),
+      nameEn: m.nameEn.trim() || m.name.trim(),
+      ...(m.icon ? { icon: m.icon } : {}),
+    };
   };
 
   const handleAddInlineSub = (categoryId: string) => {
@@ -663,6 +785,10 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                             className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-50 border border-slate-200 text-slate-800 transition-all"
                             title={lang === 'my' ? sub.name : (sub.nameEn || sub.name)}
                           >
+                            <CategoryIcon
+                              name={resolveSubCategoryIconValue(sub, category)}
+                              className="w-3.5 h-3.5 shrink-0"
+                            />
                             <span className="max-w-[180px] truncate">{lang === 'my' ? sub.name : (sub.nameEn || sub.name)}</span>
 
                             {/* Sub category actions: Edit & Delete */}
@@ -861,84 +987,13 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 <label className="block text-slate-700 font-semibold mb-1.5">
                   {lang === 'my' ? 'အိုင်ကွန် ရွေးချယ်ရန်:' : 'Select Icon:'}
                 </label>
-                <div className="max-h-72 overflow-y-auto overflow-x-hidden p-2 space-y-3 bg-slate-50 rounded-xl border border-slate-200">
-                  {/* [v7.6.47] Pictorial icons first, grouped into packs
-                      (money, food, home/shopping, vehicle/travel,
-                      health/charity, entertainment). Tapping a locked
-                      icon (guest mode, or a Premium pack on a Free
-                      plan) opens the upgrade modal instead of
-                      selecting — stored icons are never rewritten. */}
-                  {PICTORIAL_ICON_GROUPS.map((group) => (
-                    <div key={group.key}>
-                      <div className="px-1 pb-1.5 text-xs font-bold text-slate-500">
-                        {lang === 'my' ? group.labelMy : group.labelEn}
-                      </div>
-                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                        {group.icons.map((entry) => {
-                          const value = `pic:${entry.key}`;
-                          const isSelected = catIcon === value;
-                          const locked = isPictorialLocked(entry.key, plan);
-                          return (
-                            <button
-                              key={entry.key}
-                              type="button"
-                              onClick={() => {
-                                if (locked) { onOpenUpgradeModal(); return; }
-                                setCatIcon(value);
-                              }}
-                              className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                                isSelected
-                                  ? 'ring-2 ring-emerald-600 ring-offset-1 scale-105'
-                                  : 'hover:scale-105'
-                              } ${locked ? 'opacity-70' : ''}`}
-                              title={entry.key}
-                            >
-                              <img
-                                src={pictorialIconUrl(entry.key)}
-                                alt=""
-                                draggable={false}
-                                className="w-9 h-9 rounded-full object-cover"
-                              />
-                              {locked && (
-                                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center ring-1 ring-white">
-                                  <Lock className="w-2.5 h-2.5 text-white" />
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  {/* [v7.6.28] Icons grouped by category, with headings. */}
-                  {CATEGORY_ICON_GROUPS.map((group) => (
-                    <div key={group.key}>
-                      <div className="px-1 pb-1.5 text-xs font-bold text-slate-500">
-                        {lang === 'my' ? group.labelMy : group.labelEn}
-                      </div>
-                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                        {group.icons.map((iconName) => {
-                          const isSelected = catIcon === iconName;
-                          return (
-                            <button
-                              key={iconName}
-                              type="button"
-                              onClick={() => setCatIcon(iconName)}
-                              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-                                isSelected
-                                  ? 'bg-emerald-600 text-white shadow-xs scale-105'
-                                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                              }`}
-                              title={iconName}
-                            >
-                              <CategoryIcon name={iconName} className="w-4 h-4" />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <IconPickerGrid
+                  selectedValue={catIcon}
+                  onChange={setCatIcon}
+                  plan={plan}
+                  onOpenUpgradeModal={onOpenUpgradeModal}
+                  lang={lang}
+                />
               </div>
 
               {/* Color Selector */}
@@ -1098,11 +1153,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && editingSubModal.name.trim()) {
                       e.preventDefault();
-                      onUpdateSubCategory(editingSubModal.categoryId, {
-                        ...editingSubModal.subCategory,
-                        name: editingSubModal.name.trim(),
-                        nameEn: editingSubModal.nameEn.trim() || editingSubModal.name.trim(),
-                      });
+                      onUpdateSubCategory(editingSubModal.categoryId, buildUpdatedSubCategory(editingSubModal));
                       setEditingSubModal(null);
                     }
                   }}
@@ -1127,15 +1178,49 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && editingSubModal.name.trim()) {
                       e.preventDefault();
-                      onUpdateSubCategory(editingSubModal.categoryId, {
-                        ...editingSubModal.subCategory,
-                        name: editingSubModal.name.trim(),
-                        nameEn: editingSubModal.nameEn.trim() || editingSubModal.name.trim(),
-                      });
+                      onUpdateSubCategory(editingSubModal.categoryId, buildUpdatedSubCategory(editingSubModal));
                       setEditingSubModal(null);
                     }
                   }}
                   className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-800"
+                />
+              </div>
+              {/* [v7.6.48] Sub-category icon picker — the same picker
+                  as categories (14 pictorial packs + classic icons,
+                  same Free/Premium gating). Empty = parent icon. */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  {lang === 'my' ? 'အိုင်ကွန် ရွေးချယ်ရန်:' : 'Select Icon:'}
+                </label>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <CategoryIcon
+                    name={resolveSubCategoryIconValue(
+                      { ...editingSubModal.subCategory, icon: editingSubModal.icon || undefined },
+                      { id: editingSubModal.categoryId, icon: editingSubModal.categoryIcon },
+                    )}
+                    className="w-6 h-6 shrink-0"
+                  />
+                  <span className="text-xs text-slate-500">
+                    {editingSubModal.icon
+                      ? (lang === 'my' ? 'ရွေးထားသော အိုင်ကွန်' : 'Selected icon')
+                      : (lang === 'my' ? 'အဓိက ကဏ္ဍအိုင်ကွန် သုံးနေပါတယ်' : 'Using the parent category icon')}
+                  </span>
+                  {editingSubModal.icon && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingSubModal({ ...editingSubModal, icon: '' })}
+                      className="ml-auto px-2 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                    >
+                      {lang === 'my' ? 'အဓိကအိုင်ကွန်သို့ ပြန်ထားမည်' : 'Use parent icon'}
+                    </button>
+                  )}
+                </div>
+                <IconPickerGrid
+                  selectedValue={editingSubModal.icon}
+                  onChange={(v) => setEditingSubModal({ ...editingSubModal, icon: v })}
+                  plan={plan}
+                  onOpenUpgradeModal={onOpenUpgradeModal}
+                  lang={lang}
                 />
               </div>
             </div>
@@ -1164,11 +1249,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   disabled={!editingSubModal.name.trim()}
                   onClick={() => {
                     if (!editingSubModal.name.trim()) return;
-                    onUpdateSubCategory(editingSubModal.categoryId, {
-                      ...editingSubModal.subCategory,
-                      name: editingSubModal.name.trim(),
-                      nameEn: editingSubModal.nameEn.trim() || editingSubModal.name.trim(),
-                    });
+                    onUpdateSubCategory(editingSubModal.categoryId, buildUpdatedSubCategory(editingSubModal));
                     setEditingSubModal(null);
                   }}
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"

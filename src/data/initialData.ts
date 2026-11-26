@@ -84,9 +84,9 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Briefcase',
     color: '#10B981',
     subCategories: [
-      { id: 'sub_sal_base', name: 'အခြေခံလစာ', nameEn: 'Base Salary' },
-      { id: 'sub_sal_ot', name: 'အချိန်ပိုကြေး (OT)', nameEn: 'Overtime Pay' },
-      { id: 'sub_sal_allowance', name: 'စရိတ်ထောက်ပံ့ကြေး', nameEn: 'Allowances' },
+      { id: 'sub_sal_base', name: 'အခြေခံလစာ', nameEn: 'Base Salary', icon: 'pic:dollar-bills' },
+      { id: 'sub_sal_ot', name: 'အချိန်ပိုကြေး (OT)', nameEn: 'Overtime Pay', icon: 'pic:alarm-clock' },
+      { id: 'sub_sal_allowance', name: 'စရိတ်ထောက်ပံ့ကြေး', nameEn: 'Allowances', icon: 'pic:red-envelope' },
     ],
   },
   {
@@ -97,9 +97,9 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Store',
     color: '#059669',
     subCategories: [
-      { id: 'sub_biz_retail', name: 'လက်လီရောင်းရငွေ', nameEn: 'Retail Sales' },
-      { id: 'sub_biz_wholesale', name: 'လက်ကားရောင်းရငွေ', nameEn: 'Wholesale Sales' },
-      { id: 'sub_biz_online', name: 'Online Shop ရောင်းရငွေ', nameEn: 'Online Orders' },
+      { id: 'sub_biz_retail', name: 'လက်လီရောင်းရငွေ', nameEn: 'Retail Sales', icon: 'pic:cash-register' },
+      { id: 'sub_biz_wholesale', name: 'လက်ကားရောင်းရငွေ', nameEn: 'Wholesale Sales', icon: 'pic:delivery-truck' },
+      { id: 'sub_biz_online', name: 'Online Shop ရောင်းရငွေ', nameEn: 'Online Orders', icon: 'pic:browser-window' },
     ],
   },
   {
@@ -110,8 +110,8 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Laptop',
     color: '#0D9488',
     subCategories: [
-      { id: 'sub_free_project', name: 'ပရောဂျက်လုပ်ခ', nameEn: 'Project Work' },
-      { id: 'sub_free_consult', name: 'အကြံပေးခ / သင်တန်းကြေး', nameEn: 'Consulting & Teaching' },
+      { id: 'sub_free_project', name: 'ပရောဂျက်လုပ်ခ', nameEn: 'Project Work', icon: 'pic:presentation-board' },
+      { id: 'sub_free_consult', name: 'အကြံပေးခ / သင်တန်းကြေး', nameEn: 'Consulting & Teaching', icon: 'pic:graduation-cap' },
     ],
   },
   {
@@ -122,8 +122,8 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Gift',
     color: '#14B8A6',
     subCategories: [
-      { id: 'sub_bon_perf', name: 'နှစ်ကုန်ဆုကြေး / Performance', nameEn: 'Bonus' },
-      { id: 'sub_bon_gift', name: 'မုန့်ဖိုး / လက်ဆောင်ငွေ', nameEn: 'Gift Money' },
+      { id: 'sub_bon_perf', name: 'နှစ်ကုန်ဆုကြေး / Performance', nameEn: 'Bonus', icon: 'pic:trophy' },
+      { id: 'sub_bon_gift', name: 'မုန့်ဖိုး / လက်ဆောင်ငွေ', nameEn: 'Gift Money', icon: 'pic:gift-boxes' },
     ],
   },
   {
@@ -134,8 +134,8 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'TrendingUp',
     color: '#047857',
     subCategories: [
-      { id: 'sub_inv_interest', name: 'ဘဏ်အပ်ငွေအတိုး', nameEn: 'Bank Interest' },
-      { id: 'sub_inv_dividend', name: 'အစုရှယ်ယာအမြတ်', nameEn: 'Dividends & Profit Share' },
+      { id: 'sub_inv_interest', name: 'ဘဏ်အပ်ငွေအတိုး', nameEn: 'Bank Interest', icon: 'pic:piggy-bank' },
+      { id: 'sub_inv_dividend', name: 'အစုရှယ်ယာအမြတ်', nameEn: 'Dividends & Profit Share', icon: 'pic:line-chart' },
     ],
   },
   {
@@ -146,7 +146,7 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'PlusCircle',
     color: '#15803D',
     subCategories: [
-      { id: 'sub_inc_misc', name: 'အထွေထွေဝင်ငွေ', nameEn: 'Miscellaneous' },
+      { id: 'sub_inc_misc', name: 'အထွေထွေဝင်ငွေ', nameEn: 'Miscellaneous', icon: 'pic:coins' },
     ],
   },
   {
@@ -175,8 +175,8 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Scale',
     color: '#64748B',
     subCategories: [
-      { id: 'sub_rec_surplus', name: 'ပိုငွေညှိချက်', nameEn: 'Surplus Adjustment' },
-      { id: 'sub_rec_deficit', name: 'လိုငွေညှိချက်', nameEn: 'Deficit Adjustment' },
+      { id: 'sub_rec_surplus', name: 'ပိုငွေညှိချက်', nameEn: 'Surplus Adjustment', icon: 'pic:calculator' },
+      { id: 'sub_rec_deficit', name: 'လိုငွေညှိချက်', nameEn: 'Deficit Adjustment', icon: 'pic:receipt' },
     ],
   },
 
@@ -189,14 +189,14 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Utensils',
     color: '#EF4444',
     subCategories: [
-      { id: 'sub_food_breakfast', name: 'မနက်စာ', nameEn: 'Breakfast' },
-      { id: 'sub_food_lunch', name: 'နေ့လယ်စာ', nameEn: 'Lunch' },
-      { id: 'sub_food_dinner', name: 'ညနေစာ', nameEn: 'Dinner' },
-      { id: 'sub_groc_market', name: 'စည်ပင်ဈေးဝယ် / ကုန်စုံ', nameEn: 'Fresh Market & Groceries' },
-      { id: 'sub_groc_super', name: 'စူပါမားကတ်', nameEn: 'Supermarket' },
-      { id: 'sub_groc_kitchen', name: 'မီးဖိုချောင်သုံးကုန်', nameEn: 'Kitchen Supplies' },
-      { id: 'sub_food_coffee', name: 'ကော်ဖီနှင့် မုန့်ဖိုး', nameEn: 'Coffee & Snacks' },
-      { id: 'sub_food_delivery', name: 'Food Delivery အရောက်ပို့', nameEn: 'Food Delivery' },
+      { id: 'sub_food_breakfast', name: 'မနက်စာ', nameEn: 'Breakfast', icon: 'pic:fried-egg' },
+      { id: 'sub_food_lunch', name: 'နေ့လယ်စာ', nameEn: 'Lunch', icon: 'pic:rice-bowl' },
+      { id: 'sub_food_dinner', name: 'ညနေစာ', nameEn: 'Dinner', icon: 'pic:soup-bowl' },
+      { id: 'sub_groc_market', name: 'စည်ပင်ဈေးဝယ် / ကုန်စုံ', nameEn: 'Fresh Market & Groceries', icon: 'pic:fish' },
+      { id: 'sub_groc_super', name: 'စူပါမားကတ်', nameEn: 'Supermarket', icon: 'pic:tin-can' },
+      { id: 'sub_groc_kitchen', name: 'မီးဖိုချောင်သုံးကုန်', nameEn: 'Kitchen Supplies', icon: 'pic:oil-vinegar' },
+      { id: 'sub_food_coffee', name: 'ကော်ဖီနှင့် မုန့်ဖိုး', nameEn: 'Coffee & Snacks', icon: 'pic:coffee-cup' },
+      { id: 'sub_food_delivery', name: 'Food Delivery အရောက်ပို့', nameEn: 'Food Delivery', icon: 'pic:pizza' },
     ],
   },
   {
@@ -207,11 +207,11 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Bus',
     color: '#EAB308',
     subCategories: [
-      { id: 'sub_trans_taxi', name: 'တက္ကစီ / Grab', nameEn: 'Taxi / Rideshare' },
-      { id: 'sub_trans_bus', name: 'ဘတ်စကား / ရထား', nameEn: 'Bus & Public Transit' },
-      { id: 'sub_trans_flight', name: 'လေယာဉ် / အဝေးပြေးကား', nameEn: 'Flight & Long-distance Coach' },
-      { id: 'sub_trans_ferry', name: 'ဖယ်ရီ / သင်္ဘော', nameEn: 'Ferry & Water Transit' },
-      { id: 'sub_trans_toll', name: 'တံတားကြေး / လမ်းကြေး / Gate ကြေး', nameEn: 'Toll & Gate Fees' },
+      { id: 'sub_trans_taxi', name: 'တက္ကစီ / Grab', nameEn: 'Taxi / Rideshare', icon: 'pic:taxi' },
+      { id: 'sub_trans_bus', name: 'ဘတ်စကား / ရထား', nameEn: 'Bus & Public Transit', icon: 'pic:tram' },
+      { id: 'sub_trans_flight', name: 'လေယာဉ် / အဝေးပြေးကား', nameEn: 'Flight & Long-distance Coach', icon: 'pic:airplane' },
+      { id: 'sub_trans_ferry', name: 'ဖယ်ရီ / သင်္ဘော', nameEn: 'Ferry & Water Transit', icon: 'pic:sailboat' },
+      { id: 'sub_trans_toll', name: 'တံတားကြေး / လမ်းကြေး / Gate ကြေး', nameEn: 'Toll & Gate Fees', icon: 'pic:ticket' },
     ],
   },
   {
@@ -222,12 +222,12 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Car',
     color: '#0284C7',
     subCategories: [
-      { id: 'sub_veh_fuel', name: 'စက်သုံးဆီ (ဓာတ်ဆီ/ဒီဇယ်)', nameEn: 'Fuel & Petrol' },
-      { id: 'sub_veh_maintenance', name: 'ပြုပြင်ထိန်းသိမ်းမှု / ဝန်ဆောင်ခ', nameEn: 'Maintenance & Service' },
-      { id: 'sub_veh_parts', name: 'အပိုပစ္စည်းနှင့် ဆီလဲလှယ်ခြင်း', nameEn: 'Spare Parts & Engine Oil' },
+      { id: 'sub_veh_fuel', name: 'စက်သုံးဆီ (ဓာတ်ဆီ/ဒီဇယ်)', nameEn: 'Fuel & Petrol', icon: 'pic:petrol-pump' },
+      { id: 'sub_veh_maintenance', name: 'ပြုပြင်ထိန်းသိမ်းမှု / ဝန်ဆောင်ခ', nameEn: 'Maintenance & Service', icon: 'pic:wrench' },
+      { id: 'sub_veh_parts', name: 'အပိုပစ္စည်းနှင့် ဆီလဲလှယ်ခြင်း', nameEn: 'Spare Parts & Engine Oil', icon: 'pic:bolt' },
       { id: 'sub_veh_tire', name: 'တာယာနှင့် လေဖိအား', nameEn: 'Tires & Wheel Alignment' },
-      { id: 'sub_veh_wash', name: 'ကားဆေး / သန့်ရှင်းရေး', nameEn: 'Car Wash & Detailing' },
-      { id: 'sub_veh_license', name: 'လိုင်စင် / အခွန်နှင့် အာမခံ', nameEn: 'License, Tax & Insurance' },
+      { id: 'sub_veh_wash', name: 'ကားဆေး / သန့်ရှင်းရေး', nameEn: 'Car Wash & Detailing', icon: 'pic:car-wash' },
+      { id: 'sub_veh_license', name: 'လိုင်စင် / အခွန်နှင့် အာမခံ', nameEn: 'License, Tax & Insurance', icon: 'pic:certificate' },
     ],
   },
   {
@@ -238,11 +238,11 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Home',
     color: '#8B5CF6',
     subCategories: [
-      { id: 'sub_util_rent', name: 'အိမ်ငှားခ', nameEn: 'House Rent' },
-      { id: 'sub_util_elec', name: 'လျှပ်စစ်မီတာခ', nameEn: 'Electricity Bill' },
-      { id: 'sub_net_mobile', name: 'ဖုန်းဘေလ်ငွေဖြည့် / ဒေတာ', nameEn: 'Mobile Data / Topup' },
-      { id: 'sub_net_fiber', name: 'အိမ်သုံး Wifi လစဉ်ကြေး', nameEn: 'Home Fiber Wifi' },
-      { id: 'sub_util_water', name: 'ရေဖိုး / သန့်ရှင်းရေး', nameEn: 'Water & Maintenance' },
+      { id: 'sub_util_rent', name: 'အိမ်ငှားခ', nameEn: 'House Rent', icon: 'pic:building' },
+      { id: 'sub_util_elec', name: 'လျှပ်စစ်မီတာခ', nameEn: 'Electricity Bill', icon: 'pic:electricity-bill' },
+      { id: 'sub_net_mobile', name: 'ဖုန်းဘေလ်ငွေဖြည့် / ဒေတာ', nameEn: 'Mobile Data / Topup', icon: 'pic:smartphone' },
+      { id: 'sub_net_fiber', name: 'အိမ်သုံး Wifi လစဉ်ကြေး', nameEn: 'Home Fiber Wifi', icon: 'pic:globe' },
+      { id: 'sub_util_water', name: 'ရေဖိုး / သန့်ရှင်းရေး', nameEn: 'Water & Maintenance', icon: 'pic:water-bill' },
     ],
   },
   {
@@ -253,9 +253,9 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'ShoppingCart',
     color: '#EC4899',
     subCategories: [
-      { id: 'sub_shop_clothes', name: 'အဝတ်အထည်နှင့် ဖိနပ်', nameEn: 'Clothes & Footwear' },
-      { id: 'sub_shop_electronics', name: 'အီလက်ထရောနစ် / ဖုန်းဆက်စပ်', nameEn: 'Gadgets & Electronics' },
-      { id: 'sub_shop_personal', name: 'ကိုယ်ရေးကိုယ်တာ သုံးကုန်', nameEn: 'Personal Care' },
+      { id: 'sub_shop_clothes', name: 'အဝတ်အထည်နှင့် ဖိနပ်', nameEn: 'Clothes & Footwear', icon: 'pic:dress' },
+      { id: 'sub_shop_electronics', name: 'အီလက်ထရောနစ် / ဖုန်းဆက်စပ်', nameEn: 'Gadgets & Electronics', icon: 'pic:computer' },
+      { id: 'sub_shop_personal', name: 'ကိုယ်ရေးကိုယ်တာ သုံးကုန်', nameEn: 'Personal Care', icon: 'pic:soap-dispenser' },
     ],
   },
   {
@@ -266,9 +266,9 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'HeartPulse',
     color: '#F43F5E',
     subCategories: [
-      { id: 'sub_med_pharmacy', name: 'ဆေးဝါးဝယ်ယူစရိတ်', nameEn: 'Medicines' },
-      { id: 'sub_med_doctor', name: 'ဆေးခန်း / ဆရာဝန်ပြစရိတ်', nameEn: 'Clinic & Doctor' },
-      { id: 'sub_med_fitness', name: 'အားကစား / Gym', nameEn: 'Fitness & Sports' },
+      { id: 'sub_med_pharmacy', name: 'ဆေးဝါးဝယ်ယူစရိတ်', nameEn: 'Medicines', icon: 'pic:capsule' },
+      { id: 'sub_med_doctor', name: 'ဆေးခန်း / ဆရာဝန်ပြစရိတ်', nameEn: 'Clinic & Doctor', icon: 'pic:stethoscope' },
+      { id: 'sub_med_fitness', name: 'အားကစား / Gym', nameEn: 'Fitness & Sports', icon: 'pic:soccer-ball' },
     ],
   },
   {
@@ -279,9 +279,9 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'HeartHandshake',
     color: '#D97706',
     subCategories: [
-      { id: 'sub_cha_religious', name: 'ဘုန်းကြီးကျောင်း / ဆွမ်း', nameEn: 'Religious & Merit' },
-      { id: 'sub_cha_social', name: 'မင်္ဂလာဆောင် / လူမှုရေး', nameEn: 'Social Events & Gifts' },
-      { id: 'sub_cha_family', name: 'မိဘထောက်ပံ့ကန်တော့ငွေ', nameEn: 'Family Support' },
+      { id: 'sub_cha_religious', name: 'ဘုန်းကြီးကျောင်း / ဆွမ်း', nameEn: 'Religious & Merit', icon: 'pic:oil-lamp' },
+      { id: 'sub_cha_social', name: 'မင်္ဂလာဆောင် / လူမှုရေး', nameEn: 'Social Events & Gifts', icon: 'pic:balloons' },
+      { id: 'sub_cha_family', name: 'မိဘထောက်ပံ့ကန်တော့ငွေ', nameEn: 'Family Support', icon: 'pic:heart-gift' },
     ],
   },
   {
@@ -292,9 +292,9 @@ export const INITIAL_CATEGORIES: Category[] = [
     icon: 'Film',
     color: '#A855F7',
     subCategories: [
-      { id: 'sub_ent_movie', name: 'ရုပ်ရှင် / ပွဲလမ်း', nameEn: 'Movies & Outings' },
-      { id: 'sub_ent_sub', name: 'Netflix / Spotify Subscriptions', nameEn: 'Digital Subscriptions' },
-      { id: 'sub_ent_travel', name: 'ခရီးသွား / အပန်းဖြေ', nameEn: 'Travel & Trips' },
+      { id: 'sub_ent_movie', name: 'ရုပ်ရှင် / ပွဲလမ်း', nameEn: 'Movies & Outings', icon: 'pic:cd-disc' },
+      { id: 'sub_ent_sub', name: 'Netflix / Spotify Subscriptions', nameEn: 'Digital Subscriptions', icon: 'pic:music-note' },
+      { id: 'sub_ent_travel', name: 'ခရီးသွား / အပန်းဖြေ', nameEn: 'Travel & Trips', icon: 'pic:suitcase' },
     ],
   },
   {

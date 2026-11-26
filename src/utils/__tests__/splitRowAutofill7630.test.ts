@@ -125,22 +125,22 @@ describe('addSplitRow wiring (v7.6.30)', () => {
 
 describe('Version bump to v7.6.30 (build 344)', () => {
   it('version surfaces agree on v7.6.30 / build 344', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
-    expect(CURRENT_BUILD_NUMBER).toBe(370);
-    expect(VERSION_JSON.version).toBe('v7.6.56');
-    expect(VERSION_JSON.buildNumber).toBe(370);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
+    expect(CURRENT_BUILD_NUMBER).toBe(371);
+    expect(VERSION_JSON.version).toBe('v7.6.57');
+    expect(VERSION_JSON.buildNumber).toBe(371);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.56');
-    expect(entry.buildNumber).toBe(370);
+    expect(entry.version).toBe('v7.6.57');
+    expect(entry.buildNumber).toBe(371);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(8);
-    expect(entry.changesEn).toHaveLength(8);
+    expect(entry.changesMy).toHaveLength(4);
+    expect(entry.changesEn).toHaveLength(4);
     expect(entry.changesMy[0]).toBe(
-      'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ပါဘူး — ဖျက်တာ Cloud ကို ရောက်တဲ့အထိ စောင့်ပြီး အတည်ပြုပါတယ်',
+      'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
     );
     expect(entry.changesEn[0]).toBe(
-      'Deleted records no longer reappear on other devices — deletes are confirmed only once they reach Cloud',
+      'The Records balance card colours are vivid now — red, yellow and white keep their meanings',
     );
   });
 

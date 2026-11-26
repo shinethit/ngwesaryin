@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.56';
-export const CURRENT_BUILD_NUMBER = 370;
+export const CURRENT_APP_VERSION = 'v7.6.57';
+export const CURRENT_BUILD_NUMBER = 371;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.57',
+    buildNumber: 371,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'လက်ကျန်ကတ် အရောင်စိုစိုတောက်တောက် နှင့် စာရင်းထည့်ဖောင် အကူအညီများ',
+    titleEn: 'Vivid Records balance card and entry-form helpers',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ။ စာရင်းထည့်ဖောင်မှာလည်း ပမာဏရိုက်ဖို့ ဂဏန်းခလုတ်၊ ပမာဏ အမြန်ရွေးခလုတ်တွေနဲ့ နေ့ရက် ရှေ့/နောက် ရွှေ့ခလုတ်တွေ ပါလာပါပြီ။',
+    descriptionEn: 'The Records balance card colours are vivid now. The entry form has a calculator keypad for the amount, quick-amount chips, and a date stepper to move the entry date one day at a time.',
+    changesMy: [
+      'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'ပမာဏထည့်ဖို့ ဂဏန်းခလုတ်ပါလာပါပြီ — နှိပ်ပြီးရိုက်လို့ရတယ်၊ ဖျက်တာ ရှင်းတာလည်း လုပ်လို့ရတယ်',
+      'ပမာဏ အမြန်ရွေးခလုတ်တွေ ပါလာပါပြီ — ၅ သိန်း၊ ၁၀ သိန်း၊ ၁၅ သိန်း နှိပ်ရုံနဲ့ ပမာဏ ဖြည့်ပြီးသား ဖြစ်ပါတယ်',
+      'နေ့ရက်ကို တစ်ရက်ချင်း ရှေ့/နောက် ရွှေ့လို့ရတဲ့ ခလုတ်တွေ ပါလာပါပြီ',
+    ],
+    changesEn: [
+      'The Records balance card colours are vivid now — red, yellow and white keep their meanings',
+      'A calculator keypad for the amount field — tap to type, with backspace and clear',
+      'Quick-amount chips — 500,000, 1,000,000 and 1,500,000, tap to set the amount',
+      'Date stepper — move the entry date one day forward or back per tap',
+    ],
+  },
   {
     version: 'v7.6.56',
     buildNumber: 370,

@@ -341,10 +341,10 @@ describe('auto-select wiring (v7.6.03)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
-    expect(CURRENT_BUILD_NUMBER).toBe(370);
-    expect(VERSION_JSON.version).toBe('v7.6.56');
-    expect(VERSION_JSON.buildNumber).toBe(370);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
+    expect(CURRENT_BUILD_NUMBER).toBe(371);
+    expect(VERSION_JSON.version).toBe('v7.6.57');
+    expect(VERSION_JSON.buildNumber).toBe(371);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -353,34 +353,26 @@ describe('Version bump to v7.6.27 (build 342)', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.56');
-    expect(entry.buildNumber).toBe(370);
+    expect(entry.version).toBe('v7.6.57');
+    expect(entry.buildNumber).toBe(371);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဒေတာ ထပ်တူညီမှု နှင့် Menu Update ပြင်ဆင်မှုများ');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် အရောင်စိုစိုတောက်တောက် နှင့် စာရင်းထည့်ဖောင် အကူအညီများ');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-          'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ပါဘူး — ဖျက်တာ Cloud ကို ရောက်တဲ့အထိ စောင့်ပြီး အတည်ပြုပါတယ်',
-          'Cloud ချိတ်ဆက်မှု ပြတ်နေချိန်မှာ ထပ်ခါထပ်ခါ ကြိုးစားတာကို လျှော့ချပြီး စောင့်ဆိုင်းမှု ပိုမှန်ကန်လာပါပြီ',
-          'ကွန်ရက် နှေးတာနဲ့ Cloud အကောင့် တိုကင် ပြဿနာကို ခွဲခြားပြပေးပါပြီ — ချိတ်ဆက်မှု ပြန်ရရင် အလိုအလျောက် ပို့ပေးပါမယ်',
-          'ဒေတာ စီမံခန့်ခွဲမှု စာမျက်နှာက Cloud နဲ့ ထပ်တူညီမှု အခြေအနေကို အမှန်အတိုင်း ပြပါပြီ — ပို့ရန်ကျန်နေသေးရင် ၁၀၀% လို့ မပြတော့ပါ',
-          'ကိန်းဂဏန်း ၇ ခုပါတဲ့ အတန်းက ဖုန်းအကျယ် အားလုံးမှာ ညီညီညာညာ ပေါ်ပါပြီ',
-          'ဒေတာ အားလုံး ဖျက်တော့မယ့် သတိပေးစာမှာ ဖျက်မယ့် အရာအားလုံး ပါဝင်ပြီး အရန်သိမ်းတာ ပိုစုံလင်လာပါပြီ',
-          'ယာဉ်စီမံခန့်ခွဲမှုကနေ ဝန်ဆောင်မှု/ဆီထည့်တာတွေကို သိမ်းလိုက်ရင် ဆိုင်ရဲ့ Menu ပြန် Update လုပ်ဖို့ မေးတော့မှာပါ',
-          'ဆိုင်ရဲ့ Menu ပြန် Update ခလုတ်တွေက နှိပ်ရတာ ပိုသိသာလာပြီး လုပ်စရာ ကျန်သေးလား ပြီးပြီလား ရှင်းရှင်းလင်းလင်း ပြပါပြီ',
+      'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'ပမာဏထည့်ဖို့ ဂဏန်းခလုတ်ပါလာပါပြီ — နှိပ်ပြီးရိုက်လို့ရတယ်၊ ဖျက်တာ ရှင်းတာလည်း လုပ်လို့ရတယ်',
+      'ပမာဏ အမြန်ရွေးခလုတ်တွေ ပါလာပါပြီ — ၅ သိန်း၊ ၁၀ သိန်း၊ ၁၅ သိန်း နှိပ်ရုံနဲ့ ပမာဏ ဖြည့်ပြီးသား ဖြစ်ပါတယ်',
+      'နေ့ရက်ကို တစ်ရက်ချင်း ရှေ့/နောက် ရွှေ့လို့ရတဲ့ ခလုတ်တွေ ပါလာပါပြီ',
         ]);
     expect(entry.changesEn).toEqual([
-          'Deleted records no longer reappear on other devices — deletes are confirmed only once they reach Cloud',
-          'Retries while the connection is down are spaced out instead of storming, so sync recovers cleanly',
-          'Connection problems now distinguish a slow network from a Cloud sign-in token problem — pending changes sync automatically when the connection recovers',
-          'The Data Management page now shows the true sync state — it never reads 100% while work is still pending',
-          'The 7-count stats strip lines up evenly on all phone widths',
-          'The Clear All warning now lists everything that will be deleted, and the automatic backup covers more of your data',
-          'Saving a service or fuel entry from Vehicle Management now offers to update the shop menu, like the main entry form',
-          'Shop menu refresh buttons look clearly pressable and show whether work remains or the menu is up to date',
+      'The Records balance card colours are vivid now — red, yellow and white keep their meanings',
+      'A calculator keypad for the amount field — tap to type, with backspace and clear',
+      'Quick-amount chips — 500,000, 1,000,000 and 1,500,000, tap to set the amount',
+      'Date stepper — move the entry date one day forward or back per tap',
         ]);
   });
 });

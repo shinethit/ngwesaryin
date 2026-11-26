@@ -179,26 +179,26 @@ describe('select resolution for a stored တစ်- custom (v7.6.10)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
-    expect(CURRENT_BUILD_NUMBER).toBe(370);
-    expect(VERSION_JSON.version).toBe('v7.6.56');
-    expect(VERSION_JSON.buildNumber).toBe(370);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
+    expect(CURRENT_BUILD_NUMBER).toBe(371);
+    expect(VERSION_JSON.version).toBe('v7.6.57');
+    expect(VERSION_JSON.buildNumber).toBe(371);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.56');
-    expect(entry.buildNumber).toBe(370);
+    expect(entry.version).toBe('v7.6.57');
+    expect(entry.buildNumber).toBe(371);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('ဒေတာ ထပ်တူညီမှု နှင့် Menu Update ပြင်ဆင်မှုများ');
-    expect(entry.titleEn).toBe('Sync honesty, Data Management polish and Menu Update wiring');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် အရောင်စိုစိုတောက်တောက် နှင့် စာရင်းထည့်ဖောင် အကူအညီများ');
+    expect(entry.titleEn).toBe('Vivid Records balance card and entry-form helpers');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(8);
-    expect(entry.changesEn).toHaveLength(8);
+    expect(entry.changesMy).toHaveLength(4);
+    expect(entry.changesEn).toHaveLength(4);
     expect(entry.changesMy[0]).toBe(
-      'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ပါဘူး — ဖျက်တာ Cloud ကို ရောက်တဲ့အထိ စောင့်ပြီး အတည်ပြုပါတယ်',
+      'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
     );
     expect(entry.changesEn[0]).toBe(
-      'Deleted records no longer reappear on other devices — deletes are confirmed only once they reach Cloud',
+      'The Records balance card colours are vivid now — red, yellow and white keep their meanings',
     );
   });
 

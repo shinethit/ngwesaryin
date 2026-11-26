@@ -151,19 +151,19 @@ describe('Records Add button removed, floating + kept (v7.5.96 Fix 3)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
-    expect(CURRENT_BUILD_NUMBER).toBe(370);
-    expect(VERSION_JSON.version).toBe('v7.6.56');
-    expect(VERSION_JSON.buildNumber).toBe(370);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
+    expect(CURRENT_BUILD_NUMBER).toBe(371);
+    expect(VERSION_JSON.version).toBe('v7.6.57');
+    expect(VERSION_JSON.buildNumber).toBe(371);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.56');
-    expect(entry.buildNumber).toBe(370);
+    expect(entry.version).toBe('v7.6.57');
+    expect(entry.buildNumber).toBe(371);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(8);
-    expect(entry.changesEn).toHaveLength(8);
+    expect(entry.changesMy).toHaveLength(4);
+    expect(entry.changesEn).toHaveLength(4);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

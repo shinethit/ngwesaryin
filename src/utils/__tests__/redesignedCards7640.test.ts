@@ -153,17 +153,17 @@ describe('Redesigned shop cards (v7.6.40)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.56');
-    expect(CURRENT_BUILD_NUMBER).toBe(370);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.56');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(370);
-    expect(VERSION_JSON.version).toBe('v7.6.56');
-    expect(VERSION_JSON.buildNumber).toBe(370);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.57');
+    expect(CURRENT_BUILD_NUMBER).toBe(371);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.57');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(371);
+    expect(VERSION_JSON.version).toBe('v7.6.57');
+    expect(VERSION_JSON.buildNumber).toBe(371);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ဖျက်လိုက်တဲ့ မှတ်တမ်းတွေ တခြားဖုန်းမှာ ပြန်ပေါ်မလာတော့ပါဘူး — ဖျက်တာ Cloud ကို ရောက်တဲ့အထိ စောင့်ပြီး အတည်ပြုပါတယ်',
+      'စာရင်းမျက်နှာက လက်ကျန်ကတ်ရဲ့ အရောင်တွေ စိုစိုတောက်တောက် ဖြစ်လာပါပြီ — အနီ၊ အဝါ၊ အဖြူရဲ့ အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Deleted records no longer reappear on other devices — deletes are confirmed only once they reach Cloud',
+      'The Records balance card colours are vivid now — red, yellow and white keep their meanings',
     );
   });
 });

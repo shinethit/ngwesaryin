@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useDeferredValue } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle, Store } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Calendar, Wallet, Tag, FileText, Lock, Sparkles, Check, History, TrendingUp, TrendingDown, Minus, ShoppingCart, Trash2, X, Car, Fuel, Wrench, Gauge, ChevronDown, ChevronUp, HelpCircle, Store, Calculator, Delete, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Category,
   PlanType,
@@ -19,8 +19,9 @@ import {
 import { ShopContact } from '../types';
 import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatters';
 import { formatCurrency } from '../utils/currency';
-import { getLocalDateString } from '../utils/dateUtils';
+import { getLocalDateString, shiftLocalDate } from '../utils/dateUtils';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
+import { keypadPress, type KeypadKey } from '../utils/amountKeypad';
 import { CategoryTile, CategoryIcon } from './CategoryIcon';
 import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
 import { ItemPriceHistoryModal } from './ItemPriceHistoryModal';
@@ -62,6 +63,12 @@ import { db, safeSetDoc } from '../lib/firebase';
 import { doc } from 'firebase/firestore';
 
 const GAS_STATIONS = ['Denko', 'BOC', 'Other'];
+
+// [v7.6.57] Entry-form helpers: quick-amount chips (SET the amount,
+// replacing — never adding) and the keypad key layout (digits,
+// decimal, backspace; Clear lives in the keypad header).
+const QUICK_AMOUNTS_7657 = [500000, 1000000, 1500000];
+const KEYPAD_KEYS_7657: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'];
 
 export type EntryModel = 'general' | 'fuel' | 'vehicle_service' | 'tire_pressure';
 
@@ -144,6 +151,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const activeVehicles = useMemo(() => vehicles.filter((v) => v.isActive !== false), [vehicles]);
   const [type, setType] = useState<TransactionType>(editTransaction?.type || initialType);
   const [amount, setAmount] = useState(editTransaction ? String(editTransaction.amount) : '');
+  // [v7.6.57] Calculator keypad open state — display only; the amount
+  // value itself stays the single `amount` string state.
+  const [keypadOpen, setKeypadOpen] = useState(false);
   const [categoryId, setCategoryId] = useState(editTransaction?.category || '');
   // [v7.6.44] F1 — explicit-category lock: true once the user themself
   // picks a category in THIS form session (primary picker or a
@@ -666,6 +676,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
         setType(resolvedType);
         setAmount('');
+        setKeypadOpen(false);
         if (resolvedModel === 'general') {
           setCategoryId('');
           setSubCategoryId('');
@@ -1406,6 +1417,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const handleAddAmount = (add: number) => {
     const current = parseMyanmarNumber(amount) || 0;
     setAmount((current + add).toString());
+  };
+
+  // [v7.6.57] Single amount-text entry point: the typed input, the
+  // keypad and the quick-amount chips ALL go through here, so the
+  // value, parsing and the fuel-liters derivation are identical no
+  // matter how the amount was entered. The onChange body below is
+  // this function verbatim — typing behavior is unchanged.
+  const applyAmountText = (next: string) => {
+    setAmount(next);
+    const numAmt = parseMyanmarNumber(next) || 0;
+    const numPpl = parseMyanmarNumber(fuelPricePerLiter) || 0;
+    if (entryModel === 'fuel' && numAmt > 0 && numPpl > 0) {
+      setFuelLiters(String(Number((numAmt / numPpl).toFixed(2))));
+    }
+  };
+
+  // [v7.6.57] Date stepper: move the entry date by exactly one day.
+  // No min/max exists on the date field today; the shift keeps the
+  // YYYY-MM-DD local format and month/year boundaries via
+  // shiftLocalDate.
+  const handleDateShift = (days: number) => {
+    setDate(shiftLocalDate(date, days));
   };
 
   // [v7.5.60 M4/S15] Manual income/expense switch from the segmented
@@ -2216,15 +2249,61 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <div className="px-4 py-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <span className="text-xl font-black text-slate-400 shrink-0">{selectedWallet?.currency || 'MMK'}</span>
-                <input type="text" inputMode="decimal" value={amount} onChange={(e) => {
-                  setAmount(e.target.value);
-                  const numAmt = parseMyanmarNumber(e.target.value) || 0;
-                  const numPpl = parseMyanmarNumber(fuelPricePerLiter) || 0;
-                  if (entryModel === 'fuel' && numAmt > 0 && numPpl > 0) {
-                    setFuelLiters(String(Number((numAmt / numPpl).toFixed(2))));
-                  }
-                }} placeholder="0" autoFocus={!isEditing} className="flex-1 min-w-0 text-4xl font-black text-slate-900 bg-transparent border-0 focus:outline-none text-center" />
+                <input type="text" inputMode="decimal" value={amount} onChange={(e) => applyAmountText(e.target.value)} placeholder="0" autoFocus={!isEditing} className="flex-1 min-w-0 text-4xl font-black text-slate-900 bg-transparent border-0 focus:outline-none text-center" />
+                {/* [v7.6.57] Calculator keypad toggle — display only. */}
+                <button
+                  type="button"
+                  onClick={() => setKeypadOpen(!keypadOpen)}
+                  aria-expanded={keypadOpen}
+                  aria-label={lang === 'my' ? 'ဂဏန်းခလုတ် ဖွင့်/ပိတ်' : 'Toggle keypad'}
+                  title={lang === 'my' ? 'ဂဏန်းခလုတ်' : 'Keypad'}
+                  className={`shrink-0 p-2.5 rounded-xl border transition-colors cursor-pointer ${keypadOpen ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
+                >
+                  <Calculator className="w-5 h-5" />
+                </button>
               </div>
+              {/* [v7.6.57] Quick-amount chips — tapping SETS the amount
+                  (replacing, never adding), through the same path as
+                  typing. The active chip matches the current amount. */}
+              <div className="flex gap-1.5 mt-2.5">
+                {QUICK_AMOUNTS_7657.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => applyAmountText(String(v))}
+                    aria-pressed={(parseMyanmarNumber(amount) || 0) === v}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors cursor-pointer ${(parseMyanmarNumber(amount) || 0) === v ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
+                  >
+                    {v.toLocaleString('en-US')}
+                  </button>
+                ))}
+              </div>
+              {/* [v7.6.57] Calculator keypad — types into the same amount
+                  string through applyAmountText, so parsing is
+                  identical to typed input. Closed by default. */}
+              {keypadOpen && (
+                <div className="mt-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                  <div className="flex items-center justify-between px-1 pb-1.5">
+                    <span className="text-[11px] font-bold text-slate-500">{lang === 'my' ? 'ဂဏန်းခလုတ်' : 'Keypad'}</span>
+                    <button type="button" onClick={() => applyAmountText('')} className="text-[11px] font-bold text-rose-600 hover:text-rose-800 px-2 py-0.5 cursor-pointer">
+                      {lang === 'my' ? 'ရှင်းမည်' : 'Clear'}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {KEYPAD_KEYS_7657.map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => applyAmountText(keypadPress(amount, k))}
+                        aria-label={k === 'back' ? (lang === 'my' ? 'ဖျက်မည်' : 'Backspace') : k === '.' ? (lang === 'my' ? 'ဒဿမ' : 'Decimal point') : k}
+                        className="py-2.5 rounded-xl bg-white border border-slate-200 text-base font-bold text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer flex items-center justify-center"
+                      >
+                        {k === 'back' ? <Delete className="w-5 h-5" /> : k}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {entryModel === 'vehicle_service' && lastMaintLogForComparison && lastMaintLogForComparison.cost > 0 && amount && (
                 <div className="text-[10px] text-center mt-1 flex items-center justify-center gap-1">
                   <span className="text-slate-500">{lang === 'my' ? 'ယခင်ကုန်ကျစရိတ်:' : 'Prev Cost:'} {lastMaintLogForComparison.cost.toLocaleString()} Ks</span>
@@ -2914,6 +2993,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold text-slate-500">{lang === 'my' ? 'နေ့ရက်' : 'Date'}</div>
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full text-sm font-bold bg-transparent border-0 focus:outline-none mt-0.5" />
+              </div>
+              {/* [v7.6.57] Date stepper — move the entry date by exactly
+                  one day per tap; the date input itself is untouched. */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleDateShift(-1)}
+                  aria-label={lang === 'my' ? 'ယခင်နေ့' : 'Previous day'}
+                  title={lang === 'my' ? 'ယခင်နေ့' : 'Previous day'}
+                  className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDateShift(1)}
+                  aria-label={lang === 'my' ? 'နောက်နေ့' : 'Next day'}
+                  title={lang === 'my' ? 'နောက်နေ့' : 'Next day'}
+                  className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             </div>
 

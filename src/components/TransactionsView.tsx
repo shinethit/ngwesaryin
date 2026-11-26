@@ -749,21 +749,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
         <div className="grid grid-cols-3 gap-2 text-[11px]">
           <div className="min-w-0">
-            <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
+            <div className="text-white/80 font-medium truncate">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
             <div className={`font-mono font-bold truncate ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.opening, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
+            <div className="text-white/80 font-medium truncate">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
             <div className={`font-mono font-bold truncate ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="text-white/60 font-medium truncate">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
+            <div className="text-white/80 font-medium truncate">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
             <div
-              className={`font-mono font-bold truncate ${monthBalance.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}
+              className={`font-mono font-bold truncate ${monthBalance.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
               title={formatMMK(monthBalance.net)}
             >
               {balanceHidden ? '••••' : `${monthBalance.net >= 0 ? '+' : ''}${formatLakhs(monthBalance.net, lang)}`}

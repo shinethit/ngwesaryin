@@ -11,6 +11,7 @@ import { executeSyncTask } from './syncTransport';
 import {
   addTxTombstone,
   fetchTombstoneTxIds,
+  isEntityTombstoned,
   isTxDeleted,
   isTxTombstoned,
   isVehicleLogDeleted,
@@ -313,6 +314,14 @@ export class SyncQueueManager {
     ) {
       return true;
     }
+    // [v7.6.60] F4: generalized server tombstones — a debt, wallet,
+    // shop, vehicle or vehicle log deleted on ANY device stays
+    // deleted here too, once this device has fetched the tombstone
+    // (syncDataToCloud fetches at the start of every push; the
+    // listeners filter on this same gate). Budgets/categories are
+    // excluded from tombstone WRITES (reused doc ids) but the read
+    // leg is harmless for them: no such key is ever written.
+    if (isEntityTombstoned(entityType, entityId)) return true;
     return false;
   }
 
@@ -350,6 +359,29 @@ export class SyncQueueManager {
     const prevLen = this.queue.length;
     this.queue = this.queue.filter(
       (item) => !(item.entityType === entityType && item.entityId === entityId)
+    );
+    if (this.queue.length !== prevLen) {
+      this.saveQueue();
+    }
+  }
+
+  /**
+   * [v7.6.60] F1: remove() is operation-blind — it drops a pending
+   * DELETE task for the id too. Upsert-success paths must NEVER do
+   * that: a delete enqueued while the upsert was in flight (the
+   * entry guard ran BEFORE the up-to-12s write) would be silently
+   * lost, and the record would stay on every other device. This
+   * variant removes only non-delete tasks. Delete tasks leave the
+   * queue ONLY on server confirmation (doProcessQueue, by task
+   * id), the listener's confirmed-missing prune, or explicit user
+   * discard (SyncStatusDrawer / tracker modal, which keep using
+   * remove()) — never as a side effect of a successful write.
+   */
+  public removeUpsertOnly(entityType: SyncEntityType, entityId: string) {
+    const prevLen = this.queue.length;
+    this.queue = this.queue.filter(
+      (item) =>
+        !(item.entityType === entityType && item.entityId === entityId && item.operation !== 'delete')
     );
     if (this.queue.length !== prevLen) {
       this.saveQueue();
@@ -819,7 +851,11 @@ export class SyncQueueManager {
           if (this.isDeleteBlocked('transactions', tx.id)) return;
           succeededCount++;
           newlyConfirmedTxIds.push(tx.id);
-          this.remove('transactions', tx.id);
+          // [v7.6.60] F1: drop only the upsert task — a delete task
+          // for this id (enqueued after the re-check above, in the
+          // same synchronous stretch this cannot happen, but the
+          // method makes the intent structural) must survive.
+          this.removeUpsertOnly('transactions', tx.id);
         });
       } catch (err: any) {
         console.warn('[SyncQueue] writeBatch reconciliation error, executing individual fallback writes:', err);
@@ -832,7 +868,7 @@ export class SyncQueueManager {
             await withTimeout(setDoc(docRef, cleanForFirestore({ ...tx, userId: targetUid }), { merge: true }), 5000);
             succeededCount++;
             newlyConfirmedTxIds.push(tx.id);
-            this.remove('transactions', tx.id);
+            this.removeUpsertOnly('transactions', tx.id);
           } catch (itemErr) {
             // [v7.6.52] REST fallback before giving up and queueing:
             // the SDK transport is the flaky one on iOS WebKit.
@@ -849,7 +885,7 @@ export class SyncQueueManager {
             if (restRecovered) {
               succeededCount++;
               newlyConfirmedTxIds.push(tx.id);
-              this.remove('transactions', tx.id);
+              this.removeUpsertOnly('transactions', tx.id);
             } else {
               failedCount++;
               this.enqueue('transactions', tx.id, 'upsert', targetUid, tx);
@@ -865,6 +901,46 @@ export class SyncQueueManager {
       failedCount,
       newlyConfirmedTxIds,
     };
+  }
+
+  /**
+   * [v7.6.60] F3 — batch-confirmation gate. A writeBatch.commit() /
+   * setDoc() resolve is only a LOCAL accept under offline
+   * persistence, NOT server confirmation — yet syncDataToCloud
+   * used to advance its "synced" signature on exactly that signal,
+   * and the signature-skip then suppressed every later re-push of
+   * identical content. If the server later rejected the write
+   * (e.g. permission), nothing re-queued it. After a batch path
+   * resolves, wait (bounded) for the SDK to acknowledge the
+   * pending writes server-side:
+   * - acknowledged -> true; the caller may advance its signature.
+   * - timeout / rejection -> enqueue a durable backup task for
+   *   every pushed op (delete-guarded by enqueue()/enqueueBatch,
+   *   so a delete issued meanwhile still wins) and return false;
+   *   the caller must NOT advance its signature, so the next sync
+   *   re-pushes instead of skipping. The `waiter` parameter exists
+   *   for tests: production callers omit it and the real
+   *   waitForPendingWrites is used.
+   */
+  public async confirmBatchWritesOrEnqueueBackup(
+    ops: {
+      entityType: SyncEntityType;
+      entityId: string;
+      operation: SyncOperationType;
+      targetUid: string;
+      data?: any;
+    }[],
+    waiter?: () => Promise<void>
+  ): Promise<boolean> {
+    try {
+      await withTimeout(waiter ? waiter() : waitForPendingWrites(db), 5000);
+      return true;
+    } catch {
+      if (ops.length > 0) {
+        this.enqueueBatch(ops);
+      }
+      return false;
+    }
   }
 
   /**

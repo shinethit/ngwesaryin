@@ -1,4 +1,4 @@
-# NgweSarYin Sync Mechanism (v7.6.52)
+# NgweSarYin Sync Mechanism (v7.6.52, updated v7.6.60)
 
 One canonical pipeline for every cloud write and delete. This document
 describes the code as shipped in v7.6.52 — no aspirational claims.
@@ -49,6 +49,11 @@ record that was confirmed before, the local delete task for that id
 is removed and the local marker cleared. A task leaves the queue
 ONLY on server confirmation — never on a local SDK acknowledgement,
 and never because a caller removed it after attempting the delete.
+Upsert-success paths use `removeUpsertOnly()` (v7.6.60, F1): a
+delete enqueued while the upsert was in flight must survive — the
+old operation-blind `remove()` could wipe it. `remove()` itself
+remains ONLY for the confirmed-missing prune and explicit user
+discard (drawer / tracker modal).
 
 ## Transport order (executeSyncTask)
 
@@ -79,7 +84,9 @@ these hold:
 
 1. a delete task for the id is pending in the queue,
 2. a delete for the id is in the dead-letter list,
-3. a tombstone for the id exists (transactions only),
+3. a tombstone for the id exists — transactions: the bare id;
+   debts/wallets/shops/vehicles/fuelLogs/vehicleMaintenance/
+   tirePressureLogs: the composite `type:id` key (v7.6.60),
 4. a local deletion marker for the id exists.
 
 Every write path consults it:
@@ -100,14 +107,35 @@ Every write path consults it:
 - `reconcileMissingTxsWithWriteBatch` fetches tombstones
   server-first and skips tombstoned / pending-delete / marked ids.
 
-## Tombstones (transactions only)
+## Tombstones (transactions, plus generalized entity tombstones v7.6.60)
 
-- Written to `users/{uid}/tombstones/{txId}` with
+- Transactions: written to `users/{uid}/tombstones/{txId}` with
   `{ id, userId, entityType: 'transactions', deletedAt }`.
+- Debts, wallets, shops, vehicles, fuel logs, maintenance logs
+  and tire-pressure logs (v7.6.60): written to the SAME collection
+  with the composite doc id `{entityType}:{entityId}` and payload
+  `{ id, userId, entityType, entityId, deletedAt }`. The rules
+  tombstone match constrains only `userId` and `id == doc id`,
+  so composite docs pass with NO rules change. The local cache
+  (`ngwe_tombstone_entity_ids`) is updated synchronously at
+  delete time, and `isDeleteBlocked` consults it for every kind —
+  which also gates every listener/pull merge, since they filter
+  on the same gate.
+- EXCLUDED from tombstone writes, deliberately: budgets (doc id
+  IS the categoryId — a later legitimate budget for the same
+  category reuses the id, and the append-only cache would veto
+  it forever) and categories (default categories have fixed ids
+  and App re-seeds them on reset — same reuse hazard), plus
+  sharedWallets (top-level collection, different rules/path) and
+  savingsTargets (no cloud push path). For those kinds the
+  pending/dead-letter legs still cover the in-flight window; the
+  stale-device window remains, stated honestly in Limitations.
 - `enqueueTxDelete` writes the tombstone task ONLY when the target
   uid is the current user's uid (a collaborator's tombstone write
   under the owner's path would be rules-denied; the shared-wallet
-  delete task still proceeds — see Limitations).
+  delete task still proceeds — see Limitations). The same
+  own-uid-only rule applies to generalized tombstones in
+  `safeDeleteDoc`.
 - Tombstones are best-effort: the delete task is the primary
   guarantee. A tombstone write failure does not fail the delete.
 - Tombstones are NEVER pruned in v1. Reusing a deleted transaction
@@ -118,12 +146,15 @@ Every write path consults it:
   owner-only create/update/delete, owner/admin read, mirroring the
   wallets pattern. The payload must carry `userId` and `id`
   matching the path.
-- Every device learns tombstones three ways: the tombstone
+- Every device learns tombstones four ways: the tombstone
   `onSnapshot` listener, the pull (`pullDataFromCloud` returns
   `tombstoneTxIds`, unioned into the local cache — never a clear),
-  and the reconcile fetch gate. The local cache
-  (`ngwe_tombstone_tx_ids`, user-scoped) keeps gating working
-  offline and across restarts.
+  the reconcile fetch gate, and — since v7.6.60 — the
+  server-tombstone fetch at the START of every `syncDataToCloud`
+  push (transactions + composite keys, bounded, cache fallback),
+  which closes the stale-device re-push window. The local caches
+  (`ngwe_tombstone_tx_ids`, `ngwe_tombstone_entity_ids`,
+  user-scoped) keep gating working offline and across restarts.
 
 ## Retry / dead-letter rules
 
@@ -180,10 +211,10 @@ Every write path consults it:
 | Path | Goes through the pipeline? | Gate |
 |---|---|---|
 | `safeSetDoc` | yes — executor + queue on failure | `isDeleteBlocked` refusal |
-| `safeDeleteDoc` | yes — durable intent first, then executor | tombstone via `enqueueTxDelete` (own uid) |
+| `safeDeleteDoc` | yes — durable intent first, then executor | tombstone via `enqueueTxDelete` (own uid); generalized tombstone for debts/wallets/shops/vehicles/logs (own uid, v7.6.60) |
 | `safeUpdateDoc` | attempt-only (no queue) | `isDeleteBlocked` refusal |
 | `syncQueue.enqueue/enqueueBatch` | the pipeline itself | delete-wins dedup incl. tombstone leg |
-| `syncDataToCloud` batch + per-doc fallback | no — writeBatch + bounded per-doc `setDoc` (predates the executor); gated instead, and failures enqueue into the pipeline | `isDeleteBlocked` on all loops; fallback enqueue dedup |
+| `syncDataToCloud` batch + per-doc fallback | no — writeBatch + bounded per-doc `setDoc` (predates the executor); gated instead, and failures enqueue into the pipeline | `isDeleteBlocked` on all loops; tombstone fetch at push start + in-flight re-check before each chunk commit (v7.6.60, F4); batch-confirmation gate — signature advances only on server acknowledgement, else durable backup tasks (v7.6.60, F3); fallback enqueue dedup |
 | `reconcileMissingTxsWithWriteBatch` | write-batch + executor REST fallback | tombstone fetch gate |
 | `DatabaseSyncTrackerModal` single-push / REST fallbacks | single-push via enqueue + processQueue + verify-left-queue | `isDeleteBlocked` gate on REST fallbacks |
 | `deleteSharedTxChecked` / shared debt mirrors | caller enqueues shared delete tasks + `safeDeleteDoc` | composite-id delete tasks; executor REST-first for shared txs |
@@ -201,7 +232,11 @@ Every write path consults it:
   persisted before the first attempt.
 - The Firestore SDK's offline persistence (`persistentLocalCache`)
   still exists underneath, but nothing in the app treats an SDK
-  local acknowledgement as server confirmation for deletes.
+  local acknowledgement as server confirmation for deletes. Since
+  v7.6.60 the same discipline applies to the `syncDataToCloud`
+  batch: its "synced" signature advances only after
+  `waitForPendingWrites` acknowledges the writes server-side,
+  with durable backup queue tasks otherwise (F3).
 
 ## Limitations (honest)
 
@@ -214,10 +249,14 @@ Every write path consults it:
    transaction cannot write a tombstone under the owner's path
    (rules deny it). The shared-copy delete task is the guard there;
    the personal-copy delete is owned by the workspace owner.
-3. Non-transaction entities have no tombstones: their cross-device
-   delete propagation relies on the listener/pull prune and the
-   queue delete tasks, as before — only the delete-wins gating is
-   new for them.
+3. Budgets, categories, shared-wallet docs and savingsTargets
+   have no server tombstones (reused doc ids / different rules /
+   no push path — see Tombstones). Their cross-device delete
+   propagation relies on the listener/pull prune and the queue
+   delete tasks, as before; a device that was offline when such a
+   delete landed elsewhere and syncs before its first listener
+   snapshot can still re-push its stale copy. Debts, wallets,
+   shops, vehicles and vehicle logs are covered since v7.6.60.
 4. `processQueue()` has no force option; call sites casting
    `{ force: true }` are no-ops. Retries obey backoff.
 5. Not verified live: real devices, real iOS WebKit behavior,

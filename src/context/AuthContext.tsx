@@ -22,6 +22,7 @@ import { safeGetItem, safeSetItem, safeRemoveItem, setStorageScope } from '../ut
 import { getSharedWalletDocId, recomputeSharedWalletBalance } from '../lib/sharedWalletService';
 import { fetchMyRefs, deleteSharedWalletRef, subscribeMyRefs } from '../lib/sharedWalletRefs';
 import { computeSyncSignature, computeContentFingerprint } from '../utils/syncGuards';
+import { fetchTombstoneTxIds, fetchEntityTombstones } from '../utils/deletedMarkers';
 import { buildTrialProfileUpdate } from '../utils/premiumActivation';
 import { isWalletMatch } from '../utils/walletBalance';
 import { mapSetPasswordError } from '../utils/authErrorMapper';
@@ -1034,6 +1035,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const uid = auth.currentUser.uid;
     const targetUid = overrideWorkspaceId || currentWorkspaceId || uid;
 
+    // [v7.6.60] F4: learn the server's tombstones FIRST — a device
+    // that was offline when a delete landed elsewhere must not
+    // re-push its stale copy through the batch below. Bounded and
+    // failure-tolerant: the fetches fall back to the local cache
+    // internally, and a timeout never blocks the sync (the push
+    // filters below still consult the pending/dead-letter/marker
+    // legs of isDeleteBlocked).
+    try {
+      await withTimeout(
+        Promise.all([fetchTombstoneTxIds(targetUid), fetchEntityTombstones(targetUid)]),
+        5000
+      );
+    } catch {
+      // Local tombstone cache stands.
+    }
+
     // [v6.10.0 S3] Content-aware signature. Full per-entity hash replaces
     // the old count+sum+firstId heuristic, which silently missed note/
     // category/date/walletId edits and offsetting amount changes.
@@ -1270,10 +1287,62 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
+      // [v7.6.60] F3/F4: derive durable backup descriptors for
+      // everything this call pushes (from the doc paths, so the
+      // push loops above stay untouched), and the in-flight
+      // delete-block re-check used before every chunk commit: a
+      // delete enqueued while the batch was being built must not
+      // be pushed by a stale chunk.
+      const toBackupOp = (op: { ref: any; data: any }) => {
+        const parts = String(op.ref?.path || '').split('/');
+        if (parts.length === 4 && parts[0] === 'users') {
+          return {
+            entityType: parts[2] as any,
+            entityId: parts[3],
+            operation: 'upsert' as const,
+            targetUid: parts[1],
+            data: op.data,
+          };
+        }
+        if (parts[0] === 'sharedWallets' && parts.length >= 2) {
+          return {
+            entityType: 'sharedWallets' as any,
+            entityId: parts.slice(1).join('/'),
+            operation: 'upsert' as const,
+            targetUid: uid,
+            data: op.data,
+          };
+        }
+        return null;
+      };
+      const backupOps = [...operations, ...sharedOperations]
+        .map(toBackupOp)
+        .filter((o): o is NonNullable<typeof o> => o !== null);
+      const isPersonalOpDeleteBlocked = (op: { ref: any }) => {
+        const parts = String(op.ref?.path || '').split('/');
+        if (parts.length === 4 && parts[0] === 'users') {
+          return syncQueue.isDeleteBlocked(parts[2] as any, parts[3]);
+        }
+        return false;
+      };
+      const isSharedOpDeleteBlocked = (op: { ref: any; data: any }) => {
+        const parts = String(op.ref?.path || '').split('/');
+        if (parts[0] === 'sharedWallets' && parts.length === 4 && parts[2] === 'transactions') {
+          return (
+            syncQueue.isDeleteBlocked('transactions', parts[3]) ||
+            syncQueue.isEntityPendingDelete('sharedWallets', parts.slice(1).join('/'))
+          );
+        }
+        return false;
+      };
+
       // Execute in chunks with resilient per-document fallback
       const CHUNK_SIZE = 200;
       for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
-        const chunk = operations.slice(i, i + CHUNK_SIZE);
+        const chunk = operations
+          .slice(i, i + CHUNK_SIZE)
+          .filter((op) => !isPersonalOpDeleteBlocked(op));
+        if (chunk.length === 0) continue;
         try {
           const currentBatch = writeBatch(db);
           for (const op of chunk) {
@@ -1318,7 +1387,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const sharedFailedPaths: string[] = [];
       if (sharedOperations.length > 0) {
         for (let i = 0; i < sharedOperations.length; i += CHUNK_SIZE) {
-          const chunk = sharedOperations.slice(i, i + CHUNK_SIZE);
+          const chunk = sharedOperations
+            .slice(i, i + CHUNK_SIZE)
+            .filter((op) => !isSharedOpDeleteBlocked(op));
+          if (chunk.length === 0) continue;
           try {
             const swBatch = writeBatch(db);
             for (const op of chunk) {
@@ -1352,6 +1424,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
+      // [v7.6.60] F3: the batch/setDoc resolves above are LOCAL
+      // accepts, not server confirmation. Wait (bounded) for the
+      // SDK to acknowledge the pending writes; on timeout or
+      // rejection the gate enqueues durable backup tasks for
+      // every pushed op. The signature advances ONLY on
+      // acknowledgement — unconfirmed, the next sync re-pushes
+      // instead of skipping on an identical signature.
+      const batchConfirmed = await syncQueue.confirmBatchWritesOrEnqueueBackup(backupOps);
+
       if (sharedFailed > 0) {
         console.error('[syncDataToCloud] ' + sharedFailed + ' shared write(s) failed:', sharedFailedPaths.slice(0, 20));
         setSyncError(
@@ -1360,10 +1441,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
-      lastSyncedSignatureRef.current = currentSig;
-      const now = new Date();
-      setLastSyncedAt(now);
-      safeSetItem('ngwe_last_synced', now.toISOString());
+      if (batchConfirmed) {
+        lastSyncedSignatureRef.current = currentSig;
+        const now = new Date();
+        setLastSyncedAt(now);
+        safeSetItem('ngwe_last_synced', now.toISOString());
+      }
       return true;
     } catch (error: any) {
       console.error('Sync to cloud error:', error);

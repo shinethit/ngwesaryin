@@ -264,22 +264,22 @@ describe('Left alone: PlanBanner unmounted, Navbar chip untouched (v7.5.98)', ()
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
-    expect(CURRENT_BUILD_NUMBER).toBe(373);
-    expect(VERSION_JSON.version).toBe('v7.6.59');
-    expect(VERSION_JSON.buildNumber).toBe(373);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
+    expect(CURRENT_BUILD_NUMBER).toBe(374);
+    expect(VERSION_JSON.version).toBe('v7.6.60');
+    expect(VERSION_JSON.buildNumber).toBe(374);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.59');
-    expect(entry.buildNumber).toBe(373);
+    expect(entry.version).toBe('v7.6.60');
+    expect(entry.buildNumber).toBe(374);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'လက်ကျန်ကတ် အဓိကပမာဏ Hero အတိုင်း ထူထူစိုစို',
+      'Sync အပေါက်တွေ ပိတ်ခြင်းနှင့် လက်ကျန်ကတ် အပြားလိုက် ပြင်ဆင်ခြင်း',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(7);
+    expect(entry.changesEn).toHaveLength(7);
   });
 
   it('change log has no Admin content and releasedAt is present-only', () => {

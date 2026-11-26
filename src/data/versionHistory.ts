@@ -16,10 +16,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.59';
-export const CURRENT_BUILD_NUMBER = 373;
+export const CURRENT_APP_VERSION = 'v7.6.60';
+export const CURRENT_BUILD_NUMBER = 374;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.60',
+    buildNumber: 374,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Sync အပေါက်တွေ ပိတ်ခြင်းနှင့် လက်ကျန်ကတ် အပြားလိုက် ပြင်ဆင်ခြင်း',
+    titleEn: 'Sync delete-loss holes closed; balance card flat like the Hero',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဖျက်ထားတဲ့ မှတ်တမ်းတွေ ပြန်ပေါ်လာတာ၊ ဖျက်တာက ပျောက်သွားတာမျိုး မဖြစ်အောင် Sync လမ်းကြောင်းက အပေါက် ၄ ခုကို ပိတ်လိုက်ပါပြီ။ လက်ကျန်ကတ်လည်း Dashboard Hero လို အပြားလိုက် သန့်သန့်ရှင်းရှင်း ဖြစ်သွားပါပြီ။',
+    descriptionEn: 'Four holes in the sync pipeline are closed — deleted records stay deleted on every device, and the database sync tracker is reachable from the sync drawer. The balance card is flat and clean like the Dashboard Hero.',
+    changesMy: [
+      'ပြင်နေရင်း ဖျက်လိုက်တဲ့ မှတ်တမ်းက Cloud ကို မရောက်ဘဲ ပျောက်သွားတဲ့ အပေါက်ကို ပိတ်လိုက်ပါပြီ',
+      'Cloud က လက်ခံပြီးကြောင်း အတည်မပြုရသေးတဲ့ ပေးပို့မှုတွေကို ထပ်ပို့ပြီး အတည်ပြုချက်ရမှ ပြီးပြီလို့ သတ်မှတ်ပါပြီ',
+      'တခြားစက်မှာ ဖျက်ထားတဲ့ အကြွေး၊ ပိုက်ဆံအိတ်၊ ဆိုင်၊ ယာဉ်မှတ်တမ်းတွေကို ဒီစက်က ပြန်တင်ပြီး ပြန်ပေါ်လာတာမျိုး မဖြစ်တော့ပါ',
+      'Sync အသေးစိတ်မှာ Database Sync အပြည့်အစုံ ကြည့်တဲ့ ခလုတ် ပါလာပါပြီ — ပျောက်နေတဲ့ မှတ်တမ်းတွေ ပြန်ရှာတဲ့ လုပ်ဆောင်ချက်တွေ သုံးလို့ရပါပြီ',
+      'အရောင်ပြေး (gradient) အောက်ခံကို ဖြုတ်ပြီး အပြားလိုက် အပြာရင့်ရောင် ပြန်ဖြစ်ပါပြီ',
+      'အဓိကပမာဏနဲ့ အသားတင်ကိန်းဂဏန်းတွေက အလင်းဝင်း (glow) မပါဘဲ အပြားလိုက် အရောင်နဲ့ ပေါ်ပါပြီ',
+      'အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်မပါဘဲ စာသားအပြားလိုက် ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+    ],
+    changesEn: [
+      'A delete issued while an edit was saving can no longer lose its queue task',
+      'Batch uploads now wait for server acknowledgement before counting as synced, with durable retry tasks as backup',
+      'Deletes of debts, wallets, shops and vehicle logs made on another device are now honoured here via server tombstones',
+      'The sync drawer now opens the full database sync tracker, so missing-record repair actions are reachable',
+      'The gradient ground is removed — the card is flat navy again',
+      'The main and net figures carry flat colours with no glow',
+      'Opening, closing and net are plain text with no tinted chips — meanings unchanged',
+    ],
+  },
   {
     version: 'v7.6.59',
     buildNumber: 373,

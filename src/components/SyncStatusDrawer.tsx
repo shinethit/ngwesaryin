@@ -17,6 +17,11 @@ interface SyncStatusDrawerProps {
   cloudTxIds: Set<string>;
   categories?: Category[];
   onDeleteTransaction: (id: string) => void;
+  // [v7.6.60 F7] The DatabaseSyncTrackerModal (and through it the
+  // SyncHealthModal repair paths) had no opener anywhere. This
+  // drawer is the one sync-detail surface that exists, so it
+  // carries the single opener.
+  onOpenDatabaseTracker?: () => void;
 }
 
 export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
@@ -27,6 +32,7 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
   cloudTxIds,
   categories = [],
   onDeleteTransaction,
+  onOpenDatabaseTracker,
 }) => {
   const { user } = useAuth();
   const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
@@ -548,17 +554,37 @@ export const SyncStatusDrawer: React.FC<SyncStatusDrawerProps> = ({
         </div>
 
         {/* Drawer Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 text-xs">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 text-xs gap-2">
           <span className="text-slate-500 font-medium min-w-0 truncate">
             {lang === 'my' ? 'စက်တွင်း ဒေတာများ လုံခြုံစွာ ရှိနေပါသည်' : 'Local data is safely stored on device'}
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition-all cursor-pointer shrink-0"
-          >
-            {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* [v7.6.60 F7] The single opener for the database sync
+                tracker (and through it the SyncHealth repair paths).
+                The drawer and the tracker modal share z-50 and the
+                drawer mounts later, so the drawer MUST close here —
+                otherwise the tracker opens underneath it and looks
+                dead. No other button changes behaviour. */}
+            {onOpenDatabaseTracker && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenDatabaseTracker();
+                }}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all cursor-pointer"
+              >
+                {lang === 'my' ? 'Sync အသေးစိတ် အပြည့်အစုံ ကြည့်မည်' : 'View full sync details'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition-all cursor-pointer shrink-0"
+            >
+              {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

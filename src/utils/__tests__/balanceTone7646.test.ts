@@ -9,6 +9,8 @@
 // (rose-100 / amber-100 / emerald-100 / white by tone), not the
 // washed-out white/80 of 57 — the whole card reads vivid only when
 // the labels carry colour too.
+// [v7.6.60] Removed again: the user rejected the tinted chips as a
+// colour wash. Labels are plain bright white/80, flat like the Hero.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { balanceToneClass, LOW_BALANCE_THRESHOLD_MMK } from '../balanceTone';
@@ -63,10 +65,9 @@ describe('balanceToneClass (v7.6.46 Part D, saturated v7.6.57)', () => {
     );
   });
 
-  it('the mini-stat labels are bright tinted chip labels (v7.6.58), not washed-out white/80', () => {
-    expect(TX_SRC).toContain('toneChipLabelClass(balanceTone(monthBalance.opening))');
-    expect(TX_SRC).toContain('toneChipLabelClass(balanceTone(monthBalance.closing))');
-    expect(TX_SRC).toContain("toneChipLabelClass(monthBalance.net >= 0 ? 'emerald' : 'rose')");
+  it('the mini-stat labels are plain bright white/80 (v7.6.60 flat), not tinted chips', () => {
+    expect(TX_SRC).toContain('text-white/80');
+    expect(TX_SRC).not.toContain('toneChipLabelClass');
     expect(TX_SRC).not.toContain('text-white/80 font-medium truncate');
     expect(TX_SRC).not.toContain('text-white/60 font-medium truncate');
   });

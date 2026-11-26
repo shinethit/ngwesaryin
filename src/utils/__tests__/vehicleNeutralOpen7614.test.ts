@@ -193,35 +193,43 @@ describe('edit mode and explicit initialModel entry points are untouched (v7.6.1
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
-    expect(CURRENT_BUILD_NUMBER).toBe(373);
-    expect(VERSION_JSON.version).toBe('v7.6.59');
-    expect(VERSION_JSON.buildNumber).toBe(373);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
+    expect(CURRENT_BUILD_NUMBER).toBe(374);
+    expect(VERSION_JSON.version).toBe('v7.6.60');
+    expect(VERSION_JSON.buildNumber).toBe(374);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('top history entry is the v7.6.18 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.59');
-    expect(entry.buildNumber).toBe(373);
+    expect(entry.version).toBe('v7.6.60');
+    expect(entry.buildNumber).toBe(374);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('လက်ကျန်ကတ် အဓိကပမာဏ Hero အတိုင်း ထူထူစိုစို');
-    expect(entry.titleEn).toBe('Records balance figure matches the Hero — thick and vivid');
+    expect(entry.titleMy).toBe('Sync အပေါက်တွေ ပိတ်ခြင်းနှင့် လက်ကျန်ကတ် အပြားလိုက် ပြင်ဆင်ခြင်း');
+    expect(entry.titleEn).toBe('Sync delete-loss holes closed; balance card flat like the Hero');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ',
-      'အရောင် တောက်ပမှုနဲ့ အဓိပ္ပာယ်တွေ (အနီ၊ အဝါ၊ အဖြူ) အတိုင်းပါပဲ',
-      'ဖုန်း အကျယ် 360px မှာလည်း စာတွေ ညှပ်မသွားဘဲ အပြည့်အစုံ ပေါ်ပါပြီ',
-        ]);
+      'ပြင်နေရင်း ဖျက်လိုက်တဲ့ မှတ်တမ်းက Cloud ကို မရောက်ဘဲ ပျောက်သွားတဲ့ အပေါက်ကို ပိတ်လိုက်ပါပြီ',
+      'Cloud က လက်ခံပြီးကြောင်း အတည်မပြုရသေးတဲ့ ပေးပို့မှုတွေကို ထပ်ပို့ပြီး အတည်ပြုချက်ရမှ ပြီးပြီလို့ သတ်မှတ်ပါပြီ',
+      'တခြားစက်မှာ ဖျက်ထားတဲ့ အကြွေး၊ ပိုက်ဆံအိတ်၊ ဆိုင်၊ ယာဉ်မှတ်တမ်းတွေကို ဒီစက်က ပြန်တင်ပြီး ပြန်ပေါ်လာတာမျိုး မဖြစ်တော့ပါ',
+      'Sync အသေးစိတ်မှာ Database Sync အပြည့်အစုံ ကြည့်တဲ့ ခလုတ် ပါလာပါပြီ — ပျောက်နေတဲ့ မှတ်တမ်းတွေ ပြန်ရှာတဲ့ လုပ်ဆောင်ချက်တွေ သုံးလို့ရပါပြီ',
+      'အရောင်ပြေး (gradient) အောက်ခံကို ဖြုတ်ပြီး အပြားလိုက် အပြာရင့်ရောင် ပြန်ဖြစ်ပါပြီ',
+      'အဓိကပမာဏနဲ့ အသားတင်ကိန်းဂဏန်းတွေက အလင်းဝင်း (glow) မပါဘဲ အပြားလိုက် အရောင်နဲ့ ပေါ်ပါပြီ',
+      'အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်မပါဘဲ စာသားအပြားလိုက် ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+    ]);
     expect(entry.changesEn).toEqual([
-      'The main figure is now as large and bold as the Dashboard Hero figure',
-      'Glow and colour meanings (red, yellow, white) unchanged',
-      'No clipped text at any phone width, including 360px',
-        ]);
+      'A delete issued while an edit was saving can no longer lose its queue task',
+      'Batch uploads now wait for server acknowledgement before counting as synced, with durable retry tasks as backup',
+      'Deletes of debts, wallets, shops and vehicle logs made on another device are now honoured here via server tombstones',
+      'The sync drawer now opens the full database sync tracker, so missing-record repair actions are reachable',
+      'The gradient ground is removed — the card is flat navy again',
+      'The main and net figures carry flat colours with no glow',
+      'Opening, closing and net are plain text with no tinted chips — meanings unchanged',
+    ]);
   });
 });

@@ -155,6 +155,129 @@ export const fetchTombstoneTxIds = async (uid: string): Promise<Set<string>> => 
     return cached;
   }
 };
+// ── Generalized server tombstones (non-transaction entities) ──
+// [v7.6.60] F4: transactions are not the only resurrectable kind.
+// A device that was offline when a debt, wallet, shop, vehicle or
+// vehicle log was deleted elsewhere, then syncing before its first
+// listener server snapshot, re-pushed its stale copy through the
+// syncDataToCloud batch (which consulted only LOCAL markers/queue
+// state). These composite tombstones are the same server
+// collection as the transaction tombstones — one tiny doc per
+// deleted entity, doc id `${entityType}:${entityId}`, payload
+// {id, userId, entityType, entityId, deletedAt}. The
+// firestore.rules tombstone match constrains only userId and
+// id == doc id, so composite docs pass WITHOUT a rules change.
+// EXCLUDED, deliberately: budgets (doc id IS the categoryId, so a
+// later legitimate budget for the same category would reuse the
+// id and the append-only tombstone cache would veto it forever)
+// and categories (default categories have fixed ids and App.tsx
+// re-seeds INITIAL_CATEGORIES on reset — same reuse hazard), plus
+// sharedWallets (top-level collection, different rules/path) and
+// savingsTargets (no cloud push path). The residual window for
+// those kinds is stated honestly in the v7.6.60 report; the
+// pending/dead-letter legs of isDeleteBlocked still cover the
+// in-flight window for them. Tombstones are never pruned — one
+// doc per deleted entity is negligible, and pruning would reopen
+// the resurrection window for long-offline devices.
+
+export const ENTITY_TOMBSTONE_TYPES = [
+  'debts',
+  'wallets',
+  'shops',
+  'vehicles',
+  'fuelLogs',
+  'vehicleMaintenance',
+  'tirePressureLogs',
+] as const;
+
+export type EntityTombstoneType = (typeof ENTITY_TOMBSTONE_TYPES)[number];
+
+const ENTITY_TOMBSTONE_CACHE_KEY = 'ngwe_tombstone_entity_ids';
+
+export const entityTombstoneKey = (entityType: string, entityId: string): string =>
+  `${entityType}:${entityId}`;
+
+export const getTombstonedEntityKeys = (): Set<string> => {
+  try {
+    const saved = safeGetItem(ENTITY_TOMBSTONE_CACHE_KEY);
+    if (!saved) return new Set<string>();
+    const parsed = JSON.parse(saved);
+    return new Set<string>(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set<string>();
+  }
+};
+
+export const setTombstonedEntityKeys = (keys: Set<string> | string[]) => {
+  try {
+    safeSetItem(ENTITY_TOMBSTONE_CACHE_KEY, JSON.stringify(Array.from(keys)));
+  } catch {}
+};
+
+export const isEntityTombstoned = (entityType: string, entityId: string): boolean => {
+  return getTombstonedEntityKeys().has(entityTombstoneKey(entityType, entityId));
+};
+
+export const addEntityTombstone = (entityType: string, entityId: string) => {
+  try {
+    const set = getTombstonedEntityKeys();
+    const key = entityTombstoneKey(entityType, entityId);
+    if (!set.has(key)) {
+      set.add(key);
+      setTombstonedEntityKeys(set);
+    }
+  } catch {}
+};
+
+/**
+ * Fetch the server's composite tombstone keys (server-first, cache
+ * fallback). Unions into the entity cache only — bare transaction
+ * ids are the transaction tombstone path's business
+ * (fetchTombstoneTxIds) and are ignored here. Never throws: on
+ * any failure the local cache stands, exactly like the tx fetch.
+ */
+export const fetchEntityTombstones = async (uid: string): Promise<Set<string>> => {
+  const cached = getTombstonedEntityKeys();
+  if (!uid) return cached;
+  try {
+    const { collection, getDocsFromServer, getDocs } = await import('firebase/firestore');
+    const { db } = await import('../lib/firebase');
+    const colRef = collection(db, 'users', uid, 'tombstones');
+    const readIds = async (snap: any): Promise<string[]> => {
+      const ids: string[] = [];
+      snap.forEach((d: any) => {
+        if (d && d.id) ids.push(d.id);
+      });
+      return ids;
+    };
+    const unionComposite = (ids: string[]): Set<string> => {
+      const merged = new Set<string>(cached);
+      for (const id of ids) {
+        const [prefix, rest] = id.split(':');
+        if (rest !== undefined && (ENTITY_TOMBSTONE_TYPES as readonly string[]).includes(prefix)) {
+          merged.add(id);
+        }
+      }
+      return merged;
+    };
+    try {
+      const merged = unionComposite(await readIds(await getDocsFromServer(colRef)));
+      // UNION, never replace (same rule as the tx fetch): the
+      // server snapshot may not know of a tombstone this device
+      // just wrote (its upsert is still queued).
+      setTombstonedEntityKeys(merged);
+      return merged;
+    } catch {
+      const ids = await readIds(await getDocs(colRef));
+      const merged = unionComposite(ids);
+      if (ids.length > 0) setTombstonedEntityKeys(merged);
+      return ids.length > 0 ? merged : cached;
+    }
+  } catch {
+    return cached;
+  }
+};
+
 // Fuel / maintenance / tire logs had no deletion markers at all (unlike
 // transactions), so a cloud snapshot could re-merge a log the user had
 // just deleted — and its odometer came back with it. These markers make

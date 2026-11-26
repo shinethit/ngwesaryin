@@ -261,8 +261,10 @@ export function useSyncOperations({
           const httpRes = await pushTransactionsDirectHttp(remainingPendingTxs, targetUid);
           if (httpRes.pushedCount > 0 && httpRes.succeededIds.length > 0) {
             httpPushedCount = httpRes.succeededIds.length;
-            // Confirm/remove only succeededIds
-            httpRes.succeededIds.forEach((sId) => syncQueue.remove('transactions', sId));
+            // Confirm/remove only succeededIds — and only their
+            // upsert tasks ([v7.6.60] F1): a delete enqueued while
+            // this REST push was in flight must survive.
+            httpRes.succeededIds.forEach((sId) => syncQueue.removeUpsertOnly('transactions', sId));
             handleUpdateConfirmedCloudTxIds(httpRes.succeededIds);
           }
         } catch (httpErr) {

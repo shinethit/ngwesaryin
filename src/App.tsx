@@ -4437,6 +4437,9 @@ export default function App() {
         cloudTxIds={cloudTxIds}
         categories={categories}
         onDeleteTransaction={handleDeleteTransaction}
+        // [v7.6.60 F7] The drawer's footer button is the single
+        // opener for the database sync tracker.
+        onOpenDatabaseTracker={() => setIsDatabaseTrackerOpen(true)}
       />
 
       {updateAvailable && (

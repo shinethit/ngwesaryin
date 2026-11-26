@@ -153,17 +153,17 @@ describe('Redesigned shop cards (v7.6.40)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.59');
-    expect(CURRENT_BUILD_NUMBER).toBe(373);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.59');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(373);
-    expect(VERSION_JSON.version).toBe('v7.6.59');
-    expect(VERSION_JSON.buildNumber).toBe(373);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
+    expect(CURRENT_BUILD_NUMBER).toBe(374);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.60');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(374);
+    expect(VERSION_JSON.version).toBe('v7.6.60');
+    expect(VERSION_JSON.buildNumber).toBe(374);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'အဓိကပမာဏက Dashboard Hero အတိုင်း ပိုကြီး၊ ပိုထူလာပါပြီ',
+      'အရောင်ပြေး (gradient) အောက်ခံကို ဖြုတ်ပြီး အပြားလိုက် အပြာရင့်ရောင် ပြန်ဖြစ်ပါပြီ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'The main figure is now as large and bold as the Dashboard Hero figure',
+      'The gradient ground is removed — the card is flat navy again',
     );
   });
 });

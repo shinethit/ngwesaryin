@@ -42,7 +42,7 @@ import { getWalletSelectionLabel } from '../utils/walletSelectionLabel';
 // [v7.6.45] Records-top calendar (Part E) + display-time tile colours (Part D).
 import { RecordsCalendar } from './RecordsCalendar';
 import { getCategoryTileColor } from '../utils/categoryTileColor';
-import { balanceGlowClass, balanceTone, balanceToneClass, netGlowClass, toneChipClass, toneChipLabelClass } from '../utils/balanceTone';
+import { balanceToneClass } from '../utils/balanceTone';
 
 export type TimeFilterType =
   | 'all'
@@ -707,8 +707,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           [v7.6.59] The big figure is the Hero's exact phone size
           (text-3xl, 30px, font-black — Dashboard.tsx:541) with
           the same glow and tone colour. Tone semantics, numbers,
-          labels, buttons and functions are unchanged. */}
-      <div className="rounded-3xl bg-gradient-to-br from-[#0E2247] via-[#1E3A5F] to-[#1D4ED8] text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_12px_30px_rgba(29,78,216,0.40)] border border-indigo-300/25 space-y-2">
+          labels, buttons and functions are unchanged.
+          [v7.6.60] FLAT like the Hero: the gradient ground, glow
+          and tinted chips were never asked for — the user
+          rejected them as a colour wash ('ရောင်ပြေး'). Removed:
+          the ground is the flat #1E3A5F again, figures carry
+          flat tone colours only, sub-figures are plain text with
+          bright labels, buttons match the Hero's flat
+          translucent style. The 30px figure, tone semantics,
+          numbers, labels, buttons and functions are unchanged,
+          and the 360px no-truncate behaviour is kept. */}
+      <div className="rounded-3xl bg-[#1E3A5F] text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_10px_28px_rgba(30,58,95,0.25)] space-y-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-extrabold text-white truncate">
             {lang === 'my' ? 'လက်ကျန် · ဒီလ' : 'Balance · This month'}
@@ -717,7 +726,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={() => setFiltersExpandedPersist(!filtersExpanded)}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-xs font-bold text-white transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
               title={lang === 'my' ? 'ပိုက်ဆံအိတ် ရွေးချယ်ရန် Filter ဖွင့်မည်' : 'Open filters to choose wallets'}
             >
               <span>
@@ -732,7 +741,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={() => setBalanceHidden(!balanceHidden)}
-              className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors cursor-pointer"
               aria-label={lang === 'my' ? (balanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (balanceHidden ? 'Show balance' : 'Hide balance')}
               title={lang === 'my' ? (balanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (balanceHidden ? 'Show balance' : 'Hide balance')}
             >
@@ -743,7 +752,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 type="button"
                 onClick={handleCardSync}
                 disabled={isSyncing || isCardSyncing}
-                className="min-w-11 min-h-11 p-2 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-white transition-colors cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-50"
+                className="min-w-11 min-h-11 p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-50"
                 title="Sync"
                 aria-label={lang === 'my' ? 'Cloud နှင့် ထပ်မံချိတ်ဆက်မည်' : 'Sync with Cloud'}
               >
@@ -754,29 +763,29 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         <div
-          className={`text-3xl leading-tight font-black font-mono ${balanceToneClass(monthBalance.closing)} ${balanceGlowClass(monthBalance.closing)}`}
+          className={`text-3xl leading-tight font-black font-mono ${balanceToneClass(monthBalance.closing)}`}
           title={formatMMK(monthBalance.closing)}
         >
           {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
         </div>
 
         <div className="grid grid-cols-3 gap-2 max-[361px]:gap-1.5 text-[11px]">
-          <div className={`min-w-0 rounded-xl px-1 max-[361px]:px-0.5 py-1.5 ${toneChipClass(balanceTone(monthBalance.opening))}`}>
-            <div className={`font-semibold leading-tight max-[361px]:text-[9px] ${toneChipLabelClass(balanceTone(monthBalance.opening))}`}>{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
+          <div className="min-w-0">
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/80">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
             <div className={`font-mono font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.opening, lang)}
             </div>
           </div>
-          <div className={`min-w-0 rounded-xl px-1 max-[361px]:px-0.5 py-1.5 ${toneChipClass(balanceTone(monthBalance.closing))}`}>
-            <div className={`font-semibold leading-tight max-[361px]:text-[9px] ${toneChipLabelClass(balanceTone(monthBalance.closing))}`}>{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
+          <div className="min-w-0">
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/80">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
             <div className={`font-mono font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
             </div>
           </div>
-          <div className={`min-w-0 rounded-xl px-1 max-[361px]:px-0.5 py-1.5 ${toneChipClass(monthBalance.net >= 0 ? 'emerald' : 'rose')}`}>
-            <div className={`font-semibold leading-tight max-[361px]:text-[9px] ${toneChipLabelClass(monthBalance.net >= 0 ? 'emerald' : 'rose')}`}>{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
+          <div className="min-w-0">
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/80">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
             <div
-              className={`font-mono font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-400' : 'text-rose-400'} ${netGlowClass(monthBalance.net)}`}
+              className={`font-mono font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
               title={formatMMK(monthBalance.net)}
             >
               {balanceHidden ? '••••' : `${monthBalance.net >= 0 ? '+' : ''}${formatLakhs(monthBalance.net, lang)}`}
@@ -789,7 +798,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('analytics')}
-              className="px-3 py-2 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-xs font-bold text-white transition-colors cursor-pointer"
+              className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
             >
               {lang === 'my' ? 'အစီရင်ခံစာ' : 'Reports'}
             </button>
@@ -798,7 +807,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             type="button"
             onClick={() => setCalendarOpen(!calendarOpen)}
             aria-expanded={calendarOpen}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-xs font-bold text-white transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
           >
             <Calendar className="w-3.5 h-3.5" />
             {calendarOpen

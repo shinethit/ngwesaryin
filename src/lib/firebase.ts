@@ -490,7 +490,10 @@ export async function safeSetDoc(
     if (entityType && entityId) {
       import('./syncQueue')
         .then(({ syncQueue }) => {
-          syncQueue.remove(entityType as any, entityId);
+          // [v7.6.60] F1: never drop a pending DELETE task as a
+          // side effect of a successful upsert — a delete
+          // enqueued while this write was in flight survives.
+          syncQueue.removeUpsertOnly(entityType as any, entityId);
         })
         .catch(() => {});
     }
@@ -549,7 +552,31 @@ export async function safeDeleteDoc(docRef: any): Promise<boolean> {
       const { syncQueue } = await import('./syncQueue');
       if (queueEntityType === 'transactions') {
         syncQueue.enqueueTxDelete(queueEntityId, intentUid);
-      } else {
+      } else if (queueEntityType) {
+        // [v7.6.60] F4: generalized server tombstone for debts,
+        // wallets, shops, vehicles and vehicle logs — mirroring
+        // the transaction rule (own deletes only; an admin
+        // deleting another user's records must not seed
+        // tombstones in the victim's collection). The local
+        // cache is updated first so this device gates pushes
+        // before the tombstone lands server-side. Budgets and
+        // categories are excluded (reused doc ids — see
+        // deletedMarkers.ts); their delete task alone is queued.
+        const { addEntityTombstone, ENTITY_TOMBSTONE_TYPES } =
+          await import('../utils/deletedMarkers');
+        if (
+          (ENTITY_TOMBSTONE_TYPES as readonly string[]).includes(queueEntityType) &&
+          intentUid === auth.currentUser?.uid
+        ) {
+          addEntityTombstone(queueEntityType, queueEntityId);
+          syncQueue.enqueue('tombstones', `${queueEntityType}:${queueEntityId}`, 'upsert', intentUid, {
+            id: `${queueEntityType}:${queueEntityId}`,
+            userId: intentUid,
+            entityType: queueEntityType,
+            entityId: queueEntityId,
+            deletedAt: new Date().toISOString(),
+          });
+        }
         syncQueue.enqueue(queueEntityType as any, queueEntityId, 'delete', intentUid);
       }
       return true;

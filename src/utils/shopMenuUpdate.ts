@@ -20,7 +20,7 @@
 // (safeUpdateDoc/safeSetDoc CORRUPT FieldValue sentinels; see
 // AGENTS.md v7.5.64 lesson).
 
-import type { Transaction, TransactionItem } from '../types';
+import type { Transaction, TransactionItem, VehicleMaintenance } from '../types';
 import { normalizeShopName } from './shopDetailsReminders';
 import { attributeItemsToShops } from './transactionSplits';
 import type { UnifiedItemInfo } from './itemIntelligence';
@@ -357,6 +357,11 @@ export interface VehicleMenuCandidateInput {
   maintTitle?: string;
   extraNote?: string;
   finalAmount?: number;
+  /** [v7.6.54] Service fee / labor for the visit, entered separately
+   *  from the part rows. NEVER folded into a part price: the
+   *  candidate emits it as its own 'ဝန်ဆောင်ခ' row (no unit key),
+   *  and the part price is the parts total only. */
+  laborCost?: number;
   /** [v7.5.93] Multi-row service entries: the valid rows (each with
    *  its own serviceType) — the candidate emits ONE item per row.
    *  Absent / empty → the old single-item synthesis below. */
@@ -382,6 +387,9 @@ export interface ShopMenuUpdateCandidate {
  *   unit), so every part of a multi-row visit can update the menu.
  *   With no rows, the OLD single-item synthesis (title || service
  *   label || note || default, total amount, quantity 1).
+ *   [v7.6.54] The service fee is NEVER folded into a part price:
+ *   it is its own 'ဝန်ဆောင်ခ' row (no unit key), and the part
+ *   price is the parts total only (total − labor).
  *   Fires only when a workshop name and an amount > 0 are present.
  * - license_renewal (the "shop" is a government office, not a shop),
  *   tire_pressure (free, no price) and general entries → null.
@@ -406,6 +414,16 @@ export function buildVehicleMenuCandidate(
     if (input.maintServiceType === 'license_renewal') return null;
     const amount = input.finalAmount ?? 0;
     if (!shop || !Number.isFinite(amount) || amount <= 0) return null;
+    // [v7.6.54] The service fee is NEVER folded into a part price:
+    // it is its own candidate row ('ဝန်ဆောင်ခ', no unit key — the
+    // diff normalizes the missing unit to the default 'ခု', the
+    // same as every other unit-less menu line), and the part price
+    // is the parts total only. Labor is sanitized like the form's
+    // maintLaborNum (never negative, non-finite → 0).
+    const laborRaw = Number(input.laborCost);
+    const labor = Number.isFinite(laborRaw) ? Math.max(0, laborRaw) : 0;
+    const laborRow: TransactionItem | null =
+      labor > 0 ? { name: 'ဝန်ဆောင်ခ', price: labor, quantity: 1, amount: labor } : null;
     // [v7.5.93] Multi-row visit: one candidate item per valid row.
     const rowItems = (input.rows || [])
       .filter((r) => r && typeof r.name === 'string' && r.name.trim() && Number(r.quantity) > 0)
@@ -422,17 +440,25 @@ export function buildVehicleMenuCandidate(
         };
       });
     if (rowItems.length > 0) {
-      return { shopName: shop, items: rowItems };
+      return { shopName: shop, items: laborRow ? [...rowItems, laborRow] : rowItems };
     }
+    // No rows: the OLD single-item synthesis, but the price is the
+    // PARTS total only (total − labor, floored at 0). When the parts
+    // total is 0 and labor > 0, ONLY the labor row is emitted —
+    // never a zero-price part row.
+    const partsTotal = Math.max(0, amount - labor);
     const name =
       (input.maintTitle || '').trim() ||
       (input.maintServiceLabel || '').trim() ||
       (input.extraNote || '').trim() ||
       'ယာဉ်ပြုပြင်ထိန်းသိမ်းမှု';
-    return {
-      shopName: shop,
-      items: [{ name, price: amount, quantity: 1, amount, unit: DEFAULT_MENU_UNIT }],
-    };
+    const items: TransactionItem[] = [];
+    if (partsTotal > 0) {
+      items.push({ name, price: partsTotal, quantity: 1, amount: partsTotal, unit: DEFAULT_MENU_UNIT });
+    }
+    if (laborRow) items.push(laborRow);
+    if (items.length === 0) return null;
+    return { shopName: shop, items };
   }
   return null;
 }
@@ -837,11 +863,28 @@ export interface LatestItemsByShopEntry {
  * save path uses, keeping only the LATEST item per name+unit per
  * shop. Extracted verbatim from App's handleReapplyAllShopMenus so
  * the click build and the header-button derivation can never drift.
+ * [v7.6.54] When maintenance logs are passed, a visit's service fee
+ * is synthesized as its own 'ဝန်ဆောင်ခ' item (no unit key) for the
+ * visit's shop — the same separate row the save path emits — so the
+ * refresh-all-menus prompt no longer loses labor. Newest visit per
+ * shop wins, like every other item; license_renewal never yields a
+ * row; a visit with no shop at all is skipped, like a shopless
+ * entry on the save path.
  */
 export function collectLatestItemsByShop(
   transactions: Transaction[],
   suggestions: UnifiedItemInfo[],
+  maintenanceLogs?: VehicleMaintenance[],
 ): Map<string, LatestItemsByShopEntry> {
+  const laborByTx = new Map<string, { labor: number; workshopName: string }>();
+  for (const m of maintenanceLogs || []) {
+    if (!m || !m.transactionId || m.serviceType === 'license_renewal') continue;
+    const labor = Number(m.laborCost) || 0;
+    if (!Number.isFinite(labor) || labor <= 0) continue;
+    if (!laborByTx.has(m.transactionId)) {
+      laborByTx.set(m.transactionId, { labor, workshopName: (m.workshopName || '').trim() });
+    }
+  }
   const ordered = [...transactions].sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1;
     const aCreated = typeof a.createdAt === 'number' ? a.createdAt : 0;
@@ -862,6 +905,31 @@ export function collectLatestItemsByShop(
       for (const item of attributedItems) {
         const itemKey = `${(item.name || '').trim().toLowerCase()}|${(item.unit || '').trim().toLowerCase()}`;
         if (!entry.latest.has(itemKey)) entry.latest.set(itemKey, item);
+      }
+    }
+    // [v7.6.54] Service fee for this visit, if any: its own row for
+    // the visit's shop (the entry shop, else the workshop name).
+    // Items above win on a key collision — an explicitly typed
+    // 'ဝန်ဆောင်ခ' row keeps its own price.
+    const visitLabor = laborByTx.get(tx.id);
+    if (visitLabor) {
+      const laborShop = (tx.shopName || '').trim() || visitLabor.workshopName;
+      const key = normalizeShopName(laborShop);
+      if (key) {
+        let entry = latestByShop.get(key);
+        if (!entry) {
+          entry = { displayName: laborShop, latest: new Map() };
+          latestByShop.set(key, entry);
+        }
+        const laborKey = 'ဝန်ဆောင်ခ|';
+        if (!entry.latest.has(laborKey)) {
+          entry.latest.set(laborKey, {
+            name: 'ဝန်ဆောင်ခ',
+            price: visitLabor.labor,
+            quantity: 1,
+            amount: visitLabor.labor,
+          });
+        }
       }
     }
   }
@@ -915,9 +983,11 @@ export function deriveGlobalMenuPending(args: {
   privateShops: MenuShopListEntry[];
   publicShopNames: string[];
   isSignedIn: boolean;
+  /** [v7.6.54] Maintenance logs for the labor-row synthesis. */
+  maintenanceLogs?: VehicleMaintenance[];
 }): GlobalMenuPendingState {
-  const { transactions, suggestions, privateShops, publicShopNames, isSignedIn } = args;
-  const latestByShop = collectLatestItemsByShop(transactions, suggestions);
+  const { transactions, suggestions, privateShops, publicShopNames, isSignedIn, maintenanceLogs } = args;
+  const latestByShop = collectLatestItemsByShop(transactions, suggestions, maintenanceLogs);
   const publicKeys = new Set(publicShopNames.map((n) => normalizeShopName(n)));
   let pendingCount = 0;
   let hasDoubt = false;

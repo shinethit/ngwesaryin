@@ -390,23 +390,23 @@ describe('placement and UI wiring (v7.6.09)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
-    expect(CURRENT_BUILD_NUMBER).toBe(367);
-    expect(VERSION_JSON.version).toBe('v7.6.53');
-    expect(VERSION_JSON.buildNumber).toBe(367);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
+    expect(CURRENT_BUILD_NUMBER).toBe(368);
+    expect(VERSION_JSON.version).toBe('v7.6.54');
+    expect(VERSION_JSON.buildNumber).toBe(368);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.53');
-    expect(entry.buildNumber).toBe(367);
+    expect(entry.version).toBe('v7.6.54');
+    expect(entry.buildNumber).toBe(368);
     expect(entry.releaseDate).toBe('2026-11-26');
-    expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('Google အကောင့်မှာ စကားဝှက် သတ်မှတ်နိုင်ခြင်း');
+    expect(entry.tag).toBe('fix');
+    expect(entry.titleMy).toBe('Menu မှာ ဝန်ဆောင်ခ သတ်သတ် ပြခြင်း');
     expect(entry.changesMy).toEqual([
-          'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်',
-          'စကားဝှက် ရှိနှင့်ပြီးသားဆိုရင် အခြေအနေ ပြပြီး စကားဝှက်ပြောင်းဖို့ Email ပို့လို့ရပါတယ်',
+          'ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ',
+          'Menu ပြန်တင်တဲ့ ခလုတ်ကလည်း ဝန်ဆောင်ခကို သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ဆိုင်တိုင်းမှာ ဈေးအသစ်နဲ့ ကိုက်ညီအောင် တင်နိုင်ပါတယ်',
         ]);
     expect(entry.changesEn).toEqual([
-          'Google-signed-in accounts can now set an email password too — both Google and email + password sign-in work',
-          'Accounts that already have a password show their status, with an option to email a password reset link',
+          'Workshop menus now list the service fee as its own line instead of folding it into part prices — part prices are parts-only',
+          'The refresh-all-menus action also shows the service fee as a separate line, so every shop can be updated with the new prices',
         ]);
     expect(VERSION_JSON.changesMy).toEqual(entry.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(entry.changesEn);

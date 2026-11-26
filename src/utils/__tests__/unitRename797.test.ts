@@ -350,17 +350,17 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
-    expect(CURRENT_BUILD_NUMBER).toBe(367);
-    expect(VERSION_JSON.version).toBe('v7.6.53');
-    expect(VERSION_JSON.buildNumber).toBe(367);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
+    expect(CURRENT_BUILD_NUMBER).toBe(368);
+    expect(VERSION_JSON.version).toBe('v7.6.54');
+    expect(VERSION_JSON.buildNumber).toBe(368);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.53');
-    expect(entry.buildNumber).toBe(367);
+    expect(entry.version).toBe('v7.6.54');
+    expect(entry.buildNumber).toBe(368);
     expect(entry.releaseDate).toBe('2026-11-26');
-    expect(entry.tag).toBe('feature');
-    expect(entry.titleMy).toBe('Google အကောင့်မှာ စကားဝှက် သတ်မှတ်နိုင်ခြင်း');
-    expect(entry.titleEn).toBe('Set a password on a Google account');
+    expect(entry.tag).toBe('fix');
+    expect(entry.titleMy).toBe('Menu မှာ ဝန်ဆောင်ခ သတ်သတ် ပြခြင်း');
+    expect(entry.titleEn).toBe('Service fee shown separately on menus');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(2);

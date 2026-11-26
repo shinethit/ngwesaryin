@@ -325,10 +325,10 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
   });
 
   it('the shipped identity is 7.6.26 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
-    expect(CURRENT_BUILD_NUMBER).toBe(367);
-    expect(VERSION_JSON.version).toBe('v7.6.53');
-    expect(VERSION_JSON.buildNumber).toBe(367);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
+    expect(CURRENT_BUILD_NUMBER).toBe(368);
+    expect(VERSION_JSON.version).toBe('v7.6.54');
+    expect(VERSION_JSON.buildNumber).toBe(368);
   });
 });
 
@@ -366,30 +366,30 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
-    expect(CURRENT_BUILD_NUMBER).toBe(367);
-    expect(VERSION_JSON.version).toBe('v7.6.53');
-    expect(VERSION_JSON.buildNumber).toBe(367);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
+    expect(CURRENT_BUILD_NUMBER).toBe(368);
+    expect(VERSION_JSON.version).toBe('v7.6.54');
+    expect(VERSION_JSON.buildNumber).toBe(368);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.53');
-    expect(entry.buildNumber).toBe(367);
+    expect(entry.version).toBe('v7.6.54');
+    expect(entry.buildNumber).toBe(368);
     expect(entry.releaseDate).toBe('2026-11-26');
-    expect(entry.tag).toBe('feature');
+    expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'Google အကောင့်မှာ စကားဝှက် သတ်မှတ်နိုင်ခြင်း',
+      'Menu မှာ ဝန်ဆောင်ခ သတ်သတ် ပြခြင်း',
     );
     expect(entry.titleEn).toBe(
-      'Set a password on a Google account',
+      'Service fee shown separately on menus',
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toHaveLength(2);
     expect(entry.changesEn).toHaveLength(2);
     expect(entry.changesMy[0]).toBe(
-      'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်',
+      'ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      'Google-signed-in accounts can now set an email password too — both Google and email + password sign-in work',
+      'Workshop menus now list the service fee as its own line instead of folding it into part prices — part prices are parts-only',
     );
   });
 

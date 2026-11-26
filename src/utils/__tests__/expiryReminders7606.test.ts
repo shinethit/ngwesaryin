@@ -349,29 +349,29 @@ describe('expiry section wiring — modal + bell badge (v7.6.06)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
-    expect(CURRENT_BUILD_NUMBER).toBe(367);
-    expect(VERSION_JSON.version).toBe('v7.6.53');
-    expect(VERSION_JSON.buildNumber).toBe(367);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
+    expect(CURRENT_BUILD_NUMBER).toBe(368);
+    expect(VERSION_JSON.version).toBe('v7.6.54');
+    expect(VERSION_JSON.buildNumber).toBe(368);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.53');
-    expect(top.buildNumber).toBe(367);
+    expect(top.version).toBe('v7.6.54');
+    expect(top.buildNumber).toBe(368);
     expect(top.releaseDate).toBe('2026-11-26');
-    expect(top.tag).toBe('feature');
-    expect(top.titleMy).toBe('Google အကောင့်မှာ စကားဝှက် သတ်မှတ်နိုင်ခြင်း');
-    expect(top.titleEn).toBe('Set a password on a Google account');
+    expect(top.tag).toBe('fix');
+    expect(top.titleMy).toBe('Menu မှာ ဝန်ဆောင်ခ သတ်သတ် ပြခြင်း');
+    expect(top.titleEn).toBe('Service fee shown separately on menus');
     expect(top.changesMy).toEqual([
-          'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်',
-          'စကားဝှက် ရှိနှင့်ပြီးသားဆိုရင် အခြေအနေ ပြပြီး စကားဝှက်ပြောင်းဖို့ Email ပို့လို့ရပါတယ်',
+          'ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ',
+          'Menu ပြန်တင်တဲ့ ခလုတ်ကလည်း ဝန်ဆောင်ခကို သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ဆိုင်တိုင်းမှာ ဈေးအသစ်နဲ့ ကိုက်ညီအောင် တင်နိုင်ပါတယ်',
         ]);
     expect(top.changesEn).toEqual([
-          'Google-signed-in accounts can now set an email password too — both Google and email + password sign-in work',
-          'Accounts that already have a password show their status, with an option to email a password reset link',
+          'Workshop menus now list the service fee as its own line instead of folding it into part prices — part prices are parts-only',
+          'The refresh-all-menus action also shows the service fee as a separate line, so every shop can be updated with the new prices',
         ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

@@ -1539,8 +1539,10 @@ export default function App() {
         privateShops: shops,
         publicShopNames: publicShops.map((s) => s.name),
         isSignedIn: !!user,
+        // [v7.6.54] Maintenance logs feed the labor-row synthesis.
+        maintenanceLogs: vehicleMaintenance,
       }),
-    [transactions, categories, shops, publicShops, user],
+    [transactions, categories, shops, publicShops, user, vehicleMaintenance],
   );
 
   const handleReapplyAllShopMenus = async () => {
@@ -1560,7 +1562,8 @@ export default function App() {
       // [v7.6.46] Attribution loop extracted to collectLatestItemsByShop
       // (shared with the header button's sync derivation — same helper,
       // so the two can never drift apart).
-      const latestByShop = collectLatestItemsByShop(transactions, suggestions);
+      // [v7.6.54] Maintenance logs feed the labor-row synthesis.
+      const latestByShop = collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance);
       if (latestByShop.size === 0) {
         showToast(
           lang === 'my' ? 'ဝယ်ခဲ့သည့် မှတ်တမ်း မရှိသေးပါ။' : 'No purchase history yet.',

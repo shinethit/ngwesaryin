@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.53';
-export const CURRENT_BUILD_NUMBER = 367;
+export const CURRENT_APP_VERSION = 'v7.6.54';
+export const CURRENT_BUILD_NUMBER = 368;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.54',
+    buildNumber: 368,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Menu မှာ ဝန်ဆောင်ခ သတ်သတ် ပြခြင်း',
+    titleEn: 'Service fee shown separately on menus',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu ကို ဈေးနှုန်းအသစ် တင်တဲ့အခါ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ။ Menu ပြန်တင်တဲ့ ခလုတ်ကလည်း ဝန်ဆောင်ခကို သတ်သတ် ပြပါတယ်။',
+    descriptionEn: 'When a workshop menu is offered new prices, the service fee is now its own line instead of being folded into part prices — part prices are parts-only. The refresh-all-menus action shows the service fee separately too.',
+    changesMy: [
+      'ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ',
+      'Menu ပြန်တင်တဲ့ ခလုတ်ကလည်း ဝန်ဆောင်ခကို သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ဆိုင်တိုင်းမှာ ဈေးအသစ်နဲ့ ကိုက်ညီအောင် တင်နိုင်ပါတယ်',
+    ],
+    changesEn: [
+      'Workshop menus now list the service fee as its own line instead of folding it into part prices — part prices are parts-only',
+      'The refresh-all-menus action also shows the service fee as a separate line, so every shop can be updated with the new prices',
+    ],
+  },
   {
     version: 'v7.6.53',
     buildNumber: 367,

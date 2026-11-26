@@ -104,17 +104,17 @@ describe('Shop cards are compact (v7.6.39)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
-    expect(CURRENT_BUILD_NUMBER).toBe(367);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.53');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(367);
-    expect(VERSION_JSON.version).toBe('v7.6.53');
-    expect(VERSION_JSON.buildNumber).toBe(367);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
+    expect(CURRENT_BUILD_NUMBER).toBe(368);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.54');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(368);
+    expect(VERSION_JSON.version).toBe('v7.6.54');
+    expect(VERSION_JSON.buildNumber).toBe(368);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်',
+      'ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'Google-signed-in accounts can now set an email password too — both Google and email + password sign-in work',
+      'Workshop menus now list the service fee as its own line instead of folding it into part prices — part prices are parts-only',
     );
   });
 });

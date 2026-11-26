@@ -7,7 +7,7 @@ import {
   resolveVehicleServiceSubCategory,
   ROW_SERVICE_TYPES,
 } from '../vehicleServiceRows';
-import { buildVehicleMenuCandidate } from '../shopMenuUpdate';
+import { buildVehicleMenuCandidate, computeMenuDiff } from '../shopMenuUpdate';
 import type { TransactionItem } from '../../types';
 
 const row = (over: Partial<TransactionItem> & { name: string }): TransactionItem => ({
@@ -202,5 +202,114 @@ describe('buildVehicleMenuCandidate with rows (v7.5.93)', () => {
       shopName: 'Denko',
       items: [{ name: 'Octane 92', price: 3100, quantity: 10, amount: 31000, unit: 'လီတာ' }],
     });
+  });
+});
+
+describe('buildVehicleMenuCandidate labor rows (v7.6.54)', () => {
+  const base = {
+    entryModel: 'vehicle_service' as const,
+    shopName: 'ဗိုလ်ဟိန်း - လီမွန်သီး',
+    maintServiceType: 'fan_belt',
+    maintServiceLabel: 'ပန်ကာကြိုး (Fan Belt)',
+    maintTitle: 'ပန်ကာကြိုး',
+    extraNote: '',
+    // User evidence: parts 27,000x1 + 9,000x2 = 45,000, labor 40,000.
+    finalAmount: 85000,
+  };
+  const rows = [
+    row({ name: 'ပန်ကာကြိုး ၁', serviceType: 'fan_belt', price: 27000, quantity: 1, amount: 27000, unit: 'ခု' }),
+    row({ name: 'ပန်ကာကြိုး ၂', serviceType: 'fan_belt', price: 9000, quantity: 2, amount: 18000, unit: 'ခု' }),
+  ];
+
+  it('multi-row: labor is appended as its own row, never folded into a part price', () => {
+    const c = buildVehicleMenuCandidate({ ...base, rows, laborCost: 40000 });
+    expect(c).toEqual({
+      shopName: 'ဗိုလ်ဟိန်း - လီမွန်သီး',
+      items: [
+        { name: 'ပန်ကာကြိုး ၁', price: 27000, quantity: 1, amount: 27000, unit: 'ခု' },
+        { name: 'ပန်ကာကြိုး ၂', price: 9000, quantity: 2, amount: 18000, unit: 'ခု' },
+        { name: 'ဝန်ဆောင်ခ', price: 40000, quantity: 1, amount: 40000 },
+      ],
+    });
+    // No unit key on the labor row.
+    expect('unit' in c!.items[2]).toBe(false);
+  });
+
+  it('single-item: price is parts total only (total − labor) plus the labor row', () => {
+    const c = buildVehicleMenuCandidate({ ...base, laborCost: 40000 });
+    expect(c).toEqual({
+      shopName: 'ဗိုလ်ဟိန်း - လီမွန်သီး',
+      items: [
+        { name: 'ပန်ကာကြိုး', price: 45000, quantity: 1, amount: 45000, unit: 'ခု' },
+        { name: 'ဝန်ဆောင်ခ', price: 40000, quantity: 1, amount: 40000 },
+      ],
+    });
+  });
+
+  it('labor 0 / absent / negative → no labor row, prices unchanged', () => {
+    const noLabor = buildVehicleMenuCandidate({ ...base, rows });
+    expect(noLabor!.items).toHaveLength(2);
+    const zeroLabor = buildVehicleMenuCandidate({ ...base, rows, laborCost: 0 });
+    expect(zeroLabor!.items).toHaveLength(2);
+    const negLabor = buildVehicleMenuCandidate({ ...base, rows, laborCost: -5000 });
+    expect(negLabor!.items).toHaveLength(2);
+    const single = buildVehicleMenuCandidate({ ...base });
+    expect(single!.items).toEqual([
+      { name: 'ပန်ကာကြိုး', price: 85000, quantity: 1, amount: 85000, unit: 'ခု' },
+    ]);
+  });
+
+  it('labor >= total → only the labor row, never a zero/negative part row', () => {
+    const c = buildVehicleMenuCandidate({ ...base, laborCost: 85000 });
+    expect(c!.items).toEqual([{ name: 'ဝန်ဆောင်ခ', price: 85000, quantity: 1, amount: 85000 }]);
+    const over = buildVehicleMenuCandidate({ ...base, laborCost: 90000 });
+    expect(over!.items).toEqual([{ name: 'ဝန်ဆောင်ခ', price: 90000, quantity: 1, amount: 90000 }]);
+  });
+
+  it('non-finite labor → no labor row', () => {
+    const c = buildVehicleMenuCandidate({ ...base, rows, laborCost: Number.NaN });
+    expect(c!.items).toHaveLength(2);
+  });
+
+  it('license_renewal with labor → null; fuel ignores laborCost', () => {
+    expect(buildVehicleMenuCandidate({ ...base, maintServiceType: 'license_renewal', rows, laborCost: 40000 })).toBeNull();
+    const fuel = buildVehicleMenuCandidate({
+      entryModel: 'fuel',
+      shopName: 'Denko',
+      fuelType: 'Octane 92',
+      fuelLiters: 10,
+      fuelPricePerLiter: 3100,
+      laborCost: 40000,
+    });
+    expect(fuel!.items).toEqual([{ name: 'Octane 92', price: 3100, quantity: 10, amount: 31000, unit: 'လီတာ' }]);
+  });
+
+  it('labor row flows through computeMenuDiff as a new row with the default unit', () => {
+    const c = buildVehicleMenuCandidate({ ...base, rows, laborCost: 40000 })!;
+    const diff = computeMenuDiff(
+      [
+        { name: 'ပန်ကာကြိုး ၁', price: 27000, unit: 'ခု' },
+        { name: 'ပန်ကာကြိုး ၂', price: 9000, unit: 'ခု' },
+      ],
+      c.items,
+    );
+    expect(diff).toEqual([
+      { itemName: 'ဝန်ဆောင်ခ', unit: 'ခု', oldPrice: null, newPrice: 40000, isNew: true, isLargeDiff: false },
+    ]);
+  });
+
+  it('labor row updates an existing menu line instead of duplicating it', () => {
+    const c = buildVehicleMenuCandidate({ ...base, rows, laborCost: 45000 })!;
+    const diff = computeMenuDiff(
+      [
+        { name: 'ပန်ကာကြိုး ၁', price: 27000, unit: 'ခု' },
+        { name: 'ပန်ကာကြိုး ၂', price: 9000, unit: 'ခု' },
+        { name: 'ဝန်ဆောင်ခ', price: 40000, unit: 'ခု' },
+      ],
+      c.items,
+    );
+    expect(diff).toEqual([
+      { itemName: 'ဝန်ဆောင်ခ', unit: 'ခု', oldPrice: 40000, newPrice: 45000, isNew: false, isLargeDiff: false },
+    ]);
   });
 });

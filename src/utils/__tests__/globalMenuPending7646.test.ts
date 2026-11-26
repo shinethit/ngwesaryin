@@ -16,7 +16,7 @@ import {
   type GlobalMenuShopEntry,
   type MenuShopListEntry,
 } from '../shopMenuUpdate';
-import type { Transaction } from '../../types';
+import type { Transaction, VehicleMaintenance } from '../../types';
 
 const SRC = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 
@@ -180,6 +180,124 @@ describe('deriveGlobalMenuPending (v7.6.46 Part E)', () => {
     const appSrc = SRC('../../App.tsx');
     expect(appSrc).toContain('deriveGlobalMenuPending');
     expect(appSrc).toContain('globalMenuPending={globalMenuPendingState}');
-    expect(appSrc).toContain('collectLatestItemsByShop(transactions, suggestions)');
+    expect(appSrc).toContain('collectLatestItemsByShop(transactions, suggestions, vehicleMaintenance)');
+    expect(appSrc).toContain('maintenanceLogs: vehicleMaintenance');
+  });
+});
+
+describe('re-apply labor rows (v7.6.54)', () => {
+  const maint = (over: Partial<VehicleMaintenance>): VehicleMaintenance =>
+    ({
+      id: 'm1',
+      vehicleId: 'v1',
+      date: '2026-11-26',
+      odometer: 172223,
+      serviceType: 'fan_belt',
+      title: 'ပန်ကာကြိုး',
+      cost: 85000,
+      laborCost: 40000,
+      workshopName: 'ဗိုလ်ဟိန်း - လီမွန်သီး',
+      syncToExpense: true,
+      transactionId: 'tx1',
+      walletId: 'w1',
+      userId: 'u1',
+      ...over,
+    }) as VehicleMaintenance;
+
+  const visitTx = (id: string, date: string, createdAt: number): Transaction =>
+    ({
+      ...tx(date, createdAt, 'ဗိုလ်ဟိန်း - လီမွန်သီး', [
+        { name: 'ပန်ကာကြိုး ၁', price: 27000, quantity: 1, unit: 'ခု' },
+        { name: 'ပန်ကာကြိုး ၂', price: 9000, quantity: 2, unit: 'ခု' },
+      ]),
+      id,
+    }) as unknown as Transaction;
+
+  it('synthesizes the labor row for the visit shop, part prices stay pure', () => {
+    const byShop = collectLatestItemsByShop([visitTx('tx1', '2026-11-26', 5)], [], [maint({})]);
+    const entry = byShop.get('ဗိုလ်ဟိန်း - လီမွန်သီး');
+    expect(entry).toBeDefined();
+    const items = [...entry!.latest.values()];
+    expect(items).toContainEqual({ name: 'ပန်ကာကြိုး ၁', price: 27000, quantity: 1, unit: 'ခု' });
+    expect(items).toContainEqual({ name: 'ပန်ကာကြိုး ၂', price: 9000, quantity: 2, unit: 'ခု' });
+    const labor = items.find((i) => i.name === 'ဝန်ဆောင်ခ');
+    expect(labor).toEqual({ name: 'ဝန်ဆောင်ခ', price: 40000, quantity: 1, amount: 40000 });
+    expect('unit' in labor!).toBe(false);
+  });
+
+  it('newest visit wins per shop; older labor is dropped', () => {
+    const byShop = collectLatestItemsByShop(
+      [visitTx('tx1', '2026-11-26', 5), visitTx('tx0', '2026-11-25', 4)],
+      [],
+      [maint({ transactionId: 'tx1', laborCost: 40000 }), maint({ id: 'm0', transactionId: 'tx0', laborCost: 30000 })],
+    );
+    const items = [...byShop.get('ဗိုလ်ဟိန်း - လီမွန်သီး')!.latest.values()];
+    expect(items.find((i) => i.name === 'ဝန်ဆောင်ခ')!.price).toBe(40000);
+  });
+
+  it('no maintenance logs → no labor row (backward compatible)', () => {
+    const byShop = collectLatestItemsByShop([visitTx('tx1', '2026-11-26', 5)], []);
+    const items = [...byShop.get('ဗိုလ်ဟိန်း - လီမွန်သီး')!.latest.values()];
+    expect(items.some((i) => i.name === 'ဝန်ဆောင်ခ')).toBe(false);
+  });
+
+  it('license_renewal and zero labor never yield a row', () => {
+    const byShop = collectLatestItemsByShop(
+      [visitTx('tx1', '2026-11-26', 5)],
+      [],
+      [maint({ serviceType: 'license_renewal' }), maint({ id: 'm2', transactionId: 'tx1', laborCost: 0 })],
+    );
+    const items = [...byShop.get('ဗိုလ်ဟိန်း - လီမွန်သီး')!.latest.values()];
+    expect(items.some((i) => i.name === 'ဝန်ဆောင်ခ')).toBe(false);
+  });
+
+  it('labor-only visit (no items) still surfaces the labor row via the workshop name', () => {
+    const laborOnly = {
+      ...tx('2026-11-26', 5, '', []),
+      id: 'tx9',
+    } as unknown as Transaction;
+    const byShop = collectLatestItemsByShop([laborOnly], [], [maint({ transactionId: 'tx9' })]);
+    const entry = byShop.get('ဗိုလ်ဟိန်း - လီမွန်သီး');
+    expect(entry).toBeDefined();
+    expect([...entry!.latest.values()]).toEqual([
+      { name: 'ဝန်ဆောင်ခ', price: 40000, quantity: 1, amount: 40000 },
+    ]);
+  });
+
+  it('derivation counts a labor-only diff as pending, agreeing with the click build', async () => {
+    const workshopShops: MenuShopListEntry[] = [
+      {
+        id: 'shop-w',
+        name: 'ဗိုလ်ဟိန်း - လီမွန်သီး',
+        items: [
+          { name: 'ပန်ကာကြိုး ၁', price: 27000, unit: 'ခု' },
+          { name: 'ပန်ကာကြိုး ၂', price: 9000, unit: 'ခု' },
+        ],
+      },
+    ];
+    const state = deriveGlobalMenuPending({
+      transactions: [visitTx('tx1', '2026-11-26', 5)],
+      suggestions: [],
+      privateShops: workshopShops,
+      publicShopNames: [],
+      isSignedIn: true,
+      maintenanceLogs: [maint({})],
+    });
+    // Part prices match the menu; only the labor row is new → pending.
+    expect(state.pendingCount).toBe(1);
+    expect(state.upToDateCount).toBe(0);
+    const built = await (async () => {
+      const latestByShop = collectLatestItemsByShop([visitTx('tx1', '2026-11-26', 5)], [], [maint({})]);
+      const entries: GlobalMenuShopEntry[] = [];
+      for (const e of latestByShop.values()) {
+        const resolved = await resolveMenuShop(e.displayName, [], workshopShops, async () => null);
+        if (resolved) entries.push({ resolved, items: [...e.latest.values()] });
+      }
+      return buildGlobalMenuSections(entries, true);
+    })();
+    expect(built.sections).toHaveLength(1);
+    expect(built.sections[0].rows).toEqual([
+      { itemName: 'ဝန်ဆောင်ခ', unit: 'ခု', oldPrice: null, newPrice: 40000, isNew: true, isLargeDiff: false },
+    ]);
   });
 });

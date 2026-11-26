@@ -2008,6 +2008,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           maintTitle,
           extraNote,
           finalAmount,
+          // [v7.6.54] Labor is passed separately so the menu
+          // candidate emits it as its own 'ဝန်ဆောင်ခ' row instead
+          // of folding it into the part price (never for
+          // license_renewal — the builder returns null there).
+          laborCost:
+            entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal' ? maintLaborNum : 0,
           // [v7.5.93] Multi-row visit: the candidate emits one item
           // per row; the helper falls back to the single-item
           // synthesis when there are no rows.

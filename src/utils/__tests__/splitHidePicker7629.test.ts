@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
-    expect(CURRENT_BUILD_NUMBER).toBe(367);
-    expect(VERSION_JSON.version).toBe('v7.6.53');
-    expect(VERSION_JSON.buildNumber).toBe(367);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
+    expect(CURRENT_BUILD_NUMBER).toBe(368);
+    expect(VERSION_JSON.version).toBe('v7.6.54');
+    expect(VERSION_JSON.buildNumber).toBe(368);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.53');
-    expect(entry.buildNumber).toBe(367);
-    expect(entry.changesMy[0]).toBe('Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်');
+    expect(entry.version).toBe('v7.6.54');
+    expect(entry.buildNumber).toBe(368);
+    expect(entry.changesMy[0]).toBe('ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

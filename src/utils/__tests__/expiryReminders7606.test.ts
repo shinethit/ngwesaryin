@@ -349,31 +349,29 @@ describe('expiry section wiring — modal + bell badge (v7.6.06)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.52');
-    expect(CURRENT_BUILD_NUMBER).toBe(366);
-    expect(VERSION_JSON.version).toBe('v7.6.52');
-    expect(VERSION_JSON.buildNumber).toBe(366);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
+    expect(CURRENT_BUILD_NUMBER).toBe(367);
+    expect(VERSION_JSON.version).toBe('v7.6.53');
+    expect(VERSION_JSON.buildNumber).toBe(367);
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);
   });
 
   it('the top history entry carries the neutral-open entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.52');
-    expect(top.buildNumber).toBe(366);
+    expect(top.version).toBe('v7.6.53');
+    expect(top.buildNumber).toBe(367);
     expect(top.releaseDate).toBe('2026-11-26');
-    expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('ချိတ်ဆက်မှုစနစ် အသစ်နှင့် မှတ်တမ်းများ Sync ခလုပ်');
-    expect(top.titleEn).toBe('Rebuilt sync system + Records sync button');
+    expect(top.tag).toBe('feature');
+    expect(top.titleMy).toBe('Google အကောင့်မှာ စကားဝှက် သတ်မှတ်နိုင်ခြင်း');
+    expect(top.titleEn).toBe('Set a password on a Google account');
     expect(top.changesMy).toEqual([
-          'မှတ်တမ်းများ စာမျက်နှာမှာ Cloud နဲ့ ချိတ်ဆက်တဲ့ ခလုတ်အသစ် ပါလာပါပြီ — ပင်မ စာမျက်နှာက ခလုတ်လိုပဲ နှိပ်လိုက်ရင် အချက်အလက်တွေ ချိတ်ဆက်ပေးပါတယ်',
-          'ဖျက်ထားတဲ့ မှတ်တမ်းတွေ Cloud ပေါ်မှာ သေချာပျောက်အောင် ချိတ်ဆက်မှုစနစ်ကို အသစ်ပြန်တည်ဆောက်လိုက်ပါပြီ — အင်တာနက်မရတဲ့အချိန်မှာလည်း ဖျက်ထားတာတွေ မပျောက်တော့ပါ',
-          'ပို့လို့မရတဲ့ အချက်အလက်တွေကို Sync အခြေအနေမှာ မြင်ရပြီး ထပ်မံကြိုးစားလို့ရပါပြီ — အောင်မြင်ပြီလို့ အမှားပြတာမျိုး မရှိတော့ပါ',
+          'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်',
+          'စကားဝှက် ရှိနှင့်ပြီးသားဆိုရင် အခြေအနေ ပြပြီး စကားဝှက်ပြောင်းဖို့ Email ပို့လို့ရပါတယ်',
         ]);
     expect(top.changesEn).toEqual([
-          'The Records page now has its own sync button, just like the home page — tap it to sync your records with Cloud',
-          'The sync system was rebuilt so deleted records reliably disappear from Cloud too — deletions made offline are kept and applied when you reconnect',
-          'Items that could not be sent are now visible in the sync status view with a retry button — no more false "synced" messages',
+          'Google-signed-in accounts can now set an email password too — both Google and email + password sign-in work',
+          'Accounts that already have a password show their status, with an option to email a password reset link',
         ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

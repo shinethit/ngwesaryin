@@ -5,7 +5,7 @@ import {
   getPremiumDaysLeft,
   formatPremiumRemaining,
 } from '../utils/premiumExpiry';
-import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCircle, ArrowDownCircle, FileJson, Download, Upload, Lock, Trash2, Crown, Clock, Calendar, Users, Mail, ShieldCheck, BookOpen, RefreshCw, AlertCircle, History, Eye } from 'lucide-react';
+import { X, Cloud, CheckCircle2, LogOut, Sparkles, Smartphone, Laptop, ArrowUpCircle, ArrowDownCircle, FileJson, Download, Upload, Lock, Trash2, Crown, Clock, Calendar, Users, Mail, ShieldCheck, BookOpen, RefreshCw, AlertCircle, History, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resetFirestoreConnection } from '../lib/firebase';
 import { PinLockSettings, PlanType } from '../types';
@@ -14,7 +14,7 @@ import type { AmountDisplayMode } from '../utils/formatters';
 import { CURRENT_APP_VERSION } from '../data/versionHistory';
 // [v7.5.60 G-M3] Google sign-in errors go through the same mapper as
 // the login screen — no raw Firebase codes shown to the user.
-import { getAuthErrorDetails, VPN_ADVICE_MY, VPN_ADVICE_EN } from '../utils/authErrorMapper';
+import { getAuthErrorDetails, validateEmailAuthInput, VPN_ADVICE_MY, VPN_ADVICE_EN } from '../utils/authErrorMapper';
 import { friendlySyncErrorMessage } from '../utils/syncErrorMessage';
 import { PinSetupModal } from './PinSetupModal';
 import { PinLockScreen } from './PinLockScreen';
@@ -77,6 +77,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     switchWorkspace,
     invitedWorkspaces = [],
     deleteAccount,
+    setAccountPassword,
+    resetPassword,
   } = useAuth();
   // [v7.6.44] Part E — display-time mapping only: the raw Firebase
   // syncError string is never rendered; null maps to null.
@@ -102,6 +104,19 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState({ type: '', text: '' });
+  // [v7.6.53] Set-a-password card (Google users link an email/password
+  // credential to their EXISTING account). All state lives with the
+  // other modal state above the `if (!isOpen)` early return — never
+  // place a hook after it (React #310).
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [setPasswordBusy, setSetPasswordBusy] = useState(false);
+  const [setPasswordMsg, setSetPasswordMsg] = useState({ type: '', text: '' });
+  // Set locally on success so the card flips to the already-set view
+  // at once even if the refreshed providerData lags one render.
+  const [passwordJustSet, setPasswordJustSet] = useState(false);
   const isPasswordUser = (user?.providerData || []).some((p) => p.providerId === 'password');
 
   const handleResetVpnConnection = async () => {
@@ -259,6 +274,133 @@ export const AccountModal: React.FC<AccountModalProps> = ({
       return;
     }
     void handleDeleteAccount();
+  };
+
+  // [v7.6.53] Set a password on this (Google) account: validate with
+  // the SAME rules as signup (validateEmailAuthInput, sign-up mode),
+  // then link the credential to the existing account. Error keys from
+  // setAccountPassword map to plain text here — never a raw code.
+  const handleSetPassword = async () => {
+    setSetPasswordMsg({ type: '', text: '' });
+    const email = (user?.email || '').trim();
+    if (!newPassword || !confirmPassword) {
+      setSetPasswordMsg({
+        type: 'error',
+        text: lang === 'my'
+          ? '⚠️ စကားဝှက်အသစ်ကို နှစ်နေရာလုံး ရိုက်ထည့်ပါ။'
+          : '⚠️ Enter the new password in both fields.',
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setSetPasswordMsg({
+        type: 'error',
+        text: lang === 'my'
+          ? '⚠️ စကားဝှက် နှစ်ခု တူမနေပါ။ ပြန်ရိုက်ကြည့်ပါ။'
+          : '⚠️ The two passwords do not match. Please re-enter them.',
+      });
+      return;
+    }
+    const validationCode = validateEmailAuthInput(email, newPassword, true);
+    if (validationCode) {
+      const details = getAuthErrorDetails({ code: validationCode }, lang);
+      setSetPasswordMsg({ type: 'error', text: `⚠️ ${details.title}: ${details.message}` });
+      return;
+    }
+    setSetPasswordBusy(true);
+    try {
+      const res = await setAccountPassword(newPassword);
+      if (res.success) {
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordJustSet(true);
+        setSetPasswordMsg({
+          type: 'success',
+          text: lang === 'my'
+            ? '✓ စကားဝှက် သတ်မှတ်ပြီးပါပြီ — Google နဲ့လည်း ဝင်လို့ရပါတယ်၊ Email + စကားဝှက်နဲ့လည်း ဝင်လို့ရပါပြီ။'
+            : '✓ Password set — you can now sign in with Google or with email + password.',
+        });
+        return;
+      }
+      if (res.error === 'ALREADY_HAS_PASSWORD') {
+        setPasswordJustSet(true);
+        setSetPasswordMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ စကားဝှက် ရှိနှင့်ပြီးသားပါ။ ပြောင်းလိုလျှင် အောက်က "စကားဝှက်ပြောင်းမည်" ကို သုံးပါ။'
+            : '⚠️ A password is already set. Use "Change password" below to change it.',
+        });
+      } else if (res.error === 'CREDENTIAL_ALREADY_IN_USE') {
+        setSetPasswordMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ ဤ Email ဖြင့် အခြားအကောင့် ရှိနှင့်ပြီးသားပါ — စကားဝှက် သတ်မှတ်၍ မရပါ။ အရင် ဝင်ခဲ့တဲ့ နည်းဖြင့် ပြန်ဝင်ပါ။'
+            : '⚠️ This email already belongs to another account — a password cannot be set here. Sign in with the method you used before.',
+        });
+      } else if (res.error === 'WEAK_PASSWORD') {
+        const details = getAuthErrorDetails({ code: 'auth/weak-password' }, lang);
+        setSetPasswordMsg({ type: 'error', text: `⚠️ ${details.title}: ${details.message}` });
+      } else if (res.error === 'REQUIRES_RECENT_LOGIN') {
+        setSetPasswordMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ လုံခြုံရေးအတွက် မကြာသေးခင် အကောင့်ဝင်ထားဖို့ လိုပါသည်။ အရင် အကောင့်ထွက်ပြီး ပြန်ဝင်ပြီးမှ ထပ်ကြိုးစားပါ။'
+            : '⚠️ For security, please sign out and sign back in, then try again.',
+        });
+      } else if (res.error === 'REAUTH_CANCELLED') {
+        setSetPasswordMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ အတည်ပြုခြင်း ပြတင်းပေါက် ပိတ်သွားပါသည်။ စကားဝှက် မသတ်မှတ်ရသေးပါ။'
+            : '⚠️ The confirmation popup was closed. No password was set.',
+        });
+      } else if (res.error === 'NETWORK_ERROR') {
+        setSetPasswordMsg({
+          type: 'error',
+          text: lang === 'my' ? `⚠️ ${VPN_ADVICE_MY}` : `⚠️ ${VPN_ADVICE_EN}`,
+        });
+      } else if (res.error === 'NOT_LOGGED_IN') {
+        setSetPasswordMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ အကောင့် ဝင်ထားခြင်း မရှိပါ။'
+            : '⚠️ You are not signed in.',
+        });
+      } else {
+        setSetPasswordMsg({
+          type: 'error',
+          text: lang === 'my'
+            ? '⚠️ စကားဝှက် သတ်မှတ်၍ မရပါ။ အင်တာနက် စစ်ပြီး ပြန်ကြိုးစားပါ။'
+            : '⚠️ Could not set the password. Check your connection and try again.',
+        });
+      }
+    } finally {
+      setSetPasswordBusy(false);
+    }
+  };
+
+  // [v7.6.53] Already-has-password state: email a reset link instead
+  // of linking again. resetPassword throws — map it like the login
+  // screen does, never raw.
+  const handleSendPasswordResetEmail = async () => {
+    const email = (user?.email || '').trim();
+    if (!email) return;
+    setSetPasswordMsg({ type: '', text: '' });
+    setSetPasswordBusy(true);
+    try {
+      await resetPassword(email);
+      setSetPasswordMsg({
+        type: 'success',
+        text: lang === 'my'
+          ? `✓ စကားဝှက်ပြောင်းရန် Email ပို့ပြီးပါပြီ (${email}) — Email ထဲက လင့်ကို နှိပ်ပြီး စကားဝှက်အသစ် သတ်မှတ်ပါ။`
+          : `✓ Password reset email sent (${email}) — tap the link in the email to set a new password.`,
+      });
+    } catch (err: any) {
+      const details = getAuthErrorDetails(err, lang);
+      setSetPasswordMsg({ type: 'error', text: `⚠️ ${details.title}: ${details.message}` });
+    } finally {
+      setSetPasswordBusy(false);
+    }
   };
 
   const handleSwitchWorkspace = async () => {
@@ -1033,6 +1175,122 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   : '🔒 PIN is stored as PBKDF2-SHA256 hash (never as plaintext)'}
               </p>
             </div>
+
+            {/* [v7.6.53] Set-a-password card: Google users link an
+                email/password credential to their EXISTING account.
+                Guests have no account, so the card never shows for
+                them. Password users see the already-set state with a
+                reset-email path instead of a second link attempt. */}
+            {user && !isGuest && (
+              <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Mail className="w-4 h-4 text-slate-500" />
+                  <div className="font-semibold text-sm text-slate-900">
+                    {lang === 'my' ? 'Email + စကားဝှက် ဖြင့် ဝင်ခြင်း' : 'Email + password sign-in'}
+                  </div>
+                </div>
+                {isPasswordUser || passwordJustSet ? (
+                  <div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed flex items-start gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>
+                        {lang === 'my'
+                          ? `စကားဝှက် သတ်မှတ်ပြီးပါပြီ — Email + စကားဝှက်နဲ့လည်း ဝင်လို့ရပါတယ်။ အကောင့်: ${user.email || ''}`
+                          : `A password is set — you can also sign in with email + password. Account: ${user.email || ''}`}
+                      </span>
+                    </p>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        id="btn-account-send-reset-email"
+                        onClick={() => void handleSendPasswordResetEmail()}
+                        disabled={setPasswordBusy}
+                        className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        {lang === 'my' ? 'စကားဝှက်ပြောင်းမည် (Email ပို့မည်)' : 'Change password (send email)'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      {lang === 'my'
+                        ? 'အခု Google နဲ့ပဲ ဝင်နေပါတယ်။ အောက်မှာ စကားဝှက် သတ်မှတ်ထားလိုက်ရင် Email + စကားဝှက်နဲ့လည်း ဝင်လို့ရပါပြီ — Google နဲ့လည်း ဆက်ဝင်လို့ရပါတယ်။'
+                        : 'You currently sign in with Google only. Set a password below to also sign in with email + password — Google sign-in keeps working too.'}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-1.5">
+                      {lang === 'my' ? 'အကောင့်: ' : 'Account: '}
+                      <span className="font-semibold text-slate-700">{user.email || ''}</span>
+                    </p>
+                    <label className="block mt-3">
+                      <span className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        {lang === 'my' ? 'စကားဝှက်အသစ် (အနည်းဆုံး ၆ လုံး)' : 'New password (at least 6 characters)'}
+                      </span>
+                      <span className="relative block">
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          autoComplete="new-password"
+                          className="w-full px-3.5 py-2.5 pr-11 text-sm bg-white border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword((v) => !v)}
+                          aria-label={showNewPassword ? (lang === 'my' ? 'စကားဝှက် ဖျောက်မည်' : 'Hide password') : (lang === 'my' ? 'စကားဝှက် ပြမည်' : 'Show password')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </span>
+                    </label>
+                    <label className="block mt-2.5">
+                      <span className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        {lang === 'my' ? 'စကားဝှက် အတည်ပြုခြင်း' : 'Confirm password'}
+                      </span>
+                      <span className="relative block">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          autoComplete="new-password"
+                          className="w-full px-3.5 py-2.5 pr-11 text-sm bg-white border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((v) => !v)}
+                          aria-label={showConfirmPassword ? (lang === 'my' ? 'စကားဝှက် ဖျောက်မည်' : 'Hide password') : (lang === 'my' ? 'စကားဝှက် ပြမည်' : 'Show password')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </span>
+                    </label>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        id="btn-account-set-password"
+                        onClick={() => void handleSetPassword()}
+                        disabled={setPasswordBusy}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        {setPasswordBusy
+                          ? (lang === 'my' ? 'လုပ်ဆောင်နေသည်…' : 'Working…')
+                          : (lang === 'my' ? 'စကားဝှက် သတ်မှတ်မည်' : 'Set password')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {setPasswordMsg.text && (
+                  <p
+                    role="status"
+                    className={`mt-3 p-3 rounded-xl border text-[11px] font-semibold leading-relaxed ${setPasswordMsg.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}
+                  >
+                    {setPasswordMsg.text}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 

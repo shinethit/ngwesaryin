@@ -125,22 +125,22 @@ describe('addSplitRow wiring (v7.6.30)', () => {
 
 describe('Version bump to v7.6.30 (build 344)', () => {
   it('version surfaces agree on v7.6.30 / build 344', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.52');
-    expect(CURRENT_BUILD_NUMBER).toBe(366);
-    expect(VERSION_JSON.version).toBe('v7.6.52');
-    expect(VERSION_JSON.buildNumber).toBe(366);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.53');
+    expect(CURRENT_BUILD_NUMBER).toBe(367);
+    expect(VERSION_JSON.version).toBe('v7.6.53');
+    expect(VERSION_JSON.buildNumber).toBe(367);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.52');
-    expect(entry.buildNumber).toBe(366);
+    expect(entry.version).toBe('v7.6.53');
+    expect(entry.buildNumber).toBe(367);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(3);
-    expect(entry.changesEn).toHaveLength(3);
+    expect(entry.changesMy).toHaveLength(2);
+    expect(entry.changesEn).toHaveLength(2);
     expect(entry.changesMy[0]).toBe(
-      'မှတ်တမ်းများ စာမျက်နှာမှာ Cloud နဲ့ ချိတ်ဆက်တဲ့ ခလုတ်အသစ် ပါလာပါပြီ — ပင်မ စာမျက်နှာက ခလုတ်လိုပဲ နှိပ်လိုက်ရင် အချက်အလက်တွေ ချိတ်ဆက်ပေးပါတယ်',
+      'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်',
     );
     expect(entry.changesEn[0]).toBe(
-      'The Records page now has its own sync button, just like the home page — tap it to sync your records with Cloud',
+      'Google-signed-in accounts can now set an email password too — both Google and email + password sign-in work',
     );
   });
 

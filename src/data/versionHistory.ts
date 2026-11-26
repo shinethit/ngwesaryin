@@ -16,10 +16,31 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.52';
-export const CURRENT_BUILD_NUMBER = 366;
+export const CURRENT_APP_VERSION = 'v7.6.53';
+export const CURRENT_BUILD_NUMBER = 367;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.53',
+    buildNumber: 367,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'Google အကောင့်မှာ စကားဝှက် သတ်မှတ်နိုင်ခြင်း',
+    titleEn: 'Set a password on a Google account',
+    tag: 'feature',
+    tagLabelMy: 'Feature အသစ်',
+    tagLabelEn: 'New Feature',
+    descriptionMy: 'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — အကောင့်အသစ် မဟုတ်ပါ၊ ဒေတာလည်း အတူတူပါပဲ။ သတ်မှတ်ပြီးရင် Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်။ စကားဝှက် ရှိနှင့်ပြီးသားဆိုရင်လည်း အခြေအနေ ပြပြီး ပြောင်းဖို့ Email ပို့လို့ရပါတယ်။',
+    descriptionEn: 'Google-signed-in accounts can now set an email password on the same account — no new account, no data changes. After setting it, both Google and email + password sign-in work. Accounts that already have a password show their status, with an option to email a reset link.',
+    changesMy: [
+      'Google ဖြင့် ဝင်ထားတဲ့ အကောင့်မှာ Email + စကားဝှက် သတ်မှတ်လို့ရပါပြီ — Google နဲ့ရော Email + စကားဝှက်နဲ့ပါ နှစ်နည်းလုံး ဝင်လို့ရပါတယ်',
+      'စကားဝှက် ရှိနှင့်ပြီးသားဆိုရင် အခြေအနေ ပြပြီး စကားဝှက်ပြောင်းဖို့ Email ပို့လို့ရပါတယ်',
+    ],
+    changesEn: [
+      'Google-signed-in accounts can now set an email password too — both Google and email + password sign-in work',
+      'Accounts that already have a password show their status, with an option to email a password reset link',
+    ],
+  },
   {
     version: 'v7.6.52',
     buildNumber: 366,

@@ -42,6 +42,49 @@ export function validateEmailAuthInput(
   return null;
 }
 
+// [v7.6.53] Error keys for the set-a-password flow (Google users
+// linking an email/password credential to their EXISTING account).
+// The context function returns one of these keys; the AccountModal
+// maps each to its own plain Burmese/English text — raw Firebase
+// codes are never rendered, same rule as every other auth error.
+export type SetPasswordErrorKey =
+  | 'NOT_LOGGED_IN'
+  | 'NO_EMAIL'
+  | 'ALREADY_HAS_PASSWORD'
+  | 'CREDENTIAL_ALREADY_IN_USE'
+  | 'WEAK_PASSWORD'
+  | 'INVALID_EMAIL'
+  | 'REQUIRES_RECENT_LOGIN'
+  | 'REAUTH_CANCELLED'
+  | 'NETWORK_ERROR'
+  | 'UNKNOWN';
+
+// Map a Firebase error from linkWithCredential / reauthenticateWithPopup
+// to a set-password error key. `auth/credential-already-in-use` is the
+// code linkWithCredential throws when the credential's email already
+// belongs to a DIFFERENT account — it has no case in
+// getAuthErrorDetails, so it is mapped here, never shown raw.
+export function mapSetPasswordError(error: any): SetPasswordErrorKey {
+  const errCode = String(error?.code || '');
+  const errStr = String(error?.message || error || '').toLowerCase();
+  if (errCode === 'auth/credential-already-in-use' || errCode === 'auth/email-already-in-use') {
+    return 'CREDENTIAL_ALREADY_IN_USE';
+  }
+  if (errCode === 'auth/weak-password') return 'WEAK_PASSWORD';
+  if (errCode === 'auth/invalid-email') return 'INVALID_EMAIL';
+  if (errCode === 'auth/requires-recent-login') return 'REQUIRES_RECENT_LOGIN';
+  if (errCode === 'auth/popup-closed-by-user') return 'REAUTH_CANCELLED';
+  if (
+    errCode === 'auth/network-request-failed' ||
+    errStr.includes('network') ||
+    errStr.includes('timeout') ||
+    errStr.includes('connect')
+  ) {
+    return 'NETWORK_ERROR';
+  }
+  return 'UNKNOWN';
+}
+
 export function getAuthErrorDetails(error: any, lang: 'my' | 'en'): AuthErrorDetails {
   const errCode = error?.code || '';
   const errStr = String(error?.message || error || '').toLowerCase();

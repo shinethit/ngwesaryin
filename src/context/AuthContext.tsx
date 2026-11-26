@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut as firebaseSignOut, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider, GoogleAuthProvider, sendPasswordResetEmail, linkWithCredential } from 'firebase/auth';
 import {
   doc,
   getDoc,
@@ -24,6 +24,7 @@ import { fetchMyRefs, deleteSharedWalletRef, subscribeMyRefs } from '../lib/shar
 import { computeSyncSignature, computeContentFingerprint } from '../utils/syncGuards';
 import { buildTrialProfileUpdate } from '../utils/premiumActivation';
 import { isWalletMatch } from '../utils/walletBalance';
+import { mapSetPasswordError } from '../utils/authErrorMapper';
 import { pullCollection } from '../utils/pullResult';
 
 interface AuthContextType {
@@ -54,6 +55,11 @@ interface AuthContextType {
   signupWithEmail: (email: string, pass: string, displayName: string) => Promise<void>;
   // [v7.5.60 G-M1] Forgot password — sends a reset email (Firebase).
   resetPassword: (email: string) => Promise<void>;
+  // [v7.6.53] Set an email/password on the EXISTING account (Google
+  // users): links the credential to the same UID — same data, no
+  // migration, Google sign-in keeps working. Returns an error key
+  // (see mapSetPasswordError); the caller maps it to plain text.
+  setAccountPassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   continueAsGuest: () => void;
   logout: () => Promise<void>;
   refreshUserProfile: () => Promise<void>;
@@ -930,6 +936,66 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Password reset failed:', error);
       throw error;
     }
+  };
+
+  // [v7.6.53] Set an email/password on the EXISTING signed-in account
+  // (for Google users). linkWithCredential attaches the credential to
+  // the SAME user/UID — no new account, no data migration, and Google
+  // sign-in keeps working afterwards. Guards: not signed in, no email
+  // on the account, password provider already linked. Firebase demands
+  // a recent login for linking: on requires-recent-login the Google
+  // user is re-authenticated with a popup and the link is retried
+  // ONCE. The password floor (min 6) is the SAME rule as signup
+  // validation (validateEmailAuthInput, sign-up mode) — enforced here
+  // as well as in the form, so the rule cannot drift apart.
+  const setAccountPassword = async (
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const cu = auth.currentUser;
+    if (!cu) return { success: false, error: 'NOT_LOGGED_IN' };
+    const email = (cu.email || '').trim();
+    if (!email) return { success: false, error: 'NO_EMAIL' };
+    const providerIds = (cu.providerData || []).map((p) => p.providerId);
+    if (providerIds.includes('password')) {
+      return { success: false, error: 'ALREADY_HAS_PASSWORD' };
+    }
+    if (!password || password.length < 6) {
+      return { success: false, error: 'WEAK_PASSWORD' };
+    }
+    const credential = EmailAuthProvider.credential(email, password);
+    const attemptLink = () => linkWithCredential(cu, credential);
+    try {
+      await attemptLink();
+    } catch (err: any) {
+      const key = mapSetPasswordError(err);
+      if (key !== 'REQUIRES_RECENT_LOGIN') {
+        console.error('Set account password failed:', err);
+        return { success: false, error: key };
+      }
+      // Recent login required: re-authenticate with Google, then retry
+      // the link once. A closed popup is reported as cancelled, not as
+      // a generic failure — the password was never set in that case.
+      try {
+        await reauthenticateWithPopup(cu, new GoogleAuthProvider());
+      } catch (reauthErr: any) {
+        const reauthKey = mapSetPasswordError(reauthErr);
+        if (reauthKey === 'REAUTH_CANCELLED') {
+          return { success: false, error: 'REAUTH_CANCELLED' };
+        }
+        return { success: false, error: 'REQUIRES_RECENT_LOGIN' };
+      }
+      try {
+        await attemptLink();
+      } catch (err2: any) {
+        console.error('Set account password failed after re-auth:', err2);
+        return { success: false, error: mapSetPasswordError(err2) };
+      }
+    }
+    // Refresh the context user so providerData (now including
+    // 'password') reaches the UI at once; the auth-state listener
+    // fires as well, so this is a belt-and-suspenders refresh.
+    setUser(auth.currentUser);
+    return { success: true };
   };
 
   const logout = async () => {
@@ -1968,6 +2034,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loginWithEmail,
         signupWithEmail,
         resetPassword,
+        setAccountPassword,
         continueAsGuest,
         logout,
         refreshUserProfile,

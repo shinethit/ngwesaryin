@@ -606,26 +606,29 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
         </div>
 
         {/* Row 2: Actions */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-100">
+        <div className="flex items-center gap-1 flex-nowrap pt-1.5 border-t border-slate-100">
           {/* [v7.5.60 D-S5] Quick actions ≥40px tall. [v7.5.60 D-N6] Action
-              verbs, not bare nouns — "+ ဆီထည့်မည်" says what it does. */}
+              verbs, not bare nouns — "+ ဆီထည့်မည်" says what it does.
+              [v7.6.55] All four on ONE non-wrapping row at 390px and
+              360px, MY + EN: compact padding/text (tighter still at
+              ≤360px), height kept at py-3.5 — never below 40px. */}
           <button
             onClick={() => { setEditingFuelLog(null); setIsFuelModalOpen(true); }}
-            className="px-3.5 py-3.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+            className="px-1 py-3.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] max-[361px]:text-[10px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
           >
             <Fuel className="w-3 h-3" />
             <span>{lang === 'my' ? '+ ဆီထည့်မည်' : '+ Add Fuel'}</span>
           </button>
           <button
             onClick={() => { setEditingMaintenance(null); setIsMaintenanceModalOpen(true); }}
-            className="px-3.5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+            className="px-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] max-[361px]:text-[10px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
           >
             <Wrench className="w-3 h-3" />
             <span>{lang === 'my' ? '+ ဝန်ဆောင်မှု' : '+ Add Service'}</span>
           </button>
           <button
             onClick={() => { setEditingTireLog(null); setIsTireModalOpen(true); }}
-            className="px-3.5 py-3.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+            className="px-1 py-3.5 bg-teal-600 hover:bg-teal-700 text-white text-[11px] max-[361px]:text-[10px] font-bold rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
           >
             <Disc className="w-3 h-3" />
             <span>{lang === 'my' ? '+ လေချိန်မည်' : '+ Log Pressure'}</span>
@@ -633,10 +636,10 @@ export const VehiclesView: React.FC<VehiclesViewProps> = ({
           <button
             type="button"
             onClick={() => setIsFuelGuideOpen(true)}
-            className="px-3.5 py-3.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1 text-xs font-bold shrink-0"
+            className="px-1 py-3.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1 text-[11px] max-[361px]:text-[10px] font-bold shrink-0 whitespace-nowrap"
             title={lang === 'my' ? 'ဆီဖိုး ထည့်နည်း' : 'Fuel Guide'}
           >
-            <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+            <HelpCircle className="w-3 h-3 text-amber-600" />
             <span>{lang === 'my' ? 'လမ်းညွှန်' : 'Guide'}</span>
           </button>
 

@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tag, Wallet as WalletIcon, Check, Filter } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { Transaction, Category, Wallet, FuelLog } from '../types';
 import { formatMMK, getAmountDisplayMode, formatAbsoluteKyats, getCategoryDisplayName } from '../utils/formatters';
 import {
@@ -74,51 +74,14 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
   // the existing truncate rendering byte-identical.
   const isKyatMode = getAmountDisplayMode() === 'kyat';
 
-  // [v6.1.8] Multi-select wallet filter
-  const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
-  const [walletFilterOpen, setWalletFilterOpen] = useState(false);
-  const walletFilterRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!walletFilterOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (walletFilterRef.current && !walletFilterRef.current.contains(e.target as Node)) {
-        setWalletFilterOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [walletFilterOpen]);
-
-  const toggleWallet = (walletId: string) => {
-    setSelectedWalletIds((prev) =>
-      prev.includes(walletId) ? prev.filter((id) => id !== walletId) : [...prev, walletId]
-    );
-  };
-
-  // [v7.5.55] The wallets prop is the Dashboard scope (A5): drop any selected
-  // ids that are no longer in scope so the filter never goes stale-empty.
-  useEffect(() => {
-    setSelectedWalletIds((prev) => {
-      const pruned = prev.filter((id) => wallets.some((w) => w.id === id));
-      return pruned.length === prev.length ? prev : pruned;
-    });
-  }, [wallets]);
-
-  const selectAllWallets = () => setSelectedWalletIds(wallets.map((w) => w.id));
-  const clearWallets = () => setSelectedWalletIds([]);
-
-  // [v7.5.55] [] and "every id" both mean "all" (A9): only a partial
-  // selection is shown as "N / M selected".
-  const isAllWalletsShown =
-    selectedWalletIds.length === 0 || selectedWalletIds.length === wallets.length;
-
+  // [v7.6.55] No local wallet picker: the calendar follows the Hero
+  // wallet scope via the `wallets` prop (the Dashboard scope, A5).
+  // An empty scope (no wallets at all) shows everything, as the old
+  // empty-selection default did.
   const matchesWalletFilter = (walletId: string | undefined): boolean => {
-    if (selectedWalletIds.length === 0) return true;
+    if (wallets.length === 0) return true;
     if (!walletId) return false;
-    return wallets.some(
-      (w) => selectedWalletIds.includes(w.id) && isWalletMatch(w, walletId)
-    );
+    return wallets.some((w) => isWalletMatch(w, walletId));
   };
 
   // [v7.5.56] Shared-wallet helpers (finding 25): 🤝 + owner name.
@@ -220,7 +183,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
     });
 
     return map;
-  }, [transactions, monthKey, selectedWalletIds, wallets]);
+  }, [transactions, monthKey, wallets]);
 
   // [v7.5.56] Month shared totals, for the split line under the header.
   const monthSharedSummary = useMemo(() => {
@@ -243,7 +206,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
         !isTransferTransaction(t) &&
         matchesWalletFilter(t.walletId)
     );
-  }, [transactions, selectedDayStr, selectedWalletIds, wallets]);
+  }, [transactions, selectedDayStr, wallets]);
 
   // [v7.5.60 N5] Transfers are excluded from the totals above, but a day
   // with ONLY transfers is not an empty day — count them so the empty
@@ -257,7 +220,7 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
         isTransferTransaction(t) &&
         matchesWalletFilter(t.walletId)
     ).length;
-  }, [transactions, selectedDayStr, selectedWalletIds, wallets]);
+  }, [transactions, selectedDayStr, wallets]);
 
   const selectedDaySummary = useMemo(() => {
     let income = 0;
@@ -362,121 +325,6 @@ export const SmartCalendarCard: React.FC<SmartCalendarCardProps> = ({
         </div>
       </div>
 
-      {/* [v6.1.8] Multi-Select Wallet Filter */}
-      {wallets.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-2xl bg-slate-50 border border-slate-200/80">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-            <WalletIcon className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{lang === 'my' ? 'ပိုက်ဆံအိတ် ရွေးရန်:' : 'Wallet Filter:'}</span>
-          </div>
-
-          <div className="relative" ref={walletFilterRef}>
-            <button
-              type="button"
-              onClick={() => setWalletFilterOpen((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                !isAllWalletsShown
-                  ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              <Filter className="w-3.5 h-3.5" />
-              <span>
-                {isAllWalletsShown
-                  ? (lang === 'my' ? 'ပိုက်ဆံအိတ် အားလုံး (Dashboard အတိုင်း)' : 'All Wallets (as on Dashboard)')
-                  : `${selectedWalletIds.length} / ${wallets.length} ${lang === 'my' ? 'ရွေးထား' : 'selected'}`}
-              </span>
-              <ChevronRight className={`w-3.5 h-3.5 transition-transform ${walletFilterOpen ? 'rotate-90' : ''}`} />
-            </button>
-
-            {walletFilterOpen && (
-              <div className="absolute right-0 top-full mt-2 z-30 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">
-                  <button
-                    type="button"
-                    onClick={selectAllWallets}
-                    className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 cursor-pointer"
-                  >
-                    ✓ {lang === 'my' ? 'အားလုံး' : 'All'}
-                  </button>
-                  <span className="text-slate-300">•</span>
-                  <button
-                    type="button"
-                    onClick={clearWallets}
-                    className="text-[11px] font-bold text-rose-600 hover:text-rose-800 cursor-pointer"
-                  >
-                    ✕ {lang === 'my' ? 'ရှင်းမည်' : 'Clear'}
-                  </button>
-                </div>
-
-                <div className="max-h-64 overflow-y-auto overflow-x-hidden py-1">
-                  {wallets.map((w) => {
-                    const isSelected = selectedWalletIds.includes(w.id);
-                    // [v7.5.56] Shared badge + owner name (finding 25).
-                    const shared = isSharedWallet(w);
-                    const owner = getWalletOwnerName(w);
-                    return (
-                      <button
-                        key={w.id}
-                        type="button"
-                        onClick={() => toggleWallet(w.id)}
-                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-colors cursor-pointer ${
-                          isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span
-                            className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0"
-                            style={{ backgroundColor: w.color || '#6366F1' }}
-                          >
-                            <WalletIcon className="w-3 h-3" />
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-slate-800 truncate">
-                              {shared ? '🤝 ' : ''}{lang === 'my' ? w.name : w.nameEn || w.name}
-                            </div>
-                            {shared && (
-                              <div className="text-[10px] text-amber-700 font-semibold truncate">
-                                {owner
-                                  ? (lang === 'my' ? `ပိုင်ရှင်: ${owner}` : `Owner: ${owner}`)
-                                  : (lang === 'my' ? 'မျှဝေထားသော အိတ်' : 'Shared wallet')}
-                              </div>
-                            )}
-                            <div className="text-[10px] text-slate-400 font-mono truncate">
-                              {formatMMK(w.balance)}
-                            </div>
-                          </div>
-                        </div>
-                        <span
-                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
-                            isSelected
-                              ? 'bg-indigo-600 border-indigo-600'
-                              : 'border-slate-300 bg-white'
-                          }`}
-                        >
-                          {isSelected && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="px-3 py-2 border-t border-slate-100 bg-slate-50">
-                  <button
-                    type="button"
-                    onClick={() => setWalletFilterOpen(false)}
-                    className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 cursor-pointer"
-                  >
-                    {/* [v7.5.55] Selection applies live on toggle; this button
-                        only closes the popover, so it is labelled Close. */}
-                    {lang === 'my' ? 'ပိတ်မည်' : 'Close'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Calendar Grid */}
       <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/50">

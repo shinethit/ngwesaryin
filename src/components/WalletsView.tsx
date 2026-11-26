@@ -796,13 +796,17 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
         </div>
       )}
 
-      {/* Wallets Filter & Quick Stats (All, Included in Totals, Excluded) */}
+      {/* Wallets Filter & Quick Stats (All, Included in Totals, Excluded)
+          [v7.6.55] One non-wrapping row at 390px and 360px, MY + EN:
+          equal flex-1 thirds, compact padding/text, no clipping. The
+          📊/🚫 glyphs are dropped so the Burmese labels fit their
+          thirds; labels, counts and active colours unchanged. */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-fit flex-wrap">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-fit flex-nowrap">
           <button
             type="button"
             onClick={() => setWalletFilter('all')}
-            className={`px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 min-w-0 flex items-center justify-center whitespace-nowrap px-0.5 py-2.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
               walletFilter === 'all'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -813,28 +817,28 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
           <button
             type="button"
             onClick={() => setWalletFilter('included')}
-            className={`px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`flex-1 min-w-0 px-0.5 py-2.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center whitespace-nowrap gap-0.5 ${
               walletFilter === 'included'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-emerald-700'
             }`}
           >
-            <span>📊 {lang === 'my' ? 'စုစုပေါင်းထဲ ရောမည်' : 'In Totals'}</span>
-            <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${walletFilter === 'included' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'}`}>
+            <span>{lang === 'my' ? 'စုစုပေါင်းထဲ ရောမည်' : 'In Totals'}</span>
+            <span className={`text-[10px] font-black px-0.5 py-0.2 rounded-full ${walletFilter === 'included' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'}`}>
               {includedWallets.length}
             </span>
           </button>
           <button
             type="button"
             onClick={() => setWalletFilter('excluded')}
-            className={`px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`flex-1 min-w-0 px-0.5 py-2.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center whitespace-nowrap gap-0.5 ${
               walletFilter === 'excluded'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <span>🚫 {lang === 'my' ? 'သီးသန့် မရောပါ' : 'Separate'}</span>
-            <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${walletFilter === 'excluded' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'}`}>
+            <span>{lang === 'my' ? 'သီးသန့် မရောပါ' : 'Separate'}</span>
+            <span className={`text-[10px] font-black px-0.5 py-0.2 rounded-full ${walletFilter === 'excluded' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'}`}>
               {excludedWallets.length}
             </span>
           </button>

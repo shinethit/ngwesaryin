@@ -1122,22 +1122,27 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               // [v7.6.46] Navy/purple-tinted border so the card stands
               // out from the white page background (white/90 border
               // blended in). Shadow and all inner rows unchanged.
+              // [v7.6.55] Thicker, more saturated indigo border: the
+              // 1px indigo-200 edge was not prominent enough.
               return (
-                <div key={group.date} className="bg-white/95 backdrop-blur-xl rounded-3xl border border-indigo-200 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
-                  {/* [v7.6.45] Day header: big numeral + weekday +
-                      month/year + day net + count chip (one card
+                <div key={group.date} className="bg-white/95 backdrop-blur-xl rounded-3xl border-2 border-indigo-400 overflow-hidden shadow-[0_10px_28px_rgba(139,92,246,0.08),inset_1.5px_1.5px_3px_rgba(255,255,255,0.9)]">
+                  {/* [v7.6.45] Day header: big numeral + month/year +
+                      weekday on ONE line + day net + count chip (one card
                       per day). The old sticky header with in/out/net
                       badges is replaced; the rows below are
                       unchanged, and the day's in/out stay visible in
-                      the summary bar above. */}
+                      the summary bar above.
+                      [v7.6.55] The weekday + month/year were two
+                      stacked lines; they now share one non-wrapping
+                      line ("စက်တင်ဘာ 2026 - ကြာသပတေး"), sized to fit
+                      360px without clipping. */}
                   <div className="px-4 sm:px-5 pt-3 pb-2 flex items-center justify-between gap-3 border-b border-slate-100">
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-[26px] leading-none font-extrabold text-slate-900 shrink-0">
                         {dayParts.dayNum}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block text-xs font-bold text-slate-900 truncate">{dayParts.weekday}</span>
-                        <span className="block text-[11px] text-slate-500 truncate">{dayParts.monthYear}</span>
+                      <span className="min-w-0 truncate text-xs max-[361px]:text-[10px] font-bold text-slate-900">
+                        {dayParts.monthYear} - {dayParts.weekday}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -1147,7 +1152,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       >
                         {group.net >= 0 ? '+' : ''}{formatLakhs(group.net, lang)}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900">
                         {group.transactions.length} {lang === 'my' ? 'ခု' : 'items'}
                       </span>
                     </div>
@@ -1180,6 +1185,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       const subCat = lineSubId ? subCatMap.get(lineSubId) : undefined;
                       const wallet = walletMap.get(t.walletId);
                       const isIncome = t.type === 'income';
+                      // [v7.6.55] Vivid row accents: the sub-category pill
+                      // is tinted with this row's category colour (the
+                      // same curated colour the icon tile shows). Only
+                      // 6-digit hex colours tint; anything else keeps
+                      // the grey pill, and the slate text stays dark so
+                      // the pill stays readable at a glance.
+                      const tileColor = getCategoryTileColor(cat, isIncome);
+                      const tileTintStyle = /^#[0-9a-fA-F]{6}$/.test(tileColor)
+                        ? { backgroundColor: `${tileColor}1A`, borderColor: `${tileColor}66` }
+                        : undefined;
                       // [v7.5.60 S3] Row amounts in lakhs like the summary
                       // bar (exact kyat in the tooltip); foreign-currency
                       // wallets keep their own currency format.
@@ -1254,7 +1269,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             <CategoryTile
                               categoryId={cat?.id}
                               icon={cat?.icon}
-                              color={getCategoryTileColor(cat, isIncome)}
+                              color={tileColor}
                               sizeClassName="w-10 h-10 sm:w-11 sm:h-11"
                               roundedClassName="rounded-2xl"
                               iconClassName="w-5 h-5"
@@ -1271,7 +1286,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   {getCategoryDisplayName(lineCatId, categories, lang)}
                                 </span>
                                 {subCat && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-medium border border-slate-200 shrink-0">
+                                  <span
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[10.5px] font-semibold border border-slate-200 shrink-0"
+                                    style={tileTintStyle}
+                                  >
                                     {/* [v7.6.48] Sub-category's own resolved icon; no categoryId. */}
                                     <CategoryIcon name={resolveSubCategoryIconValue(subCat, cat)} className="w-3 h-3 shrink-0" />
                                     <span>{lang === 'my' ? subCat.name : subCat.nameEn}</span>
@@ -1281,7 +1299,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
                               {/* Line 2: Amount & Wallet */}
                               <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                                <span className={`font-mono font-bold text-xs sm:text-sm shrink-0 ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`} title={formatMMK(amountMMK)}>
+                                <span className={`font-mono font-extrabold text-[13px] sm:text-sm shrink-0 ${isIncome ? 'text-emerald-600' : 'text-rose-500'}`} title={formatMMK(amountMMK)}>
                                   {isIncome ? `+${isMMK ? formatLakhs(amountMMK, lang) : formatCurrency(shopGroup.amount, wallet?.currency)}` : `-${isMMK ? formatLakhs(amountMMK, lang) : formatCurrency(shopGroup.amount, wallet?.currency)}`}
                                 </span>
                                 {wallet && wallet.currency && wallet.currency !== 'MMK' && (
@@ -1305,8 +1323,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                   : t.walletId !== defaultWalletId) && (
                                 <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border max-w-full flex-wrap ${
                                   isSharedWallet(wallet)
-                                    ? 'bg-amber-50 text-amber-900 border-amber-300'
-                                    : 'bg-indigo-50 text-indigo-900 border-indigo-200'
+                                    ? 'bg-amber-100 text-amber-900 border-amber-400'
+                                    : 'bg-indigo-100 text-indigo-900 border-indigo-300'
                                 }`}>
                                   {wallet ? (
                                     <>
@@ -1332,7 +1350,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     Single-shop records show no pill,
                                     exactly as today. */}
                                 {isMultiShop && shopGroup.shopName && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-900 text-[10px] font-bold border border-emerald-200 shrink-0">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-[10px] font-bold border border-emerald-300 shrink-0">
                                     🏪 {shopGroup.shopName}
                                   </span>
                                 )}
@@ -1341,7 +1359,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                     Own rows show "ကိုယ်တိုင်" when the stamp
                                     is missing but the creator is the viewer. */}
                                 {isFirstLine && isSharedWallet(wallet) && (t.createdByName || (t.createdBy && t.createdBy === user?.uid)) && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 text-[10px] font-bold border border-amber-200 shrink-0">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300 shrink-0">
                                     👤 {t.createdByName || (lang === 'my' ? 'ကိုယ်တိုင်' : 'You')}
                                   </span>
                                 )}

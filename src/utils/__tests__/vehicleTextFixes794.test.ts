@@ -81,19 +81,32 @@ describe('Vehicle cost values never truncate (v7.5.94 Fix A)', () => {
 
 describe('Vehicle action buttons and tabs fit 390px (v7.5.94 Fixes B/C)', () => {
   it('action buttons and Guide are wider with larger tap targets', () => {
+    // [v7.6.55] Supersedes the v7.5.94 width: all four buttons now fit
+    // ONE non-wrapping row at 390px and 360px (compact padding/text),
+    // while the tap-target height (py-3.5, >=40px) is preserved.
     expect(VEHICLES_SRC).toContain(
-      'px-3.5 py-3.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold',
+      'px-1 py-3.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px]',
     );
     expect(VEHICLES_SRC).toContain(
-      'px-3.5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold',
+      'px-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px]',
     );
     expect(VEHICLES_SRC).toContain(
-      'px-3.5 py-3.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold',
+      'px-1 py-3.5 bg-teal-600 hover:bg-teal-700 text-white text-[11px]',
     );
     expect(VEHICLES_SRC).toContain('active:scale-95 shrink-0');
     expect(VEHICLES_SRC).not.toContain('px-2.5 py-3 bg-amber-500');
     expect(VEHICLES_SRC).not.toContain('px-2.5 py-3 bg-blue-600');
     expect(VEHICLES_SRC).not.toContain('px-2.5 py-3 bg-teal-600');
+  });
+
+  it('the four quick actions sit on one non-wrapping row (v7.6.55)', () => {
+    const actionsStart = VEHICLES_SRC.indexOf('Row 2: Actions');
+    const actions = VEHICLES_SRC.slice(
+      actionsStart,
+      VEHICLES_SRC.indexOf('deactivatedSection', actionsStart),
+    );
+    expect(actions).toContain('flex-nowrap');
+    expect(actions).not.toContain('flex-wrap');
   });
 
   it('button labels are untouched', () => {
@@ -193,19 +206,19 @@ describe('Tire-pressure tiles stay visible (v7.5.94 Fix E)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
-    expect(CURRENT_BUILD_NUMBER).toBe(368);
-    expect(VERSION_JSON.version).toBe('v7.6.54');
-    expect(VERSION_JSON.buildNumber).toBe(368);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
+    expect(CURRENT_BUILD_NUMBER).toBe(369);
+    expect(VERSION_JSON.version).toBe('v7.6.55');
+    expect(VERSION_JSON.buildNumber).toBe(369);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.54');
-    expect(entry.buildNumber).toBe(368);
+    expect(entry.version).toBe('v7.6.55');
+    expect(entry.buildNumber).toBe(369);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('fix');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(2);
-    expect(entry.changesEn).toHaveLength(2);
+    expect(entry.changesMy).toHaveLength(7);
+    expect(entry.changesEn).toHaveLength(7);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

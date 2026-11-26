@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
-    expect(CURRENT_BUILD_NUMBER).toBe(368);
-    expect(VERSION_JSON.version).toBe('v7.6.54');
-    expect(VERSION_JSON.buildNumber).toBe(368);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
+    expect(CURRENT_BUILD_NUMBER).toBe(369);
+    expect(VERSION_JSON.version).toBe('v7.6.55');
+    expect(VERSION_JSON.buildNumber).toBe(369);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.54');
-    expect(entry.buildNumber).toBe(368);
-    expect(entry.changesMy[0]).toBe('ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ');
+    expect(entry.version).toBe('v7.6.55');
+    expect(entry.buildNumber).toBe(369);
+    expect(entry.changesMy[0]).toBe('စာရင်း (Transactions) ကတ်တွေ ပိုတောက်ပလာပါပြီ — ကဏ္ဍခွဲပြားတွေက ကဏ္ဍအရောင် ဖျော့ဖျော့ နဲ့ ပါလာပြီး ပမာဏတွေက ပိုထင်ရှားလာပါတယ်');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

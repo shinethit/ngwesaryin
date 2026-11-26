@@ -16,10 +16,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.54';
-export const CURRENT_BUILD_NUMBER = 368;
+export const CURRENT_APP_VERSION = 'v7.6.55';
+export const CURRENT_BUILD_NUMBER = 369;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.55',
+    buildNumber: 369,
+    releaseDate: '2026-11-26',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'မျက်နှာပြင် အသေးစိတ် ပြင်ဆင်မှုများ',
+    titleEn: 'Detail polish: vivid cards, one-line headers and filters',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'စာရင်းကတ်တွေ ပိုတောက်ပလာပြီး နေ့ခေါင်းစဉ်တွေ တစ်ကြောင်းတည်း ဖြစ်သွားပါပြီ။ စမတ်ပြက္ခဒိန်က အပေါ်က ရွေးထားတဲ့ ပိုက်ဆံအိတ်အတိုင်း ပြပြီး ပိုက်ဆံအိတ် စစ်ထုတ်တာနဲ့ ယာဉ် အမြန်ခလုတ်တွေက ဖုန်းအကျယ် အားလုံးမှာ တစ်တန်းတည်း ဖြစ်သွားပါပြီ။',
+    descriptionEn: 'Records cards are more vivid and day headers are a single line. The Smart Calendar follows the wallet scope selected at the top, and the wallet filter and vehicle quick actions are single rows on every phone width.',
+    changesMy: [
+      'စာရင်း (Transactions) ကတ်တွေ ပိုတောက်ပလာပါပြီ — ကဏ္ဍခွဲပြားတွေက ကဏ္ဍအရောင် ဖျော့ဖျော့ နဲ့ ပါလာပြီး ပမာဏတွေက ပိုထင်ရှားလာပါတယ်',
+      'နေ့အလိုက် ကတ်တွေရဲ့ ခရမ်းပြာရောင် ဘောင်က ပိုထင်ရှားလာပါပြီ',
+      'နေ့ခေါင်းစဉ်က တစ်ကြောင်းတည်း ဖြစ်သွားပါပြီ — ရက်၊ လ/နှစ်၊ နေ့နံ တစ်တန်းတည်း မြင်ရပါတယ်',
+      'ဆိုင်ရှာတဲ့ နေရာမှာ တွေ့ရှိတဲ့ ဆိုင်အရေအတွက်ကို အမည်မသိ ခလုတ်ဘေးမှာ တိုက်ရိုက် ပြထားပါပြီ',
+      'စမတ်ပြက္ခဒိန်မှာ ပိုက်ဆံအိတ် ရွေးတဲ့ ခလုတ်အထပ် မရှိတော့ပါ — အပေါ်က ရွေးထားတဲ့ ပိုက်ဆံအိတ်အတိုင်း ပြပါပြီ',
+      'ပိုက်ဆံအိတ် စစ်ထုတ်တဲ့ ခလုတ်တွေက တစ်တန်းတည်း ဖြစ်သွားပါပြီ',
+      'ယာဉ် အမြန်ခလုတ် ၄ ခု (ဆီ၊ ဝန်ဆောင်မှု၊ လေချိန်၊ လမ်းညွှန်) က တစ်တန်းတည်း ဖြစ်သွားပါပြီ',
+    ],
+    changesEn: [
+      'Records cards are more vivid — sub-category pills are tinted with their category colour and amounts stand out more',
+      'Day-group cards now have a clearly visible indigo border',
+      'Day headers are a single line — day number, month/year and weekday together',
+      'The shop count now sits beside the Unknown toggle in the Shops filter, filling the empty space',
+      'The Smart Calendar no longer has its own wallet picker — it follows the wallet scope selected at the top of the Dashboard',
+      'The wallet filter is a single row on all phone widths',
+      'The four vehicle quick actions (Fuel, Service, Pressure, Guide) are a single row on all phone widths',
+    ],
+  },
   {
     version: 'v7.6.54',
     buildNumber: 368,

@@ -1518,7 +1518,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </button>
             </div>
             {/* Row 1: Search + Location toggle + Reset + Count */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <div className="relative flex-1 min-w-[160px]">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
@@ -1593,7 +1593,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 <select
                   value={sortMode}
                   onChange={(e) => setSortMode(e.target.value as any)}
-                  className="appearance-none pl-2.5 pr-7 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer max-w-[150px]"
+                  className="appearance-none pl-2 pr-6 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer max-w-[150px]"
                   title={lang === 'my' ? 'စီစဥ်ရန်' : 'Sort'}
                 >
                   {/* [v7.5.80] Shortened: "📁 အုပ်စုခွဲ (အမျိုးအစား)" is 172px
@@ -1614,7 +1614,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsLocationFilterExpanded(!isLocationFilterExpanded)}
-                className={`flex items-center gap-1 px-2.5 py-2.5 min-h-[44px] rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${selectedStateRegionFilter !== 'all' || isLocationFilterExpanded ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                className={`flex items-center gap-1 px-1.5 py-2.5 min-h-[44px] rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${selectedStateRegionFilter !== 'all' || isLocationFilterExpanded ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                 title={lang === 'my' ? 'မြို့နယ်အလိုက် စစ်ထုတ်ရန်' : 'Filter by Location'}
               >
                 <MapPin className="w-3.5 h-3.5" />
@@ -1631,13 +1631,28 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowUnknown(!showUnknown)}
-                className={`h-11 px-2.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${showUnknown ? 'bg-slate-800 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                className={`h-11 px-1.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${showUnknown ? 'bg-slate-800 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                 title={lang === 'my' ? 'အမည်မသိ ဆိုင်များ ပြ/မပြ' : 'Toggle Unknown Shops'}
               >
                 <span>{showUnknown ? '👁️' : '🫣'}</span>
                 <span>{lang === 'my' ? 'အမည်မသိ' : 'Unknown'}</span>
               </button>
               </>)}
+
+              {/* [v7.6.55] Shop count moved up from Row 4 into the dead
+                  space right of the Unknown toggle. Same indicator,
+                  same text — not a new control. */}
+              {searchMode === 'shop' && (
+                <span className="font-bold text-slate-800 text-[10px] whitespace-nowrap shrink-0">
+                  {loadingPublic && directoryType === 'public'
+                    ? lang === 'my'
+                      ? 'ဆိုင်များ ရှာဖွေနေပါသည်…'
+                      : 'Loading shops…'
+                    : lang === 'my'
+                    ? `တွေ့ရှိ ${visibleShops.length} ဆိုင်`
+                    : `${visibleShops.length} shops`}
+                </span>
+              )}
 
               {/* Reset (icon only) */}
               {searchMode === 'shop' && hasActiveFilters && (
@@ -1832,15 +1847,9 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             {/* Row 4: Count + Active Filter Chips */}
             <div className={searchMode === 'item' ? 'hidden' : 'flex items-center justify-between gap-2 text-[11px]'}>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-slate-800">
-                  {loadingPublic && directoryType === 'public'
-                    ? lang === 'my'
-                      ? 'ဆိုင်များ ရှာဖွေနေပါသည်…'
-                      : 'Loading shops…'
-                    : lang === 'my'
-                    ? `တွေ့ရှိ ${visibleShops.length} ဆိုင်`
-                    : `${visibleShops.length} shops`}
-                </span>
+                {/* [v7.6.55] The count span moved up to Row 1 (dead
+                    space right of the Unknown toggle); only the
+                    filter chips stay here. */}
                 {/* [v7.5.91 D4] Needs-details filter chip — toggles the
                     filter; the amber state matches the card marker. */}
                 <button

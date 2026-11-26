@@ -350,21 +350,21 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
-    expect(CURRENT_BUILD_NUMBER).toBe(368);
-    expect(VERSION_JSON.version).toBe('v7.6.54');
-    expect(VERSION_JSON.buildNumber).toBe(368);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
+    expect(CURRENT_BUILD_NUMBER).toBe(369);
+    expect(VERSION_JSON.version).toBe('v7.6.55');
+    expect(VERSION_JSON.buildNumber).toBe(369);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.54');
-    expect(entry.buildNumber).toBe(368);
+    expect(entry.version).toBe('v7.6.55');
+    expect(entry.buildNumber).toBe(369);
     expect(entry.releaseDate).toBe('2026-11-26');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Menu မှာ ဝန်ဆောင်ခ သတ်သတ် ပြခြင်း');
-    expect(entry.titleEn).toBe('Service fee shown separately on menus');
+    expect(entry.titleMy).toBe('မျက်နှာပြင် အသေးစိတ် ပြင်ဆင်မှုများ');
+    expect(entry.titleEn).toBe('Detail polish: vivid cards, one-line headers and filters');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(2);
-    expect(entry.changesEn).toHaveLength(2);
+    expect(entry.changesMy).toHaveLength(7);
+    expect(entry.changesEn).toHaveLength(7);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.54');
-    expect(CURRENT_BUILD_NUMBER).toBe(368);
-    expect(VERSION_JSON.version).toBe('v7.6.54');
-    expect(VERSION_JSON.buildNumber).toBe(368);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.55');
+    expect(CURRENT_BUILD_NUMBER).toBe(369);
+    expect(VERSION_JSON.version).toBe('v7.6.55');
+    expect(VERSION_JSON.buildNumber).toBe(369);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,18 +330,28 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.54');
-    expect(top.buildNumber).toBe(368);
+    expect(top.version).toBe('v7.6.55');
+    expect(top.buildNumber).toBe(369);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Menu မှာ ဝန်ဆောင်ခ သတ်သတ် ပြခြင်း');
-    expect(top.titleEn).toBe('Service fee shown separately on menus');
+    expect(top.titleMy).toBe('မျက်နှာပြင် အသေးစိတ် ပြင်ဆင်မှုများ');
+    expect(top.titleEn).toBe('Detail polish: vivid cards, one-line headers and filters');
     expect(top.changesMy).toEqual([
-          'ယာဉ်ပြုပြင်တဲ့ ဆိုင်ရဲ့ Menu မှာ ဝန်ဆောင်ခကို ပစ္စည်းဖိုးနဲ့ မပေါင်းတော့ဘဲ သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ပစ္စည်းဈေးတွေက ပစ္စည်းဖိုးသက်သက်ပါ',
-          'Menu ပြန်တင်တဲ့ ခလုတ်ကလည်း ဝန်ဆောင်ခကို သတ်သတ် အတန်းအဖြစ် ပြပါပြီ — ဆိုင်တိုင်းမှာ ဈေးအသစ်နဲ့ ကိုက်ညီအောင် တင်နိုင်ပါတယ်',
+          'စာရင်း (Transactions) ကတ်တွေ ပိုတောက်ပလာပါပြီ — ကဏ္ဍခွဲပြားတွေက ကဏ္ဍအရောင် ဖျော့ဖျော့ နဲ့ ပါလာပြီး ပမာဏတွေက ပိုထင်ရှားလာပါတယ်',
+          'နေ့အလိုက် ကတ်တွေရဲ့ ခရမ်းပြာရောင် ဘောင်က ပိုထင်ရှားလာပါပြီ',
+          'နေ့ခေါင်းစဉ်က တစ်ကြောင်းတည်း ဖြစ်သွားပါပြီ — ရက်၊ လ/နှစ်၊ နေ့နံ တစ်တန်းတည်း မြင်ရပါတယ်',
+          'ဆိုင်ရှာတဲ့ နေရာမှာ တွေ့ရှိတဲ့ ဆိုင်အရေအတွက်ကို အမည်မသိ ခလုတ်ဘေးမှာ တိုက်ရိုက် ပြထားပါပြီ',
+          'စမတ်ပြက္ခဒိန်မှာ ပိုက်ဆံအိတ် ရွေးတဲ့ ခလုတ်အထပ် မရှိတော့ပါ — အပေါ်က ရွေးထားတဲ့ ပိုက်ဆံအိတ်အတိုင်း ပြပါပြီ',
+          'ပိုက်ဆံအိတ် စစ်ထုတ်တဲ့ ခလုတ်တွေက တစ်တန်းတည်း ဖြစ်သွားပါပြီ',
+          'ယာဉ် အမြန်ခလုတ် ၄ ခု (ဆီ၊ ဝန်ဆောင်မှု၊ လေချိန်၊ လမ်းညွှန်) က တစ်တန်းတည်း ဖြစ်သွားပါပြီ',
         ]);
     expect(top.changesEn).toEqual([
-          'Workshop menus now list the service fee as its own line instead of folding it into part prices — part prices are parts-only',
-          'The refresh-all-menus action also shows the service fee as a separate line, so every shop can be updated with the new prices',
+          'Records cards are more vivid — sub-category pills are tinted with their category colour and amounts stand out more',
+          'Day-group cards now have a clearly visible indigo border',
+          'Day headers are a single line — day number, month/year and weekday together',
+          'The shop count now sits beside the Unknown toggle in the Shops filter, filling the empty space',
+          'The Smart Calendar no longer has its own wallet picker — it follows the wallet scope selected at the top of the Dashboard',
+          'The wallet filter is a single row on all phone widths',
+          'The four vehicle quick actions (Fuel, Service, Pressure, Guide) are a single row on all phone widths',
         ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

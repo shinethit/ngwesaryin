@@ -341,10 +341,10 @@ describe('auto-select wiring (v7.6.03)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('current version is v7.6.27 / build 341 in every surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
-    expect(CURRENT_BUILD_NUMBER).toBe(375);
-    expect(VERSION_JSON.version).toBe('v7.6.61');
-    expect(VERSION_JSON.buildNumber).toBe(375);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
+    expect(CURRENT_BUILD_NUMBER).toBe(376);
+    expect(VERSION_JSON.version).toBe('v7.6.62');
+    expect(VERSION_JSON.buildNumber).toBe(376);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (its exact value differs per machine).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -353,28 +353,26 @@ describe('Version bump to v7.6.27 (build 342)', () => {
 
   it('top history entry is the v7.6.24 fix entry with no Admin mention', () => {
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.61');
-    expect(entry.buildNumber).toBe(375);
+    expect(entry.version).toBe('v7.6.62');
+    expect(entry.buildNumber).toBe(376);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('လက်ကျန်ကတ် စာလုံးနဲ့ အရောင်အတွဲအစပ် အသစ်');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် အလှပြင် — အရောင်အတွဲအစပ်နဲ့ စာလုံး အသစ်');
     const entryText = JSON.stringify(entry);
     expect(entryText).not.toContain('Admin');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
     expect(entry.changesMy).toEqual([
-      'လက်ကျန်ကတ်မှာ Noto Sans Myanmar စာလုံးအသစ်သုံးထားပါပြီ — မြန်မာစာနဲ့ ဂဏန်းတွေ တစ်မျိုးတည်းနဲ့ လှလှပပ ပေါ်ပါပြီ',
-      'စာလုံးဖိုင်တွေကို အက်ပ်ထဲမှာပဲ ထည့်ထားလို့ အင်တာနက်မရှိလည်း စာလုံးအလှ မပျက်ပါ',
-      'ကတ်အောက်ခံက Hero လို အနက်ရောင် နီးပါး ပြာရင့်ရောင် အပြားလိုက် ဖြစ်သွားပါပြီ',
-      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေက Hero ရဲ့ အဆင့်တွေအတိုင်း ပိုသန့်ပြီး ပိုဖတ်ရလွယ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
-      'အဖွင့်၊ အပိတ်၊ အသားတင် စာတန်းတွေ ပိုရှင်းပြီး ဖတ်ရလွယ်ပါပြီ',
+      'လက်ကျန်ကတ်က အမဲကွက်ကြီး မဟုတ်တော့ပါ — နက်ရှိုင်းတဲ့ အင်ဒီဂိုပြာရင့်ရောင် အောက်ခံအသစ်နဲ့ ပိုလှသွားပါပြီ',
+      'စာလုံးက ဖုန်းမှာ ကောင်းကောင်းမြင်ရတဲ့ system font အတိုင်း ပြန်ဖြစ်ပါပြီ — စာတွေ ပျက်နေတာ မရှိတော့ပါ',
+      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေ မူလအတိုင်း ပြန်ဖြစ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'ဂဏန်းတွေ ညီညီညာညာ ပေါ်အောင်၊ မြန်မာစာတွေ မညှပ်အောင် စာကြောင်းအကွာအဝေး ပိုပေးထားပါပြီ',
     ]);
     expect(entry.changesEn).toEqual([
-      'The card now uses the Noto Sans Myanmar typeface — Burmese text and Latin digits share one beautiful face',
-      'The font files ship inside the app, so the card keeps its type fully offline',
-      "The card ground is the Hero's near-black navy, flat and clean",
-      "Red, amber and white follow the Hero's tier shades — cleaner and easier to read, meanings unchanged",
-      'Opening, closing and net labels are crisper and easier to read',
+      "The card ground is a deep indigo gradient with real depth — no more black patch",
+      "The card uses the phone-proven system font again — no more broken text",
+      "Red, amber and white are back to their original values — meanings unchanged",
+      "Figures use tabular numerals with generous leading, so Burmese text is never clipped",
     ]);
   });
 });

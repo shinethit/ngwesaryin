@@ -717,21 +717,39 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           translucent style. The 30px figure, tone semantics,
           numbers, labels, buttons and functions are unchanged,
           and the 360px no-truncate behaviour is kept.
-          [v7.6.61] RESEARCHED REDESIGN: the user rejected the whole
-          card ('ဖောင့်မလှ', 'အရောင်မလှ', 'ရွံစရာကြီး') and
-          ordered real websites/apps studied first. Ground is the
-          Hero's own near-black navy, flat (#0F172A, slate-900 —
-          the Hero gradient's start, Dashboard.tsx:540; Monzo's
-          measured dark panel #0F1A25 is the same family). Figures
-          use Noto Sans Myanmar Variable (Google, 100–900, OFL —
-          one family for Latin digits AND the Myanmar unit, self-
-          hosted in public/fonts and precached by the service
-          worker), tabular figures, tight tracking — no monospace.
-          Tone shades follow the Hero's -300 tier scale (red-400 /
-          amber-300 / white; net emerald-300). Labels are white/70
-          (Monzo's secondary white on navy). Tone meanings,
-          numbers, labels, buttons and functions are unchanged. */}
-      <div className="rounded-3xl balance-card-font bg-[#0F172A] text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_10px_28px_rgba(15,23,42,0.25)] space-y-2">
+          [v7.6.62] RESEARCHED REDESIGN, SECOND STUDY: v7.6.61 was
+          rejected on the phone ('အမဲကွက်ကြီး', 'စာတွေက ပျက်နေတယ်',
+          'အရောင်တွေက သောက်တလွဲ ဖြစ်နေတယ်',
+          'Font က စုတ်ပြတ်နေတယ်'). Root
+          causes, proved from code and renders: the ground was a
+          FLAT solid (#0F172A) so it read as a black patch; the
+          custom variable webfont path (index.css @font-face,
+          unicode-range subsets, font-synthesis:none, SW precache)
+          put Myanmar shaping at the mercy of the phone's font
+          delivery; the red-400/amber-300 shades were justified as
+          a health-tier scale that answers a different question
+          (financialHealth.ts:166), so the v7.6.57 -400 values are
+          restored. The user then ordered ('ဖောင့်မလှ', 'အရောင်မလှ', 'လှအောင်ပြင်ပါ',
+          'Website တွေအကုန်လိုက်လေ့လာပြီးမှ အရောင်အတွဲအစပ်လုပ်ပါ',
+          'ခုဟာကြီးက ရွံစရာကြီး') — study
+          all websites FIRST, then pair colours — and that a
+          verbatim Hero copy was never ordered. Re-studied:
+          FinPulse (devault.design) hero card #1F2A53 to #2B3566,
+          never pure black; Midnight Banking (designmd.ai)
+          gradient account cards, softened secondary text, tabular
+          numerals; Crypto.com (uiskillbook.com) cool-blue hero
+          gradients, 700-800 headlines, tabular figures; Fjord
+          Bank (designlounge.live) near-black card, tabular
+          amount; Kanonara + Material language support: Burmese
+          is a Tall script needing generous leading. Treatment: a
+          two-stop deep-indigo diagonal (indigo-950 to indigo-900
+          — depth without gaudiness), the phone-proven system
+          font stack (no webfont anywhere), an extrabold tabular
+          figure with generous leading, the restored -400 tones,
+          softened slate-300 labels and emerald-300/rose-300 net.
+          Tone meanings, numbers, labels, buttons and functions
+          are unchanged. */}
+      <div className="rounded-3xl bg-gradient-to-br from-indigo-950 to-indigo-900 text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_10px_28px_rgba(15,23,42,0.25)] space-y-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-extrabold text-white truncate">
             {lang === 'my' ? 'လက်ကျန် · ဒီလ' : 'Balance · This month'}
@@ -777,7 +795,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         <div
-          className={`text-3xl leading-tight font-black tracking-tight ${balanceToneClass(monthBalance.closing)}`}
+          className={`text-3xl sm:text-4xl font-extrabold tabular-nums leading-[1.4] ${balanceToneClass(monthBalance.closing)}`}
           title={formatMMK(monthBalance.closing)}
         >
           {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
@@ -785,21 +803,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
         <div className="grid grid-cols-3 gap-2 max-[361px]:gap-1.5 text-[11px]">
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/70">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
             <div className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.opening, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/70">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
             <div className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/70">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
             <div
-              className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-300' : 'text-red-400'}`}
+              className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}
               title={formatMMK(monthBalance.net)}
             >
               {balanceHidden ? '••••' : `${monthBalance.net >= 0 ? '+' : ''}${formatLakhs(monthBalance.net, lang)}`}

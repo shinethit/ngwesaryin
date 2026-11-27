@@ -33,7 +33,7 @@ describe('service-worker scheme guard (v7.6.51 item 1)', () => {
   });
 
   it('caching behaviour for http(s) is untouched', () => {
-    expect(SW_SRC).toContain("const CACHE_NAME = 'ngwesaryin-live-v12';");
+    expect(SW_SRC).toContain("const CACHE_NAME = 'ngwesaryin-live-v13';");
     expect(SW_SRC).toContain("if (url.pathname === '/version.json') {");
     expect(SW_SRC.match(/cache\.put\(request, responseClone\)/g)).toHaveLength(2);
   });
@@ -74,20 +74,20 @@ describe('recharts visibility gate (v7.6.51 item 2)', () => {
 
 describe('Version pins roll to v7.6.52 / build 366', () => {
   it('constants and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
-    expect(CURRENT_BUILD_NUMBER).toBe(375);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
+    expect(CURRENT_BUILD_NUMBER).toBe(376);
     const VERSION_JSON = JSON.parse(
       readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
     );
-    expect(VERSION_JSON.version).toBe('v7.6.61');
-    expect(VERSION_JSON.buildNumber).toBe(375);
+    expect(VERSION_JSON.version).toBe('v7.6.62');
+    expect(VERSION_JSON.buildNumber).toBe(376);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.61');
-    expect(top.buildNumber).toBe(375);
+    expect(top.version).toBe('v7.6.62');
+    expect(top.buildNumber).toBe(376);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(5);
-    expect(top.changesEn.length).toBe(5);
+    expect(top.changesMy.length).toBe(4);
+    expect(top.changesEn.length).toBe(4);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

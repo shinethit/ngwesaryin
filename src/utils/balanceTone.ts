@@ -14,23 +14,27 @@
 // They are removed. The card is flat navy again, figures carry
 // FLAT tone colours only, like the Dashboard hero. The -400
 // saturation and the semantics/boundaries below are unchanged.
-// [v7.6.61] RESEARCHED REDESIGN: the user rejected the whole card
-// ('ဖောင့်မလှ', 'အရောင်မလှ', 'ရွံစရာကြီး') and ordered the
-// colour/font pairing studied from real finance apps and
-// Burmese webfonts first. Shades now follow the Hero's own tier
-// scale (Dashboard.tsx heroHealthText: -300 steps on the dark
-// ground) with the muted-red family fintech dark-mode guidance
-// prescribes for dark surfaces (a slightly muted red, never pure
-// #ff0000): negative red-400 #f87171, low amber-300 #fcd34d
-// (the Hero's moderate tier, exact), high white. Semantics and
-// boundaries are UNCHANGED — only the shades change.
+// [v7.6.62] RESTORED: the v7.6.61 shades (red-400 / amber-300)
+// were justified in comments as 'the Hero's tier scale
+// (heroHealthText)' — that justification is FALSE, proved from
+// code. heroHealthText (Dashboard.tsx:358-367) maps FINANCIAL
+// HEALTH tiers: calculateFinancialHealth (financialHealth.ts:166)
+// scores the savings rate, debt ratio and deficit state, NOT the
+// 100,000 MMK balance threshold — e.g. a 50,000 MMK balance with
+// a 55% savings rate scores 'super_surplus' (purple-300), and a
+// 500,000 MMK balance with negative flow scores 'negative'
+// (rose-400). The scales answer different questions, and red-400
+// appears NOWHERE in heroHealthText (negative/critical are
+// rose-400). So the -400 shades from v7.6.57 are restored
+// exactly: negative rose-400 #fb7185, low amber-400 #fbbf24,
+// high white. Semantics and boundaries are UNCHANGED.
 export const LOW_BALANCE_THRESHOLD_MMK = 100000;
 
 /** Tailwind text colour for a balance value on the navy card. */
 export function balanceToneClass(
   value: number,
-): 'text-red-400' | 'text-amber-300' | 'text-white' {
-  if (value < 0) return 'text-red-400';
-  if (value < LOW_BALANCE_THRESHOLD_MMK) return 'text-amber-300';
+): 'text-rose-400' | 'text-amber-400' | 'text-white' {
+  if (value < 0) return 'text-rose-400';
+  if (value < LOW_BALANCE_THRESHOLD_MMK) return 'text-amber-400';
   return 'text-white';
 }

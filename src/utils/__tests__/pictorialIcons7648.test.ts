@@ -149,7 +149,7 @@ describe('pictorial lock matrix (v7.6.48)', () => {
 describe('pictorial precache + files (v7.6.48)', () => {
   it('the service worker precaches all 463 icons under cache v11', () => {
     const src = SRC('../../../public/sw.js');
-    expect(src).toContain("const CACHE_NAME = 'ngwesaryin-live-v12'");
+    expect(src).toContain("const CACHE_NAME = 'ngwesaryin-live-v13'");
     const matches = src.match(/'\/icons\/[a-z0-9-]+\.webp'/g) || [];
     expect(matches).toHaveLength(463);
     expect(new Set(matches).size).toBe(463);

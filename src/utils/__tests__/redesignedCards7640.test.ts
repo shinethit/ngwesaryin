@@ -153,17 +153,17 @@ describe('Redesigned shop cards (v7.6.40)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
-    expect(CURRENT_BUILD_NUMBER).toBe(375);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.61');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(375);
-    expect(VERSION_JSON.version).toBe('v7.6.61');
-    expect(VERSION_JSON.buildNumber).toBe(375);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
+    expect(CURRENT_BUILD_NUMBER).toBe(376);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.62');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(376);
+    expect(VERSION_JSON.version).toBe('v7.6.62');
+    expect(VERSION_JSON.buildNumber).toBe(376);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'ကတ်အောက်ခံက Hero လို အနက်ရောင် နီးပါး ပြာရင့်ရောင် အပြားလိုက် ဖြစ်သွားပါပြီ',
+      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေ မူလအတိုင်း ပြန်ဖြစ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      "The card ground is the Hero's near-black navy, flat and clean",
+      "Red, amber and white are back to their original values — meanings unchanged",
     );
   });
 });

@@ -16,10 +16,35 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.61';
-export const CURRENT_BUILD_NUMBER = 375;
+export const CURRENT_APP_VERSION = 'v7.6.62';
+export const CURRENT_BUILD_NUMBER = 376;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.62',
+    buildNumber: 376,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'လက်ကျန်ကတ် အလှပြင် — အရောင်အတွဲအစပ်နဲ့ စာလုံး အသစ်',
+    titleEn: "Balance card beautified — researched colour pairing and font",
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'လက်ကျန်ကတ်ကို ဝက်ဘ်ဆိုက်တွေလေ့လာပြီး အလှပြင်ထားပါတယ်။ အောက်ခံက နက်ရှိုင်းတဲ့ အင်ဒီဂိုရောင်၊ စာလုံးက ဖုန်းမှာ ကောင်းကောင်းမြင်ရတဲ့ system font၊ အရောင်တွေက အဓိပ္ပာယ်အတိုင်း မူလအတိုင်း ပြန်ဖြစ်ပါပြီ။',
+    descriptionEn: 'The balance card was redesigned from studied websites and apps: a deep indigo ground with real depth, the phone-proven system font, and the original tone colours restored.',
+    changesMy: [
+      'လက်ကျန်ကတ်က အမဲကွက်ကြီး မဟုတ်တော့ပါ — နက်ရှိုင်းတဲ့ အင်ဒီဂိုပြာရင့်ရောင် အောက်ခံအသစ်နဲ့ ပိုလှသွားပါပြီ',
+      'စာလုံးက ဖုန်းမှာ ကောင်းကောင်းမြင်ရတဲ့ system font အတိုင်း ပြန်ဖြစ်ပါပြီ — စာတွေ ပျက်နေတာ မရှိတော့ပါ',
+      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေ မူလအတိုင်း ပြန်ဖြစ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'ဂဏန်းတွေ ညီညီညာညာ ပေါ်အောင်၊ မြန်မာစာတွေ မညှပ်အောင် စာကြောင်းအကွာအဝေး ပိုပေးထားပါပြီ',
+    ],
+    changesEn: [
+      "The card ground is a deep indigo gradient with real depth — no more black patch",
+      "The card uses the phone-proven system font again — no more broken text",
+      "Red, amber and white are back to their original values — meanings unchanged",
+      "Figures use tabular numerals with generous leading, so Burmese text is never clipped",
+    ],
+  },
   {
     version: 'v7.6.61',
     buildNumber: 375,

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ngwesaryin-live-v12';
+const CACHE_NAME = 'ngwesaryin-live-v13';
 // [v7.6.34] ATOMIC GENERATIONS — bump CACHE_NAME on EVERY release.
 // A new worker activates only after it has precached the COMPLETE
 // build (index.html + every hashed JS/CSS asset it references). The
@@ -20,11 +20,6 @@ const PRECACHE_ASSETS = [
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/pwa-maskable-512x512.png',
-  // [v7.6.61] Records balance card type — Noto Sans Myanmar
-  // Variable, self-hosted subsets, precached like the icons so
-  // the card keeps its type fully offline.
-  '/fonts/noto-sans-myanmar-myanmar-wght-normal.woff2',
-  '/fonts/noto-sans-myanmar-latin-wght-normal.woff2',
   // [v7.6.47/v7.6.48] Pictorial category icons — precached with the build
   // (atomic generation) so a category row never 404s offline on
   // first sight. Filenames are unhashed; the CACHE_NAME bump above

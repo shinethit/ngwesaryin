@@ -91,14 +91,14 @@ describe('the category state sync is untouched (v7.6.29 is UI-only)', () => {
 
 describe('Version bump to v7.6.29 (build 343)', () => {
   it('version surfaces agree on v7.6.29 / build 343', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
-    expect(CURRENT_BUILD_NUMBER).toBe(375);
-    expect(VERSION_JSON.version).toBe('v7.6.61');
-    expect(VERSION_JSON.buildNumber).toBe(375);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
+    expect(CURRENT_BUILD_NUMBER).toBe(376);
+    expect(VERSION_JSON.version).toBe('v7.6.62');
+    expect(VERSION_JSON.buildNumber).toBe(376);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.61');
-    expect(entry.buildNumber).toBe(375);
-    expect(entry.changesMy[0]).toBe('လက်ကျန်ကတ်မှာ Noto Sans Myanmar စာလုံးအသစ်သုံးထားပါပြီ — မြန်မာစာနဲ့ ဂဏန်းတွေ တစ်မျိုးတည်းနဲ့ လှလှပပ ပေါ်ပါပြီ');
+    expect(entry.version).toBe('v7.6.62');
+    expect(entry.buildNumber).toBe(376);
+    expect(entry.changesMy[0]).toBe('လက်ကျန်ကတ်က အမဲကွက်ကြီး မဟုတ်တော့ပါ — နက်ရှိုင်းတဲ့ အင်ဒီဂိုပြာရင့်ရောင် အောက်ခံအသစ်နဲ့ ပိုလှသွားပါပြီ');
     expect(JSON.stringify(VERSION_HISTORY[0])).not.toContain('Admin');
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
     expect(VERSION_JSON.releasedAt.length).toBeGreaterThan(0);

@@ -1,10 +1,18 @@
-// [v7.6.61] Researched redesign pins: the Records balance card uses
-// the self-hosted Noto Sans Myanmar Variable type (one family for
-// Latin digits and the Myanmar unit), the Hero-family near-black
-// ground, and the -300 tier shades. The font files are precached
-// by the service worker so the card keeps its type offline.
+// [v7.6.62] The Records balance card: researched redesign, second
+// study. v7.6.61 was rejected on the phone (black patch, broken
+// text, wrong colours, terrible font). The custom Noto Sans
+// Myanmar Variable webfont is removed: the variable-font +
+// unicode-range subset + SW-precache path put Myanmar shaping at
+// the mercy of the phone's font delivery. Ground is a two-stop
+// deep-indigo diagonal (indigo-950 to indigo-900) from the
+// studied fintech card pattern — depth without gaudiness, never
+// flat black, and not a copy of any single reference. The figure
+// is extrabold tabular numerals with generous leading (Burmese
+// is a Tall script). Tone shades return to the v7.6.57 -400
+// values; net keeps soft emerald-300/rose-300; labels stay
+// slate-300. Tone semantics and boundaries unchanged.
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const TX_SRC = readFileSync(
   new URL('../../components/TransactionsView.tsx', import.meta.url),
@@ -21,72 +29,79 @@ const SW_SRC = readFileSync(
   'utf8',
 );
 
-const MYANMAR_FONT = readFileSync(
-  new URL(
-    '../../../public/fonts/noto-sans-myanmar-myanmar-wght-normal.woff2',
-    import.meta.url,
-  ),
-);
-
-const LATIN_FONT = readFileSync(
-  new URL(
-    '../../../public/fonts/noto-sans-myanmar-latin-wght-normal.woff2',
-    import.meta.url,
-  ),
-);
-
-const OFL_TEXT = readFileSync(
-  new URL('../../../public/fonts/OFL.txt', import.meta.url),
+const BT_SRC = readFileSync(
+  new URL('../balanceTone.ts', import.meta.url),
   'utf8',
 );
 
-describe('balance card typeface (v7.6.61 researched redesign)', () => {
-  it('the card uses the Noto Sans Myanmar card font class, never monospace', () => {
-    expect(TX_SRC).toContain('balance-card-font');
-    expect(TX_SRC).toContain('text-3xl leading-tight font-black tracking-tight');
-    expect(TX_SRC).not.toContain('font-black font-mono');
-  });
-
-  it('the card ground is the Hero-family near-black navy, flat', () => {
-    expect(TX_SRC).toContain('bg-[#0F172A]');
+describe('balance card researched redesign (v7.6.62)', () => {
+  it('the card ground is a two-stop deep-indigo gradient, never flat black', () => {
+    expect(TX_SRC).toContain(
+      'bg-gradient-to-br from-indigo-950 to-indigo-900',
+    );
+    expect(TX_SRC).not.toContain('bg-[#0F172A]');
     expect(TX_SRC).not.toContain('bg-[#1E3A5F]');
+    expect(TX_SRC).not.toContain('via-indigo-950');
   });
 
-  it('the stylesheet declares both variable subsets with Fontsource unicode ranges', () => {
-    expect(CSS_SRC).toContain("font-family: 'Noto Sans Myanmar Variable'");
-    expect(CSS_SRC).toContain('font-weight: 100 900');
-    expect(CSS_SRC).toContain('font-display: swap');
-    expect(CSS_SRC).toContain(
-      "url('/fonts/noto-sans-myanmar-myanmar-wght-normal.woff2')",
+  it('the big figure is extrabold tabular numerals with generous leading', () => {
+    const figLine = TX_SRC.split('\n').find((l) =>
+      l.includes('text-3xl sm:text-4xl'),
     );
-    expect(CSS_SRC).toContain(
-      "url('/fonts/noto-sans-myanmar-latin-wght-normal.woff2')",
+    expect(figLine).toContain(
+      'text-3xl sm:text-4xl font-extrabold tabular-nums leading-[1.4]',
     );
-    expect(CSS_SRC).toContain('U+1000-109F');
-    expect(CSS_SRC).toContain('U+0000-00FF');
-    expect(CSS_SRC).toContain('.balance-card-font');
-    expect(CSS_SRC).toContain('font-variant-numeric: tabular-nums');
+    expect(figLine).not.toContain('font-black');
+    expect(figLine).not.toContain('tracking-tight');
+    expect(TX_SRC).not.toContain('text-3xl leading-tight font-black');
+    expect(TX_SRC).not.toContain('balance-card-font');
   });
 
-  it('the service worker precaches both font files under a bumped cache name', () => {
-    expect(SW_SRC).toContain("const CACHE_NAME = 'ngwesaryin-live-v12'");
-    expect(SW_SRC).toContain(
-      "'/fonts/noto-sans-myanmar-myanmar-wght-normal.woff2'",
-    );
-    expect(SW_SRC).toContain(
-      "'/fonts/noto-sans-myanmar-latin-wght-normal.woff2'",
-    );
+  it('the stylesheet has no webfont: no @font-face, no card font class', () => {
+    expect(CSS_SRC).not.toContain('@font-face');
+    expect(CSS_SRC).not.toContain('Noto Sans Myanmar Variable');
+    expect(CSS_SRC).not.toContain('.balance-card-font');
+    expect(CSS_SRC).not.toContain('font-synthesis');
+    expect(CSS_SRC).not.toContain('/fonts/');
   });
 
-  it('the shipped font files are real woff2 binaries with content', () => {
-    expect(MYANMAR_FONT.subarray(0, 4).toString('ascii')).toBe('wOF2');
-    expect(LATIN_FONT.subarray(0, 4).toString('ascii')).toBe('wOF2');
-    expect(MYANMAR_FONT.length).toBeGreaterThan(100000);
-    expect(LATIN_FONT.length).toBeGreaterThan(10000);
+  it('the service worker has no font precache entries under a bumped cache name', () => {
+    expect(SW_SRC).toContain("const CACHE_NAME = 'ngwesaryin-live-v13'");
+    expect(SW_SRC).not.toContain('/fonts/noto-sans-myanmar');
+    expect(SW_SRC).not.toContain('woff2');
   });
 
-  it('the OFL licence travels with the fonts', () => {
-    expect(OFL_TEXT).toContain('SIL OPEN FONT LICENSE');
-    expect(OFL_TEXT).toContain('Noto Project Authors');
+  it('the shipped font files are gone', () => {
+    expect(
+      existsSync(
+        new URL(
+          '../../../public/fonts/noto-sans-myanmar-myanmar-wght-normal.woff2',
+          import.meta.url,
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        new URL(
+          '../../../public/fonts/noto-sans-myanmar-latin-wght-normal.woff2',
+          import.meta.url,
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(new URL('../../../public/fonts/OFL.txt', import.meta.url)),
+    ).toBe(false);
+  });
+
+  it('tone shades are the restored -400 values, net is soft emerald/rose, labels are slate-300', () => {
+    expect(BT_SRC).toContain("'text-rose-400'");
+    expect(BT_SRC).toContain("'text-amber-400'");
+    expect(BT_SRC).not.toContain('text-red-400');
+    expect(BT_SRC).not.toContain('text-amber-300');
+    expect(TX_SRC).toContain(
+      "monthBalance.net >= 0 ? 'text-emerald-300' : 'text-rose-300'",
+    );
+    expect(TX_SRC).toContain('text-slate-300');
+    expect(TX_SRC).not.toContain('text-white/70');
   });
 });

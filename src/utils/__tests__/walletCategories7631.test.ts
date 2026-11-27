@@ -271,22 +271,22 @@ describe('shared-wallet mirror + rules (v7.6.31)', () => {
 
 describe('Version bump to v7.6.41 (build 355)', () => {
   it('version surfaces agree on v7.6.31 / build 345', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
-    expect(CURRENT_BUILD_NUMBER).toBe(375);
-    expect(VERSION_JSON.version).toBe('v7.6.61');
-    expect(VERSION_JSON.buildNumber).toBe(375);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
+    expect(CURRENT_BUILD_NUMBER).toBe(376);
+    expect(VERSION_JSON.version).toBe('v7.6.62');
+    expect(VERSION_JSON.buildNumber).toBe(376);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.61');
-    expect(entry.buildNumber).toBe(375);
+    expect(entry.version).toBe('v7.6.62');
+    expect(entry.buildNumber).toBe(376);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(5);
-    expect(entry.changesEn).toHaveLength(5);
+    expect(entry.changesMy).toHaveLength(4);
+    expect(entry.changesEn).toHaveLength(4);
     expect(entry.changesMy[0]).toBe(
-      'လက်ကျန်ကတ်မှာ Noto Sans Myanmar စာလုံးအသစ်သုံးထားပါပြီ — မြန်မာစာနဲ့ ဂဏန်းတွေ တစ်မျိုးတည်းနဲ့ လှလှပပ ပေါ်ပါပြီ',
+      'လက်ကျန်ကတ်က အမဲကွက်ကြီး မဟုတ်တော့ပါ — နက်ရှိုင်းတဲ့ အင်ဒီဂိုပြာရင့်ရောင် အောက်ခံအသစ်နဲ့ ပိုလှသွားပါပြီ',
     );
     expect(entry.changesEn[0]).toBe(
-      'The card now uses the Noto Sans Myanmar typeface — Burmese text and Latin digits share one beautiful face',
+      "The card ground is a deep indigo gradient with real depth — no more black patch",
     );
     expect([...entry.changesMy, ...entry.changesEn].join(' ')).not.toContain('Admin');
   });

@@ -5,12 +5,16 @@
 // ground, flat tone colours, plain-text sub-figures with bright
 // labels, Hero-flat buttons. Tone SEMANTICS and boundaries are
 // unchanged; the 360px no-truncate behaviour is kept.
-// [v7.6.61] Researched redesign: the user rejected the whole card
-// ('ဖောင့်မလှ', 'အရောင်မလှ', 'ရွံစရာကြီး'). Ground moves to the
-// Hero's near-black navy #0F172A, figures to Noto Sans Myanmar
-// Variable with tabular figures, shades to the Hero's -300 tier
-// scale, labels to white/70. Flat language and all functions
-// unchanged.
+// [v7.6.62] RESEARCHED REDESIGN, SECOND STUDY: the user rejected
+// the 61 card on the phone (black patch, broken text, wrong
+// colours, bad font) and ordered websites studied first — a
+// verbatim copy of any single reference was never ordered.
+// Ground is a two-stop deep-indigo diagonal (indigo-950 to
+// indigo-900); the Noto webfont is removed (phone-proven system
+// stack); shades return to the v7.6.57 -400 values (the 'tier
+// scale' justification was false); labels stay slate-300. Tone
+// semantics and boundaries unchanged; 360px no-truncate
+// behaviour kept.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
@@ -31,8 +35,8 @@ const BT_SRC = readFileSync(
 describe('balanceTone helpers (v7.6.60 flat)', () => {
   it('balanceToneClass keeps the v7.6.46 semantics and boundaries', () => {
     expect(LOW_BALANCE_THRESHOLD_MMK).toBe(100000);
-    expect(balanceToneClass(-1)).toBe('text-red-400');
-    expect(balanceToneClass(0)).toBe('text-amber-300');
+    expect(balanceToneClass(-1)).toBe('text-rose-400');
+    expect(balanceToneClass(0)).toBe('text-amber-400');
     expect(balanceToneClass(100000)).toBe('text-white');
   });
 
@@ -51,32 +55,35 @@ describe('balanceTone helpers (v7.6.60 flat)', () => {
 });
 
 describe('flat card wiring (v7.6.60)', () => {
-  it('the card ground is the flat #0F172A, never a gradient', () => {
-    expect(TX_SRC).toContain('bg-[#0F172A]');
+  it('the card ground is a two-stop deep-indigo gradient', () => {
+    expect(TX_SRC).toContain('bg-gradient-to-br from-indigo-950 to-indigo-900');
+    expect(TX_SRC).not.toContain('bg-[#0F172A]');
+    expect(TX_SRC).not.toContain('bg-[#1E3A5F]');
     expect(TX_SRC).not.toContain('bg-gradient-to-br from-[#0E2247]');
     expect(TX_SRC).not.toContain('border-indigo-300/25');
     expect(TX_SRC).not.toContain('rgba(29,78,216,0.40)');
   });
 
-  it('the big figure is the Hero size, black weight, flat colour', () => {
-    // [v7.6.59] Hero parity: the figure is the Hero's exact phone
-    // size (text-3xl, 30px — Dashboard.tsx:541), not 26px.
-    expect(TX_SRC).toContain('text-3xl leading-tight font-black tracking-tight');
+  it('the big figure is extrabold tabular numerals with generous leading', () => {
+    // [v7.6.59] Phone size kept: the figure is text-3xl, 30px,
+    // not 26px; [v7.6.62] weight is extrabold with tabular
+    // numerals and generous leading for the Tall Myanmar script.
+    expect(TX_SRC).toContain('text-3xl sm:text-4xl font-extrabold tabular-nums leading-[1.4]');
     expect(TX_SRC).not.toContain('text-[26px] leading-tight font-black');
     expect(TX_SRC).toContain('balanceToneClass(monthBalance.closing)');
   });
 
   it('the three sub-figures are plain text with bright labels, not chips', () => {
-    expect(TX_SRC).toContain('text-white/70');
+    expect(TX_SRC).toContain('text-slate-300');
     expect(TX_SRC).not.toContain('rounded-xl px-1 max-[361px]:px-0.5 py-1.5');
     expect(TX_SRC).toContain('balanceToneClass(monthBalance.opening)');
     expect(TX_SRC).toContain('balanceToneClass(monthBalance.closing)');
     expect(TX_SRC).toContain(
-      "monthBalance.net >= 0 ? 'text-emerald-300' : 'text-red-400'",
+      "monthBalance.net >= 0 ? 'text-emerald-300' : 'text-rose-300'",
     );
   });
 
-  it('the card buttons match the Hero flat translucent style', () => {
+  it('the card buttons keep the flat translucent style', () => {
     expect(TX_SRC).toContain('bg-white/10 hover:bg-white/20 border border-white/20');
     expect(TX_SRC).not.toContain('bg-white/15 hover:bg-white/25');
   });

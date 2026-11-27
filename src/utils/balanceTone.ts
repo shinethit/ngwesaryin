@@ -14,13 +14,23 @@
 // They are removed. The card is flat navy again, figures carry
 // FLAT tone colours only, like the Dashboard hero. The -400
 // saturation and the semantics/boundaries below are unchanged.
+// [v7.6.61] RESEARCHED REDESIGN: the user rejected the whole card
+// ('ဖောင့်မလှ', 'အရောင်မလှ', 'ရွံစရာကြီး') and ordered the
+// colour/font pairing studied from real finance apps and
+// Burmese webfonts first. Shades now follow the Hero's own tier
+// scale (Dashboard.tsx heroHealthText: -300 steps on the dark
+// ground) with the muted-red family fintech dark-mode guidance
+// prescribes for dark surfaces (a slightly muted red, never pure
+// #ff0000): negative red-400 #f87171, low amber-300 #fcd34d
+// (the Hero's moderate tier, exact), high white. Semantics and
+// boundaries are UNCHANGED — only the shades change.
 export const LOW_BALANCE_THRESHOLD_MMK = 100000;
 
 /** Tailwind text colour for a balance value on the navy card. */
 export function balanceToneClass(
   value: number,
-): 'text-rose-400' | 'text-amber-400' | 'text-white' {
-  if (value < 0) return 'text-rose-400';
-  if (value < LOW_BALANCE_THRESHOLD_MMK) return 'text-amber-400';
+): 'text-red-400' | 'text-amber-300' | 'text-white' {
+  if (value < 0) return 'text-red-400';
+  if (value < LOW_BALANCE_THRESHOLD_MMK) return 'text-amber-300';
   return 'text-white';
 }

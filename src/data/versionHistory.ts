@@ -16,10 +16,37 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.60';
-export const CURRENT_BUILD_NUMBER = 374;
+export const CURRENT_APP_VERSION = 'v7.6.61';
+export const CURRENT_BUILD_NUMBER = 375;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.61',
+    buildNumber: 375,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'လက်ကျန်ကတ် စာလုံးနဲ့ အရောင်အတွဲအစပ် အသစ်',
+    titleEn: 'Balance card redesigned — new typeface and colour pairing',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'လက်ကျန်ကတ်ကို ဘဏ်/ငွေကြေးအက်ပ်တွေနဲ့ မြန်မာစာလုံးပုံစံတွေကို လေ့လာပြီး ပြန်ပြင်ထားပါတယ်။ မြန်မာစာရော အင်္ဂလိပ်ဂဏန်းပါ တစ်မျိုးတည်းသော စာလုံးနဲ့ လှလှပပ ပေါ်ပြီး၊ အရောင်တွေလည်း Hero ကတ်နဲ့ တစ်အိမ်တည်းဖြစ်သွားပါပြီ။',
+    descriptionEn: 'The balance card was redesigned after studying banking and money-manager apps and Burmese webfonts. Burmese text and Latin digits now share one typeface, and the colours sit in the same family as the Dashboard Hero.',
+    changesMy: [
+      'လက်ကျန်ကတ်မှာ Noto Sans Myanmar စာလုံးအသစ်သုံးထားပါပြီ — မြန်မာစာနဲ့ ဂဏန်းတွေ တစ်မျိုးတည်းနဲ့ လှလှပပ ပေါ်ပါပြီ',
+      'စာလုံးဖိုင်တွေကို အက်ပ်ထဲမှာပဲ ထည့်ထားလို့ အင်တာနက်မရှိလည်း စာလုံးအလှ မပျက်ပါ',
+      'ကတ်အောက်ခံက Hero လို အနက်ရောင် နီးပါး ပြာရင့်ရောင် အပြားလိုက် ဖြစ်သွားပါပြီ',
+      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေက Hero ရဲ့ အဆင့်တွေအတိုင်း ပိုသန့်ပြီး ပိုဖတ်ရလွယ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'အဖွင့်၊ အပိတ်၊ အသားတင် စာတန်းတွေ ပိုရှင်းပြီး ဖတ်ရလွယ်ပါပြီ',
+    ],
+    changesEn: [
+      'The card now uses the Noto Sans Myanmar typeface — Burmese text and Latin digits share one beautiful face',
+      'The font files ship inside the app, so the card keeps its type fully offline',
+      "The card ground is the Hero's near-black navy, flat and clean",
+      "Red, amber and white follow the Hero's tier shades — cleaner and easier to read, meanings unchanged",
+      'Opening, closing and net labels are crisper and easier to read',
+    ],
+  },
   {
     version: 'v7.6.60',
     buildNumber: 374,

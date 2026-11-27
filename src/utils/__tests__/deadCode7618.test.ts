@@ -358,26 +358,26 @@ describe('Version bump to v7.6.27 (build 342)', () => {
     const VERSION_JSON = JSON.parse(
       readFileSync(new URL('../../../public/version.json', import.meta.url), 'utf8'),
     );
-    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
-    expect(CURRENT_BUILD_NUMBER).toBe(374);
-    expect(VERSION_JSON.version).toBe('v7.6.60');
-    expect(VERSION_JSON.buildNumber).toBe(374);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
+    expect(CURRENT_BUILD_NUMBER).toBe(375);
+    expect(VERSION_JSON.version).toBe('v7.6.61');
+    expect(VERSION_JSON.buildNumber).toBe(375);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.60');
-    expect(entry.buildNumber).toBe(374);
+    expect(entry.version).toBe('v7.6.61');
+    expect(entry.buildNumber).toBe(375);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Sync အပေါက်တွေ ပိတ်ခြင်းနှင့် လက်ကျန်ကတ် အပြားလိုက် ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Sync delete-loss holes closed; balance card flat like the Hero');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် စာလုံးနဲ့ အရောင်အတွဲအစပ် အသစ်');
+    expect(entry.titleEn).toBe('Balance card redesigned — new typeface and colour pairing');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(7);
-    expect(entry.changesEn).toHaveLength(7);
+    expect(entry.changesMy).toHaveLength(5);
+    expect(entry.changesEn).toHaveLength(5);
     expect(entry.changesMy[0]).toBe(
-      'ပြင်နေရင်း ဖျက်လိုက်တဲ့ မှတ်တမ်းက Cloud ကို မရောက်ဘဲ ပျောက်သွားတဲ့ အပေါက်ကို ပိတ်လိုက်ပါပြီ',
+      'လက်ကျန်ကတ်မှာ Noto Sans Myanmar စာလုံးအသစ်သုံးထားပါပြီ — မြန်မာစာနဲ့ ဂဏန်းတွေ တစ်မျိုးတည်းနဲ့ လှလှပပ ပေါ်ပါပြီ',
     );
     expect(entry.changesEn[0]).toBe(
-      'A delete issued while an edit was saving can no longer lose its queue task',
+      'The card now uses the Noto Sans Myanmar typeface — Burmese text and Latin digits share one beautiful face',
     );
   });
 

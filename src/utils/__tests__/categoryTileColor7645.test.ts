@@ -79,17 +79,17 @@ describe('getCategoryTileColor (v7.6.45 Part D)', () => {
 
 describe('Version pins roll to v7.6.52 / build 366', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
-    expect(CURRENT_BUILD_NUMBER).toBe(374);
-    expect(VERSION_JSON.version).toBe('v7.6.60');
-    expect(VERSION_JSON.buildNumber).toBe(374);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
+    expect(CURRENT_BUILD_NUMBER).toBe(375);
+    expect(VERSION_JSON.version).toBe('v7.6.61');
+    expect(VERSION_JSON.buildNumber).toBe(375);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.60');
-    expect(top.buildNumber).toBe(374);
+    expect(top.version).toBe('v7.6.61');
+    expect(top.buildNumber).toBe(375);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(7);
-    expect(top.changesEn.length).toBe(7);
+    expect(top.changesMy.length).toBe(5);
+    expect(top.changesEn.length).toBe(5);
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);
     expect(VERSION_JSON.changesEn).toEqual(top.changesEn);
   });

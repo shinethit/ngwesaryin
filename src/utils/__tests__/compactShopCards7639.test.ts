@@ -104,17 +104,17 @@ describe('Shop cards are compact (v7.6.39)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
-    expect(CURRENT_BUILD_NUMBER).toBe(374);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.60');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(374);
-    expect(VERSION_JSON.version).toBe('v7.6.60');
-    expect(VERSION_JSON.buildNumber).toBe(374);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
+    expect(CURRENT_BUILD_NUMBER).toBe(375);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.61');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(375);
+    expect(VERSION_JSON.version).toBe('v7.6.61');
+    expect(VERSION_JSON.buildNumber).toBe(375);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'အရောင်ပြေး (gradient) အောက်ခံကို ဖြုတ်ပြီး အပြားလိုက် အပြာရင့်ရောင် ပြန်ဖြစ်ပါပြီ',
+      'ကတ်အောက်ခံက Hero လို အနက်ရောင် နီးပါး ပြာရင့်ရောင် အပြားလိုက် ဖြစ်သွားပါပြီ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      'The gradient ground is removed — the card is flat navy again',
+      "The card ground is the Hero's near-black navy, flat and clean",
     );
   });
 });

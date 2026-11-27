@@ -716,8 +716,22 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           bright labels, buttons match the Hero's flat
           translucent style. The 30px figure, tone semantics,
           numbers, labels, buttons and functions are unchanged,
-          and the 360px no-truncate behaviour is kept. */}
-      <div className="rounded-3xl bg-[#1E3A5F] text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_10px_28px_rgba(30,58,95,0.25)] space-y-2">
+          and the 360px no-truncate behaviour is kept.
+          [v7.6.61] RESEARCHED REDESIGN: the user rejected the whole
+          card ('ဖောင့်မလှ', 'အရောင်မလှ', 'ရွံစရာကြီး') and
+          ordered real websites/apps studied first. Ground is the
+          Hero's own near-black navy, flat (#0F172A, slate-900 —
+          the Hero gradient's start, Dashboard.tsx:540; Monzo's
+          measured dark panel #0F1A25 is the same family). Figures
+          use Noto Sans Myanmar Variable (Google, 100–900, OFL —
+          one family for Latin digits AND the Myanmar unit, self-
+          hosted in public/fonts and precached by the service
+          worker), tabular figures, tight tracking — no monospace.
+          Tone shades follow the Hero's -300 tier scale (red-400 /
+          amber-300 / white; net emerald-300). Labels are white/70
+          (Monzo's secondary white on navy). Tone meanings,
+          numbers, labels, buttons and functions are unchanged. */}
+      <div className="rounded-3xl balance-card-font bg-[#0F172A] text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_10px_28px_rgba(15,23,42,0.25)] space-y-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-extrabold text-white truncate">
             {lang === 'my' ? 'လက်ကျန် · ဒီလ' : 'Balance · This month'}
@@ -763,7 +777,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         <div
-          className={`text-3xl leading-tight font-black font-mono ${balanceToneClass(monthBalance.closing)}`}
+          className={`text-3xl leading-tight font-black tracking-tight ${balanceToneClass(monthBalance.closing)}`}
           title={formatMMK(monthBalance.closing)}
         >
           {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
@@ -771,21 +785,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
         <div className="grid grid-cols-3 gap-2 max-[361px]:gap-1.5 text-[11px]">
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/80">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
-            <div className={`font-mono font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/70">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
+            <div className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.opening, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/80">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
-            <div className={`font-mono font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/70">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
+            <div className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/80">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
+            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-white/70">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
             <div
-              className={`font-mono font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+              className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-300' : 'text-red-400'}`}
               title={formatMMK(monthBalance.net)}
             >
               {balanceHidden ? '••••' : `${monthBalance.net >= 0 ? '+' : ''}${formatLakhs(monthBalance.net, lang)}`}

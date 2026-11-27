@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
-    expect(CURRENT_BUILD_NUMBER).toBe(374);
-    expect(VERSION_JSON.version).toBe('v7.6.60');
-    expect(VERSION_JSON.buildNumber).toBe(374);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
+    expect(CURRENT_BUILD_NUMBER).toBe(375);
+    expect(VERSION_JSON.version).toBe('v7.6.61');
+    expect(VERSION_JSON.buildNumber).toBe(375);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,28 +330,24 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.60');
-    expect(top.buildNumber).toBe(374);
+    expect(top.version).toBe('v7.6.61');
+    expect(top.buildNumber).toBe(375);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('Sync အပေါက်တွေ ပိတ်ခြင်းနှင့် လက်ကျန်ကတ် အပြားလိုက် ပြင်ဆင်ခြင်း');
-    expect(top.titleEn).toBe('Sync delete-loss holes closed; balance card flat like the Hero');
+    expect(top.titleMy).toBe('လက်ကျန်ကတ် စာလုံးနဲ့ အရောင်အတွဲအစပ် အသစ်');
+    expect(top.titleEn).toBe('Balance card redesigned — new typeface and colour pairing');
     expect(top.changesMy).toEqual([
-      'ပြင်နေရင်း ဖျက်လိုက်တဲ့ မှတ်တမ်းက Cloud ကို မရောက်ဘဲ ပျောက်သွားတဲ့ အပေါက်ကို ပိတ်လိုက်ပါပြီ',
-      'Cloud က လက်ခံပြီးကြောင်း အတည်မပြုရသေးတဲ့ ပေးပို့မှုတွေကို ထပ်ပို့ပြီး အတည်ပြုချက်ရမှ ပြီးပြီလို့ သတ်မှတ်ပါပြီ',
-      'တခြားစက်မှာ ဖျက်ထားတဲ့ အကြွေး၊ ပိုက်ဆံအိတ်၊ ဆိုင်၊ ယာဉ်မှတ်တမ်းတွေကို ဒီစက်က ပြန်တင်ပြီး ပြန်ပေါ်လာတာမျိုး မဖြစ်တော့ပါ',
-      'Sync အသေးစိတ်မှာ Database Sync အပြည့်အစုံ ကြည့်တဲ့ ခလုတ် ပါလာပါပြီ — ပျောက်နေတဲ့ မှတ်တမ်းတွေ ပြန်ရှာတဲ့ လုပ်ဆောင်ချက်တွေ သုံးလို့ရပါပြီ',
-      'အရောင်ပြေး (gradient) အောက်ခံကို ဖြုတ်ပြီး အပြားလိုက် အပြာရင့်ရောင် ပြန်ဖြစ်ပါပြီ',
-      'အဓိကပမာဏနဲ့ အသားတင်ကိန်းဂဏန်းတွေက အလင်းဝင်း (glow) မပါဘဲ အပြားလိုက် အရောင်နဲ့ ပေါ်ပါပြီ',
-      'အဖွင့်၊ အပိတ်၊ အသားတင် သုံးခုလုံး အရောင်ခွက်မပါဘဲ စာသားအပြားလိုက် ရှင်းရှင်းလင်းလင်း ပေါ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'လက်ကျန်ကတ်မှာ Noto Sans Myanmar စာလုံးအသစ်သုံးထားပါပြီ — မြန်မာစာနဲ့ ဂဏန်းတွေ တစ်မျိုးတည်းနဲ့ လှလှပပ ပေါ်ပါပြီ',
+      'စာလုံးဖိုင်တွေကို အက်ပ်ထဲမှာပဲ ထည့်ထားလို့ အင်တာနက်မရှိလည်း စာလုံးအလှ မပျက်ပါ',
+      'ကတ်အောက်ခံက Hero လို အနက်ရောင် နီးပါး ပြာရင့်ရောင် အပြားလိုက် ဖြစ်သွားပါပြီ',
+      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေက Hero ရဲ့ အဆင့်တွေအတိုင်း ပိုသန့်ပြီး ပိုဖတ်ရလွယ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'အဖွင့်၊ အပိတ်၊ အသားတင် စာတန်းတွေ ပိုရှင်းပြီး ဖတ်ရလွယ်ပါပြီ',
     ]);
     expect(top.changesEn).toEqual([
-      'A delete issued while an edit was saving can no longer lose its queue task',
-      'Batch uploads now wait for server acknowledgement before counting as synced, with durable retry tasks as backup',
-      'Deletes of debts, wallets, shops and vehicle logs made on another device are now honoured here via server tombstones',
-      'The sync drawer now opens the full database sync tracker, so missing-record repair actions are reachable',
-      'The gradient ground is removed — the card is flat navy again',
-      'The main and net figures carry flat colours with no glow',
-      'Opening, closing and net are plain text with no tinted chips — meanings unchanged',
+      'The card now uses the Noto Sans Myanmar typeface — Burmese text and Latin digits share one beautiful face',
+      'The font files ship inside the app, so the card keeps its type fully offline',
+      "The card ground is the Hero's near-black navy, flat and clean",
+      "Red, amber and white follow the Hero's tier shades — cleaner and easier to read, meanings unchanged",
+      'Opening, closing and net labels are crisper and easier to read',
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

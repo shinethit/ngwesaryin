@@ -350,21 +350,21 @@ describe('display sites normalize the stored unit (v7.5.97 source assertions)', 
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.60');
-    expect(CURRENT_BUILD_NUMBER).toBe(374);
-    expect(VERSION_JSON.version).toBe('v7.6.60');
-    expect(VERSION_JSON.buildNumber).toBe(374);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.61');
+    expect(CURRENT_BUILD_NUMBER).toBe(375);
+    expect(VERSION_JSON.version).toBe('v7.6.61');
+    expect(VERSION_JSON.buildNumber).toBe(375);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.60');
-    expect(entry.buildNumber).toBe(374);
+    expect(entry.version).toBe('v7.6.61');
+    expect(entry.buildNumber).toBe(375);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
-    expect(entry.titleMy).toBe('Sync အပေါက်တွေ ပိတ်ခြင်းနှင့် လက်ကျန်ကတ် အပြားလိုက် ပြင်ဆင်ခြင်း');
-    expect(entry.titleEn).toBe('Sync delete-loss holes closed; balance card flat like the Hero');
+    expect(entry.titleMy).toBe('လက်ကျန်ကတ် စာလုံးနဲ့ အရောင်အတွဲအစပ် အသစ်');
+    expect(entry.titleEn).toBe('Balance card redesigned — new typeface and colour pairing');
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(7);
-    expect(entry.changesEn).toHaveLength(7);
+    expect(entry.changesMy).toHaveLength(5);
+    expect(entry.changesEn).toHaveLength(5);
   });
 
   it('change log has no Admin content and releasedAt is present', () => {

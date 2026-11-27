@@ -743,15 +743,19 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           amount; Kanonara + Material language support: Burmese
           is a Tall script needing generous leading. Treatment: a
           two-stop deep-indigo diagonal (indigo-950 to indigo-900
-          — depth without gaudiness), the phone-proven system
-          font stack (no webfont anywhere), an extrabold tabular
-          figure with generous leading, the restored -400 tones,
-          softened slate-300 labels and emerald-300/rose-300 net.
+          — depth without gaudiness), self-hosted Padauk for the
+          card text (full WOFF2 files, real 700 Bold face, no
+          webfont CDN), a bold tabular figure with generous
+          leading, the restored -400 tones, softened slate-300
+          labels and emerald-300/rose-300 net. [v7.6.63] COLOURS
+          UNCHANGED from v7.6.62 by order; only the typeface,
+          the leading (1.7 — Burmese tall stacks no longer
+          collide) and the eye/refresh button sizes changed.
           Tone meanings, numbers, labels, buttons and functions
           are unchanged. */}
-      <div className="rounded-3xl bg-gradient-to-br from-indigo-950 to-indigo-900 text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_10px_28px_rgba(15,23,42,0.25)] space-y-2">
+      <div className="balance-card-font rounded-3xl bg-gradient-to-br from-indigo-950 to-indigo-900 text-white px-3.5 py-3 max-[361px]:px-3 sm:px-4 shadow-[0_10px_28px_rgba(15,23,42,0.25)] space-y-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-extrabold text-white truncate">
+          <span className="text-xs font-bold leading-[1.7] text-white truncate">
             {lang === 'my' ? 'လက်ကျန် · ဒီလ' : 'Balance · This month'}
           </span>
           <div className="ml-auto flex items-center gap-1.5 shrink-0">
@@ -773,7 +777,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={() => setBalanceHidden(!balanceHidden)}
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors cursor-pointer"
+              className="min-w-11 min-h-11 p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors cursor-pointer flex items-center justify-center shrink-0"
               aria-label={lang === 'my' ? (balanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (balanceHidden ? 'Show balance' : 'Hide balance')}
               title={lang === 'my' ? (balanceHidden ? 'လက်ကျန်ကို ပြမည်' : 'လက်ကျန်ကို ဝှက်မည်') : (balanceHidden ? 'Show balance' : 'Hide balance')}
             >
@@ -788,14 +792,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 title="Sync"
                 aria-label={lang === 'my' ? 'Cloud နှင့် ထပ်မံချိတ်ဆက်မည်' : 'Sync with Cloud'}
               >
-                <RefreshCw className={'w-3.5 h-3.5 ' + ((isSyncing || isCardSyncing) ? 'animate-spin' : '')} />
+                <RefreshCw className={'w-4 h-4 ' + ((isSyncing || isCardSyncing) ? 'animate-spin' : '')} />
               </button>
             )}
           </div>
         </div>
 
         <div
-          className={`text-3xl sm:text-4xl font-extrabold tabular-nums leading-[1.4] ${balanceToneClass(monthBalance.closing)}`}
+          className={`text-3xl sm:text-4xl font-bold tabular-nums leading-[1.7] ${balanceToneClass(monthBalance.closing)}`}
           title={formatMMK(monthBalance.closing)}
         >
           {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
@@ -803,21 +807,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
         <div className="grid grid-cols-3 gap-2 max-[361px]:gap-1.5 text-[11px]">
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
-            <div className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
+            <div className="font-semibold leading-[1.7] max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'လအစလက်ကျန်' : 'Opening'}</div>
+            <div className={`font-bold leading-[1.7] tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.opening)}`} title={formatMMK(monthBalance.opening)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.opening, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
-            <div className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
+            <div className="font-semibold leading-[1.7] max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'လအဆုံးလက်ကျန်' : 'Closing'}</div>
+            <div className={`font-bold leading-[1.7] tracking-tight max-[361px]:text-[10px] ${balanceToneClass(monthBalance.closing)}`} title={formatMMK(monthBalance.closing)}>
               {balanceHidden ? '••••' : formatLakhs(monthBalance.closing, lang)}
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-semibold leading-tight max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
+            <div className="font-semibold leading-[1.7] max-[361px]:text-[9px] text-slate-300">{lang === 'my' ? 'အသားတင်' : 'Net'}</div>
             <div
-              className={`font-bold leading-tight tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}
+              className={`font-bold leading-[1.7] tracking-tight max-[361px]:text-[10px] ${monthBalance.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}
               title={formatMMK(monthBalance.net)}
             >
               {balanceHidden ? '••••' : `${monthBalance.net >= 0 ? '+' : ''}${formatLakhs(monthBalance.net, lang)}`}

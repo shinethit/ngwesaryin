@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ngwesaryin-live-v13';
+const CACHE_NAME = 'ngwesaryin-live-v14';
 // [v7.6.34] ATOMIC GENERATIONS — bump CACHE_NAME on EVERY release.
 // A new worker activates only after it has precached the COMPLETE
 // build (index.html + every hashed JS/CSS asset it references). The
@@ -20,6 +20,10 @@ const PRECACHE_ASSETS = [
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/pwa-maskable-512x512.png',
+  // [v7.6.63] Self-hosted Padauk for the Records balance card —
+  // precached so the card renders offline on first sight.
+  '/fonts/padauk-regular.woff2',
+  '/fonts/padauk-bold.woff2',
   // [v7.6.47/v7.6.48] Pictorial category icons — precached with the build
   // (atomic generation) so a category row never 404s offline on
   // first sight. Filenames are unhashed; the CACHE_NAME bump above

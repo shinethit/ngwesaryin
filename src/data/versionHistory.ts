@@ -16,10 +16,41 @@ export interface VersionItem {
   changesEn: string[];
 }
 
-export const CURRENT_APP_VERSION = 'v7.6.62';
-export const CURRENT_BUILD_NUMBER = 376;
+export const CURRENT_APP_VERSION = 'v7.6.63';
+export const CURRENT_BUILD_NUMBER = 377;
 
 export const VERSION_HISTORY: VersionItem[] = [
+  {
+    version: 'v7.6.63',
+    buildNumber: 377,
+    releaseDate: '2026-11-27',
+    releaseTime: '12:00 PM (MMT)',
+    titleMy: 'တွက်ချက်မှုများ ပြင်ဆင်ခြင်း — ဈေး/အရေအတွက်/စုစုပေါင်းနှင့် လက်ကျန်ကတ် စာလုံး',
+    titleEn: 'Calculation fixes — price/qty/total and balance card typography',
+    tag: 'fix',
+    tagLabelMy: 'Bug Fix',
+    tagLabelEn: 'Bug Fix',
+    descriptionMy: 'ဈေးဝယ်စာရင်းမှာ ဈေး၊ အရေအတွက်၊ စုစုပေါင်း ၂ ခု ဖြည့်တာနဲ့ ကျန်တခုကို ချက်ချင်း တွက်ပေးပါပြီ။ ရိုက်ထားတဲ့ တန်ဖိုးကို ဘယ်တော့မှ ပြန်မပြောင်းတော့ပါ။ လက်ကျန်ကတ်မှာလည်း Padauk စာလုံးကို အက်ပ်ထဲမှာ ထည့်ထားပြီး စာကြောင်းအကွာအဝေး ပိုပေးထားလို့ မြန်မာစာတွေ ထပ်မနေတော့ပါ။ အရောင်တွေ မပြောင်းထားပါ။',
+    descriptionEn: 'Shopping rows now compute the third value the moment any two of price, quantity and total are filled, and never rewrite a typed value. The balance card uses self-hosted Padauk with wider leading so Myanmar text no longer collides. Colours are unchanged.',
+    changesMy: [
+      'ဈေး၊ အရေအတွက်၊ စုစုပေါင်း — ၂ ခု ဖြည့်တာနဲ့ ကျန်တခုကို ချက်ချင်း တွက်ပေးပါပြီ — ရိုက်ထားတဲ့ တန်ဖိုးကို ဘယ်တော့မှ ပြန်မပြောင်းတော့ပါ',
+      'အရေအတွက်နဲ့ စုစုပေါင်း ရိုက်ရင် ဈေးကို ဖြည့်ပေးပါပြီ — အရေအတွက်ကို အလိုအလျောက် မပြောင်းတော့ပါ',
+      'သိမ်းတဲ့အခါ မျက်နှာပြင်မှာ ပြထားတဲ့ စုစုပေါင်းအတိုင်း သိမ်းပါပြီ — ၀ ကျပ် ဖြစ်သွားတာ မရှိတော့ပါ',
+      'လက်ကျန်ကတ်က စာလုံးတွေ ထပ်မနေတော့ပါ — Padauk စာလုံးကို အက်ပ်ထဲမှာ ထည့်ထားပြီး စာကြောင်းအကွာအဝေး ပိုပေးထားပါပြီ (အရောင်တွေ မပြောင်းပါ)',
+      'ကျန်တွက်ချက်မှုပုံစံအားလုံး (ဘတ်ဂျက်၊ အကြွေး၊ ဆီစားနှုန်း၊ ငွေလဲနှုန်း၊ ခွဲခြမ်းစာရင်း) ကို ပြန်စစ်ပြီး မှန်ကန်ကြောင်း အတည်ပြုထားပါပြီ',
+      'ဆိုင်စာမျက်နှာကို ကျစ်ကျစ်လေးဖြစ်အောင် ပြင်ထားပါပြီ — ခေါင်းစဉ်နဲ့ စစ်ထုတ်မှုတွေ နေရာပိုယူမနေတော့ဘဲ ဆိုင်ကတ်တွေ ပိုမြင်ရပါပြီ',
+      'အသေးစိတ် မဖြည့်ရသေးတဲ့ ဆိုင်တွေကို ခေါင်းစဉ်တစ်ခုတည်းအောက်မှာ စုပြီး ပြပါပြီ — အမည်မသိ ဆိုင်တွေကို မထိထားပါ',
+    ],
+    changesEn: [
+      'Price, quantity, total — fill any two and the third is computed at once; a typed value is never rewritten',
+      'Typing quantity + total now fills in the price — quantity is no longer changed on its own',
+      'Saving stores the total shown on screen — it can no longer become 0 kyat',
+      'Balance card text no longer collides — self-hosted Padauk with wider leading (colours unchanged)',
+      'Every other calculation pattern (budgets, debts, fuel economy, currency conversion, splits) was re-checked and confirmed correct',
+      'The Shops screen is more compact — header and filters take less space so more shop cards fit on screen',
+      'Shops missing details are now grouped under a single header — Unknown shops are untouched',
+    ],
+  },
   {
     version: 'v7.6.62',
     buildNumber: 376,

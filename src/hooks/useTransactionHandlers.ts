@@ -215,7 +215,7 @@ export function useTransactionHandlers({
   // Guest 15, Free 150 per month): count transactions dated within
   // the window (local YYYY-MM-DD compare).
   // The count blocks the moment it reaches the CURRENT plan's
-  // maxTransactions (guest 30, free 100), even if reached in 10 days.
+  // maxTransactions (guest 15, free 150), even if reached in 10 days.
   // [v7.5.56 A8] A tx counts toward MY plan limit iff I created it
   // (legacy txs with no createdBy still count) AND its wallet is mine
   // or a shared wallet I own. A collaborator's tx in someone else's

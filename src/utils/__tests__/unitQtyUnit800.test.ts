@@ -325,10 +325,10 @@ describe('version identity 7.6.02 — fix-script guard is raw string equality (r
   });
 
   it('the shipped identity is 7.6.26 in every version surface', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
   });
 });
 
@@ -366,30 +366,30 @@ describe('app update check detects 7.6.01 over 7.5.99 (renumber)', () => {
 
 describe('Version bump to v7.6.27 (build 342)', () => {
   it('version constants and history entry match version.json', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.62');
-    expect(entry.buildNumber).toBe(376);
+    expect(entry.version).toBe('v7.6.63');
+    expect(entry.buildNumber).toBe(377);
     expect(entry.releaseDate).toBe('2026-11-27');
     expect(entry.tag).toBe('fix');
     expect(entry.titleMy).toBe(
-      'လက်ကျန်ကတ် အလှပြင် — အရောင်အတွဲအစပ်နဲ့ စာလုံး အသစ်',
+      'တွက်ချက်မှုများ ပြင်ဆင်ခြင်း — ဈေး/အရေအတွက်/စုစုပေါင်းနှင့် လက်ကျန်ကတ် စာလုံး',
     );
     expect(entry.titleEn).toBe(
-      "Balance card beautified — researched colour pairing and font",
+      "Calculation fixes — price/qty/total and balance card typography",
     );
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(4);
-    expect(entry.changesEn).toHaveLength(4);
+    expect(entry.changesMy).toHaveLength(7);
+    expect(entry.changesEn).toHaveLength(7);
     expect(entry.changesMy[0]).toBe(
-      'လက်ကျန်ကတ်က အမဲကွက်ကြီး မဟုတ်တော့ပါ — နက်ရှိုင်းတဲ့ အင်ဒီဂိုပြာရင့်ရောင် အောက်ခံအသစ်နဲ့ ပိုလှသွားပါပြီ',
+      'ဈေး၊ အရေအတွက်၊ စုစုပေါင်း — ၂ ခု ဖြည့်တာနဲ့ ကျန်တခုကို ချက်ချင်း တွက်ပေးပါပြီ — ရိုက်ထားတဲ့ တန်ဖိုးကို ဘယ်တော့မှ ပြန်မပြောင်းတော့ပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      "The card ground is a deep indigo gradient with real depth — no more black patch",
+      "Price, quantity, total — fill any two and the third is computed at once; a typed value is never rewritten",
     );
   });
 

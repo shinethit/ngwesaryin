@@ -41,19 +41,24 @@ const VERSION_JSON = JSON.parse(
 
 describe('Group 1 — Shops filter + header panel (v7.6.42)', () => {
   it('header card, filter card and root stack are tightened', () => {
-    expect(SHOPS_SRC).toContain('<div className="space-y-3 max-w-7xl mx-auto">');
-    expect(SHOPS_SRC).toContain('px-3 py-2.5 shadow-xs');
+    // [v7.6.63] Compact round: root space-y-3 -> 2, header py-2.5
+    // -> 2, tabs mt-1.5 -> 1, filter p-2.5/space-y-2 -> p-2/1.5.
+    expect(SHOPS_SRC).toContain('<div className="space-y-2 max-w-7xl mx-auto">');
+    expect(SHOPS_SRC).toContain('px-3 py-2 shadow-xs');
     expect(SHOPS_SRC).toContain('w-8 h-8 rounded-xl bg-emerald-50');
-    expect(SHOPS_SRC).toContain('mt-1.5 flex items-center justify-between gap-2 flex-wrap');
-    expect(SHOPS_SRC).toContain('p-2.5 shadow-xs space-y-2');
+    expect(SHOPS_SRC).toContain('mt-1 flex items-center justify-between gap-2 flex-wrap');
+    expect(SHOPS_SRC).toContain('p-2 shadow-xs space-y-1.5');
   });
 
   it('the needs-details chip lives in the found-count row, same toggle and amber state', () => {
-    // The label appears twice in UI by design: the toggle button in
-    // the count row, plus the pre-existing active-filter ✕ chip that
-    // shows while the filter is on. (The English string has a third
-    // occurrence in a v7.5.91 code comment.)
-    expect(count(SHOPS_SRC, 'အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ')).toBe(2);
+    // [v7.6.63] The Myanmar label appears four times in UI by
+    // design: the toggle button's aria-label + title in Row 1, the
+    // single clustered group header, plus the pre-existing
+    // active-filter ✕ chip that shows while the filter is on. (The
+    // English string still appears three times: the toggle's
+    // aria-label/title use lowercase "shops", so only the group
+    // header, the chip, and the v7.5.91 code comment match.)
+    expect(count(SHOPS_SRC, 'အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ')).toBe(4);
     expect(count(SHOPS_SRC, 'Shops missing details')).toBe(3);
     expect(SHOPS_SRC).toContain("onClick={() => setShowNeedsDetailsOnly((v) => !v)}");
     expect(SHOPS_SRC).toContain('aria-pressed={showNeedsDetailsOnly}');
@@ -198,16 +203,16 @@ describe('Group 8 — Debts, Vehicles, Data, Categories, Notifications (v7.6.42)
 
 describe('Version pins roll to v7.6.52 / build 366', () => {
   it('constants, version.json and the top history entry agree, with no Admin strings', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.62');
-    expect(top.buildNumber).toBe(376);
+    expect(top.version).toBe('v7.6.63');
+    expect(top.buildNumber).toBe(377);
     expect(top.changesMy.join(' ')).not.toContain('Admin');
     expect(top.changesEn.join(' ')).not.toContain('Admin');
-    expect(top.changesMy.length).toBe(4);
-    expect(top.changesEn.length).toBe(4);
+    expect(top.changesMy.length).toBe(7);
+    expect(top.changesEn.length).toBe(7);
   });
 });

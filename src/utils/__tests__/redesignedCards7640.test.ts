@@ -153,17 +153,17 @@ describe('Redesigned shop cards (v7.6.40)', () => {
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.62');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.63');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေ မူလအတိုင်း ပြန်ဖြစ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'သိမ်းတဲ့အခါ မျက်နှာပြင်မှာ ပြထားတဲ့ စုစုပေါင်းအတိုင်း သိမ်းပါပြီ — ၀ ကျပ် ဖြစ်သွားတာ မရှိတော့ပါ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      "Red, amber and white are back to their original values — meanings unchanged",
+      "Saving stores the total shown on screen — it can no longer become 0 kyat",
     );
   });
 });

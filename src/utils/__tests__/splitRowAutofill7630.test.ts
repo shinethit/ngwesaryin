@@ -125,22 +125,22 @@ describe('addSplitRow wiring (v7.6.30)', () => {
 
 describe('Version bump to v7.6.30 (build 344)', () => {
   it('version surfaces agree on v7.6.30 / build 344', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.62');
-    expect(entry.buildNumber).toBe(376);
+    expect(entry.version).toBe('v7.6.63');
+    expect(entry.buildNumber).toBe(377);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
-    expect(entry.changesMy).toHaveLength(4);
-    expect(entry.changesEn).toHaveLength(4);
+    expect(entry.changesMy).toHaveLength(7);
+    expect(entry.changesEn).toHaveLength(7);
     expect(entry.changesMy[0]).toBe(
-      'လက်ကျန်ကတ်က အမဲကွက်ကြီး မဟုတ်တော့ပါ — နက်ရှိုင်းတဲ့ အင်ဒီဂိုပြာရင့်ရောင် အောက်ခံအသစ်နဲ့ ပိုလှသွားပါပြီ',
+      'ဈေး၊ အရေအတွက်၊ စုစုပေါင်း — ၂ ခု ဖြည့်တာနဲ့ ကျန်တခုကို ချက်ချင်း တွက်ပေးပါပြီ — ရိုက်ထားတဲ့ တန်ဖိုးကို ဘယ်တော့မှ ပြန်မပြောင်းတော့ပါ',
     );
     expect(entry.changesEn[0]).toBe(
-      "The card ground is a deep indigo gradient with real depth — no more black patch",
+      "Price, quantity, total — fill any two and the third is computed at once; a typed value is never rewritten",
     );
   });
 

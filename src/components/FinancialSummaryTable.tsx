@@ -106,8 +106,10 @@ export const FinancialSummaryTable: React.FC<FinancialSummaryTableProps> = ({
         <div className="w-full overflow-x-auto">
           {/* [v7.5.73] Wraps to at most 2 lines at phone width so every
               amount + the count stay visible without scrolling; the
-              overflow-x-auto is only a safety net for very large amounts. */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 whitespace-nowrap text-xs py-1">
+              overflow-x-auto is only a safety net for very large amounts.
+              [v7.6.63] leading 1.7: Burmese tall stacks collided across
+              the two wrapped rows at the default text-xs leading. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 whitespace-nowrap text-xs leading-[1.7] py-1">
             {(financialSystem === 'opening_closing'
               ? [
                   { label: lang === 'my' ? 'အစလက်ကျန်' : 'Opening', value: displayAmount(totals.opening), tip: displayTip(totals.opening), toneCls: 'text-slate-800' },

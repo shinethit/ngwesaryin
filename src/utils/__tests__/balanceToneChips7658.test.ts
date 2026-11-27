@@ -64,11 +64,12 @@ describe('flat card wiring (v7.6.60)', () => {
     expect(TX_SRC).not.toContain('rgba(29,78,216,0.40)');
   });
 
-  it('the big figure is extrabold tabular numerals with generous leading', () => {
+  it('the big figure is bold tabular numerals with generous leading', () => {
     // [v7.6.59] Phone size kept: the figure is text-3xl, 30px,
-    // not 26px; [v7.6.62] weight is extrabold with tabular
-    // numerals and generous leading for the Tall Myanmar script.
-    expect(TX_SRC).toContain('text-3xl sm:text-4xl font-extrabold tabular-nums leading-[1.4]');
+    // not 26px; [v7.6.63] weight is bold — the REAL Padauk Bold
+    // face (font-synthesis:none forbids faux-bold) — with
+    // leading 1.7 for the Tall Myanmar script.
+    expect(TX_SRC).toContain('text-3xl sm:text-4xl font-bold tabular-nums leading-[1.7]');
     expect(TX_SRC).not.toContain('text-[26px] leading-tight font-black');
     expect(TX_SRC).toContain('balanceToneClass(monthBalance.closing)');
   });
@@ -89,7 +90,9 @@ describe('flat card wiring (v7.6.60)', () => {
   });
 
   it('the title is bright white, not pale sky-200', () => {
-    expect(TX_SRC).toContain('text-xs font-extrabold text-white truncate');
+    // [v7.6.63] Same bright-white title, bold (real Padauk Bold)
+    // with the card's generous leading.
+    expect(TX_SRC).toContain('text-xs font-bold leading-[1.7] text-white truncate');
     expect(TX_SRC).not.toContain('text-sky-200');
   });
 

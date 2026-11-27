@@ -53,9 +53,11 @@ describe('Shop cards are compact (v7.6.39)', () => {
   });
 
   it('the ShopsView card grids and compact lists are tightened', () => {
-    expect(count(SHOPS_SRC, 'lg:grid-cols-3 gap-3')).toBe(2);
+    // [v7.6.63] Compact round: both card grids gap-3 -> gap-2.5.
+    expect(count(SHOPS_SRC, 'lg:grid-cols-3 gap-2.5')).toBe(2);
     expect(SHOPS_SRC).toContain('<div className="space-y-2">');
     expect(SHOPS_SRC).not.toContain('lg:grid-cols-3 gap-4');
+    expect(SHOPS_SRC).not.toContain('lg:grid-cols-3 gap-3');
   });
 
   it('the old bulky sizes are gone from the card', () => {
@@ -100,21 +102,25 @@ describe('Shop cards are compact (v7.6.39)', () => {
     // a 44px target. Nothing shrank; one control was added.
     // [v7.6.44] 27 -> 28: the global "Refresh All Menus" header button
     // is itself a 44px target. Nothing shrank; one control was added.
-    expect(count(SHOPS_SRC, 'min-h-[44px]')).toBe(28);
+    // [v7.6.63] 28 -> 27: the Row 4 needs-details button moved to
+    // Row 1 beside Unknown as an h-11 (44px) toggle — same target
+    // height, different class spelling, so the min-h-[44px] count
+    // drops by one. Nothing shrank; one control moved.
+    expect(count(SHOPS_SRC, 'min-h-[44px]')).toBe(27);
   });
 
   it('version pins roll to v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_HISTORY[0].version).toBe('v7.6.62');
-    expect(VERSION_HISTORY[0].buildNumber).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_HISTORY[0].version).toBe('v7.6.63');
+    expect(VERSION_HISTORY[0].buildNumber).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
     expect(VERSION_HISTORY[0].changesMy).toContain(
-      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေ မူလအတိုင်း ပြန်ဖြစ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
+      'သိမ်းတဲ့အခါ မျက်နှာပြင်မှာ ပြထားတဲ့ စုစုပေါင်းအတိုင်း သိမ်းပါပြီ — ၀ ကျပ် ဖြစ်သွားတာ မရှိတော့ပါ',
     );
     expect(VERSION_HISTORY[0].changesEn).toContain(
-      "Red, amber and white are back to their original values — meanings unchanged",
+      "Saving stores the total shown on screen — it can no longer become 0 kyat",
     );
   });
 });

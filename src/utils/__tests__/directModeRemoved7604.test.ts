@@ -318,10 +318,10 @@ describe('legacy records restore as one row (v7.6.25 mapping)', () => {
 
 describe('version pins rolled forward to v7.6.27 (build 342)', () => {
   it('versionHistory + version.json agree, releasedAt present-only', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
     // releasedAt is never rewritten by a version bump — assert only
     // that it is present (v7.5.78 lesson: never bake its value in).
     expect(typeof VERSION_JSON.releasedAt).toBe('string');
@@ -330,22 +330,28 @@ describe('version pins rolled forward to v7.6.27 (build 342)', () => {
 
   it('the top history entry carries the merged-form entry, no Admin strings', () => {
     const top = VERSION_HISTORY[0];
-    expect(top.version).toBe('v7.6.62');
-    expect(top.buildNumber).toBe(376);
+    expect(top.version).toBe('v7.6.63');
+    expect(top.buildNumber).toBe(377);
     expect(top.tag).toBe('fix');
-    expect(top.titleMy).toBe('လက်ကျန်ကတ် အလှပြင် — အရောင်အတွဲအစပ်နဲ့ စာလုံး အသစ်');
-    expect(top.titleEn).toBe("Balance card beautified — researched colour pairing and font");
+    expect(top.titleMy).toBe('တွက်ချက်မှုများ ပြင်ဆင်ခြင်း — ဈေး/အရေအတွက်/စုစုပေါင်းနှင့် လက်ကျန်ကတ် စာလုံး');
+    expect(top.titleEn).toBe("Calculation fixes — price/qty/total and balance card typography");
     expect(top.changesMy).toEqual([
-      'လက်ကျန်ကတ်က အမဲကွက်ကြီး မဟုတ်တော့ပါ — နက်ရှိုင်းတဲ့ အင်ဒီဂိုပြာရင့်ရောင် အောက်ခံအသစ်နဲ့ ပိုလှသွားပါပြီ',
-      'စာလုံးက ဖုန်းမှာ ကောင်းကောင်းမြင်ရတဲ့ system font အတိုင်း ပြန်ဖြစ်ပါပြီ — စာတွေ ပျက်နေတာ မရှိတော့ပါ',
-      'အနီ၊ အဝါ၊ အဖြူ အရောင်တွေ မူလအတိုင်း ပြန်ဖြစ်ပါပြီ — အဓိပ္ပာယ်တွေ အတိုင်းပါပဲ',
-      'ဂဏန်းတွေ ညီညီညာညာ ပေါ်အောင်၊ မြန်မာစာတွေ မညှပ်အောင် စာကြောင်းအကွာအဝေး ပိုပေးထားပါပြီ',
+      'ဈေး၊ အရေအတွက်၊ စုစုပေါင်း — ၂ ခု ဖြည့်တာနဲ့ ကျန်တခုကို ချက်ချင်း တွက်ပေးပါပြီ — ရိုက်ထားတဲ့ တန်ဖိုးကို ဘယ်တော့မှ ပြန်မပြောင်းတော့ပါ',
+      'အရေအတွက်နဲ့ စုစုပေါင်း ရိုက်ရင် ဈေးကို ဖြည့်ပေးပါပြီ — အရေအတွက်ကို အလိုအလျောက် မပြောင်းတော့ပါ',
+      'သိမ်းတဲ့အခါ မျက်နှာပြင်မှာ ပြထားတဲ့ စုစုပေါင်းအတိုင်း သိမ်းပါပြီ — ၀ ကျပ် ဖြစ်သွားတာ မရှိတော့ပါ',
+      'လက်ကျန်ကတ်က စာလုံးတွေ ထပ်မနေတော့ပါ — Padauk စာလုံးကို အက်ပ်ထဲမှာ ထည့်ထားပြီး စာကြောင်းအကွာအဝေး ပိုပေးထားပါပြီ (အရောင်တွေ မပြောင်းပါ)',
+      'ကျန်တွက်ချက်မှုပုံစံအားလုံး (ဘတ်ဂျက်၊ အကြွေး၊ ဆီစားနှုန်း၊ ငွေလဲနှုန်း၊ ခွဲခြမ်းစာရင်း) ကို ပြန်စစ်ပြီး မှန်ကန်ကြောင်း အတည်ပြုထားပါပြီ',
+      'ဆိုင်စာမျက်နှာကို ကျစ်ကျစ်လေးဖြစ်အောင် ပြင်ထားပါပြီ — ခေါင်းစဉ်နဲ့ စစ်ထုတ်မှုတွေ နေရာပိုယူမနေတော့ဘဲ ဆိုင်ကတ်တွေ ပိုမြင်ရပါပြီ',
+      'အသေးစိတ် မဖြည့်ရသေးတဲ့ ဆိုင်တွေကို ခေါင်းစဉ်တစ်ခုတည်းအောက်မှာ စုပြီး ပြပါပြီ — အမည်မသိ ဆိုင်တွေကို မထိထားပါ',
     ]);
     expect(top.changesEn).toEqual([
-      "The card ground is a deep indigo gradient with real depth — no more black patch",
-      "The card uses the phone-proven system font again — no more broken text",
-      "Red, amber and white are back to their original values — meanings unchanged",
-      "Figures use tabular numerals with generous leading, so Burmese text is never clipped",
+      "Price, quantity, total — fill any two and the third is computed at once; a typed value is never rewritten",
+      "Typing quantity + total now fills in the price — quantity is no longer changed on its own",
+      "Saving stores the total shown on screen — it can no longer become 0 kyat",
+      "Balance card text no longer collides — self-hosted Padauk with wider leading (colours unchanged)",
+      "Every other calculation pattern (budgets, debts, fuel economy, currency conversion, splits) was re-checked and confirmed correct",
+      "The Shops screen is more compact — header and filters take less space so more shop cards fit on screen",
+      "Shops missing details are now grouped under a single header — Unknown shops are untouched",
     ]);
     expect(JSON.stringify(top)).not.toContain('Admin');
     expect(VERSION_JSON.changesMy).toEqual(top.changesMy);

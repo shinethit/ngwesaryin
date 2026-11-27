@@ -1,10 +1,30 @@
 @import "tailwindcss";
 
-/* [v7.6.62] The v7.6.61 variable webfont is REMOVED: on the
-   user's phone the card rendered as a black patch with broken
-   text. The Records card uses the Hero's exact treatment — the
-   system font stack, no font-face rules, no webfont files, no
-   precache entries. */
+/* [v7.6.63] Self-hosted Padauk (SIL OFL 1.1, full files — NO
+   unicode-range splitting, NO variable subsets): the Records
+   balance card uses this face via .balance-card-font. Two static
+   weights only (400/700) so font-bold uses the REAL Bold face;
+   font-synthesis:none forbids faux-bold. Files are precached by
+   the service worker (sw.js) so the card renders offline. The
+   rest of the app is untouched and keeps the system stack. */
+@font-face {
+  font-family: 'Padauk';
+  src: url('/fonts/padauk-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Padauk';
+  src: url('/fonts/padauk-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+.balance-card-font {
+  font-family: 'Padauk', 'Noto Sans Myanmar', system-ui, sans-serif;
+  font-synthesis: none;
+}
 
 
 

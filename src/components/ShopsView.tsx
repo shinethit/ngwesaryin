@@ -1254,6 +1254,19 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     [filteredShops, showUnknown]
   );
 
+  // [v7.6.63] Needs-details total for the Row 1 toggle badge — the
+  // count on the ACTIVE tab among Unknown-visible shops (the Unknown
+  // toggle hides Unknown-named shops from the list, so the badge
+  // matches what the filter will show). Independent of search /
+  // category / sort; the toggle narrows the same list.
+  const needsDetailsCount = useMemo(
+    () =>
+      filterShopsNeedingDetails(
+        activeShopsList.filter((s) => showUnknown || !s.name.startsWith('Unknown '))
+      ).length,
+    [activeShopsList, showUnknown]
+  );
+
   // [v7.5.37] Sort + Group logic
   const sortedAndGrouped = useMemo(() => {
     // First sort the filtered shops
@@ -1284,13 +1297,29 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     // Group by parent category (v7.6.43) — the same two levels as
     // the filter. Legacy shops resolve from `note` on read, so no
     // stored doc needs rewriting.
+    // [v7.6.63] Unknown-toggle filtering happens once here, before
+    // grouping, so every branch below sees only visible shops.
+    const visibleSorted = sorted.filter((s) => showUnknown || !s.name.startsWith('Unknown '));
+
+    // [v7.6.63] Needs-details review clusters under ONE row: when the
+    // needs-details filter is on, every visible shop needs details, so
+    // per-category groups would be one-shop headers — a single row
+    // keeps the review list compact. Flat sort modes are unchanged.
+    if (showNeedsDetailsOnly) {
+      return {
+        flat: null,
+        groups: visibleSorted.length > 0
+          ? [{
+              key: 'needs-details',
+              label: lang === 'my' ? '⚠️ အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ' : '⚠️ Shops missing details',
+              shops: visibleSorted,
+            }]
+          : [],
+      };
+    }
+
     const groupMap = new Map<string, (ShopContact | PublicShop)[]>();
-    sorted.forEach((shop) => {
-      const isUnknown = shop.name.startsWith('Unknown ');
-
-      // Unknown ဖြစ်ပြီး Toggle က ပိတ်ထားရင် ဒီ Group ထဲ ထည့်မှာ မဟုတ်ပါဘူး
-      if (isUnknown && !showUnknown) return;
-
+    visibleSorted.forEach((shop) => {
       const cat = resolveShopTaxonomy(shop).categoryId;
       if (!groupMap.has(cat)) groupMap.set(cat, []);
       groupMap.get(cat)!.push(shop);
@@ -1318,7 +1347,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
     });
 
     return { flat: null, groups: orderedGroups };
-  }, [filteredShops, sortMode, lang, showUnknown]);
+  }, [filteredShops, sortMode, lang, showUnknown, showNeedsDetailsOnly]);
 
   // [v7.5.80] Batched display — the first `visibleCount` shops in display
   // order. Grouped: walk the groups in order, keep only groups that contain
@@ -1378,14 +1407,14 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
   const selectedRegionObj = MYANMAR_REGIONS.find((r) => r.nameMy === selectedStateRegionFilter);
 
   return (
-    <div className="space-y-3 max-w-7xl mx-auto">
+    <div className="space-y-2 max-w-7xl mx-auto">
       {/* --------------------------------------------------------------------- */}
       {/* 1. COMPACT HEADER                                                     */}
       {/* --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 px-3 py-2.5 shadow-xs">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="bg-white rounded-2xl border border-slate-200/80 px-3 py-2 shadow-xs">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           {/* Left: Title */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
               <Store className="w-5 h-5" />
             </div>
@@ -1401,23 +1430,28 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             </div>
           </div>
 
-          {/* Right: Add button */}
+          {/* Right: Add button — [v7.6.63 compact] label + guest note stack
+              in two lines so title + button share one row (the wide
+              one-line button wrapped to a second row in guest mode).
+              Same label, same note, same tooltip; button stays 44px. */}
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer shrink-0"
             title={!auth.currentUser ? (lang === 'my' ? 'အကောင့်ဝင်ပြီးမှ ဆိုင်ထည့်နိုင်ပါသည်' : 'Sign in to add a shop') : undefined}
           >
-            {!auth.currentUser ? <Lock className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-            <span>{lang === 'my' ? 'ဆိုင်အသစ်' : 'Add Shop'}</span>
-            {!auth.currentUser && (
-              <span className="text-[10px] font-bold opacity-80">{lang === 'my' ? '(Sign in မှ ထည့်နိုင်မည်)' : '(Sign in to add)'}</span>
-            )}
+            {!auth.currentUser ? <Lock className="w-3.5 h-3.5 shrink-0" /> : <Plus className="w-3.5 h-3.5 shrink-0" />}
+            <span className="flex flex-col items-start">
+              <span>{lang === 'my' ? 'ဆိုင်အသစ်' : 'Add Shop'}</span>
+              {!auth.currentUser && (
+                <span className="text-[10px] font-bold opacity-80">{lang === 'my' ? '(Sign in မှ ထည့်နိုင်မည်)' : '(Sign in to add)'}</span>
+              )}
+            </span>
           </button>
         </div>
 
         {/* Directory Switcher + View Mode — SAME ROW */}
-        <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap">
+        <div className="mt-1 flex items-center justify-between gap-2 flex-wrap">
           {/* Directory Tabs */}
           <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/60 flex-1 min-w-0 max-w-xs">
             <button
@@ -1498,11 +1532,11 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
           {/* ----------------------------------------------------------------- */}
           {/* 3. COMPACT SEARCH + FILTER BAR                                    */}
           {/* ----------------------------------------------------------------- */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-2.5 shadow-xs space-y-2">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-xs space-y-1.5">
             {/* [v7.5.86] Search-mode toggle — shop names (default, unchanged)
                 or item names across every shop's menu (စျေးစုံစမ်းခြင်း:
                 everyone's prices in one place, cheapest first). */}
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <button
                 type="button"
                 onClick={() => setSearchMode('shop')}
@@ -1518,7 +1552,8 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 {lang === 'my' ? '🛒 ပစ္စည်းနဲ့ ရှာ' : '🛒 By item'}
               </button>
             </div>
-            {/* Row 1: Search + Location toggle + Reset + Count */}
+            {/* [v7.6.63 compact] Row A: Search + Menu. The toggles live
+                in their own row below. */}
             <div className="flex flex-wrap items-center gap-1.5">
               <div className="relative flex-1 min-w-[160px]">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1590,18 +1625,26 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   )}
                 </button>
               )}
+            </div>
 
+            {/* [v7.6.63 compact] Toggles row — sort + location + Unknown
+                + count on ONE row. The old single flex-wrap container
+                wrapped these across two half-empty rows (55–75px dead
+                on the sort row, 126–176px on the details row). Shop
+                mode only, as before. */}
+            {searchMode === 'shop' && (
+            <div className="flex items-center gap-1.5">
               {searchMode === 'shop' && (<>
               {/* Sort Dropdown */}
               <div className="relative shrink-0">
                 <select
                   value={sortMode}
                   onChange={(e) => setSortMode(e.target.value as any)}
-                  className="appearance-none pl-2 pr-6 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer max-w-[150px]"
+                  className="appearance-none pl-1.5 pr-4 py-2.5 min-h-[44px] bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer max-w-[132px]"
                   title={lang === 'my' ? 'စီစဥ်ရန်' : 'Sort'}
                 >
                   {/* [v7.5.80] Shortened: "📁 အုပ်စုခွဲ (အမျိုးအစား)" is 172px
-                      wide but the select is 150px, so it truncated to
+                      wide but the select is 132px, so it truncated to
                       "အုပ်စု (...)". The short label fits with room to spare. */}
                   <option value="group-category">{lang === 'my' ? '📁 အုပ်စုခွဲ' : '📁 Grouped'}</option>
                   <option value="newest">{lang === 'my' ? '🆕 အသစ်ဆုံး' : '🆕 Newest'}</option>
@@ -1609,7 +1652,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   <option value="name-desc">{lang === 'my' ? '🔤 အမည် Z→A' : '🔤 Name Z→A'}</option>
                   <option value="helpful">{lang === 'my' ? '👍 မဲအများဆုံး' : '👍 Most Helpful'}</option>
                 </select>
-                <ChevronDown className="w-3 h-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3 h-3 text-slate-500 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
               </>)}
 
@@ -1635,7 +1678,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowUnknown(!showUnknown)}
-                className={`h-11 px-1.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${showUnknown ? 'bg-slate-800 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                className={`h-11 px-1 flex items-center justify-center gap-0.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${showUnknown ? 'bg-slate-800 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                 title={lang === 'my' ? 'အမည်မသိ ဆိုင်များ ပြ/မပြ' : 'Toggle Unknown Shops'}
               >
                 <span>{showUnknown ? '👁️' : '🫣'}</span>
@@ -1658,20 +1701,10 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 </span>
               )}
 
-              {/* Reset (icon only) */}
-              {searchMode === 'shop' && hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  className="min-h-[44px] min-w-[44px] p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center justify-center"
-                  title={lang === 'my' ? 'စစ်ထုတ်မှုအားလုံး ပယ်ဖျက်မည်' : 'Reset all filters'}
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
+            )}
 
-            {/* Row 2: Category filter (dropdown) — [v7.5.80] the 17 pill
+            {/* [v7.6.63 compact] Row B2: Category filter (dropdown) + Details toggle + Reset + location — [v7.5.80] the 17 pill
                 buttons wrapped to ~7 rows at 390px and filled ~40% of the
                 screen before the first shop card. A native <select> shows
                 the selected category name, reaches every category in 2 taps
@@ -1683,7 +1716,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 parent Category; a second select for the Subcategory
                 appears only while a parent is picked, so the unfiltered
                 view keeps its single row. */}
-            <div className={searchMode === 'item' ? 'hidden' : 'flex items-center gap-2'}>
+            <div className={searchMode === 'item' ? 'hidden' : 'flex items-center gap-1.5'}>
               {/* [v7.5.80] Icon-only prefix: the longest category label
                   ("အမည်မသိ / Import လုပ်ထားသော", 245px) must fit inside
                   the select with its padding — a text label ("အမျိုးအစား")
@@ -1712,6 +1745,37 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
+              {/* [v7.6.63 compact] Needs-details toggle — moved from the
+                  toggles row (B1) beside the category select, so B1
+                  fits sort + location + Unknown + count on one row.
+                  Same toggle, same amber state, same filter, same
+                  count badge; full wording in title/aria-label. */}
+              <button
+                type="button"
+                onClick={() => setShowNeedsDetailsOnly((v) => !v)}
+                aria-pressed={showNeedsDetailsOnly}
+                aria-label={lang === 'my' ? 'အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များသာ ပြမည်' : 'Show only shops missing details'}
+                title={lang === 'my' ? 'အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များသာ ပြမည်' : 'Show only shops missing details'}
+                className={`h-11 px-1.5 flex items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${showNeedsDetailsOnly ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+              >
+                <span>⚠️</span>
+                <span>{lang === 'my' ? 'အသေးစိတ်' : 'Details'}</span>
+                <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-black">
+                  {needsDetailsCount}
+                </span>
+              </button>
+              {/* Reset (icon only) — [v7.6.63 compact] moved here from
+                  the toggles row; same condition, same handler. */}
+              {searchMode === 'shop' && hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="min-h-[44px] min-w-[44px] p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                  title={lang === 'my' ? 'စစ်ထုတ်မှုအားလုံး ပယ်ဖျက်မည်' : 'Reset all filters'}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {/* [v7.6.43] Subcategory filter — only while a parent
@@ -1743,11 +1807,12 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </div>
             )}
 
-            {/* [v7.6.42] Needs-details chip lives in the count row below
-                (was its own 44px row) — same toggle, same amber state. */}
+            {/* [v7.6.63 compact] Needs-details toggle lives in Row B2
+                beside the category select (was its own 44px row, then
+                beside Unknown) — same toggle, same amber state. */}
             {/* Row 3: Expandable Location Panel */}
             {searchMode === 'shop' && isLocationFilterExpanded && (
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 animate-fade-in">
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 animate-fade-in">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {/* State */}
                   <div>
@@ -1848,26 +1913,18 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
               </div>
             )}
 
-            {/* Row 4: Count + Active Filter Chips */}
-            <div className={searchMode === 'item' ? 'hidden' : 'flex items-center justify-between gap-2 text-[11px]'}>
+            {/* [v7.6.63] Row 4 is now chips-only and renders ONLY when a
+                filter chip exists — the needs-details toggle moved to
+                Row 1. No chips = no row (one row saved). In item mode
+                the row never renders, as before. */}
+            {searchMode === 'shop' &&
+              (selectedStateRegionFilter !== 'all' ||
+                selectedTownshipFilter !== 'all' ||
+                selectedCategoryFilter !== 'all' ||
+                selectedSubTypeFilter !== 'all' ||
+                showNeedsDetailsOnly) && (
+            <div className="flex items-center justify-between gap-2 text-[11px]">
               <div className="flex items-center gap-1.5 flex-wrap">
-                {/* [v7.6.55] The count span moved up to Row 1 (dead
-                    space right of the Unknown toggle); only the
-                    filter chips stay here. */}
-                {/* [v7.5.91 D4] Needs-details filter chip — toggles the
-                    filter; the amber state matches the card marker. */}
-                <button
-                  type="button"
-                  onClick={() => setShowNeedsDetailsOnly((v) => !v)}
-                  aria-pressed={showNeedsDetailsOnly}
-                  className={`min-h-[44px] px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                    showNeedsDetailsOnly
-                      ? 'bg-amber-100 border-amber-300 text-amber-800'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {lang === 'my' ? '⚠️ အသေးစိတ် မဖြည့်ရသေးသော ဆိုင်များ' : '⚠️ Shops missing details'}
-                </button>
                 {selectedStateRegionFilter !== 'all' && (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[10px] font-bold border border-emerald-100">
                     📍 {selectedStateRegionFilter.replace('တိုင်းဒေသကြီး', '').replace('ပြည်နယ်', '').trim()}
@@ -1900,7 +1957,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                   </span>
                 )}
               </div>
-            </div>
+            </div>)}
           </div>
 
           {/* ----------------------------------------------------------------- */}
@@ -1913,7 +1970,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             // cheapest first. Tap a row to open that shop. The shop list
             // (with its category/location/sort filters) is replaced here;
             // switching back to shop mode restores it unchanged.
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <p className="text-[11px] font-bold text-slate-800 px-1">
                 {loadingPublic && directoryType === 'public'
                   ? lang === 'my'
@@ -2070,13 +2127,13 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
             </div>
           ) : sortMode === 'group-category' && sortedAndGrouped.groups ? (
             // GROUPED VIEW
-            <div className="space-y-4">
+            <div className="space-y-3">
               {(batchedGroups ?? []).map((group) => (
-                <div key={group.key} className="space-y-2.5">
+                <div key={group.key} className="space-y-2">
                   {/* Group Header */}
                   <div className="flex items-center gap-2 px-1">
                     <div className="h-px flex-1 bg-slate-200" />
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-lg border border-slate-200/60">
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-100 rounded-lg border border-slate-200/60">
                       <span className="text-[11px] font-black text-slate-700 truncate min-w-0 max-w-[220px]">
                         {group.label}
                       </span>
@@ -2112,7 +2169,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
                       {group.shops.map((shop) => (
                         <ShopCard
                           key={shop.id}
@@ -2164,7 +2221,7 @@ export const ShopsView: React.FC<ShopsViewProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {(batchedFlat ?? []).map((shop) => (
                   <ShopCard
                     key={shop.id}

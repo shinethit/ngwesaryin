@@ -21,6 +21,12 @@ import { formatMMK, formatLakhs, getAmountDisplayMode } from '../utils/formatter
 import { formatCurrency } from '../utils/currency';
 import { getLocalDateString, shiftLocalDate } from '../utils/dateUtils';
 import { parseMyanmarNumber } from '../utils/myanmarDigits';
+import {
+  defaultShoppingEditOrder,
+  deriveShoppingItem,
+  restoredShoppingEditOrder,
+  type ShoppingCalcField,
+} from '../utils/shoppingItemMath';
 import { keypadPress, type KeypadKey } from '../utils/amountKeypad';
 import { CategoryTile, CategoryIcon } from './CategoryIcon';
 import { resolveSubCategoryIconValue } from '../utils/categoryPictures';
@@ -242,8 +248,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       : [{ id: 'item_1', name: '', price: 0, quantity: 1, amount: 0 }]
   );
 
-  const shoppingLastEditedRef = useRef<Record<string, 'price' | 'qty' | 'amount'>>({});
-  const shoppingAmountTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+  // [v7.6.63] Per-row Price/Qty/Total edit history for the anchor
+  // rule (shoppingItemMath.ts) — oldest first. No timers: the
+  // derivation is synchronous, so a quick save can never outrun it.
+  const shoppingEditOrderRef = useRef<Record<string, ShoppingCalcField[]>>({});
 
   // [v7.6.07] Split transactions (general entries only): when
   // on, the record's total is divided across these rows. Row 1 is
@@ -402,9 +410,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
       if (editTransaction) {
         if (isNewlyOpened || isEditTxChanged) {
-          Object.values(shoppingAmountTimersRef.current).forEach(clearTimeout);
-          shoppingAmountTimersRef.current = {};
-          shoppingLastEditedRef.current = {};
+          shoppingEditOrderRef.current = {};
           setType(editTransaction.type);
           setAmount(String(editTransaction.amount));
           setCategoryId(editTransaction.category || '');
@@ -571,19 +577,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             // several id-less rows would all update at once. The
             // serviceType (when saved) rides along untouched; a missing
             // one falls back to the visit's main type at save time.
-            setShoppingItems(editTransaction.items.map((it, i) => ({ ...it, id: it.id || `item_${Date.now()}_${i}` })));
+            const restoredItems = editTransaction.items.map((it, i) => ({ ...it, id: it.id || `item_${Date.now()}_${i}` }));
+            setShoppingItems(restoredItems);
+            // [v7.6.63] Restored rows start from the stored triple:
+            // the amount is the saved total, not a typed value.
+            restoredItems.forEach((it) => { if (it.id) shoppingEditOrderRef.current[it.id] = restoredShoppingEditOrder(); });
           } else if (editTransaction.unitPrice) {
             // [v7.6.49] The synthetic row carries parts only: the
             // stored total already includes labor (see
             // restoredVisitLabor), and the save adds labor back.
-            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: editTransaction.unitPrice, quantity: editTransaction.quantity || 1, amount: Math.max(0, editTransaction.amount - restoredVisitLabor), unit: DEFAULT_MENU_UNIT }]);
+            const syntheticRow = [{ id: 'item_1', name: parsedItemName, price: editTransaction.unitPrice, quantity: editTransaction.quantity || 1, amount: Math.max(0, editTransaction.amount - restoredVisitLabor), unit: DEFAULT_MENU_UNIT }];
+            setShoppingItems(syntheticRow);
+            shoppingEditOrderRef.current['item_1'] = restoredShoppingEditOrder();
           } else {
-            setShoppingItems([{ id: 'item_1', name: parsedItemName, price: Math.max(0, editTransaction.amount - restoredVisitLabor), quantity: 1, amount: Math.max(0, editTransaction.amount - restoredVisitLabor), unit: DEFAULT_MENU_UNIT }]);
+            const syntheticRow = [{ id: 'item_1', name: parsedItemName, price: Math.max(0, editTransaction.amount - restoredVisitLabor), quantity: 1, amount: Math.max(0, editTransaction.amount - restoredVisitLabor), unit: DEFAULT_MENU_UNIT }];
+            setShoppingItems(syntheticRow);
+            shoppingEditOrderRef.current['item_1'] = restoredShoppingEditOrder();
           }
           setNewSubName('');
         }
       } else if (isNewlyOpened) {
-        shoppingLastEditedRef.current = {};
+        shoppingEditOrderRef.current = {};
         const lastUsedWalletId = typeof localStorage !== 'undefined' ? localStorage.getItem('fortune_last_used_wallet_id') : null;
         let chosenWalletId =
           (initialWalletId && wallets.some((w) => w.id === initialWalletId))
@@ -743,45 +757,35 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               }
             }
           }
-          const pNum = parseMyanmarNumber(newItem.price as any) || 0;
-          const qNum = parseMyanmarNumber(newItem.quantity as any) || 0;
-          const aNum = parseMyanmarNumber(newItem.amount as any) || 0;
-          const last = shoppingLastEditedRef.current[id] || null;
-          if (field === 'price') {
-            if (last === 'qty') newItem.amount = Number((pNum * qNum).toFixed(2));
-            else if (last === 'amount') { if (pNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); }
-            else { if (qNum > 0) newItem.amount = Number((pNum * qNum).toFixed(2)); else if (pNum > 0 && aNum > 0) newItem.quantity = Number((aNum / pNum).toFixed(2)); }
-            shoppingLastEditedRef.current[id] = 'price';
-          } else if (field === 'quantity') {
-            if (last === 'price') newItem.amount = Number((pNum * qNum).toFixed(2));
-            else if (last === 'amount') { if (qNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
-            else { if (pNum > 0) newItem.amount = Number((pNum * qNum).toFixed(2)); else if (qNum > 0 && aNum > 0) newItem.price = Number((aNum / qNum).toFixed(2)); }
-            shoppingLastEditedRef.current[id] = 'qty';
-          } else if (field === 'amount') {
-            newItem.amount = aNum;
-            if (shoppingAmountTimersRef.current[id]) clearTimeout(shoppingAmountTimersRef.current[id]);
-            const capturedId = id;
-            shoppingAmountTimersRef.current[id] = setTimeout(() => {
-              setShoppingItems((prevItems) => prevItems.map((it) => {
-                if (it.id !== capturedId) return it;
-                const item = { ...it };
-                const p = item.price || 0;
-                const q = item.quantity || 0;
-                const a = item.amount || 0;
-                const lastNow = shoppingLastEditedRef.current[capturedId];
-                if (lastNow === 'price') { if (p > 0) item.quantity = Number((a / p).toFixed(2)); }
-                else if (lastNow === 'qty') { if (q > 0) item.price = Number((a / q).toFixed(2)); }
-                else { if (p > 0) item.quantity = Number((a / p).toFixed(2)); else if (q > 0) item.price = Number((a / q).toFixed(2)); else { item.quantity = 1; item.price = a; } }
-                return item;
-              }));
-            }, 500);
-            shoppingLastEditedRef.current[id] = 'amount';
+          // [v7.6.63] Price/Qty/Total anchor rule (shoppingItemMath):
+          // filling any two derives the third SYNCHRONOUSLY in this
+          // same update — no timer, so a quick save can never outrun
+          // the derivation, and a typed value is never rewritten.
+          // Only the derived field is written back (as a number);
+          // the field just typed keeps its raw text, so decimal /
+          // Myanmar-digit typing is never disturbed mid-keystroke.
+          if (field === 'price' || field === 'quantity' || field === 'amount') {
+            const parsed = {
+              price: parseMyanmarNumber(newItem.price as any) || 0,
+              quantity: parseMyanmarNumber(newItem.quantity as any) || 0,
+              amount: parseMyanmarNumber(newItem.amount as any) || 0,
+            };
+            const prevOrder =
+              shoppingEditOrderRef.current[id] ?? defaultShoppingEditOrder();
+            const derived = deriveShoppingItem(parsed, field, prevOrder);
+            shoppingEditOrderRef.current[id] = derived.order;
+            if (derived.derivedField) {
+              (newItem as any)[derived.derivedField] = derived.values[derived.derivedField];
+            }
           }
           return newItem;
         }
         return item;
       });
-      const totalSum = updated.reduce((sum, item) => sum + (item.amount || 0), 0);
+      // [v7.6.63] Amounts may be raw typed text (Myanmar digits,
+      // mid-decimal) — parse, never add strings ('' + '1000' would
+      // concatenate). Same sum the save handler recomputes.
+      const totalSum = updated.reduce((sum, item) => sum + (parseMyanmarNumber(item.amount as any) || 0), 0);
       // [v7.6.49] The shared amount input is the visit TOTAL: parts
       // rows + labor (vehicle-service visits only — general entries
       // have no labor field, so their total is unchanged).
@@ -844,7 +848,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const removeShoppingItemRow = (id: string) => {
     setShoppingItems((prev) => {
       const filtered = prev.filter((i) => i.id !== id);
-      const totalSum = filtered.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const totalSum = filtered.reduce((sum, item) => sum + (parseMyanmarNumber(item.amount as any) || 0), 0);
       // [v7.6.49] Same visit-total rule as updateShoppingItem:
       // removing a row must not drop the labor part of the total.
       const visitLabor = entryModel === 'vehicle_service' && maintServiceType !== 'license_renewal' ? maintLaborNum : 0;
@@ -1631,11 +1635,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const validItems = shoppingItems.filter((i) => i.name.trim() && parseMyanmarNumber(i.quantity as any) > 0).map((i) => {
       const p = parseMyanmarNumber(i.price as any) || 0;
       const q = parseMyanmarNumber(i.quantity as any) || 0;
+      // [v7.6.63] The saved amount is the row's DISPLAYED amount
+      // (typed or synchronously derived) — never recomputed as
+      // price x qty here. Recomputing discarded a typed total
+      // whenever price had not been derived yet (Qty + Total typed,
+      // price still 0 → saved amount 0).
+      const a = parseMyanmarNumber(i.amount as any) || 0;
       // [v7.5.93] Carry the row's own serviceType through — the map
       // rebuilds the object, so a dropped type would collapse every
       // row back onto the visit's main type. (Only stamped when set;
       // an undefined key must never reach Firestore.)
-      return { name: i.name.trim(), price: p, quantity: q, amount: p * q, unit: resolveSavedMenuUnit(i.unit), ...(i.serviceType ? { serviceType: i.serviceType } : {}) };
+      return { name: i.name.trim(), price: p, quantity: q, amount: a, unit: resolveSavedMenuUnit(i.unit), ...(i.serviceType ? { serviceType: i.serviceType } : {}) };
     });
     let finalAmount = numAmount;
     if (isFreeTireCheck && (!finalAmount || finalAmount <= 0)) finalAmount = 0;

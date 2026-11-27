@@ -147,13 +147,13 @@ describe('menu re-apply button wiring (v7.6.41 B)', () => {
 
 describe('Version bump to v7.6.42 (build 356)', () => {
   it('version surfaces agree on v7.6.42 / build 356', () => {
-    expect(CURRENT_APP_VERSION).toBe('v7.6.62');
-    expect(CURRENT_BUILD_NUMBER).toBe(376);
-    expect(VERSION_JSON.version).toBe('v7.6.62');
-    expect(VERSION_JSON.buildNumber).toBe(376);
+    expect(CURRENT_APP_VERSION).toBe('v7.6.63');
+    expect(CURRENT_BUILD_NUMBER).toBe(377);
+    expect(VERSION_JSON.version).toBe('v7.6.63');
+    expect(VERSION_JSON.buildNumber).toBe(377);
     const entry = VERSION_HISTORY[0];
-    expect(entry.version).toBe('v7.6.62');
-    expect(entry.buildNumber).toBe(376);
+    expect(entry.version).toBe('v7.6.63');
+    expect(entry.buildNumber).toBe(377);
     expect(entry.changesMy).toEqual(VERSION_JSON.changesMy);
     expect(entry.changesEn).toEqual(VERSION_JSON.changesEn);
   });
